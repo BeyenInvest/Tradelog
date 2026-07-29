@@ -1,0 +1,93 @@
+import { useState, type FormEvent } from "react";
+import { X } from "lucide-react";
+import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
+import { isoWeekOf } from "@/lib/isoWeek";
+import { ReviewContentFields, type ReviewContentValue } from "@/components/reviews/ReviewContentFields";
+
+interface ReviewFormProps {
+  review?: WeeklyReview;
+  onSubmit: (input: WeeklyReviewInput) => Promise<void>;
+  onClose: () => void;
+}
+
+function defaultWeek() {
+  return isoWeekOf(new Date().toISOString().slice(0, 10));
+}
+
+export function ReviewForm({ review, onSubmit, onClose }: ReviewFormProps) {
+  const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
+  const [jaar, setJaar] = useState(startWeek.jaar);
+  const [weekNummer, setWeekNummer] = useState(startWeek.week_nummer);
+  const [titel, setTitel] = useState(review?.titel ?? "");
+  const [content, setContent] = useState<ReviewContentValue>({
+    technisch: review?.technisch ?? "",
+    mentaal_owner: review?.mentaal_owner ?? "",
+    mentaal_trader: review?.mentaal_trader ?? "",
+    acties: review?.acties?.length ? review.acties : [""],
+    takeaway: review?.takeaway ?? "",
+    overall_comment: review?.overall_comment ?? "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        jaar,
+        week_nummer: weekNummer,
+        titel: titel || null,
+        technisch: content.technisch || null,
+        mentaal_owner: content.mentaal_owner || null,
+        mentaal_trader: content.mentaal_trader || null,
+        acties: content.acties.map((a) => a.trim()).filter(Boolean),
+        takeaway: content.takeaway || null,
+        overall_comment: content.overall_comment || null,
+      });
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={onClose}>
+      <div className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display text-2xl italic text-ink">{review ? "Review bewerken" : "Nieuwe weekly review"}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-white/5 text-muted">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-wider text-muted">Week</label>
+              <input type="number" min={1} max={53} className="input" value={weekNummer} onChange={(e) => setWeekNummer(Number(e.target.value))} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-wider text-muted">Jaar</label>
+              <input type="number" className="input" value={jaar} onChange={(e) => setJaar(Number(e.target.value))} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-wider text-muted">Titel</label>
+              <input type="text" className="input" value={titel} onChange={(e) => setTitel(e.target.value)} />
+            </div>
+          </div>
+
+          <ReviewContentFields value={content} onChange={setContent} />
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
+              Annuleren
+            </button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg disabled:opacity-60">
+              {submitting ? "Bezig..." : "Opslaan"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

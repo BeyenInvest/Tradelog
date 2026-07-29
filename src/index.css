@@ -1,0 +1,41 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-ink font-body antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .input {
+    @apply rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none w-full;
+  }
+  .input:focus {
+    @apply border-gold;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2d35;
+  border-radius: 999px;
+}

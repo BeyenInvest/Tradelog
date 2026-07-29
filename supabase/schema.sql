@@ -1,0 +1,255 @@
+-- =========================================================
+-- Beyen Invest — Supabase schema
+-- Paste into Supabase SQL editor and run once (fresh project).
+-- =========================================================
+create extension if not exists pgcrypto;
+
+-- ---------- ENUM TYPES ----------
+create type fase_enum as enum ('Fase 1','Fase 2','Fase 3','Fase 4');
+create type outcome_enum as enum ('Win','Loss','BE');
+create type trade_evaluation_enum as enum ('Good trade','Emotional error','Technical error','Missed trade');
+create type period_type_enum as enum ('month','quarter','year');
+create type pair_enum as enum (
+  'AUDCAD','AUDCHF','AUDJPY','AUDNZD','AUDUSD',
+  'CADCHF','CADJPY','CHFJPY',
+  'EURAUD','EURCAD','EURCHF','EURGBP','EURJPY','EURNZD','EURUSD',
+  'GBPAUD','GBPCAD','GBPCHF','GBPJPY','GBPNZD','GBPUSD',
+  'NZDCAD','NZDCHF','NZDJPY','NZDUSD',
+  'USDCAD','USDCHF','USDJPY',
+  'XAGUSD','XAUUSD'
+);
+create type weekly_criteria_enum as enum ('Pattern','High/Low','IC','Region');
+create type weekly_kenmerk_enum as enum ('Trending market','Corrective market','Ranging market');
+create type trade_concept_enum as enum (
+  'Reversal','Continuation','Daily retrace','Pattern in Pattern',
+  'Push IC Push','Weekly-4H','Reclaim','Small daily pattern'
+);
+create type entry_enum as enum (
+  'Decel','Reversal','Continuation met ruimte','Continuation zonder ruimte',
+  '2H Entry','Reclaim','100 Fib','Instant limiet'
+);
+create type cc_enum as enum ('03','07','11','15','19','23');
+create type sessie_enum as enum ('Asia','London','Overlap','New York');
+create type structuur_enum as enum ('Inner','Outer');
+create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded');
+
+-- ---------- BACKTEST PROJECTS (created before trades — trades FK into it) ----------
+-- A trade belongs to the live Journal when backtest_project_id IS NULL, or to
+-- exactly one isolated backtest project when set — never both, never shared.
+create table backtest_projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  naam text not null,
+  beschrijving text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ---------- WEEKLY REVIEWS (created before trades — trades FK into it) ----------
+create table weekly_reviews (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  week_nummer integer not null check (week_nummer between 1 and 53),
+  jaar integer not null check (jaar between 2000 and 2100),
+  titel text,
+  technisch text,
+  mentaal_owner text,
+  mentaal_trader text,
+  acties text[] not null default '{}',
+  takeaway text,
+  overall_comment text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, jaar, week_nummer)
+);
+
+-- ---------- PERIODIC REVIEWS (month/quarter/year — no FK from trades, period found by date range) ----------
+create table periodic_reviews (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  period_type period_type_enum not null,
+  jaar integer not null check (jaar between 2000 and 2100),
+  periode_nummer integer, -- 1-12 for month, 1-4 for quarter, null for year
+  titel text,
+  technisch text,
+  mentaal_owner text,
+  mentaal_trader text,
+  acties text[] not null default '{}',
+  takeaway text,
+  overall_comment text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index periodic_reviews_month_quarter_unique
+  on periodic_reviews(user_id, period_type, jaar, periode_nummer)
+  where periode_nummer is not null;
+create unique index periodic_reviews_year_unique
+  on periodic_reviews(user_id, jaar)
+  where period_type = 'year';
+
+-- ---------- TRADES ----------
+create table trades (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+
+  fase fase_enum not null,
+  datum_open date not null,
+  datum_sluiting date,
+  duur_dagen integer generated always as (datum_sluiting - datum_open) stored,
+
+  pair pair_enum not null,
+  outcome outcome_enum not null,
+  resultaat_pct numeric(7,2) not null,
+  trade_evaluation trade_evaluation_enum,
+
+  weekly_criteria weekly_criteria_enum,
+  weekly_kenmerk weekly_kenmerk_enum,
+  trade_concept trade_concept_enum,
+  entry entry_enum,
+
+  cc cc_enum not null,
+  sessie sessie_enum generated always as (
+    case cc
+      when '03' then 'Asia'::sessie_enum
+      when '07' then 'Asia'::sessie_enum
+      when '11' then 'London'::sessie_enum
+      when '15' then 'London'::sessie_enum
+      when '19' then 'Overlap'::sessie_enum
+      when '23' then 'New York'::sessie_enum
+    end
+  ) stored,
+
+  nieuws boolean not null default false,
+  w_confirm boolean,
+  d_confirm boolean,
+  h4_confirm boolean,
+  w_screenshot text,
+  d_screenshot text,
+  h4_screenshot text,
+  h2_screenshot text,
+  extra_d_conf boolean,
+
+  tpfs_pct numeric(7,2),
+  notes text,
+
+  -- Fase 1
+  fase1_daily_respecteert_zone boolean,
+  fase1_spelers_verleden boolean,
+  -- Fase 2
+  fase2_daily_respecteert_zone boolean,
+  fase2_structuur structuur_enum,
+  -- Fase 3
+  fase3_zone_min_2_touches boolean,
+  fase3_engulfing_candle boolean,
+  fase3_beide boolean generated always as (
+    coalesce(fase3_zone_min_2_touches,false) and coalesce(fase3_engulfing_candle,false)
+  ) stored,
+  fase3_structuur structuur_enum,
+  -- Fase 4
+  fase4_weekly_bevestigingscandle boolean,
+
+  weekly_review_id uuid references weekly_reviews(id) on delete set null,
+  backtest_project_id uuid references backtest_projects(id) on delete cascade,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ---------- ACCOUNTS ----------
+create table prop_accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  naam text not null,
+  account_size numeric(12,2) not null,
+  fase prop_fase_enum not null default 'Phase 1',
+  actief boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table payouts (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references prop_accounts(id) on delete cascade,
+  bedrag numeric(12,2) not null,
+  datum date not null,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+-- ---------- INDEXES ----------
+create index idx_trades_user on trades(user_id);
+create index idx_trades_datum_open on trades(datum_open);
+create index idx_trades_fase on trades(fase);
+create index idx_trades_pair on trades(pair);
+create index idx_trades_weekly_review on trades(weekly_review_id);
+create index idx_trades_backtest_project on trades(backtest_project_id);
+create index idx_payouts_account on payouts(account_id);
+create index idx_periodic_reviews_user on periodic_reviews(user_id);
+
+-- ---------- updated_at TRIGGERS ----------
+create or replace function set_updated_at() returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_trades_updated_at before update on trades
+  for each row execute function set_updated_at();
+create trigger trg_weekly_reviews_updated_at before update on weekly_reviews
+  for each row execute function set_updated_at();
+create trigger trg_prop_accounts_updated_at before update on prop_accounts
+  for each row execute function set_updated_at();
+create trigger trg_backtest_projects_updated_at before update on backtest_projects
+  for each row execute function set_updated_at();
+create trigger trg_periodic_reviews_updated_at before update on periodic_reviews
+  for each row execute function set_updated_at();
+
+-- ---------- auto-link trade -> weekly_review on INSERT only ----------
+-- (created after its trades already exist? use the manual relink action in-app,
+--  see linkTradesToReview in src/hooks/useWeeklyReviews.ts)
+create or replace function link_trade_to_weekly_review() returns trigger as $$
+declare
+  iso_year int;
+  iso_week int;
+  found_id uuid;
+begin
+  -- backtest_project_id is not null => project trade, never belongs to a weekly review
+  if new.weekly_review_id is null and new.backtest_project_id is null then
+    iso_year := extract(isoyear from new.datum_open);
+    iso_week := extract(week from new.datum_open);
+    select id into found_id from weekly_reviews
+      where user_id = new.user_id and jaar = iso_year and week_nummer = iso_week
+      limit 1;
+    new.weekly_review_id := found_id;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_link_trade_weekly_review
+  before insert on trades
+  for each row execute function link_trade_to_weekly_review();
+
+-- ---------- RLS ----------
+alter table trades enable row level security;
+alter table weekly_reviews enable row level security;
+alter table prop_accounts enable row level security;
+alter table payouts enable row level security;
+alter table backtest_projects enable row level security;
+alter table periodic_reviews enable row level security;
+
+create policy "trades_owner_all" on trades
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "weekly_reviews_owner_all" on weekly_reviews
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "periodic_reviews_owner_all" on periodic_reviews
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "backtest_projects_owner_all" on backtest_projects
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "prop_accounts_owner_all" on prop_accounts
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "payouts_owner_all" on payouts
+  for all using (exists (select 1 from prop_accounts pa where pa.id = payouts.account_id and pa.user_id = auth.uid()))
+  with check (exists (select 1 from prop_accounts pa where pa.id = payouts.account_id and pa.user_id = auth.uid()));
