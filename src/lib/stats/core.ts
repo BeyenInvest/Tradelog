@@ -1,6 +1,25 @@
 import type { Trade } from "../types";
 import type { Outcome } from "../constants";
 
+/**
+ * Missed trades (trade_evaluation = "Missed trade") are hypothetical — a setup
+ * seen but never taken. They must never count toward real performance
+ * (resultaat, win-rate, streaks, drawdown, review stats, ...), only ever
+ * appear in their own badged/toggled view. Every view applies this rule
+ * through these three helpers rather than re-writing the filter locally.
+ */
+export function isMissed(trade: Pick<Trade, "trade_evaluation">): boolean {
+  return trade.trade_evaluation === "Missed trade";
+}
+
+export function takenTrades<T extends Pick<Trade, "trade_evaluation">>(trades: T[]): T[] {
+  return trades.filter((t) => !isMissed(t));
+}
+
+export function missedTrades<T extends Pick<Trade, "trade_evaluation">>(trades: T[]): T[] {
+  return trades.filter(isMissed);
+}
+
 /** Sorts chronologically by datum_open, tie-broken by id for deterministic output. */
 export function sortChronological(trades: Trade[]): Trade[] {
   return [...trades].sort((a, b) => {
@@ -21,7 +40,8 @@ export interface OutcomeCounts {
   resultaatTotal: number;
 }
 
-export function computeOutcomeCounts(trades: Trade[]): OutcomeCounts {
+/** Only needs outcome + resultaat_pct — callers may pass a narrower column selection than a full Trade. */
+export function computeOutcomeCounts(trades: Pick<Trade, "outcome" | "resultaat_pct">[]): OutcomeCounts {
   const n = trades.length;
   const wins = trades.filter((t) => t.outcome === "Win").length;
   const losses = trades.filter((t) => t.outcome === "Loss").length;

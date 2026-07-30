@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { tradeSchema, type TradeFormValues } from "@/lib/validation";
 import type { Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
+import { useModalGuard } from "@/hooks/useModalGuard";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
@@ -93,23 +96,30 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
   });
   const {
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = methods;
+  const [error, setError] = useState<string | null>(null);
+  const requestClose = useModalGuard(isDirty, onClose);
 
   async function handleFormSubmit(values: TradeFormValues) {
-    await onSubmit(values as TradeSubmitInput);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(values as TradeSubmitInput);
+      onClose();
+    } catch (err) {
+      setError(toErrorMessage(err, "Opslaan van de trade is mislukt"));
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={requestClose}>
       <div
         className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-display text-2xl italic text-ink">{trade ? "Trade bewerken" : "Nieuwe trade"}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-white/5 text-muted">
+          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-white/5 text-muted">
             <X size={18} />
           </button>
         </div>
@@ -122,8 +132,10 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
             <hr className="border-border" />
             <TechnicalSection />
 
+            {error && <p className="text-sm text-loss">{error}</p>}
+
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
+              <button type="button" onClick={requestClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
                 Annuleren
               </button>
               <button

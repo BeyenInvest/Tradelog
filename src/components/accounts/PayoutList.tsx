@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { Payout, PayoutInput } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errorMessage";
 
 interface PayoutListProps {
   accountId: string;
@@ -13,16 +14,29 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
   const [bedrag, setBedrag] = useState("");
   const [datum, setDatum] = useState(new Date().toISOString().slice(0, 10));
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     if (!bedrag) return;
     setAdding(true);
+    setError(null);
     try {
       await onCreate({ account_id: accountId, bedrag: Number(bedrag), datum, notes: null });
       setBedrag("");
+    } catch (err) {
+      setError(toErrorMessage(err, "Toevoegen van payout is mislukt"));
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setError(null);
+    try {
+      await onDelete(id);
+    } catch (err) {
+      setError(toErrorMessage(err, "Verwijderen van payout is mislukt"));
     }
   }
 
@@ -38,7 +52,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
         <div key={p.id} className="flex items-center justify-between font-mono text-xs py-1 border-b border-border-soft">
           <span className="text-muted">{p.datum}</span>
           <span className="text-win">€{p.bedrag.toFixed(2)}</span>
-          <button onClick={() => void onDelete(p.id)} className="p-1 rounded hover:bg-white/5 text-muted hover:text-loss">
+          <button onClick={() => void handleDelete(p.id)} className="p-1 rounded hover:bg-white/5 text-muted hover:text-loss">
             <Trash2 size={12} />
           </button>
         </div>
@@ -57,6 +71,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
           <Plus size={13} />
         </button>
       </form>
+      {error && <p className="text-xs text-loss">{error}</p>}
     </div>
   );
 }

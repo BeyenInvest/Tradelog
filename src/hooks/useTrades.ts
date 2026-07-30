@@ -22,8 +22,13 @@ export function useTrades(scope: TradeScope) {
 
   const scopeKey = scope.type === "live" ? "live" : scope.projectId;
   const loadedScopeRef = useRef<string | null>(null);
+  // Guards against a slow response from a previous scope (e.g. quickly switching
+  // between backtest projects) landing after a newer request and overwriting its
+  // data — that would silently mix one project's trades into another's view.
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     // `loading` gates a full-screen "Laden..." that unmounts the whole view. Raise
     // it only until this scope has data on screen — a refetch after create/update/
     // delete swaps the data in place instead, so component state survives (e.g. the
@@ -33,6 +38,7 @@ export function useTrades(scope: TradeScope) {
     let query = supabase.from("trades").select("*").order("datum_open", { ascending: true });
     query = scope.type === "live" ? query.is("backtest_project_id", null) : query.eq("backtest_project_id", scope.projectId);
     const { data, error: fetchError } = await query;
+    if (requestId !== requestIdRef.current) return; // a newer request has since superseded this one
     if (fetchError) {
       setError(fetchError.message);
     } else {

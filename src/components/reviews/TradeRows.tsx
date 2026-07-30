@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { Trade } from "@/lib/types";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 
@@ -27,8 +28,7 @@ export function TradeRows({ label, rows, emptyLabel, muted }: TradeRowsProps) {
             <span className="text-ink">{t.pair}</span>
             <OutcomePill outcome={t.outcome} />
             <span
-              className="text-right"
-              style={{ color: t.resultaat_pct > 0 ? "#5FAE82" : t.resultaat_pct < 0 ? "#E0665A" : "#8B93A7" }}
+              className={clsx("text-right", t.resultaat_pct > 0 ? "text-win" : t.resultaat_pct < 0 ? "text-loss" : "text-be")}
             >
               {t.resultaat_pct > 0 ? "+" : ""}
               {t.resultaat_pct}%

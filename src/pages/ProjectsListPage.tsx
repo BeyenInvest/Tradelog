@@ -7,19 +7,32 @@ import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { supabase } from "@/lib/supabase";
 import { computeOutcomeCounts } from "@/lib/stats";
+import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
+
+/** Only the columns computeOutcomeCounts actually reads — the per-project summary cards don't need full trade rows. */
+type ProjectTradeSummaryRow = Pick<Trade, "backtest_project_id" | "outcome" | "resultaat_pct">;
 
 export default function ProjectsListPage() {
   const { projects, loading, createProject, deleteProject } = useBacktestProjects();
-  const [projectTrades, setProjectTrades] = useState<Trade[]>([]);
+  const [projectTrades, setProjectTrades] = useState<ProjectTradeSummaryRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     supabase
       .from("trades")
-      .select("*")
+      .select("backtest_project_id,outcome,resultaat_pct")
       .not("backtest_project_id", "is", null)
-      .then(({ data }) => setProjectTrades((data as Trade[]) ?? []));
-  }, [projects.length]);
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) setError(fetchError.message);
+        else setProjectTrades((data as ProjectTradeSummaryRow[]) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projects]);
 
   const summaryByProject = useMemo(() => {
     const m = new Map<string, ReturnType<typeof computeOutcomeCounts>>();
@@ -31,7 +44,12 @@ export default function ProjectsListPage() {
 
   async function handleDelete(id: string, naam: string) {
     if (confirm(`Project "${naam}" en al zijn trades definitief verwijderen?`)) {
-      await deleteProject(id);
+      setError(null);
+      try {
+        await deleteProject(id);
+      } catch (err) {
+        setError(toErrorMessage(err, "Verwijderen van project is mislukt"));
+      }
     }
   }
 
@@ -40,6 +58,12 @@ export default function ProjectsListPage() {
       <PageHeader title="Backtesting" subtitle="Elk project is een volledig geïsoleerde testomgeving — eigen trades, eigen journal, eigen analyse" />
 
       <div className="flex flex-col gap-5">
+        {error && (
+          <Card className="border-loss/40">
+            <p className="text-sm text-loss">{error}</p>
+          </Card>
+        )}
+
         <Card>
           <h3 className="font-display text-lg italic mb-3 text-ink">Nieuw project</h3>
           <ProjectForm onSubmit={createProject} />

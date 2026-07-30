@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { BreakdownRow } from "@/lib/stats";
 import { Card } from "@/components/ui/Card";
 import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
@@ -37,8 +38,7 @@ export function BreakdownTable({ title, rows }: BreakdownTableProps) {
               </span>
               <span className="text-right text-muted">{r.n}</span>
               <span
-                className="text-right"
-                style={{ color: r.resultaatTotal > 0 ? "#5FAE82" : r.resultaatTotal < 0 ? "#E0665A" : "#8B93A7" }}
+                className={clsx("text-right", r.resultaatTotal > 0 ? "text-win" : r.resultaatTotal < 0 ? "text-loss" : "text-be")}
               >
                 {r.resultaatTotal > 0 ? "+" : ""}
                 {r.resultaatTotal}%

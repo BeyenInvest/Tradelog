@@ -9,7 +9,8 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
-import { computeOverviewKpis, computeEquityCurve } from "@/lib/stats";
+import { computeOverviewKpis, computeEquityCurve, takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
+import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
 
 interface TradeJournalViewProps {
@@ -39,10 +40,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
   const [formOpen, setFormOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [showMissed, setShowMissed] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isLive = scope.type === "live";
-  const realTrades = useMemo(() => trades.filter((t) => t.trade_evaluation !== "Missed trade"), [trades]);
-  const missedTrades = useMemo(() => trades.filter((t) => t.trade_evaluation === "Missed trade"), [trades]);
+  const realTrades = useMemo(() => takenTrades(trades), [trades]);
+  const missedTrades = useMemo(() => filterMissedTrades(trades), [trades]);
   const missedCount = missedTrades.length;
   const listTrades = isLive && showMissed ? trades : realTrades;
 
@@ -69,7 +71,12 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
 
   async function handleDelete(trade: Trade) {
     if (confirm(`Trade ${trade.pair} op ${trade.datum_open} verwijderen?`)) {
-      await deleteTrade(trade.id);
+      setDeleteError(null);
+      try {
+        await deleteTrade(trade.id);
+      } catch (err) {
+        setDeleteError(toErrorMessage(err, "Verwijderen van trade is mislukt"));
+      }
     }
   }
 
@@ -99,9 +106,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
         }
       />
 
-      {error && (
+      {(error || deleteError) && (
         <Card className="mb-5 border-loss/40">
-          <p className="text-sm text-loss">{error}</p>
+          <p className="text-sm text-loss">{error ?? deleteError}</p>
         </Card>
       )}
 

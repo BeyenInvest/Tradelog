@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TradeJournalView } from "@/components/trades/TradeJournalView";
 import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
 import { useTrades } from "@/hooks/useTrades";
+import { takenTrades } from "@/lib/stats";
 
 /** Live market trades only — backtest project trades never appear here. */
 export default function JournalPage() {
@@ -9,10 +10,7 @@ export default function JournalPage() {
   // One shared instance for both tabs — see TradesApi. Two would leave Analyse stale after adding a trade.
   const tradesApi = useTrades({ type: "live" });
   // Missed trades are hypothetical — never counted in the Analyse breakdowns, same rule as the Journal's own KPIs.
-  const realTrades = useMemo(
-    () => tradesApi.trades.filter((t) => t.trade_evaluation !== "Missed trade"),
-    [tradesApi.trades]
-  );
+  const realTrades = useMemo(() => takenTrades(tradesApi.trades), [tradesApi.trades]);
 
   return (
     <div className="flex flex-col gap-5">

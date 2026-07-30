@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
@@ -12,6 +13,8 @@ import { PeriodicReviewDetail } from "@/components/reviews/PeriodicReviewDetail"
 import { PeriodicReviewForm } from "@/components/reviews/PeriodicReviewForm";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import { toErrorMessage } from "@/lib/errorMessage";
+import { takenTrades, missedTrades } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 
 type ReviewTab = "week" | PeriodType;
@@ -36,11 +39,10 @@ export default function ReviewsPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="px-4 py-2 font-body text-sm -mb-px border-b-2 transition-colors"
-            style={{
-              borderColor: tab === t.key ? "#D4A64A" : "transparent",
-              color: tab === t.key ? "#F1EFEA" : "#9A9CA5",
-            }}
+            className={clsx(
+              "px-4 py-2 font-body text-sm -mb-px border-b-2 transition-colors",
+              tab === t.key ? "border-gold text-ink" : "border-transparent text-muted"
+            )}
           >
             {t.label}
           </button>
@@ -61,6 +63,7 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<WeeklyReview | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedId && reviews.length > 0) setSelectedId(reviews[0].id);
@@ -81,7 +84,7 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
 
   // Missed trades are hypothetical (see LinkedTradesPanel) — never counted toward a review's real resultaat/win-rate/trade-count.
   function takenTradesOf(review: WeeklyReview) {
-    return (tradesByReview.get(review.id) ?? []).filter((t) => t.trade_evaluation !== "Missed trade");
+    return takenTrades(tradesByReview.get(review.id) ?? []);
   }
   function resultaatOf(review: WeeklyReview): number {
     return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
@@ -115,8 +118,13 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
 
   async function handleDelete(review: WeeklyReview) {
     if (confirm(`Review W${review.week_nummer} · ${review.jaar} verwijderen?`)) {
-      await deleteReview(review.id);
-      if (selectedId === review.id) setSelectedId(null);
+      setError(null);
+      try {
+        await deleteReview(review.id);
+        if (selectedId === review.id) setSelectedId(null);
+      } catch (err) {
+        setError(toErrorMessage(err, "Verwijderen van review is mislukt"));
+      }
     }
   }
 
@@ -133,6 +141,8 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
           <Plus size={15} /> Nieuwe review
         </button>
       </div>
+
+      {error && <p className="text-sm text-loss mb-4">{error}</p>}
 
       {loading ? (
         <p className="text-muted text-sm">Laden...</p>
@@ -175,6 +185,7 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<PeriodicReview | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedId(null);
@@ -188,10 +199,10 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
 
   // Missed trades never count toward a period's real resultaat/win-rate/trade-count — same rule as the weekly review.
   function takenTradesOf(review: PeriodicReview) {
-    return tradesInPeriod(trades, review).filter((t) => t.trade_evaluation !== "Missed trade");
+    return takenTrades(tradesInPeriod(trades, review));
   }
   function missedTradesOf(review: PeriodicReview) {
-    return tradesInPeriod(trades, review).filter((t) => t.trade_evaluation === "Missed trade");
+    return missedTrades(tradesInPeriod(trades, review));
   }
   function resultaatOf(review: PeriodicReview): number {
     return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
@@ -225,8 +236,13 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
 
   async function handleDelete(review: PeriodicReview) {
     if (confirm(`${PERIOD_TYPE_LABELS[periodType]} review "${periodLabel(review.period_type, review.jaar, review.periode_nummer)}" verwijderen?`)) {
-      await deleteReview(review.id);
-      if (selectedId === review.id) setSelectedId(null);
+      setError(null);
+      try {
+        await deleteReview(review.id);
+        if (selectedId === review.id) setSelectedId(null);
+      } catch (err) {
+        setError(toErrorMessage(err, "Verwijderen van review is mislukt"));
+      }
     }
   }
 
@@ -237,6 +253,8 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
           <Plus size={15} /> Nieuwe {PERIOD_TYPE_LABELS[periodType].toLowerCase()} review
         </button>
       </div>
+
+      {error && <p className="text-sm text-loss mb-4">{error}</p>}
 
       {loading ? (
         <p className="text-muted text-sm">Laden...</p>

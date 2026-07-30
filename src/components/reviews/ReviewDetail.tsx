@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
-import { computeEquityCurve } from "@/lib/stats";
+import { computeEquityCurve, takenTrades } from "@/lib/stats";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
@@ -18,7 +18,7 @@ interface ReviewDetailProps {
 
 export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onRelink }: ReviewDetailProps) {
   const taken = useMemo(
-    () => trades.filter((t) => t.weekly_review_id === review.id && t.trade_evaluation !== "Missed trade"),
+    () => takenTrades(trades.filter((t) => t.weekly_review_id === review.id)),
     [trades, review.id]
   );
   const equityData = useMemo(() => computeEquityCurve(taken), [taken]);

@@ -49,9 +49,12 @@ export function useWeeklyReviews() {
   }
 
   /**
-   * Manual backfill: a review created after its trades already exist won't be
+   * Manual (re)link: a review created after its trades already exist won't be
    * caught by the trigger's INSERT-only auto-link, so this runs the same
-   * linking logic explicitly for that week's date range.
+   * linking logic explicitly for that week's date range. Also unlinks trades
+   * currently pointing at this review whose datum_open no longer falls in the
+   * range — e.g. after editing a trade's date to a different week — so the
+   * relink is idempotent in both directions rather than only ever adding.
    *
    * Scoped to live trades only — weekly reviews are a Journal concept, and a
    * backtest project's trades must never be pulled into one just because their
@@ -59,6 +62,14 @@ export function useWeeklyReviews() {
    */
   async function linkTradesToReview(reviewId: string, jaar: number, weekNummer: number): Promise<number> {
     const { start, end } = isoWeekRange(jaar, weekNummer);
+
+    const { error: unlinkError } = await supabase
+      .from("trades")
+      .update({ weekly_review_id: null })
+      .eq("weekly_review_id", reviewId)
+      .or(`datum_open.lt.${start},datum_open.gt.${end}`);
+    if (unlinkError) throw unlinkError;
+
     const { data, error: linkError } = await supabase
       .from("trades")
       .update({ weekly_review_id: reviewId })

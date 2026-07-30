@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview } from "@/lib/types";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
@@ -24,14 +25,16 @@ export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, 
           <button
             key={rv.id}
             onClick={() => onSelect(rv.id)}
-            className="text-left rounded-lg p-3 font-body text-sm transition-colors"
-            style={{ background: active ? "#22242B" : "transparent", border: `1px solid ${active ? "#D4A64A" : "transparent"}` }}
+            className={clsx(
+              "text-left rounded-lg p-3 font-body text-sm transition-colors border",
+              active ? "bg-surface-2 border-gold" : "bg-transparent border-transparent"
+            )}
           >
             <p className="text-ink">
               {periodLabel(rv.period_type, rv.jaar, rv.periode_nummer)}
               {rv.titel ? ` — ${rv.titel}` : ""}
             </p>
-            <p className="font-mono text-xs mt-1" style={{ color: resultaat >= 0 ? "#5FAE82" : "#E0665A" }}>
+            <p className={clsx("font-mono text-xs mt-1", resultaat >= 0 ? "text-win" : "text-loss")}>
               {resultaat > 0 ? "+" : ""}
               {resultaat}% · {tradeCountOf(rv)} trades
             </p>

@@ -1,6 +1,8 @@
+import clsx from "clsx";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
+import { isMissed } from "@/lib/stats";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 
 const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; title: string }>> = {
@@ -16,11 +18,11 @@ interface TradeListItemProps {
 }
 
 export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
-  const isMissed = trade.trade_evaluation === "Missed trade";
+  const missed = isMissed(trade);
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
   return (
     <div
-      className={`grid grid-cols-7 gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${isMissed ? "opacity-60" : ""}`}
+      className={`grid grid-cols-7 gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${missed ? "opacity-60" : ""}`}
     >
       <span className="text-muted">
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "2-digit" })}
@@ -37,8 +39,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
         )}
       </span>
       <span
-        className="text-right"
-        style={{ color: trade.resultaat_pct > 0 ? "#5FAE82" : trade.resultaat_pct < 0 ? "#E0665A" : "#8B93A7" }}
+        className={clsx("text-right", trade.resultaat_pct > 0 ? "text-win" : trade.resultaat_pct < 0 ? "text-loss" : "text-be")}
       >
         {trade.resultaat_pct > 0 ? "+" : ""}
         {trade.resultaat_pct}%

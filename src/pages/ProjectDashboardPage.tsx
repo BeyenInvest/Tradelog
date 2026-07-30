@@ -6,12 +6,14 @@ import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAna
 import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { useTrades } from "@/hooks/useTrades";
+import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function ProjectDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects, loading: projectsLoading, updateProject, deleteProject } = useBacktestProjects();
   const [tab, setTab] = useState<"journal" | "analyse">("journal");
   const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const project = projects.find((p) => p.id === projectId);
   // One shared instance for both tabs — see TradesApi. Two would leave Analyse stale after adding a trade.
@@ -33,8 +35,13 @@ export default function ProjectDashboardPage() {
 
   async function handleDelete() {
     if (confirm(`Project "${project!.naam}" en al zijn trades definitief verwijderen?`)) {
-      await deleteProject(project!.id);
-      window.location.href = "/backtesting";
+      setError(null);
+      try {
+        await deleteProject(project!.id);
+        window.location.href = "/backtesting";
+      } catch (err) {
+        setError(toErrorMessage(err, "Verwijderen van project is mislukt"));
+      }
     }
   }
 
@@ -53,6 +60,8 @@ export default function ProjectDashboardPage() {
           </button>
         </div>
       </div>
+
+      {error && <p className="text-sm text-loss">{error}</p>}
 
       {editing ? (
         <ProjectForm
