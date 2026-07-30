@@ -17,7 +17,7 @@ export function Sidebar() {
   const { signOut } = useAuth();
 
   return (
-    <aside className="w-full md:w-56 md:shrink-0 flex flex-row md:flex-col items-center md:items-stretch justify-between py-3 md:py-6 px-4 border-b md:border-b-0 md:border-r border-border">
+    <aside className="w-full md:w-56 md:shrink-0 flex flex-row md:flex-col items-center md:items-stretch justify-between py-3 md:py-6 px-4 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto">
       <div className="flex items-center gap-2 md:px-2 md:mb-8">
         <BullBearLogo size={20} className="text-gold" />
         <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink">Beyen Invest</span>
