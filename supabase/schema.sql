@@ -33,6 +33,19 @@ create type sessie_enum as enum ('Asia','London','Overlap','New York');
 create type structuur_enum as enum ('Inner','Outer');
 create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded');
 
+-- ---------- PROFILES ----------
+-- 1:1 with auth.users, auto-provisioned by the trigger below. `plan` defaults
+-- to 'free' as the hook point for a future billing integration — no billing
+-- logic exists yet, this just avoids a backfill migration later.
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  display_name text,
+  plan text not null default 'free',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- ---------- BACKTEST PROJECTS (created before trades — trades FK into it) ----------
 -- A trade belongs to the live Journal when backtest_project_id IS NULL, or to
 -- exactly one isolated backtest project when set — never both, never shared.
@@ -205,6 +218,25 @@ create trigger trg_backtest_projects_updated_at before update on backtest_projec
   for each row execute function set_updated_at();
 create trigger trg_periodic_reviews_updated_at before update on periodic_reviews
   for each row execute function set_updated_at();
+create trigger trg_profiles_updated_at before update on profiles
+  for each row execute function set_updated_at();
+
+-- ---------- auto-provision profiles row on new auth.users signup ----------
+-- SECURITY DEFINER: the client's JWT has no insert rights on auth.users or a
+-- brand-new profiles row at signup time, so this runs with elevated
+-- privileges, scoped tightly to just this insert.
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, display_name)
+  values (new.id, new.email, new.raw_user_meta_data ->> 'display_name');
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
 
 -- ---------- auto-link trade -> weekly_review on INSERT only ----------
 -- (created after its trades already exist? use the manual relink action in-app,
@@ -239,6 +271,14 @@ alter table prop_accounts enable row level security;
 alter table payouts enable row level security;
 alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
+alter table profiles enable row level security;
+
+-- No insert/delete policy for profiles: rows are created only by the
+-- handle_new_user() trigger above and removed via the auth.users FK cascade.
+create policy "profiles_owner_select" on profiles
+  for select using (id = auth.uid());
+create policy "profiles_owner_update" on profiles
+  for update using (id = auth.uid()) with check (id = auth.uid());
 
 create policy "trades_owner_all" on trades
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());

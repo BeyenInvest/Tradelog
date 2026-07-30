@@ -106,3 +106,40 @@ export const tradeSchema = z
   });
 
 export type TradeFormValues = z.infer<typeof tradeSchema>;
+
+const emailField = z.string().min(1, "Verplicht").email("Ongeldig e-mailadres");
+const passwordField = z.string().min(8, "Minimaal 8 tekens");
+
+export const signupSchema = z
+  .object({
+    email: emailField,
+    password: passwordField,
+    confirmPassword: z.string(),
+    acceptTerms: z.literal(true, {
+      errorMap: () => ({ message: "Verplicht om verder te gaan" }),
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Wachtwoorden komen niet overeen",
+  });
+
+export type SignupFormValues = z.infer<typeof signupSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: emailField,
+});
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    newPassword: passwordField,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Wachtwoorden komen niet overeen",
+  });
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

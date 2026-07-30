@@ -1,20 +1,22 @@
 # Beyen Invest
 
-Persoonlijk trading- en backtesting-journal (React + Supabase). Zie `beyen-invest-spec.md` voor de volledige productspecificatie.
+Trading- en backtesting-journal (React + Supabase), gebouwd richting een self-serve multi-tenant app. Zie `beyen-invest-spec.md` voor de volledige productspecificatie.
 
 ## 1. Vereisten
 
 - Node.js 20+ en npm
-- Een Supabase-project (gratis tier volstaat)
+- Een Supabase-project (gratis tier volstaat om te starten)
+- Een Cloudflare-account (gratis) voor Turnstile, als je publieke registratie wilt aanzetten
 
 ## 2. Supabase opzetten
 
 1. Maak een nieuw project aan op [supabase.com](https://supabase.com).
-2. Open **SQL Editor** in het Supabase dashboard, plak de volledige inhoud van [`supabase/schema.sql`](supabase/schema.sql) en voer uit. Dit maakt alle enums, tabellen, indexes, triggers en RLS-policies aan.
-3. Ga naar **Authentication → Users → Add user** en maak het enige account aan (jouw e-mailadres + wachtwoord). Er is geen signup-flow in de app — inloggen gebeurt met dit account.
-4. Ga naar **Project Settings → API** en noteer:
+2. Open **SQL Editor** in het Supabase dashboard, plak de volledige inhoud van [`supabase/schema.sql`](supabase/schema.sql) en voer uit. Dit maakt alle enums, tabellen, indexes, triggers, de `profiles`-tabel (met auto-provisioning trigger op nieuwe signups) en RLS-policies aan.
+3. Ga naar **Project Settings → API** en noteer:
    - **Project URL**
    - **anon public key**
+
+Registratie via de app-UI (`/signup`) staat pas echt open voor het publiek nadat je onderstaande stappen 6/7 hebt doorlopen — tot die tijd kun je testaccounts nog steeds handmatig aanmaken via **Authentication → Users → Add user** (er verschijnt dan automatisch een bijpassende rij in `profiles`, dankzij de trigger).
 
 ## 3. Lokale setup
 
@@ -23,11 +25,12 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Vul in `.env.local` de waarden uit stap 2.4 in:
+Vul in `.env.local` de waarden uit stap 2 in:
 
 ```
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=xxxx
+VITE_TURNSTILE_SITE_KEY=xxxx   # optioneel lokaal — zonder deze key wordt de captcha-widget gewoon overgeslagen
 ```
 
 ## 4. Draaien
@@ -38,13 +41,31 @@ npm run test      # vitest — rekenregels in src/lib/stats
 npm run build     # productie build
 ```
 
-## 5. Structuur
+## 5. Publieke registratie aanzetten (eenmalig, per omgeving)
+
+Registratie staat by default nog uit op het Supabase-project (bewust, om misbruik te voorkomen zolang de flow niet volledig getest is). Volgorde om 'm aan te zetten:
+
+1. Registreer een gratis Turnstile-site bij Cloudflare → noteer de **site key** en **secret key**.
+2. Zet `VITE_TURNSTILE_SITE_KEY` (de site key) in de env-variabelen van je Vercel-project.
+3. Supabase dashboard → **Authentication → Attack Protection**: zet CAPTCHA-bescherming aan, provider Turnstile, plak de **secret key**.
+4. Supabase dashboard → **Authentication → URL Configuration**: Site URL = je productie-URL (bv. `https://tradelog-three-alpha.vercel.app`), en voeg `/login` en `/reset-password` toe aan de Redirect URLs.
+5. Supabase dashboard → **Authentication → Sign In / Providers**: zet **"Allow new users to sign up"** aan.
+6. Loop de verificatiestappen in het interne bouwplan door (signup → e-mailbevestiging → login → wachtwoord vergeten → reset → login) op de productieomgeving voor je dit aankondigt.
+
+Zolang bovenstaande niet is doorlopen, faalt `/signup` gewoon met een Supabase-foutmelding — dat is verwacht gedrag, geen bug.
+
+## 6. Structuur
 
 - `src/lib/stats/` — alle rekenregels (streaks, drawdown, expectancy, per-dimensie uitsplitsingen, TPFS) als pure, herbruikbare functies. Elke view leest hieruit, niets wordt dubbel berekend.
-- `src/lib/constants.ts` — vaste lijsten (pairs, fases, fase-kenmerken-config).
-- `supabase/schema.sql` — volledige DB-schema, RLS scoped op de ene gebruiker.
-- `src/pages/` — Journal, Backtesting, Reviews, Accounts, Login.
+- `src/lib/constants.ts` — vaste lijsten (pairs, fases, fase-kenmerken-config). Voor nu identiek voor elke gebruiker; nog niet per-gebruiker instelbaar.
+- `supabase/schema.sql` — volledige DB-schema, RLS scoped per gebruiker (`user_id = auth.uid()`), inclusief `profiles` + auto-provisioning.
+- `supabase/migrations/` — incrementele wijzigingen op een bestaand project, in volgorde uit te voeren.
+- `src/pages/` — Journal, Backtesting, Reviews, Accounts, plus de auth-flow: Login, Signup, ForgotPassword, ResetPassword, Terms, Privacy.
 
-## 6. Buiten scope in v1
+**Let op:** de tekst op `/terms` en `/privacy` is placeholder-tekst, nog niet juridisch nagekeken. Vervang dit door echte, gecontroleerde voorwaarden voor je publiek launcht.
 
-Migratie vanuit de oude Google Sheets, missed-trades log, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling. Zie sectie 7-8 van de spec.
+## 7. Buiten scope (bewust nog niet gebouwd)
+
+- Per-gebruiker instelbare trading-methodologie (iedereen krijgt nu dezelfde vaste "4 fasen"-strategie).
+- Betaling/abonnementen (Stripe) — de `profiles.plan`-kolom (default `'free'`) is de enige voorbereiding hierop.
+- Migratie vanuit de oude Google Sheets, missed-trades log, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling. Zie sectie 7-8 van de spec.

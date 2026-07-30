@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BullBearLogo } from "@/components/ui/BullBearLogo";
 
@@ -73,6 +73,15 @@ export default function LoginPage() {
           >
             {submitting ? "Bezig..." : "Inloggen"}
           </button>
+
+          <div className="flex items-center justify-between text-xs text-muted">
+            <Link to="/forgot-password" className="hover:text-gold">
+              Wachtwoord vergeten?
+            </Link>
+            <Link to="/signup" className="hover:text-gold">
+              Nog geen account? Registreren
+            </Link>
+          </div>
         </form>
       </div>
     </div>
