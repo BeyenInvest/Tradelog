@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
 
 export default function LoginPage() {
   const { session, signIn } = useAuth();
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
 
   if (session) return <Navigate to="/journal" replace />;
 
@@ -17,7 +19,7 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await signIn(email, password);
+      await signIn(email, password, captchaToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Inloggen mislukt");
     } finally {
@@ -63,6 +65,8 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
+          <CaptchaWidget onToken={setCaptchaToken} />
 
           {error && <p className="text-xs text-loss">{error}</p>}
 

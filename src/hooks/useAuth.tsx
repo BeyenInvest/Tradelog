@@ -7,7 +7,7 @@ interface AuthContextValue {
   loading: boolean;
   /** True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the sole guard (see ResetPasswordPage). */
   passwordRecovery: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
@@ -36,8 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  async function signIn(email: string, password: string, captchaToken?: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) throw error;
   }
 
