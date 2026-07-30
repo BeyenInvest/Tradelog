@@ -8,13 +8,7 @@
       (function () {
         try {
           var stored = localStorage.getItem("theme");
-          var theme =
-            stored === "dark" || stored === "light"
-              ? stored
-              : window.matchMedia("(prefers-color-scheme: light)").matches
-                ? "light"
-                : "dark";
-          if (theme === "light") document.documentElement.classList.add("light");
+          if (stored === "light") document.documentElement.classList.add("light");
         } catch (e) {}
       })();
     </script>
