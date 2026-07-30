@@ -137,7 +137,7 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
   return (
     <>
       <div className="flex justify-end mb-4">
-        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg">
+        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
           <Plus size={15} /> Nieuwe review
         </button>
       </div>
@@ -249,7 +249,7 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
   return (
     <>
       <div className="flex justify-end mb-4">
-        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg">
+        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
           <Plus size={15} /> Nieuwe {PERIOD_TYPE_LABELS[periodType].toLowerCase()} review
         </button>
       </div>

@@ -73,7 +73,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-bg disabled:opacity-60"
+            className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
           >
             {submitting ? "Bezig..." : "Inloggen"}
           </button>

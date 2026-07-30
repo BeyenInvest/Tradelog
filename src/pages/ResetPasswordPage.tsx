@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-bg disabled:opacity-60"
+              className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
               {isSubmitting ? "Bezig..." : "Wachtwoord bijwerken"}
             </button>

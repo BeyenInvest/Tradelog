@@ -99,7 +99,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
         action={
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
           >
             <Plus size={15} /> Nieuwe trade
           </button>

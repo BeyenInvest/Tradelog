@@ -5,17 +5,33 @@ export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-        <CartesianGrid stroke="#2A2D35" strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="label" tick={{ fill: "#9A9CA5", fontSize: 12, fontFamily: "IBM Plex Mono" }} axisLine={{ stroke: "#2A2D35" }} tickLine={false} />
-        <YAxis tick={{ fill: "#9A9CA5", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} width={40} />
+        <CartesianGrid stroke="rgb(var(--color-border))" strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey="label"
+          tick={{ fill: "rgb(var(--color-muted))", fontSize: 12, fontFamily: "IBM Plex Mono" }}
+          axisLine={{ stroke: "rgb(var(--color-border))" }}
+          tickLine={false}
+        />
+        <YAxis
+          tick={{ fill: "rgb(var(--color-muted))", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+          axisLine={false}
+          tickLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={{ background: "#22242B", border: "1px solid #2A2D35", borderRadius: 8, fontFamily: "IBM Plex Mono", fontSize: 12 }}
+          contentStyle={{
+            background: "rgb(var(--color-surface-2))",
+            border: "1px solid rgb(var(--color-border))",
+            borderRadius: 8,
+            fontFamily: "IBM Plex Mono",
+            fontSize: 12,
+          }}
           formatter={(v: number) => [`${v}%`, "Resultaat"]}
-          labelStyle={{ color: "#9A9CA5" }}
+          labelStyle={{ color: "rgb(var(--color-muted))" }}
         />
         <Bar dataKey="resultaatTotal" radius={[6, 6, 0, 0]}>
           {data.map((d, i) => (
-            <Cell key={i} fill={d.resultaatTotal >= 0 ? "#5FAE82" : "#E0665A"} />
+            <Cell key={i} fill={d.resultaatTotal >= 0 ? "rgb(var(--color-win))" : "rgb(var(--color-loss))"} />
           ))}
         </Bar>
       </BarChart>

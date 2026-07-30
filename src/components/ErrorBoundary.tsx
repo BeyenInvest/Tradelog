@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <p className="font-mono text-xs text-faint break-all">{this.state.error.message}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg"
+              className="mt-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
             >
               Pagina herladen
             </button>

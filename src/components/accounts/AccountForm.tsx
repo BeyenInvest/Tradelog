@@ -45,7 +45,7 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
           <label className="text-xs uppercase tracking-wider text-muted">Fase</label>
           <EnumSelect options={PROP_FASES} value={fase} onChange={(e) => setFase(e.target.value as PropFase)} className="w-36" />
         </div>
-        <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg disabled:opacity-60">
+        <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60">
           {submitting ? "Bezig..." : "Toevoegen"}
         </button>
       </form>

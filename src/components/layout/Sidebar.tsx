@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const NAV = [
   { to: "/journal", label: "Journal", icon: BookOpen },
@@ -47,6 +48,7 @@ export function Sidebar() {
       </nav>
 
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">
+        <ThemeToggle />
         <button
           onClick={() => void signOut()}
           className="flex items-center gap-2 text-xs font-body text-muted hover:text-ink transition-colors"
@@ -54,9 +56,12 @@ export function Sidebar() {
           <LogOut size={14} /> Uitloggen
         </button>
       </div>
-      <button onClick={() => void signOut()} className="md:hidden p-2 rounded-lg text-muted hover:text-ink">
-        <LogOut size={16} />
-      </button>
+      <div className="flex items-center gap-1 md:hidden">
+        <ThemeToggle iconOnly />
+        <button onClick={() => void signOut()} className="p-2 rounded-lg text-muted hover:text-ink">
+          <LogOut size={16} />
+        </button>
+      </div>
     </aside>
   );
 }

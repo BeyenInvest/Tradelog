@@ -49,7 +49,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
               Annuleren
             </button>
           )}
-          <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg disabled:opacity-60">
+          <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60">
             {submitting ? "Bezig..." : project ? "Opslaan" : "Project aanmaken"}
           </button>
         </div>

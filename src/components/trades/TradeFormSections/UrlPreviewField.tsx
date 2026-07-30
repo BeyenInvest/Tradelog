@@ -63,11 +63,11 @@ function ImagePreviewModal({ src, label, onClose }: { src: string; label: string
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           title="Openen in nieuw tabblad"
-          className="p-2 rounded-lg text-muted hover:text-ink hover:bg-white/5"
+          className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5"
         >
           <ExternalLink size={18} />
         </a>
-        <button onClick={onClose} title="Sluiten" className="p-2 rounded-lg text-muted hover:text-ink hover:bg-white/5">
+        <button onClick={onClose} title="Sluiten" className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5">
           <X size={20} />
         </button>
       </div>
@@ -85,7 +85,7 @@ function ImagePreviewModal({ src, label, onClose }: { src: string; label: string
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="mt-1 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg"
+            className="mt-1 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
           >
             Openen in nieuw tabblad
           </a>

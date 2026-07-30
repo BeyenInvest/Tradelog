@@ -146,13 +146,13 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           <div className="inline-flex rounded-lg border border-border overflow-hidden">
             <button
               onClick={() => setViewMode("totaal")}
-              className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+              className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
             >
               Totaal
             </button>
             <button
               onClick={() => setViewMode("per-fase")}
-              className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+              className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
             >
               Per Fase
             </button>

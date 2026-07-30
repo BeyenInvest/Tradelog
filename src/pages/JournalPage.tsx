@@ -17,13 +17,13 @@ export default function JournalPage() {
       <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
         <button
           onClick={() => setTab("journal")}
-          className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+          className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
           Journal
         </button>
         <button
           onClick={() => setTab("analyse")}
-          className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+          className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
           Analyse
         </button>

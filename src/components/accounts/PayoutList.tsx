@@ -52,7 +52,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
         <div key={p.id} className="flex items-center justify-between font-mono text-xs py-1 border-b border-border-soft">
           <span className="text-muted">{p.datum}</span>
           <span className="text-win">€{p.bedrag.toFixed(2)}</span>
-          <button onClick={() => void handleDelete(p.id)} className="p-1 rounded hover:bg-white/5 text-muted hover:text-loss">
+          <button onClick={() => void handleDelete(p.id)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
             <Trash2 size={12} />
           </button>
         </div>

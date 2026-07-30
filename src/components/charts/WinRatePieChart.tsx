@@ -7,7 +7,11 @@ interface WinRatePieChartProps {
   size?: number;
 }
 
-const COLORS = { Win: "#5FAE82", BE: "#8B93A7", Loss: "#E0665A" };
+const COLORS = {
+  Win: "rgb(var(--color-win))",
+  BE: "rgb(var(--color-be))",
+  Loss: "rgb(var(--color-loss))",
+};
 
 export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChartProps) {
   const total = wins + be + losses;
@@ -33,13 +37,19 @@ export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChar
             isAnimationActive={false}
           >
             {(data.length ? data : [{ name: "Geen data" }]).map((d, i) => (
-              <Cell key={i} fill={COLORS[d.name as keyof typeof COLORS] ?? "#2A2D35"} />
+              <Cell key={i} fill={COLORS[d.name as keyof typeof COLORS] ?? "rgb(var(--color-border))"} />
             ))}
           </Pie>
           {data.length > 0 && (
             <Tooltip
-              contentStyle={{ background: "#22242B", border: "1px solid #2A2D35", borderRadius: 8, fontFamily: "IBM Plex Mono", fontSize: 12 }}
-              itemStyle={{ color: "#F1EFEA" }}
+              contentStyle={{
+                background: "rgb(var(--color-surface-2))",
+                border: "1px solid rgb(var(--color-border))",
+                borderRadius: 8,
+                fontFamily: "IBM Plex Mono",
+                fontSize: 12,
+              }}
+              itemStyle={{ color: "rgb(var(--color-ink))" }}
               formatter={(value: number, name: string) => [`${value} (${total ? ((value / total) * 100).toFixed(0) : 0}%)`, name]}
             />
           )}

@@ -30,10 +30,10 @@ export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, o
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-gold">{(winRate * 100).toFixed(0)}% win</span>
-          <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-ink">
+          <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-loss">
+          <button onClick={onDelete} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
             <Trash2 size={14} />
           </button>
         </div>

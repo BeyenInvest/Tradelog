@@ -44,7 +44,7 @@ export default function EconomicCalendarPage() {
         action={
           <button
             onClick={() => void refresh()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-white/5"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Ververs
           </button>
@@ -71,7 +71,7 @@ export default function EconomicCalendarPage() {
               key={impact}
               onClick={() => toggleImpact(impact)}
               className={`px-3 py-2 text-xs font-body transition-colors ${
-                impactFilter.has(impact) ? "bg-gold text-bg" : "bg-surface-2 text-muted"
+                impactFilter.has(impact) ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"
               }`}
             >
               {impact}

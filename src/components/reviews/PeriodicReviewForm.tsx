@@ -97,7 +97,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
           <h2 className="font-display text-2xl italic text-ink">
             {review ? "Review bewerken" : `Nieuwe ${PERIOD_TYPE_LABELS[periodType].toLowerCase()} review`}
           </h2>
-          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-white/5 text-muted">
+          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>
         </div>
@@ -179,7 +179,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
             <button type="button" onClick={requestClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
               Annuleren
             </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg disabled:opacity-60">
+            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60">
               {submitting ? "Bezig..." : "Opslaan"}
             </button>
           </div>

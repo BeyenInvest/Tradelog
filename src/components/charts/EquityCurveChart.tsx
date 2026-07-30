@@ -7,25 +7,36 @@ export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
       <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="cumFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#D4A64A" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="#D4A64A" stopOpacity={0} />
+            <stop offset="0%" stopColor="rgb(var(--color-gold))" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="rgb(var(--color-gold))" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="#2A2D35" strokeDasharray="3 3" vertical={false} />
+        <CartesianGrid stroke="rgb(var(--color-border))" strokeDasharray="3 3" vertical={false} />
         <XAxis
           dataKey="idx"
-          tick={{ fill: "#9A9CA5", fontSize: 11, fontFamily: "IBM Plex Mono" }}
-          axisLine={{ stroke: "#2A2D35" }}
+          tick={{ fill: "rgb(var(--color-muted))", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+          axisLine={{ stroke: "rgb(var(--color-border))" }}
           tickLine={false}
         />
-        <YAxis tick={{ fill: "#9A9CA5", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={false} tickLine={false} width={40} />
+        <YAxis
+          tick={{ fill: "rgb(var(--color-muted))", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+          axisLine={false}
+          tickLine={false}
+          width={40}
+        />
         <Tooltip
-          contentStyle={{ background: "#22242B", border: "1px solid #2A2D35", borderRadius: 8, fontFamily: "IBM Plex Mono", fontSize: 12 }}
-          labelStyle={{ color: "#9A9CA5" }}
+          contentStyle={{
+            background: "rgb(var(--color-surface-2))",
+            border: "1px solid rgb(var(--color-border))",
+            borderRadius: 8,
+            fontFamily: "IBM Plex Mono",
+            fontSize: 12,
+          }}
+          labelStyle={{ color: "rgb(var(--color-muted))" }}
           formatter={(v: number) => [`${v}%`, "Cumulatief"]}
           labelFormatter={(l) => `Trade #${l}`}
         />
-        <Area type="monotone" dataKey="cum" stroke="#D4A64A" strokeWidth={2} fill="url(#cumFill)" />
+        <Area type="monotone" dataKey="cum" stroke="rgb(var(--color-gold))" strokeWidth={2} fill="url(#cumFill)" />
       </AreaChart>
     </ResponsiveContainer>
   );

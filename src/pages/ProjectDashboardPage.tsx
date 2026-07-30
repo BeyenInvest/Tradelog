@@ -52,10 +52,10 @@ export default function ProjectDashboardPage() {
           <ArrowLeft size={14} /> Projecten
         </Link>
         <div className="flex items-center gap-2">
-          <button onClick={() => setEditing((v) => !v)} className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-ink">
+          <button onClick={() => setEditing((v) => !v)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>
-          <button onClick={() => void handleDelete()} className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-loss">
+          <button onClick={() => void handleDelete()} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
             <Trash2 size={14} />
           </button>
         </div>
@@ -82,13 +82,13 @@ export default function ProjectDashboardPage() {
       <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
         <button
           onClick={() => setTab("journal")}
-          className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+          className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
           Journal
         </button>
         <button
           onClick={() => setTab("analyse")}
-          className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-bg" : "bg-surface-2 text-muted"}`}
+          className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
           Analyse
         </button>

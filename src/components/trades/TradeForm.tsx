@@ -119,7 +119,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-display text-2xl italic text-ink">{trade ? "Trade bewerken" : "Nieuwe trade"}</h2>
-          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-white/5 text-muted">
+          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>
         </div>
@@ -141,7 +141,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-bg disabled:opacity-60"
+                className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
               >
                 {isSubmitting ? "Bezig..." : trade ? "Opslaan" : "Trade toevoegen"}
               </button>

@@ -4,6 +4,38 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Dark theme (default) — RGB channels, consumed via rgb(var(--x) / <alpha>) so Tailwind opacity modifiers keep working. */
+  --color-bg: 18 19 23;
+  --color-surface: 27 29 35;
+  --color-surface-2: 34 36 43;
+  --color-border: 42 45 53;
+  --color-border-soft: 33 35 42;
+  --color-ink: 241 239 234;
+  --color-muted: 154 156 165;
+  --color-faint: 90 92 100;
+  --color-gold: 212 166 74;
+  --color-win: 95 174 130;
+  --color-loss: 224 102 90;
+  --color-be: 139 147 167;
+}
+
+:root.light {
+  /* Light theme — darker accent/status hues than dark mode, kept for AA text contrast on a light surface. */
+  --color-bg: 247 245 240;
+  --color-surface: 255 255 255;
+  --color-surface-2: 239 235 226;
+  --color-border: 221 214 199;
+  --color-border-soft: 230 225 214;
+  --color-ink: 30 32 36;
+  --color-muted: 107 110 118;
+  --color-faint: 163 166 174;
+  --color-gold: 166 121 28;
+  --color-win: 47 133 88;
+  --color-loss: 199 71 58;
+  --color-be: 91 98 112;
+}
+
 html,
 body,
 #root {
@@ -36,6 +68,6 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2d35;
+  background: rgb(var(--color-border));
   border-radius: 999px;
 }

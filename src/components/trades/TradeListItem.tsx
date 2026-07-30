@@ -45,10 +45,10 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
         {trade.resultaat_pct}%
       </span>
       <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onEdit(trade)} className="p-1 rounded hover:bg-white/5 text-muted hover:text-ink">
+        <button onClick={() => onEdit(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
           <Pencil size={13} />
         </button>
-        <button onClick={() => onDelete(trade)} className="p-1 rounded hover:bg-white/5 text-muted hover:text-loss">
+        <button onClick={() => onDelete(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
           <Trash2 size={13} />
         </button>
       </span>

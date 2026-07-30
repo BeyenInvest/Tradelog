@@ -78,13 +78,13 @@ export function CalendarView({ trades, missedTrades = [], headerAction, onDayCli
         <div className="flex items-center gap-1">
           <button
             onClick={() => setMonthDate(new Date(year, month - 1, 1))}
-            className="p-1.5 rounded-md hover:bg-white/5 text-muted"
+            className="p-1.5 rounded-md hover:bg-ink/5 text-muted"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => setMonthDate(new Date(year, month + 1, 1))}
-            className="p-1.5 rounded-md hover:bg-white/5 text-muted"
+            className="p-1.5 rounded-md hover:bg-ink/5 text-muted"
           >
             <ChevronRight size={16} />
           </button>
@@ -106,38 +106,38 @@ export function CalendarView({ trades, missedTrades = [], headerAction, onDayCli
           const dayResult = dayTrades ? dayTrades.reduce((s, t) => s + t.resultaat_pct, 0) : null;
           const missedResult = missedDayResult.get(d) ?? null;
 
-          let bg = "#16171C";
-          let border = "#242730";
+          let bg = "rgb(var(--color-bg))";
+          let border = "rgb(var(--color-border-soft))";
           let borderStyle: "solid" | "dashed" = "solid";
           let displayValue = dayResult;
-          let displayColor = "#D98B42";
+          let displayColor = "rgb(var(--color-gold))";
           let displayMissed = false;
 
           if (dayResult != null) {
             if (dayResult > 0) {
-              bg = "rgba(95,174,130,0.12)";
-              border = "rgba(95,174,130,0.4)";
-              displayColor = "#5FAE82";
+              bg = "rgb(var(--color-win) / 0.12)";
+              border = "rgb(var(--color-win) / 0.4)";
+              displayColor = "rgb(var(--color-win))";
             } else if (dayResult < 0) {
-              bg = "rgba(224,102,90,0.12)";
-              border = "rgba(224,102,90,0.4)";
-              displayColor = "#E0665A";
+              bg = "rgb(var(--color-loss) / 0.12)";
+              border = "rgb(var(--color-loss) / 0.4)";
+              displayColor = "rgb(var(--color-loss))";
             } else {
-              bg = "rgba(217,139,66,0.12)";
-              border = "rgba(217,139,66,0.4)";
-              displayColor = "#D98B42";
+              bg = "rgb(var(--color-gold) / 0.12)";
+              border = "rgb(var(--color-gold) / 0.4)";
+              displayColor = "rgb(var(--color-gold))";
             }
             if (missedResult != null) {
               // Real result stays the displayed value — the missed trade only flags via the dashed grey border.
-              border = "rgba(139,147,167,0.6)";
+              border = "rgb(var(--color-be) / 0.6)";
               borderStyle = "dashed";
             }
           } else if (missedResult != null) {
-            bg = "rgba(139,147,167,0.08)";
-            border = "rgba(139,147,167,0.5)";
+            bg = "rgb(var(--color-be) / 0.08)";
+            border = "rgb(var(--color-be) / 0.5)";
             borderStyle = "dashed";
             displayValue = missedResult;
-            displayColor = "#8B93A7";
+            displayColor = "rgb(var(--color-be))";
             displayMissed = true;
           }
 

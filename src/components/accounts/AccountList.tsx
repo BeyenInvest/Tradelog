@@ -47,7 +47,7 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onCreatePayout
                   {!acc.actief && " · inactief"}
                 </p>
               </div>
-              <button onClick={() => void handleDeleteAccount(acc.id)} className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-loss">
+              <button onClick={() => void handleDeleteAccount(acc.id)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
                 <Trash2 size={14} />
               </button>
             </div>

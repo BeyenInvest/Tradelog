@@ -88,7 +88,7 @@ export default function ProjectsListPage() {
                     </div>
                     <button
                       onClick={() => void handleDelete(p.id, p.naam)}
-                      className="p-1.5 rounded-md hover:bg-white/5 text-muted hover:text-loss"
+                      className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -106,7 +106,7 @@ export default function ProjectsListPage() {
 
                   <Link
                     to={`/backtesting/${p.id}`}
-                    className="flex items-center justify-center gap-1.5 mt-1 px-4 py-2 rounded-lg font-body text-sm bg-surface-2 text-ink hover:bg-white/5"
+                    className="flex items-center justify-center gap-1.5 mt-1 px-4 py-2 rounded-lg font-body text-sm bg-surface-2 text-ink hover:bg-ink/5"
                   >
                     Openen <ChevronRight size={14} />
                   </Link>
