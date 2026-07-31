@@ -3,39 +3,54 @@ import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
+import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
+import { PeriodPicker } from "@/components/trades/PeriodPicker";
+import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
-  computeTpfsStats, computeDurationByOutcome, groupIntoSeries,
+  computeTpfsStats, computeDurationByOutcome, computeEquityCurve, groupIntoSeries,
 } from "@/lib/stats";
 import { BREAKDOWN_DIMENSIONS } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
+import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
 
 /**
  * Overview KPIs, per-Fase cards, TPFS block, duration, series-of-5, and every
- * "Per X" breakdown — all derived from whatever `trades` slice is passed in.
- * Used for the live-trade combined view is NOT this component (that's
- * TradeJournalView); this is purely the deep-analysis half, reused per
- * backtest project so each project's numbers never mix with another's.
+ * "Per X" breakdown — all derived from whatever `trades` slice is passed in,
+ * scoped further by the period/filter toolbar this component owns itself
+ * (same applyJournalFilters gate as TradeJournalView, kept local here since
+ * both the live-Journal Analyse tab and every project's Analyse tab render
+ * this component independently). Used for the live-trade combined view is
+ * NOT this component (that's TradeJournalView); this is purely the
+ * deep-analysis half, reused per backtest project so each project's numbers
+ * never mix with another's.
  */
 export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
+  const [period, setPeriod] = useState<DateRange | null>(null);
+  const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
 
-  const kpis = useMemo(() => computeOverviewKpis(trades), [trades]);
-  const byFase = useMemo(() => breakdownBy(trades, (t) => t.fase, { sortOrder: FASES }), [trades]);
-  const tpfs = useMemo(() => computeTpfsStats(trades), [trades]);
-  const duration = useMemo(() => computeDurationByOutcome(trades), [trades]);
-  const series = useMemo(() => groupIntoSeries(trades, 5), [trades]);
+  const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
+
+  const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
+  const byFase = useMemo(() => breakdownBy(scopedTrades, (t) => t.fase, { sortOrder: FASES }), [scopedTrades]);
+  const equityData = useMemo(() => computeEquityCurve(scopedTrades), [scopedTrades]);
+  const tpfs = useMemo(() => computeTpfsStats(scopedTrades), [scopedTrades]);
+  const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
+  const series = useMemo(() => groupIntoSeries(scopedTrades, 5), [scopedTrades]);
 
   const dimensionRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(trades, d.keyFn, { sortOrder: d.sortOrder }) })),
-    [trades]
+    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
+    [scopedTrades]
   );
   const dimensionGridRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(trades, d.keyFn, { sortOrder: d.sortOrder }) })),
-    [trades]
+    () =>
+      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
+    [scopedTrades]
   );
   // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
   // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
@@ -45,13 +60,19 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
     () =>
       FASE_KENMERKEN.filter((k) => !k.computed).map((k) => ({
         config: k,
-        rows: breakdownByFaseKenmerk(trades, k, { minSample: 1 }),
+        rows: breakdownByFaseKenmerk(scopedTrades, k, { minSample: 1 }),
       })),
-    [trades]
+    [scopedTrades]
   );
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Period + filter toolbar — scopes every KPI, chart and breakdown below */}
+      <div className="flex flex-wrap items-center gap-2">
+        <PeriodPicker value={period} onChange={setPeriod} />
+        <FilterPanel value={filters} onChange={setFilters} />
+      </div>
+
       {/* Overview KPIs */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Totaal trades" value={kpis.totalTrades} />
@@ -101,10 +122,16 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
             </Card>
           ))}
         </div>
-        <Card>
-          <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
-          <FaseBarChart data={byFase} />
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <Card>
+            <h3 className="font-display text-xl italic mb-4 text-ink">Cumulatief resultaat</h3>
+            <EquityCurveChart data={equityData} />
+          </Card>
+          <Card>
+            <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
+            <FaseBarChart data={byFase} />
+          </Card>
+        </div>
       </section>
 
       {/* Series of 5 */}
