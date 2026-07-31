@@ -168,10 +168,13 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {viewMode === "totaal"
-            ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
-            : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+        <div className="flex flex-col gap-3">
+          <h3 className="font-display text-lg italic text-ink">Setup &amp; Weekly-data</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {viewMode === "totaal"
+              ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
+              : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+          </div>
         </div>
 
         {/* Fase-kenmerken */}
@@ -193,10 +196,13 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {viewMode === "totaal"
-            ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
-            : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+        <div className="flex flex-col gap-3">
+          <h3 className="font-display text-lg italic text-ink">Timing &amp; Instrument</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {viewMode === "totaal"
+              ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
+              : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+          </div>
         </div>
       </section>
     </div>
