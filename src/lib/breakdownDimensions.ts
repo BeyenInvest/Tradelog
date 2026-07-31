@@ -1,5 +1,5 @@
 import type { Trade } from "./types";
-import { currenciesOfPair, FASES, CCS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import { currenciesOfPair, CCS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 
 export interface DimensionConfig {
@@ -16,7 +16,8 @@ export interface DimensionConfig {
  * place a new dimension needs to be added.
  */
 export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
-  { id: "fase", label: "Per Fase", keyFn: (t) => t.fase, sortOrder: FASES },
+  // No "fase" entry — that data lives in the Per Fase overview cards above this section, and a per-fase split of
+  // the fase dimension itself is just a diagonal matrix (every off-diagonal cell is empty by construction).
   { id: "trade_concept", label: "Per Trade Concept", keyFn: (t) => t.trade_concept },
   { id: "entry", label: "Per Entry", keyFn: (t) => t.entry },
   // Weekly data ranks above session/candle-close/pair/currency — it's the higher-signal dimension for this methodology.

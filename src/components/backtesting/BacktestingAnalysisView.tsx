@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
+import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
@@ -23,7 +24,7 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
 
   const kpis = useMemo(() => computeOverviewKpis(trades), [trades]);
-  const byFase = useMemo(() => breakdownBy(trades, (t) => t.fase, { minSample: 1, sortOrder: FASES }), [trades]);
+  const byFase = useMemo(() => breakdownBy(trades, (t) => t.fase, { sortOrder: FASES }), [trades]);
   const tpfs = useMemo(() => computeTpfsStats(trades), [trades]);
   const duration = useMemo(() => computeDurationByOutcome(trades), [trades]);
   const series = useMemo(() => groupIntoSeries(trades, 5), [trades]);
@@ -74,14 +75,19 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           {byFase.map((f) => (
             <Card key={f.key}>
               <p className="font-display text-2xl italic text-gold">{f.label}</p>
-              <p className="font-mono text-2xl mt-2 text-ink">
-                {f.n} <span className="text-xs text-muted">trades</span>
+              <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
+                {f.n} <span className="text-xs text-muted font-body">trades</span>
+                {f.isLowSample && <SampleSizeBadge n={f.n} />}
               </p>
               <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
                 {f.resultaatTotal > 0 ? "+" : ""}
                 {f.resultaatTotal}%
               </p>
-              <p className="font-body text-xs mt-1 text-muted">{(f.winRate * 100).toFixed(0)}% win rate</p>
+              <p className="font-body text-xs mt-1 text-muted">
+                <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
+                {" · "}
+                <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
+              </p>
             </Card>
           ))}
         </div>
