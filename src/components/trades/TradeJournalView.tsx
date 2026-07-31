@@ -23,8 +23,6 @@ interface TradeJournalViewProps {
   tradesApi: TradesApi;
   title: string;
   subtitle?: string;
-  /** Recent-trades list is capped like the live Journal; project dashboards show the full list. */
-  recentOnly?: boolean;
 }
 
 /**
@@ -43,7 +41,7 @@ interface TradeJournalViewProps {
  * "toon missed trades" toggle only affects the trade list, where each one is
  * clearly badged, never the numbers.
  */
-export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly = false }: TradeJournalViewProps) {
+export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJournalViewProps) {
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
@@ -193,13 +191,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
           {viewMode === "calendar" ? (
             <CalendarView trades={realTrades} missedTrades={isLive && showMissed ? missedTrades : undefined} />
           ) : (
-            <TradeList
-              trades={listTrades}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              title={recentOnly ? "Recente trades" : "Trades"}
-              limit={recentOnly ? 8 : undefined}
-            />
+            <TradeList trades={listTrades} onEdit={openEdit} onDelete={handleDelete} title="Trades" />
           )}
         </div>
       )}

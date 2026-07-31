@@ -30,7 +30,7 @@ export default function JournalPage() {
       </div>
 
       {tab === "journal" ? (
-        <TradeJournalView scope={{ type: "live" }} tradesApi={tradesApi} title="Journal" recentOnly />
+        <TradeJournalView scope={{ type: "live" }} tradesApi={tradesApi} title="Journal" />
       ) : (
         <BacktestingAnalysisView trades={realTrades} />
       )}

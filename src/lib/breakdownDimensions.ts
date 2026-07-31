@@ -19,6 +19,9 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "fase", label: "Per Fase", keyFn: (t) => t.fase, sortOrder: FASES },
   { id: "trade_concept", label: "Per Trade Concept", keyFn: (t) => t.trade_concept },
   { id: "entry", label: "Per Entry", keyFn: (t) => t.entry },
+  // Weekly data ranks above session/candle-close/pair/currency — it's the higher-signal dimension for this methodology.
+  { id: "weekly_criteria", label: "Per Weekly Criteria", keyFn: (t) => t.weekly_criteria },
+  { id: "weekly_kenmerk", label: "Per Weekly Kenmerk", keyFn: (t) => t.weekly_kenmerk },
   { id: "cc", label: "Per CC (4H Candle Close)", keyFn: (t) => t.cc, sortOrder: CCS },
   { id: "sessie", label: "Per Sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
   { id: "weekday", label: "Per Dag", keyFn: weekdayKey, sortOrder: WEEKDAYS },
@@ -26,6 +29,4 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "nieuws", label: "Per Nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
   { id: "pair", label: "Per Pair", keyFn: (t) => t.pair },
   { id: "currency", label: "Per Currency", keyFn: (t) => currenciesOfPair(t.pair) },
-  { id: "weekly_criteria", label: "Per Weekly Criteria", keyFn: (t) => t.weekly_criteria },
-  { id: "weekly_kenmerk", label: "Per Weekly Kenmerk", keyFn: (t) => t.weekly_kenmerk },
 ];
