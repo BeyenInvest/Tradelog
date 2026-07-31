@@ -29,7 +29,7 @@ function ListHeader() {
 /** Full trade history, grouped by month or ISO week (collapsible) with a free-text search — this is a deliberate full view, not a capped preview. */
 export function TradeList({ trades, onEdit, onDelete, title = "Trades" }: TradeListProps) {
   const [search, setSearch] = useState("");
-  const [groupBy, setGroupBy] = useState<GroupBy>("month");
+  const [groupBy, setGroupBy] = useState<GroupBy>("week");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const sorted = useMemo(() => [...trades].sort((a, b) => b.datum_open.localeCompare(a.datum_open)), [trades]);
@@ -72,21 +72,21 @@ export function TradeList({ trades, onEdit, onDelete, title = "Trades" }: TradeL
           <div className="inline-flex rounded-lg border border-border overflow-hidden">
             <button
               type="button"
-              onClick={() => setGroupBy("month")}
-              className={`px-3 py-1.5 text-xs font-body transition-colors ${
-                groupBy === "month" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-              }`}
-            >
-              Maand
-            </button>
-            <button
-              type="button"
               onClick={() => setGroupBy("week")}
               className={`px-3 py-1.5 text-xs font-body transition-colors ${
                 groupBy === "week" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
               }`}
             >
               Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setGroupBy("month")}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                groupBy === "month" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              Maand
             </button>
           </div>
         </div>
