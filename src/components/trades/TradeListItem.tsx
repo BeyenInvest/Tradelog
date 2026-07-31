@@ -28,7 +28,9 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "2-digit" })}
       </span>
       <span className="text-ink">{trade.pair}</span>
-      <span className="text-muted">{trade.fase}</span>
+      <span>
+        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
+      </span>
       <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
       <span className="flex items-center gap-1.5">
         <OutcomePill outcome={trade.outcome} />

@@ -8,12 +8,10 @@ interface CalendarViewProps {
   trades: Trade[];
   /** Missed trades to render, e.g. only passed when the "toon missed trades" toggle is on. Never affects a day's real coloring/value — that's driven by `trades` alone; missed-only days get their own dashed gold styling. */
   missedTrades?: Trade[];
-  /** Rendered next to the month/year label, e.g. the "toon missed trades" toggle. */
-  headerAction?: React.ReactNode;
   onDayClick?: (dateIso: string, trades: Trade[]) => void;
 }
 
-export function CalendarView({ trades, missedTrades = [], headerAction, onDayClick }: CalendarViewProps) {
+export function CalendarView({ trades, missedTrades = [], onDayClick }: CalendarViewProps) {
   const [monthDate, setMonthDate] = useState(() => new Date());
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -73,7 +71,6 @@ export function CalendarView({ trades, missedTrades = [], headerAction, onDayCli
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h3 className="font-display text-xl italic text-ink capitalize">{monthLabel}</h3>
-          {headerAction}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -91,6 +88,7 @@ export function CalendarView({ trades, missedTrades = [], headerAction, onDayCli
         </div>
       </div>
 
+      <div className="max-w-2xl mx-auto w-full">
       <div className="grid grid-cols-7 gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted">
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-center">
@@ -167,6 +165,7 @@ export function CalendarView({ trades, missedTrades = [], headerAction, onDayCli
             </button>
           );
         })}
+      </div>
       </div>
     </Card>
   );

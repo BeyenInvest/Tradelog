@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Flame, Eye, EyeOff } from "lucide-react";
+import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, Flame } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -8,8 +8,12 @@ import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
+import { PeriodPicker } from "@/components/trades/PeriodPicker";
+import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
 import { computeOverviewKpis, computeEquityCurve, takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
+import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
 
@@ -28,6 +32,10 @@ interface TradeJournalViewProps {
  * to either the live Journal or a single backtest project — trades never leak
  * across scopes (enforced by useTrades' scope filter, not just UI hiding).
  *
+ * The period picker + filter panel scope everything on this page (KPIs, charts,
+ * calendar, list) to the selected date range/dimensions — one shared gate
+ * (applyJournalFilters), not per-section filtering.
+ *
  * Missed trades (trade_evaluation = "Missed trade", live scope only — a
  * backtest project never offers that option) carry a hypothetical outcome, so
  * they're excluded from KPIs/equity curve/calendar unconditionally — those
@@ -41,12 +49,16 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [showMissed, setShowMissed] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<DateRange | null>(null);
+  const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const isLive = scope.type === "live";
-  const realTrades = useMemo(() => takenTrades(trades), [trades]);
-  const missedTrades = useMemo(() => filterMissedTrades(trades), [trades]);
+  const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
+  const realTrades = useMemo(() => takenTrades(scopedTrades), [scopedTrades]);
+  const missedTrades = useMemo(() => filterMissedTrades(scopedTrades), [scopedTrades]);
   const missedCount = missedTrades.length;
-  const listTrades = isLive && showMissed ? trades : realTrades;
+  const listTrades = isLive && showMissed ? scopedTrades : realTrades;
 
   const kpis = useMemo(() => computeOverviewKpis(realTrades), [realTrades]);
   const equityData = useMemo(() => computeEquityCurve(realTrades), [realTrades]);
@@ -80,17 +92,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
     }
   }
 
-  const missedToggle = isLive && (
-    <button
-      onClick={() => setShowMissed((v) => !v)}
-      disabled={missedCount === 0}
-      className="flex items-center gap-1.5 text-xs font-body text-muted hover:text-ink transition-colors disabled:opacity-40 disabled:hover:text-muted disabled:cursor-default"
-    >
-      {showMissed ? <EyeOff size={13} /> : <Eye size={13} />}
-      {showMissed ? "Verberg missed trades" : `Toon missed trades (${missedCount})`}
-    </button>
-  );
-
   return (
     <>
       <PageHeader
@@ -116,6 +117,42 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
         <p className="text-muted text-sm">Laden...</p>
       ) : (
         <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <PeriodPicker value={period} onChange={setPeriod} />
+            <FilterPanel value={filters} onChange={setFilters} />
+
+            <div className="sm:ml-auto flex flex-wrap items-center gap-3">
+              {isLive && (
+                <button
+                  onClick={() => setShowMissed((v) => !v)}
+                  disabled={missedCount === 0}
+                  className="flex items-center gap-1.5 text-xs font-body text-muted hover:text-ink transition-colors disabled:opacity-40 disabled:hover:text-muted disabled:cursor-default"
+                >
+                  {showMissed ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {showMissed ? "Verberg missed trades" : `Toon missed trades (${missedCount})`}
+                </button>
+              )}
+              <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                <button
+                  onClick={() => setViewMode("calendar")}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-body transition-colors ${
+                    viewMode === "calendar" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                  }`}
+                >
+                  <CalendarDays size={14} /> Kalender
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-body transition-colors ${
+                    viewMode === "list" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                  }`}
+                >
+                  <ListIcon size={14} /> Lijst
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Totaal trades" value={kpis.totalTrades} />
             <StatCard
@@ -153,20 +190,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, recentOnly
             </Card>
           </div>
 
-          <CalendarView
-            trades={realTrades}
-            missedTrades={isLive && showMissed ? missedTrades : undefined}
-            headerAction={missedToggle}
-          />
-
-          <TradeList
-            trades={listTrades}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-            title={recentOnly ? "Recente trades" : "Trades"}
-            limit={recentOnly ? 8 : undefined}
-            headerAction={missedToggle}
-          />
+          {viewMode === "calendar" ? (
+            <CalendarView trades={realTrades} missedTrades={isLive && showMissed ? missedTrades : undefined} />
+          ) : (
+            <TradeList
+              trades={listTrades}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              title={recentOnly ? "Recente trades" : "Trades"}
+              limit={recentOnly ? 8 : undefined}
+            />
+          )}
         </div>
       )}
 

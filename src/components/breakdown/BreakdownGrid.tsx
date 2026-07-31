@@ -36,7 +36,7 @@ export function BreakdownGrid({ title, rows }: BreakdownGridProps) {
               {FASES.map((f) => {
                 const cell = r.byFase[f];
                 return (
-                  <span key={f} className={`text-right flex items-center justify-end gap-1 ${cell.isLowSample ? "opacity-40" : ""}`}>
+                  <span key={f} className="text-right flex items-center justify-end gap-1">
                     <span className={clsx(cell.resultaatTotal > 0 ? "text-win" : cell.resultaatTotal < 0 ? "text-loss" : "text-be")}>
                       {cell.n ? `${cell.resultaatTotal > 0 ? "+" : ""}${cell.resultaatTotal}%` : "—"}
                     </span>

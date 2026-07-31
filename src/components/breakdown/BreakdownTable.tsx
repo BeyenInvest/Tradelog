@@ -28,9 +28,7 @@ export function BreakdownTable({ title, rows }: BreakdownTableProps) {
           {rows.map((r) => (
             <div
               key={r.key}
-              className={`grid grid-cols-5 gap-2 font-mono text-xs py-1.5 items-center border-b border-border-soft ${
-                r.isLowSample ? "opacity-40" : ""
-              }`}
+              className="grid grid-cols-5 gap-2 font-mono text-xs py-1.5 items-center border-b border-border-soft"
             >
               <span className="text-ink font-body truncate flex items-center gap-1.5">
                 {r.label}

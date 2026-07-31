@@ -39,6 +39,23 @@ describe("breakdownBy", () => {
     expect(breakdownBy(trades14, (t) => t.pair)[0].isLowSample).toBe(true);
     expect(breakdownBy(trades15, (t) => t.pair)[0].isLowSample).toBe(false);
   });
+
+  it("sortOrder overrides first-seen-in-data order (e.g. Fase 2 appearing before Fase 1 in the data)", () => {
+    const trades = [
+      makeTrade({ fase: "Fase 3" }),
+      makeTrade({ fase: "Fase 1" }),
+      makeTrade({ fase: "Fase 2" }),
+      makeTrade({ fase: "Fase 4" }),
+    ];
+    const rows = breakdownBy(trades, (t) => t.fase, { minSample: 1, sortOrder: ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] });
+    expect(rows.map((r) => r.key)).toEqual(["Fase 1", "Fase 2", "Fase 3", "Fase 4"]);
+  });
+
+  it("sortOrder appends keys absent from the list after the ordered ones, in first-seen order", () => {
+    const trades = [makeTrade({ pair: "GBPUSD" }), makeTrade({ pair: "EURUSD" }), makeTrade({ pair: "USDJPY" })];
+    const rows = breakdownBy(trades, (t) => t.pair, { minSample: 1, sortOrder: ["EURUSD"] });
+    expect(rows.map((r) => r.key)).toEqual(["EURUSD", "GBPUSD", "USDJPY"]);
+  });
 });
 
 describe("breakdownByWithFaseSplit", () => {

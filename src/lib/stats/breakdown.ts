@@ -16,6 +16,8 @@ export interface BreakdownRow<K extends string> {
 export interface BreakdownOpts<K extends string> {
   labelFn?: (key: K) => string;
   minSample?: number;
+  /** When set, rows are ordered to match this list (e.g. FASES) instead of first-seen-in-data order. Keys not present in the list keep their relative insertion order, appended after. */
+  sortOrder?: readonly K[];
 }
 
 /**
@@ -49,7 +51,18 @@ export function breakdownBy<K extends string>(
     }
   }
 
-  return order.map((key) => {
+  const orderedKeys = opts.sortOrder
+    ? [...order].sort((a, b) => {
+        const ia = opts.sortOrder!.indexOf(a);
+        const ib = opts.sortOrder!.indexOf(b);
+        if (ia === -1 && ib === -1) return 0;
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      })
+    : order;
+
+  return orderedKeys.map((key) => {
     const bucket = groups.get(key)!;
     const n = bucket.length;
     const wins = bucket.filter((t) => t.outcome === "Win").length;

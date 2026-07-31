@@ -23,17 +23,17 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
 
   const kpis = useMemo(() => computeOverviewKpis(trades), [trades]);
-  const byFase = useMemo(() => breakdownBy(trades, (t) => t.fase, { minSample: 1 }), [trades]);
+  const byFase = useMemo(() => breakdownBy(trades, (t) => t.fase, { minSample: 1, sortOrder: FASES }), [trades]);
   const tpfs = useMemo(() => computeTpfsStats(trades), [trades]);
   const duration = useMemo(() => computeDurationByOutcome(trades), [trades]);
   const series = useMemo(() => groupIntoSeries(trades, 5), [trades]);
 
   const dimensionRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(trades, d.keyFn) })),
+    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(trades, d.keyFn, { sortOrder: d.sortOrder }) })),
     [trades]
   );
   const dimensionGridRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(trades, d.keyFn) })),
+    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(trades, d.keyFn, { sortOrder: d.sortOrder }) })),
     [trades]
   );
 
