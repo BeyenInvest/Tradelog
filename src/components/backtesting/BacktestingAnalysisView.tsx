@@ -91,6 +91,13 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
                 {" · "}
                 <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
               </p>
+              <p className="font-mono text-[11px] mt-1 text-muted">
+                <span className="text-win">{f.wins}W</span>
+                {" / "}
+                <span className="text-be">{f.be}BE</span>
+                {" / "}
+                <span className="text-loss">{f.losses}L</span>
+              </p>
             </Card>
           ))}
         </div>
@@ -98,30 +105,6 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
           <FaseBarChart data={byFase} />
         </Card>
-      </section>
-
-      {/* TPFS */}
-      <section>
-        <h2 className="font-display text-xl italic mb-3 text-ink">TPFS (TP on First Structure)</h2>
-        <p className="font-body text-xs text-muted mb-3">
-          Hypothetisch, parallel resultaat — telt nooit mee in de statistieken hierboven.
-        </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Trades met TPFS" value={tpfs.n} />
-          <StatCard label="TPFS resultaat" value={`${tpfs.totalTpfs > 0 ? "+" : ""}${tpfs.totalTpfs}%`} tone={tpfs.totalTpfs >= 0 ? "up" : "down"} />
-          <StatCard label="TPFS win rate" value={`${(tpfs.winRate * 100).toFixed(0)}%`} />
-          <StatCard label="TPFS gemiddeld" value={`${tpfs.avgTpfs}%`} />
-        </div>
-      </section>
-
-      {/* Duration by outcome */}
-      <section>
-        <h2 className="font-display text-xl italic mb-3 text-ink">Gemiddelde duur per outcome</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {OUTCOMES.map((o) => (
-            <StatCard key={o} label={o} value={duration[o].avgDays != null ? `${duration[o].avgDays}d` : "—"} sub={`n=${duration[o].n}`} />
-          ))}
-        </div>
       </section>
 
       {/* Series of 5 */}
@@ -203,6 +186,34 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
               ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
               : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
           </div>
+        </div>
+      </section>
+
+      {/* TPFS + duration — supplementary/hypothetical numbers, so compact and last, not competing with the real KPIs at top */}
+      <section className="flex flex-col gap-3">
+        <h3 className="font-body text-sm uppercase tracking-wider text-muted">TPFS &amp; Gemiddelde duur per outcome</h3>
+        <p className="font-body text-xs text-muted -mt-1">
+          TPFS is hypothetisch, parallel resultaat — telt nooit mee in de statistieken hierboven.
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard compact label="Trades met TPFS" value={tpfs.n} />
+          <StatCard
+            compact
+            label="TPFS resultaat"
+            value={`${tpfs.totalTpfs > 0 ? "+" : ""}${tpfs.totalTpfs}%`}
+            tone={tpfs.totalTpfs >= 0 ? "up" : "down"}
+          />
+          <StatCard compact label="TPFS win rate" value={`${(tpfs.winRate * 100).toFixed(0)}%`} />
+          <StatCard compact label="TPFS gemiddeld" value={`${tpfs.avgTpfs}%`} />
+          {OUTCOMES.map((o) => (
+            <StatCard
+              key={o}
+              compact
+              label={`Duur ${o}`}
+              value={duration[o].avgDays != null ? `${duration[o].avgDays}d` : "—"}
+              sub={`n=${duration[o].n}`}
+            />
+          ))}
         </div>
       </section>
     </div>

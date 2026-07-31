@@ -1,6 +1,16 @@
 import type { HTMLAttributes } from "react";
 import clsx from "clsx";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={clsx("rounded-xl p-5 bg-surface border border-border", className)} {...props} />;
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** "sm" for secondary/supplementary content that shouldn't compete visually with primary stats. */
+  padding?: "default" | "sm";
+}
+
+export function Card({ className, padding = "default", ...props }: CardProps) {
+  return (
+    <div
+      className={clsx("rounded-xl bg-surface border border-border", padding === "sm" ? "p-3" : "p-5", className)}
+      {...props}
+    />
+  );
 }

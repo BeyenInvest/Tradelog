@@ -27,7 +27,8 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "sessie", label: "Per Sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
   { id: "weekday", label: "Per Dag", keyFn: weekdayKey, sortOrder: WEEKDAYS },
   { id: "quarter", label: "Per Kwartaal", keyFn: quarterKey, sortOrder: QUARTERS },
-  { id: "nieuws", label: "Per Nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
   { id: "pair", label: "Per Pair", keyFn: (t) => t.pair },
   { id: "currency", label: "Per Currency", keyFn: (t) => currenciesOfPair(t.pair) },
+  // Last: only 2 rows (Ja/Nee), so it leaves a large empty gap if placed mid-grid next to wider tables.
+  { id: "nieuws", label: "Per Nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
 ];

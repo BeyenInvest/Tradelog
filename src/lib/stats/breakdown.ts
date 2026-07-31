@@ -7,6 +7,9 @@ export interface BreakdownRow<K extends string> {
   label: string;
   n: number;
   resultaatTotal: number;
+  wins: number;
+  be: number;
+  losses: number;
   winRate: number;
   beRate: number;
   lossRate: number;
@@ -73,6 +76,9 @@ export function breakdownBy<K extends string>(
       label: opts.labelFn ? opts.labelFn(key) : key,
       n,
       resultaatTotal: round2(bucket.reduce((s, t) => s + t.resultaat_pct, 0)),
+      wins,
+      be,
+      losses,
       winRate: n ? wins / n : 0,
       beRate: n ? be / n : 0,
       lossRate: n ? losses / n : 0,
