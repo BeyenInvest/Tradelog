@@ -37,6 +37,9 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
     () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(trades, d.keyFn, { sortOrder: d.sortOrder }) })),
     [trades]
   );
+  // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
+  // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
+  const kenmerkenSplit = BREAKDOWN_DIMENSIONS.findIndex((d) => d.id === "weekly_kenmerk") + 1;
 
   const kenmerkRows = useMemo(
     () =>
@@ -167,28 +170,34 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {viewMode === "totaal"
-            ? dimensionRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
-            : dimensionGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+            ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
+            : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
         </div>
-      </section>
 
-      {/* Fase-kenmerken */}
-      <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl italic text-ink">Fase-kenmerken</h2>
-        {FASES.map((fase) => {
-          const configs = kenmerkRows.filter((k) => k.config.fase === fase);
-          if (configs.length === 0) return null;
-          return (
-            <div key={fase} className="flex flex-col gap-3">
-              <h3 className="font-body text-sm text-muted">{fase}</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {configs.map(({ config, rows }) => (
-                  <BreakdownTable key={config.field} title={config.label} rows={rows} />
-                ))}
+        {/* Fase-kenmerken */}
+        <div className="flex flex-col gap-4">
+          <h3 className="font-display text-lg italic text-ink">Fase-kenmerken</h3>
+          {FASES.map((fase) => {
+            const configs = kenmerkRows.filter((k) => k.config.fase === fase);
+            if (configs.length === 0) return null;
+            return (
+              <div key={fase} className="flex flex-col gap-3">
+                <h4 className="font-body text-sm text-muted">{fase}</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {configs.map(({ config, rows }) => (
+                    <BreakdownTable key={config.field} title={config.label} rows={rows} />
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {viewMode === "totaal"
+            ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
+            : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+        </div>
       </section>
     </div>
   );
