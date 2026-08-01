@@ -238,6 +238,21 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
 
+-- ---------- self-service account deletion (GDPR right to erasure) ----------
+-- SECURITY DEFINER: the client's JWT has no delete rights on auth.users. This
+-- only ever deletes the caller's own row (auth.uid(), never a parameter) —
+-- every other table cascades away via its `on delete cascade` FK to
+-- auth.users(id), so nothing else needs to be touched here.
+create or replace function delete_own_account() returns void
+language plpgsql security definer set search_path = public, auth as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function delete_own_account() from public;
+grant execute on function delete_own_account() to authenticated;
+
 -- ---------- auto-link trade -> weekly_review on INSERT only ----------
 -- (created after its trades already exist? use the manual relink action in-app,
 --  see linkTradesToReview in src/hooks/useWeeklyReviews.ts)

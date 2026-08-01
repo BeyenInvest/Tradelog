@@ -12,6 +12,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -74,9 +75,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPasswordRecovery(false);
   }
 
+  async function deleteAccount() {
+    const { error } = await supabase.rpc("delete_own_account");
+    if (error) throw error;
+    await signOut();
+  }
+
   return (
     <AuthContext.Provider
-      value={{ session, loading, passwordRecovery, signIn, signOut, signUp, sendPasswordReset, updatePassword }}
+      value={{
+        session,
+        loading,
+        passwordRecovery,
+        signIn,
+        signOut,
+        signUp,
+        sendPasswordReset,
+        updatePassword,
+        deleteAccount,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -2,10 +2,15 @@ import { Link } from "react-router-dom";
 import { BullBearLogo } from "@/components/ui/BullBearLogo";
 
 /**
- * Placeholder copy — NOT reviewed by a lawyer. Must be replaced with real,
- * GDPR-reviewed privacy terms before public launch (the app handles
- * trading/financial journal data and will have EU users). The in-page notice
- * below says the same to visitors until this is replaced.
+ * Concept-tekst — NOT reviewed by a lawyer. Must be replaced/confirmed by real
+ * GDPR review before public launch (the app handles trading/financial
+ * journal data and will have EU users). Facts baked in below, confirmed by
+ * the owner 2026-08-01: Belgium-based hobby project (no legal entity yet),
+ * all hosting in the EU, no analytics/tracking cookies in the app, and
+ * self-service account deletion now exists (Sidebar "Account verwijderen",
+ * calling the delete_own_account() DB function — see
+ * supabase/migrations/0006_delete_own_account.sql). The in-page notice below
+ * says the same to visitors until this is replaced with reviewed copy.
  */
 export default function PrivacyPage() {
   return (
@@ -23,36 +28,57 @@ export default function PrivacyPage() {
 
         <div className="flex flex-col gap-4 text-sm text-muted">
           <section>
-            <h2 className="text-ink font-medium mb-1">1. Welke gegevens verzamelen we</h2>
+            <h2 className="text-ink font-medium mb-1">1. Wie verwerkt je gegevens</h2>
+            <p>
+              Beyen Invest wordt op dit moment als privéproject beheerd door een natuurlijke persoon, gevestigd in
+              België. Dit beleid wordt bijgewerkt met definitieve bedrijfsgegevens zodra dat verandert.
+            </p>
+          </section>
+          <section>
+            <h2 className="text-ink font-medium mb-1">2. Welke gegevens verzamelen we</h2>
             <p>
               Je e-mailadres (voor je account) en de trading-gegevens die je zelf invoert: trades, reviews,
-              backtestprojecten en accountnotities.
+              backtestprojecten en accountnotities. We plaatsen geen tracking- of analytics-cookies — enkel de
+              technisch noodzakelijke sessie van Supabase Authenticatie om je ingelogd te houden.
             </p>
           </section>
           <section>
-            <h2 className="text-ink font-medium mb-1">2. Waarom</h2>
-            <p>Om de dienst te leveren: jouw journal tonen, berekenen en bewaren — uitsluitend voor jouw gebruik.</p>
-          </section>
-          <section>
-            <h2 className="text-ink font-medium mb-1">3. Bewaartermijn</h2>
-            <p>Zolang je account actief is. Bij verwijdering van je account worden je gegevens verwijderd.</p>
-          </section>
-          <section>
-            <h2 className="text-ink font-medium mb-1">4. Verwerkers</h2>
+            <h2 className="text-ink font-medium mb-1">3. Grondslag en doel</h2>
             <p>
-              Gegevens worden gehost bij Supabase (database/authenticatie) en Vercel (hosting) — beide treden op als
-              verwerker namens Beyen Invest.
+              We verwerken je gegevens om de overeenkomst met jou uit te voeren (art. 6.1.b AVG): je journal tonen,
+              berekenen en bewaren, uitsluitend voor jouw eigen gebruik. Bij registratie verifiëren we je met een
+              CAPTCHA (Cloudflare Turnstile) op basis van ons gerechtvaardigd belang (art. 6.1.f AVG) om misbruik van
+              het registratieformulier tegen te gaan.
             </p>
           </section>
           <section>
-            <h2 className="text-ink font-medium mb-1">5. Jouw rechten</h2>
+            <h2 className="text-ink font-medium mb-1">4. Bewaartermijn</h2>
             <p>
-              Je hebt recht op inzage, correctie en verwijdering van je gegevens. Neem hiervoor contact op via het
-              contactadres van Beyen Invest.
+              Zolang je account actief is. Je kunt je account en alle bijbehorende gegevens zelf en direct verwijderen
+              via "Account verwijderen" in de app (linksonder in de zijbalk) — dit is onomkeerbaar.
             </p>
           </section>
           <section>
-            <h2 className="text-ink font-medium mb-1">6. Beveiliging</h2>
+            <h2 className="text-ink font-medium mb-1">5. Verwerkers</h2>
+            <p>
+              Gegevens worden gehost bij Supabase (database/authenticatie) en Vercel (hosting), beide in een
+              EU-regio, en Cloudflare (Turnstile, CAPTCHA bij registratie) — allen treden op als verwerker namens
+              Beyen Invest. Er worden geen gegevens verkocht of gedeeld met derden voor marketingdoeleinden.
+            </p>
+          </section>
+          <section>
+            <h2 className="text-ink font-medium mb-1">6. Jouw rechten</h2>
+            <p>
+              Je hebt recht op inzage, correctie, verwijdering, beperking van de verwerking, overdraagbaarheid van je
+              gegevens en bezwaar. Verwijdering kun je zelf direct uitvoeren in de app; voor de overige rechten kun je
+              contact opnemen via{" "}
+              <span className="text-loss">[contactadres — wordt toegevoegd zodra een vaste domeinnaam is gekozen]</span>.
+              Je hebt ook het recht om een klacht in te dienen bij de Belgische Gegevensbeschermingsautoriteit (GBA,
+              gegevensbeschermingsautoriteit.be).
+            </p>
+          </section>
+          <section>
+            <h2 className="text-ink font-medium mb-1">7. Beveiliging</h2>
             <p>
               Toegang tot je gegevens is beperkt tot jouw account via database-niveau toegangscontrole (Row Level
               Security) — geen andere gebruiker kan jouw gegevens inzien.
