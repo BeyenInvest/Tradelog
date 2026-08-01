@@ -4,7 +4,7 @@ import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOu
 import { useAuth } from "@/hooks/useAuth";
 import { BullBearLogo } from "@/components/ui/BullBearLogo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { toErrorMessage } from "@/lib/errorMessage";
+import { DeleteAccountModal } from "./DeleteAccountModal";
 
 const NAV = [
   { to: "/journal", label: "Journal", icon: BookOpen },
@@ -17,26 +17,7 @@ const NAV = [
 
 export function Sidebar() {
   const { signOut, deleteAccount } = useAuth();
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  async function handleDeleteAccount() {
-    if (
-      !confirm(
-        "Account definitief verwijderen? Al je trades, reviews, backtestprojecten en accountgegevens worden permanent gewist. Dit kan niet ongedaan worden gemaakt.",
-      )
-    ) {
-      return;
-    }
-    setDeleteError(null);
-    setDeleting(true);
-    try {
-      await deleteAccount();
-    } catch (err) {
-      setDeleteError(toErrorMessage(err, "Verwijderen van account is mislukt"));
-      setDeleting(false);
-    }
-  }
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
     <aside className="w-full md:w-56 md:shrink-0 flex flex-row md:flex-col items-center md:items-stretch justify-between py-3 md:py-6 px-4 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto">
@@ -78,27 +59,25 @@ export function Sidebar() {
           <LogOut size={14} /> Uitloggen
         </button>
         <button
-          onClick={() => void handleDeleteAccount()}
-          disabled={deleting}
-          className="flex items-center gap-2 text-xs font-body text-muted hover:text-loss transition-colors disabled:opacity-50"
+          onClick={() => setShowDeleteModal(true)}
+          className="flex items-center gap-2 text-xs font-body text-muted hover:text-loss transition-colors"
         >
-          <Trash2 size={14} /> {deleting ? "Bezig met verwijderen..." : "Account verwijderen"}
+          <Trash2 size={14} /> Account verwijderen
         </button>
-        {deleteError && <p className="text-[11px] text-loss">{deleteError}</p>}
       </div>
       <div className="flex items-center gap-1 md:hidden">
         <ThemeToggle iconOnly />
         <button onClick={() => void signOut()} className="p-2 rounded-lg text-muted hover:text-ink">
           <LogOut size={16} />
         </button>
-        <button
-          onClick={() => void handleDeleteAccount()}
-          disabled={deleting}
-          className="p-2 rounded-lg text-muted hover:text-loss disabled:opacity-50"
-        >
+        <button onClick={() => setShowDeleteModal(true)} className="p-2 rounded-lg text-muted hover:text-loss">
           <Trash2 size={16} />
         </button>
       </div>
+
+      {showDeleteModal && (
+        <DeleteAccountModal onConfirm={deleteAccount} onClose={() => setShowDeleteModal(false)} />
+      )}
     </aside>
   );
 }
