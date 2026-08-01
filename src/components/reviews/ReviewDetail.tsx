@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
-import { computeEquityCurve, takenTrades } from "@/lib/stats";
+import { computeEquityCurve, computeDisciplineImpact, takenTrades } from "@/lib/stats";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 
@@ -17,11 +18,10 @@ interface ReviewDetailProps {
 }
 
 export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onRelink }: ReviewDetailProps) {
-  const taken = useMemo(
-    () => takenTrades(trades.filter((t) => t.weekly_review_id === review.id)),
-    [trades, review.id]
-  );
+  const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
+  const taken = useMemo(() => takenTrades(linked), [linked]);
   const equityData = useMemo(() => computeEquityCurve(taken), [taken]);
+  const disciplineImpact = useMemo(() => computeDisciplineImpact(linked), [linked]);
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -48,6 +48,12 @@ export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onReli
           <div>
             <p className="font-body text-xs uppercase tracking-wider mb-2 text-muted">Cumulatief resultaat</p>
             <EquityCurveChart data={equityData} />
+          </div>
+        )}
+
+        {linked.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
           </div>
         )}
 

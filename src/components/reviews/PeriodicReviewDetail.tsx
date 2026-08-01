@@ -3,8 +3,9 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
 import { periodLabel } from "@/lib/periodRanges";
-import { computeEquityCurve } from "@/lib/stats";
+import { computeEquityCurve, computeDisciplineImpact } from "@/lib/stats";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 import { TradeRows } from "./TradeRows";
 
@@ -20,6 +21,7 @@ interface PeriodicReviewDetailProps {
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
 export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, onDelete }: PeriodicReviewDetailProps) {
   const equityData = useMemo(() => computeEquityCurve(taken), [taken]);
+  const disciplineImpact = useMemo(() => computeDisciplineImpact([...taken, ...missed]), [taken, missed]);
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -44,6 +46,12 @@ export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, o
           <div>
             <p className="font-body text-xs uppercase tracking-wider mb-2 text-muted">Cumulatief resultaat</p>
             <EquityCurveChart data={equityData} />
+          </div>
+        )}
+
+        {taken.length + missed.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
           </div>
         )}
 
