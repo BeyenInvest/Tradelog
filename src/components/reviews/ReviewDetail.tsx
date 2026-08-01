@@ -2,12 +2,11 @@ import { useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
-import { computeDisciplineImpact, takenTrades } from "@/lib/stats";
-import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
-import { MarketCaptureLine } from "@/components/trades/MarketCaptureLine";
+import { computeDisciplineImpact, takenTrades, missedTrades } from "@/lib/stats";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
+import { ReviewDisciplineSection } from "./ReviewDisciplineSection";
 
 interface ReviewDetailProps {
   review: WeeklyReview;
@@ -21,6 +20,7 @@ interface ReviewDetailProps {
 export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onRelink }: ReviewDetailProps) {
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
+  const missed = useMemo(() => missedTrades(linked), [linked]);
   const disciplineImpact = useMemo(() => computeDisciplineImpact(linked), [linked]);
 
   return (
@@ -43,29 +43,25 @@ export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onReli
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <ReviewStatsHeader taken={taken} />
+      <div className="flex flex-col gap-6">
+        <ReviewStatsHeader taken={taken} missed={missed} />
 
-        {linked.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
-            </div>
-            <MarketCaptureLine impact={disciplineImpact} />
-          </div>
-        )}
+        <ReviewDisciplineSection impact={disciplineImpact} />
 
-        <ReviewContentDisplay
-          technisch={review.technisch}
-          mentaal_owner={review.mentaal_owner}
-          mentaal_trader={review.mentaal_trader}
-          acties={review.acties}
-          takeaway={review.takeaway}
-          overall_comment={review.overall_comment}
-        />
+        <section className="flex flex-col gap-4 border-t border-border pt-6">
+          <ReviewContentDisplay
+            technisch={review.technisch}
+            mentaal_owner={review.mentaal_owner}
+            mentaal_trader={review.mentaal_trader}
+            acties={review.acties}
+            takeaway={review.takeaway}
+            overall_comment={review.overall_comment}
+          />
+        </section>
 
-        <hr className="border-border" />
-        <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} />
+        <section className="border-t border-border pt-6">
+          <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} />
+        </section>
       </div>
     </Card>
   );

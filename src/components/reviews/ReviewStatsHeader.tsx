@@ -1,32 +1,61 @@
+import { useState } from "react";
 import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { computeOverviewKpis, computeEquityCurve, round2 } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
+type View = "taken" | "missed" | "both";
+
 function signedPct(n: number): string {
   return `${n > 0 ? "+" : ""}${n}%`;
 }
 
 /**
- * The "Results" block for a review detail: the real numbers (trades, total
- * result, avg RR) + win-rate gauge + equity curve — not just the lone equity
- * curve the reviews used to show. Runs on taken trades only; missed trades
- * carry a hypothetical result and never dilute review performance.
- *
- * Avg RR = total result / decisive trades (wins + losses, BE excluded), the
- * average R booked per trade that actually resolved.
+ * The "Resultaat" block for a review detail: the real numbers (trades, total
+ * result, avg RR) + win-rate gauge + equity curve, with a Genomen/Missed/Beide
+ * toggle mirroring the reference. Avg RR = total result / decisive trades
+ * (wins + losses, BE excluded).
  */
-export function ReviewStatsHeader({ taken }: { taken: Trade[] }) {
-  if (taken.length === 0) return null;
+export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: Trade[] }) {
+  const [view, setView] = useState<View>("taken");
+  const hasMissed = missed.length > 0;
 
-  const kpis = computeOverviewKpis(taken);
-  const equityData = computeEquityCurve(taken);
+  if (taken.length === 0 && missed.length === 0) return null;
+
+  const rows = view === "taken" ? taken : view === "missed" ? missed : [...taken, ...missed];
+  const kpis = computeOverviewKpis(rows);
+  const equityData = computeEquityCurve(rows);
   const decisive = kpis.wins + kpis.losses;
   const avgRR = decisive > 0 ? round2(kpis.totalResultaat / decisive) : 0;
 
+  const options: { key: View; label: string }[] = [
+    { key: "taken", label: "Genomen" },
+    { key: "missed", label: "Missed" },
+    { key: "both", label: "Beide" },
+  ];
+
   return (
-    <div className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-body text-xs uppercase tracking-wider text-gold">Resultaat</p>
+        {hasMissed && (
+          <div className="inline-flex rounded-lg border border-border overflow-hidden">
+            {options.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setView(o.key)}
+                className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                  view === o.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Trades" value={kpis.totalTrades} compact />
         <StatCard
@@ -38,21 +67,25 @@ export function ReviewStatsHeader({ taken }: { taken: Trade[] }) {
         <StatCard label="Gem. RR" value={signedPct(avgRR)} tone={avgRR >= 0 ? "up" : "down"} compact />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-surface-2 p-4 flex flex-col items-center">
-          <p className="font-body text-xs uppercase tracking-wider text-muted self-start mb-2">Win rate</p>
-          <WinRatePieChart wins={kpis.wins} be={kpis.be} losses={kpis.losses} size={148} />
-          <div className="flex gap-4 mt-3 font-mono text-xs">
-            <span className="text-win">{kpis.wins}W</span>
-            <span className="text-be">{kpis.be}BE</span>
-            <span className="text-loss">{kpis.losses}L</span>
+      {rows.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="rounded-xl border border-border bg-surface-2 p-4 flex flex-col items-center">
+            <p className="font-body text-xs uppercase tracking-wider text-muted self-start mb-2">Win rate</p>
+            <WinRatePieChart wins={kpis.wins} be={kpis.be} losses={kpis.losses} size={148} />
+            <div className="flex gap-4 mt-3 font-mono text-xs">
+              <span className="text-win">{kpis.wins}W</span>
+              <span className="text-be">{kpis.be}BE</span>
+              <span className="text-loss">{kpis.losses}L</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-surface-2 p-4 lg:col-span-2">
+            <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">Cumulatief resultaat</p>
+            <EquityCurveChart data={equityData} />
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-surface-2 p-4 lg:col-span-2">
-          <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">Cumulatief resultaat</p>
-          <EquityCurveChart data={equityData} />
-        </div>
-      </div>
-    </div>
+      ) : (
+        <p className="font-body text-sm text-muted">Geen trades in deze weergave.</p>
+      )}
+    </section>
   );
 }

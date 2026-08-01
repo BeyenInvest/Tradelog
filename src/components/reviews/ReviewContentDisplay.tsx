@@ -53,7 +53,7 @@ export function ReviewContentDisplay({ technisch, mentaal_owner, mentaal_trader,
       )}
       {overall_comment && (
         <div>
-          <p className="font-body text-xs uppercase tracking-wider mb-1 text-muted">Overall comment</p>
+          <p className="font-body text-xs uppercase tracking-wider mb-1 text-gold">Overall comment</p>
           <p className="font-body text-sm leading-relaxed text-ink whitespace-pre-wrap">{overall_comment}</p>
         </div>
       )}
