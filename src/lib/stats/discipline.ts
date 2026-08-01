@@ -16,6 +16,8 @@ export function isErrorEvaluation(ev: TradeEvaluation | null): boolean {
 export interface DisciplineImpact {
   /** Taken (non-missed) trades in the set — the denominator for errorRate. */
   takenCount: number;
+  /** Net resultaat_pct actually captured across all taken trades (= the real period result). */
+  takenResultPct: number;
   /** Taken trades flagged Emotional/Technical error. */
   errorCount: number;
   /** errorCount / takenCount, 0 when there are no taken trades. */
@@ -52,6 +54,7 @@ export function computeDisciplineImpact(
   trades: Pick<Trade, "trade_evaluation" | "resultaat_pct">[]
 ): DisciplineImpact {
   let takenCount = 0;
+  let takenResultPct = 0;
   let errorCount = 0;
   let errorResultPct = 0;
   let missedCount = 0;
@@ -63,6 +66,7 @@ export function computeDisciplineImpact(
       missedResultPct += t.resultaat_pct;
     } else {
       takenCount += 1;
+      takenResultPct += t.resultaat_pct;
       if (isErrorEvaluation(t.trade_evaluation)) {
         errorCount += 1;
         errorResultPct += t.resultaat_pct;
@@ -73,6 +77,7 @@ export function computeDisciplineImpact(
   const roundedErrorResult = round2(errorResultPct);
   return {
     takenCount,
+    takenResultPct: round2(takenResultPct),
     errorCount,
     errorRate: takenCount ? errorCount / takenCount : 0,
     errorResultPct: roundedErrorResult,
@@ -80,4 +85,32 @@ export function computeDisciplineImpact(
     missedCount,
     missedResultPct: round2(missedResultPct),
   };
+}
+
+export interface MarketCapture {
+  /** Total that was theoretically capturable = what you took, plus what errors and skipped setups cost. */
+  availablePct: number;
+  /** What you actually banked (net taken result). */
+  capturedPct: number;
+  /** availablePct − capturedPct = errorCostPct + missedResultPct. */
+  leftOnTablePct: number;
+  /** capturedPct / availablePct as a fraction — can be negative (you gave back) or >1 (rare). */
+  capturedShare: number;
+}
+
+/**
+ * The synthesis a trader writes by hand every monthly/quarterly review:
+ * "er zat X% in de markt, ik pakte Y%, ik liet Z% liggen." Returns null when
+ * there's nothing meaningful to say — no errors and no missed setups, nothing
+ * actually left on the table, or a non-positive available pool (dividing a
+ * capture-% out of that would mislead).
+ */
+export function computeMarketCapture(impact: DisciplineImpact): MarketCapture | null {
+  if (impact.errorCount === 0 && impact.missedCount === 0) return null;
+  const leftOnTablePct = round2(impact.errorCostPct + impact.missedResultPct);
+  if (leftOnTablePct <= 0) return null; // errors/skips netted out to a help, not a cost — no regret to surface
+  const capturedPct = impact.takenResultPct;
+  const availablePct = round2(capturedPct + leftOnTablePct);
+  if (availablePct <= 0) return null;
+  return { availablePct, capturedPct, leftOnTablePct, capturedShare: capturedPct / availablePct };
 }

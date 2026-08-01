@@ -6,6 +6,7 @@ import { periodLabel } from "@/lib/periodRanges";
 import { computeEquityCurve, computeDisciplineImpact } from "@/lib/stats";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
+import { MarketCaptureLine } from "@/components/trades/MarketCaptureLine";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 import { TradeRows } from "./TradeRows";
 
@@ -50,8 +51,11 @@ export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, o
         )}
 
         {taken.length + missed.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
+            </div>
+            <MarketCaptureLine impact={disciplineImpact} />
           </div>
         )}
 

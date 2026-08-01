@@ -11,6 +11,7 @@ import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
+import { MarketCaptureLine } from "@/components/trades/MarketCaptureLine";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
 import {
   computeOverviewKpis,
@@ -182,8 +183,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           </div>
 
           {showDisciplineRow && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <DisciplineImpactCards impact={disciplineImpact} showMissed={isLive} />
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DisciplineImpactCards impact={disciplineImpact} showMissed={isLive} />
+              </div>
+              <MarketCaptureLine impact={disciplineImpact} />
             </div>
           )}
 

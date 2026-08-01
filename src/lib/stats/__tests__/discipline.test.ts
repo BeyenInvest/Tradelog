@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeDisciplineImpact, isErrorEvaluation } from "../discipline";
+import { computeDisciplineImpact, computeMarketCapture, isErrorEvaluation } from "../discipline";
 import { makeTrade } from "./fixtures";
 
 describe("isErrorEvaluation", () => {
@@ -17,6 +17,7 @@ describe("computeDisciplineImpact", () => {
     const impact = computeDisciplineImpact([]);
     expect(impact).toEqual({
       takenCount: 0,
+      takenResultPct: 0,
       errorCount: 0,
       errorRate: 0,
       errorResultPct: 0,
@@ -67,5 +68,53 @@ describe("computeDisciplineImpact", () => {
     const impact = computeDisciplineImpact([makeTrade({ trade_evaluation: "Missed trade", resultaat_pct: 2 })]);
     expect(impact.takenCount).toBe(0);
     expect(impact.errorRate).toBe(0);
+  });
+
+  it("tracks the net captured result across taken trades", () => {
+    const impact = computeDisciplineImpact([
+      makeTrade({ trade_evaluation: "Good trade", resultaat_pct: 2 }),
+      makeTrade({ trade_evaluation: "Technical error", resultaat_pct: -1 }),
+      makeTrade({ trade_evaluation: "Missed trade", resultaat_pct: 5 }), // ignored for capture
+    ]);
+    expect(impact.takenResultPct).toBe(1);
+  });
+});
+
+describe("computeMarketCapture", () => {
+  it("returns null when there are no errors and no missed setups", () => {
+    const impact = computeDisciplineImpact([makeTrade({ trade_evaluation: "Good trade", resultaat_pct: 3 })]);
+    expect(computeMarketCapture(impact)).toBeNull();
+  });
+
+  it("returns null when errors/skips net out to a help (nothing left on the table)", () => {
+    // A winning emotional-error trade: errorCostPct is negative, missed absent.
+    const impact = computeDisciplineImpact([makeTrade({ trade_evaluation: "Emotional error", resultaat_pct: 2 })]);
+    expect(computeMarketCapture(impact)).toBeNull();
+  });
+
+  it("splits available into captured + left-on-table (positive capture)", () => {
+    const impact = computeDisciplineImpact([
+      makeTrade({ trade_evaluation: "Good trade", resultaat_pct: 3.08 }),
+      makeTrade({ trade_evaluation: "Technical error", resultaat_pct: -7.2 }),
+      makeTrade({ trade_evaluation: "Missed trade", resultaat_pct: 5.44 }),
+    ]);
+    const cap = computeMarketCapture(impact)!;
+    expect(cap.capturedPct).toBe(-4.12); // 3.08 + (-7.2)
+    expect(cap.leftOnTablePct).toBe(12.64); // 7.2 error cost + 5.44 missed
+    expect(cap.availablePct).toBe(8.52); // -4.12 + 12.64
+  });
+
+  it("handles a net-negative captured result (gave back into a positive market)", () => {
+    // 24 taken netting -1.84, errors cost 6, missed 6.65 → 10.81 available, captured negative.
+    const impact = computeDisciplineImpact([
+      makeTrade({ trade_evaluation: "Good trade", resultaat_pct: 4.16 }),
+      makeTrade({ trade_evaluation: "Emotional error", resultaat_pct: -6 }),
+      makeTrade({ trade_evaluation: "Missed trade", resultaat_pct: 6.65 }),
+    ]);
+    const cap = computeMarketCapture(impact)!;
+    expect(cap.capturedPct).toBe(-1.84);
+    expect(cap.leftOnTablePct).toBe(12.65);
+    expect(cap.availablePct).toBe(10.81);
+    expect(cap.capturedShare).toBeLessThan(0);
   });
 });

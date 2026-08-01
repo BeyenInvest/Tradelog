@@ -5,6 +5,7 @@ import type { Trade, WeeklyReview } from "@/lib/types";
 import { computeEquityCurve, computeDisciplineImpact, takenTrades } from "@/lib/stats";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
+import { MarketCaptureLine } from "@/components/trades/MarketCaptureLine";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 
@@ -52,8 +53,11 @@ export function ReviewDetail({ review, trades, winRate, onEdit, onDelete, onReli
         )}
 
         {linked.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <DisciplineImpactCards impact={disciplineImpact} showMissed compact />
+            </div>
+            <MarketCaptureLine impact={disciplineImpact} />
           </div>
         )}
 
