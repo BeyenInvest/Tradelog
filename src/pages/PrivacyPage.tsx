@@ -6,10 +6,13 @@ import { BullBearLogo } from "@/components/ui/BullBearLogo";
  * GDPR review before public launch (the app handles trading/financial
  * journal data and will have EU users). Facts baked in below, confirmed by
  * the owner 2026-08-01: Belgium-based hobby project (no legal entity yet),
- * all hosting in the EU, no analytics/tracking cookies in the app, and
- * self-service account deletion now exists (Sidebar "Account verwijderen",
- * calling the delete_own_account() DB function — see
- * supabase/migrations/0006_delete_own_account.sql). The in-page notice below
+ * all hosting in the EU, no analytics/tracking cookies in the app. A
+ * self-service delete button exists in code (DeleteAccountModal +
+ * useAuth.deleteAccount + supabase/migrations/0006_delete_own_account.sql)
+ * but is deliberately not wired into the Sidebar yet (owner call
+ * 2026-08-01: too exposed without a proper profile/settings page around
+ * it), so this page frames deletion as "op verzoek" rather than
+ * self-service until that button is re-surfaced. The in-page notice below
  * says the same to visitors until this is replaced with reviewed copy.
  */
 export default function PrivacyPage() {
@@ -54,8 +57,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-ink font-medium mb-1">4. Bewaartermijn</h2>
             <p>
-              Zolang je account actief is. Je kunt je account en alle bijbehorende gegevens zelf en direct verwijderen
-              via "Account verwijderen" in de app (linksonder in de zijbalk) — dit is onomkeerbaar.
+              Zolang je account actief is. Je kunt op elk moment vragen om je account en alle bijbehorende gegevens
+              te laten verwijderen — dit is onomkeerbaar.
             </p>
           </section>
           <section>
@@ -70,8 +73,7 @@ export default function PrivacyPage() {
             <h2 className="text-ink font-medium mb-1">6. Jouw rechten</h2>
             <p>
               Je hebt recht op inzage, correctie, verwijdering, beperking van de verwerking, overdraagbaarheid van je
-              gegevens en bezwaar. Verwijdering kun je zelf direct uitvoeren in de app; voor de overige rechten kun je
-              contact opnemen via{" "}
+              gegevens en bezwaar. Neem hiervoor contact op via{" "}
               <span className="text-loss">[contactadres — wordt toegevoegd zodra een vaste domeinnaam is gekozen]</span>.
               Je hebt ook het recht om een klacht in te dienen bij de Belgische Gegevensbeschermingsautoriteit (GBA,
               gegevensbeschermingsautoriteit.be).

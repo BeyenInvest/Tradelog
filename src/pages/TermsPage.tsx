@@ -53,12 +53,12 @@ export default function TermsPage() {
           <section>
             <h2 className="text-ink font-medium mb-1">4. Jouw gegevens, jouw account</h2>
             <p>
-              Je kunt je account inclusief alle bijbehorende gegevens op elk moment zelf en permanent verwijderen via
-              de knop "Account verwijderen" in de app. Zie het{" "}
+              Je kunt op elk moment vragen om je account en alle bijbehorende gegevens permanent te laten
+              verwijderen. Zie het{" "}
               <Link to="/privacy" className="text-gold hover:underline">
                 privacybeleid
               </Link>{" "}
-              voor details over welke gegevens dat betreft.
+              voor hoe en welke gegevens dat betreft.
             </p>
           </section>
           <section>
