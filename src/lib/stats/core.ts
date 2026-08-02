@@ -223,6 +223,5 @@ function mean(values: number[]): number {
 }
 
 export function round2(n: number): number {
-  const r = Math.round(n * 100) / 100;
-  return r === 0 ? 0 : r; // normalise -0 → 0 so it never renders as "-0%" or breaks equality checks
+  return Math.round(n * 100) / 100;
 }

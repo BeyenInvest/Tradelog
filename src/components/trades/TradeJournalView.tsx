@@ -10,16 +10,8 @@ import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
-import { DisciplineImpactCards } from "@/components/trades/DisciplineImpactCards";
-import { MarketCaptureLine } from "@/components/trades/MarketCaptureLine";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
-import {
-  computeOverviewKpis,
-  computeEquityCurve,
-  computeDisciplineImpact,
-  takenTrades,
-  missedTrades as filterMissedTrades,
-} from "@/lib/stats";
+import { computeOverviewKpis, computeEquityCurve, takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -68,9 +60,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
   const kpis = useMemo(() => computeOverviewKpis(realTrades), [realTrades]);
   const equityData = useMemo(() => computeEquityCurve(realTrades), [realTrades]);
-  // Discipline impact needs both taken (for errors) and missed (for forgone profit), so it runs on the full scoped set.
-  const disciplineImpact = useMemo(() => computeDisciplineImpact(scopedTrades), [scopedTrades]);
-  const showDisciplineRow = kpis.totalTrades > 0 || (isLive && missedCount > 0);
 
   function openCreate() {
     setEditingTrade(undefined);
@@ -181,15 +170,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               </div>
             </Card>
           </div>
-
-          {showDisciplineRow && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DisciplineImpactCards impact={disciplineImpact} showMissed={isLive} />
-              </div>
-              <MarketCaptureLine impact={disciplineImpact} />
-            </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <Card className="flex flex-col items-center justify-center">
