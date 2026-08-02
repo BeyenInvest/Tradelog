@@ -13,11 +13,13 @@ const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; title: strin
 
 interface TradeListItemProps {
   trade: Trade;
-  onEdit: (trade: Trade) => void;
-  onDelete: (trade: Trade) => void;
+  /** Omit both to render read-only (no action column) — used by review trade lists. */
+  onEdit?: (trade: Trade) => void;
+  onDelete?: (trade: Trade) => void;
 }
 
 export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
+  const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
   return (
@@ -46,14 +48,20 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
         {trade.resultaat_pct > 0 ? "+" : ""}
         {trade.resultaat_pct}%
       </span>
-      <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onEdit(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
-          <Pencil size={13} />
-        </button>
-        <button onClick={() => onDelete(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
-          <Trash2 size={13} />
-        </button>
-      </span>
+      {!readOnly && (
+        <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onEdit && (
+            <button onClick={() => onEdit(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
+              <Pencil size={13} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={() => onDelete(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </span>
+      )}
     </div>
   );
 }

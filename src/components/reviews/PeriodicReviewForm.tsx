@@ -3,13 +3,13 @@ import { X } from "lucide-react";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import { MONTH_NAMES, PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
-import { computeEquityCurve, computeOutcomeCounts, takenTrades, missedTrades } from "@/lib/stats";
+import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useModalGuard } from "@/hooks/useModalGuard";
-import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
-import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
-import { ReviewContentFields, type ReviewContentValue } from "@/components/reviews/ReviewContentFields";
-import { TradeRows } from "@/components/reviews/TradeRows";
+import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
+import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
+import { PeriodicReviewContentFields, type PeriodicReviewContentValue } from "@/components/reviews/PeriodicReviewContentFields";
+import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
 
 interface PeriodicReviewFormProps {
   periodType: PeriodType;
@@ -29,13 +29,14 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
   const [jaar, setJaar] = useState(review?.jaar ?? now.getFullYear());
   const [periodeNummer, setPeriodeNummer] = useState(review?.periode_nummer ?? defaultPeriodeNummer(periodType, now));
   const [titel, setTitel] = useState(review?.titel ?? "");
-  const [content, setContent] = useState<ReviewContentValue>({
+  const [content, setContent] = useState<PeriodicReviewContentValue>({
     technisch: review?.technisch ?? "",
     mentaal_owner: review?.mentaal_owner ?? "",
     mentaal_trader: review?.mentaal_trader ?? "",
     acties: review?.acties?.length ? review.acties : [""],
     takeaway: review?.takeaway ?? "",
     overall_comment: review?.overall_comment ?? "",
+    periode_overzicht: review?.periode_overzicht ?? "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +61,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
   }, [trades, periodType, jaar, periodeNummerForRange]);
   const takenPreview = takenTrades(tradesInPeriod);
   const missedPreview = missedTrades(tradesInPeriod);
-  const outcomeCounts = useMemo(() => computeOutcomeCounts(takenPreview), [takenPreview]);
-  const equityData = useMemo(() => computeEquityCurve(takenPreview), [takenPreview]);
-  const emotionalErrorCount = takenPreview.filter((t) => t.trade_evaluation === "Emotional error").length;
-  const technicalErrorCount = takenPreview.filter((t) => t.trade_evaluation === "Technical error").length;
+  const errorCounts = useMemo(() => computeErrorCounts(takenPreview, missedPreview), [takenPreview, missedPreview]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -81,6 +79,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
         acties: content.acties.map((a) => a.trim()).filter(Boolean),
         takeaway: content.takeaway || null,
         overall_comment: content.overall_comment || null,
+        periode_overzicht: content.periode_overzicht || null,
       });
       onClose();
     } catch (err) {
@@ -134,43 +133,19 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-lg p-4 bg-bg border border-border">
-            <div className="flex items-center justify-between font-mono text-sm">
-              <span>
-                <span className="text-win">{outcomeCounts.wins}</span> win ·{" "}
-                <span className="text-be">{outcomeCounts.be}</span> be ·{" "}
-                <span className="text-loss">{outcomeCounts.losses}</span> loss
-              </span>
-              <span className="text-muted">{outcomeCounts.n} trades genomen</span>
-            </div>
-            <div className="flex gap-4 font-mono text-xs text-muted">
-              <span>{emotionalErrorCount} emotional error{emotionalErrorCount === 1 ? "" : "s"}</span>
-              <span>{technicalErrorCount} technical error{technicalErrorCount === 1 ? "" : "s"}</span>
-              <span>{missedPreview.length} missed trade{missedPreview.length === 1 ? "" : "s"}</span>
-            </div>
-            <div className="flex justify-center">
-              <WinRatePieChart wins={outcomeCounts.wins} be={outcomeCounts.be} losses={outcomeCounts.losses} />
-            </div>
-          </div>
-
-          {takenPreview.length > 0 && (
-            <div>
-              <p className="font-body text-xs uppercase tracking-wider mb-2 text-muted">Cumulatief resultaat</p>
-              <EquityCurveChart data={equityData} />
-            </div>
-          )}
+          <ReviewStatsHeader taken={takenPreview} missed={missedPreview} />
+          <ReviewErrorStats {...errorCounts} />
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs uppercase tracking-wider text-muted">Titel</label>
             <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
           </div>
 
-          <ReviewContentFields value={content} onChange={handleContentChange} />
+          <PeriodicReviewContentFields periodType={periodType} value={content} onChange={handleContentChange} />
 
           <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
             <p className="font-body text-xs uppercase tracking-wider text-muted">Trades in periode ({tradesInPeriod.length})</p>
-            <TradeRows label="Trades genomen" rows={takenPreview} emptyLabel="Geen genomen trades." />
-            <TradeRows label="Missed trades" rows={missedPreview} emptyLabel="Geen missed trades deze periode." muted />
+            <ReviewTradeGroups taken={takenPreview} missed={missedPreview} extraGroupModes={periodicExtraGroupModes(periodType)} />
           </div>
 
           {error && <p className="text-sm text-loss">{error}</p>}

@@ -3,7 +3,7 @@ import { RefreshCw } from "lucide-react";
 import type { Trade, WeeklyReview } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades } from "@/lib/stats";
-import { TradeRows } from "./TradeRows";
+import { ReviewTradeGroups } from "./ReviewTradeGroups";
 
 interface LinkedTradesPanelProps {
   review: WeeklyReview;
@@ -49,8 +49,7 @@ export function LinkedTradesPanel({ review, trades, onRelink }: LinkedTradesPane
       {lastCount != null && !error && <p className="text-[11px] text-muted">{lastCount} trade(s) gekoppeld.</p>}
       {error && <p className="text-[11px] text-loss">{error}</p>}
 
-      <TradeRows label="Trades genomen" rows={taken} emptyLabel="Geen genomen trades." />
-      <TradeRows label="Missed trades" rows={missed} emptyLabel="Geen missed trades deze week." muted />
+      <ReviewTradeGroups taken={taken} missed={missed} />
     </div>
   );
 }

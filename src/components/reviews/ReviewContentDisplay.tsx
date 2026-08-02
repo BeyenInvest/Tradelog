@@ -1,3 +1,5 @@
+import { ContentBlock, VoiceBlock, ActiesList, TakeawayQuote, OverallCommentBlock } from "./ReviewContentBlocks";
+
 interface ReviewContentDisplayProps {
   technisch: string | null;
   mentaal_owner: string | null;
@@ -11,52 +13,16 @@ interface ReviewContentDisplayProps {
 export function ReviewContentDisplay({ technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
   return (
     <>
-      {technisch && (
-        <div>
-          <p className="font-body text-xs uppercase tracking-wider mb-1 text-gold">Technisch</p>
-          <p className="font-body text-sm leading-relaxed text-ink whitespace-pre-wrap">{technisch}</p>
-        </div>
-      )}
+      {technisch && <ContentBlock label="Technisch">{technisch}</ContentBlock>}
       {(mentaal_owner || mentaal_trader) && (
-        <div className="grid grid-cols-2 gap-4">
-          {mentaal_owner && (
-            <div>
-              <p className="font-body text-xs uppercase tracking-wider mb-1 text-gold">Mentaal — Owner</p>
-              <p className="font-body text-sm leading-relaxed text-ink whitespace-pre-wrap">{mentaal_owner}</p>
-            </div>
-          )}
-          {mentaal_trader && (
-            <div>
-              <p className="font-body text-xs uppercase tracking-wider mb-1 text-gold">Mentaal — Trader</p>
-              <p className="font-body text-sm leading-relaxed text-ink whitespace-pre-wrap">{mentaal_trader}</p>
-            </div>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {mentaal_owner && <VoiceBlock label="Mentaal — Owner">{mentaal_owner}</VoiceBlock>}
+          {mentaal_trader && <VoiceBlock label="Mentaal — Trader">{mentaal_trader}</VoiceBlock>}
         </div>
       )}
-      {acties.length > 0 && (
-        <div>
-          <p className="font-body text-xs uppercase tracking-wider mb-2 text-gold">Acties</p>
-          <div className="flex flex-wrap gap-2">
-            {acties.map((a, i) => (
-              <span key={i} className="font-mono text-xs px-2 py-1 rounded-md bg-surface-2 text-muted border border-border">
-                {a}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      {takeaway && (
-        <div className="rounded-lg p-4 bg-bg border border-border">
-          <p className="font-body text-xs uppercase tracking-wider mb-1 text-gold">Wat neem ik mee?</p>
-          <p className="font-display text-lg italic leading-snug text-ink">{takeaway}</p>
-        </div>
-      )}
-      {overall_comment && (
-        <div>
-          <p className="font-body text-xs uppercase tracking-wider mb-1 text-muted">Overall comment</p>
-          <p className="font-body text-sm leading-relaxed text-ink whitespace-pre-wrap">{overall_comment}</p>
-        </div>
-      )}
+      <ActiesList label="Acties" items={acties} />
+      {takeaway && <TakeawayQuote label="Wat neem ik mee?">{takeaway}</TakeawayQuote>}
+      {overall_comment && <OverallCommentBlock>{overall_comment}</OverallCommentBlock>}
     </>
   );
 }

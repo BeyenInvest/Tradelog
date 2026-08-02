@@ -218,6 +218,27 @@ export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
   };
 }
 
+export interface ErrorCounts {
+  emotional: number;
+  technical: number;
+  missedCount: number;
+  missedResultaat: number;
+}
+
+/**
+ * Raw counts only — no synthesized "cost" narrative (that framing was tried
+ * and rejected). Just how many taken trades were self-flagged as an error,
+ * and how many trades were missed with what hypothetical result.
+ */
+export function computeErrorCounts(taken: Trade[], missed: Trade[]): ErrorCounts {
+  return {
+    emotional: taken.filter((t) => t.trade_evaluation === "Emotional error").length,
+    technical: taken.filter((t) => t.trade_evaluation === "Technical error").length,
+    missedCount: missed.length,
+    missedResultaat: round2(missed.reduce((s, t) => s + t.resultaat_pct, 0)),
+  };
+}
+
 function mean(values: number[]): number {
   return values.reduce((s, v) => s + v, 0) / values.length;
 }

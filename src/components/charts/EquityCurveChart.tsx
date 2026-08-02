@@ -2,9 +2,13 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import type { EquityPoint } from "@/lib/stats";
 
 export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
+  // A single point has nothing to draw a line between — Recharts just renders a dot.
+  // Prepend a synthetic zero-baseline point so it reads as a line from start to result.
+  const chartData = data.length === 1 ? [{ ...data[0], idx: 0, cum: 0 }, data[0]] : data;
+
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="cumFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="rgb(var(--color-gold))" stopOpacity={0.35} />

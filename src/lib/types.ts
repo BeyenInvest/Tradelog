@@ -99,6 +99,7 @@ export interface PeriodicReview {
   acties: string[];
   takeaway: string | null;
   overall_comment: string | null;
+  periode_overzicht: string | null;
   created_at: string;
   updated_at: string;
 }

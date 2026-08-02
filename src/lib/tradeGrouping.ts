@@ -1,7 +1,7 @@
 import type { Trade } from "./types";
-import { MONTH_NAMES } from "./constants";
+import { MONTH_NAMES, type Outcome } from "./constants";
 
-export type GroupBy = "month" | "week";
+export type GroupBy = "month" | "week" | "quarter";
 
 export interface TradeGroup {
   key: string;
@@ -19,6 +19,12 @@ function monthKey(dateIso: string): { key: string; label: string } {
   return { key: `${y}-${m}`, label: `${MONTH_NAMES[Number(m) - 1]} ${y}` };
 }
 
+function quarterKey(dateIso: string): { key: string; label: string } {
+  const [y, m] = dateIso.split("-").map(Number);
+  const q = Math.floor((m - 1) / 3) + 1;
+  return { key: `${y}-Q${q}`, label: `Q${q} ${y}` };
+}
+
 /** ISO 8601 week (Monday-first, week 1 = the week containing the year's first Thursday). */
 function weekKey(dateIso: string): { key: string; label: string } {
   const [y, m, d] = dateIso.split("-").map(Number);
@@ -29,9 +35,9 @@ function weekKey(dateIso: string): { key: string; label: string } {
   return { key: `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`, label: `Week ${week} · ${date.getUTCFullYear()}` };
 }
 
-/** Groups trades by month or ISO week — input order is preserved per bucket (pass already-sorted trades in). */
+/** Groups trades by month, quarter, or ISO week — input order is preserved per bucket (pass already-sorted trades in). */
 export function groupTrades(trades: Trade[], groupBy: GroupBy): TradeGroup[] {
-  const keyFn = groupBy === "month" ? monthKey : weekKey;
+  const keyFn = groupBy === "month" ? monthKey : groupBy === "quarter" ? quarterKey : weekKey;
   const buckets = new Map<string, Trade[]>();
   const labels = new Map<string, string>();
   const order: string[] = [];
@@ -53,6 +59,21 @@ export function groupTrades(trades: Trade[], groupBy: GroupBy): TradeGroup[] {
     return {
       key,
       label: labels.get(key)!,
+      trades: bucketTrades,
+      resultaatTotal: round2(bucketTrades.reduce((s, t) => s + t.resultaat_pct, 0)),
+    };
+  });
+}
+
+const OUTCOME_ORDER: Outcome[] = ["Win", "BE", "Loss"];
+
+/** Groups trades into fixed Win/BE/Loss buckets (always all three, even empty) — order matches the rest of the review UI (pie chart legend, outcome counts). */
+export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
+  return OUTCOME_ORDER.map((outcome) => {
+    const bucketTrades = trades.filter((t) => t.outcome === outcome);
+    return {
+      key: outcome,
+      label: outcome,
       trades: bucketTrades,
       resultaatTotal: round2(bucketTrades.reduce((s, t) => s + t.resultaat_pct, 0)),
     };

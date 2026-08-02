@@ -3,23 +3,23 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
 import { periodLabel } from "@/lib/periodRanges";
-import { computeEquityCurve } from "@/lib/stats";
-import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
-import { ReviewContentDisplay } from "./ReviewContentDisplay";
-import { TradeRows } from "./TradeRows";
+import { computeErrorCounts } from "@/lib/stats";
+import { PeriodicReviewContentDisplay } from "./PeriodicReviewContentDisplay";
+import { ReviewStatsHeader } from "./ReviewStatsHeader";
+import { ReviewErrorStats } from "./ReviewErrorStats";
+import { ReviewTradeGroups, periodicExtraGroupModes } from "./ReviewTradeGroups";
 
 interface PeriodicReviewDetailProps {
   review: PeriodicReview;
   taken: Trade[];
   missed: Trade[];
-  winRate: number;
   onEdit: () => void;
   onDelete: () => void;
 }
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
-export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, onDelete }: PeriodicReviewDetailProps) {
-  const equityData = useMemo(() => computeEquityCurve(taken), [taken]);
+export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete }: PeriodicReviewDetailProps) {
+  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -29,7 +29,6 @@ export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, o
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-gold">{(winRate * 100).toFixed(0)}% win</span>
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>
@@ -39,29 +38,27 @@ export function PeriodicReviewDetail({ review, taken, missed, winRate, onEdit, o
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        {taken.length > 0 && (
-          <div>
-            <p className="font-body text-xs uppercase tracking-wider mb-2 text-muted">Cumulatief resultaat</p>
-            <EquityCurveChart data={equityData} />
-          </div>
-        )}
+      <div className="flex flex-col gap-6">
+        <ReviewStatsHeader taken={taken} missed={missed} />
+        <ReviewErrorStats {...errorCounts} />
 
-        <ReviewContentDisplay
-          technisch={review.technisch}
-          mentaal_owner={review.mentaal_owner}
-          mentaal_trader={review.mentaal_trader}
-          acties={review.acties}
-          takeaway={review.takeaway}
-          overall_comment={review.overall_comment}
-        />
+        <section className="flex flex-col gap-4 border-t border-border pt-6">
+          <PeriodicReviewContentDisplay
+            periodType={review.period_type}
+            technisch={review.technisch}
+            mentaal_owner={review.mentaal_owner}
+            mentaal_trader={review.mentaal_trader}
+            acties={review.acties}
+            takeaway={review.takeaway}
+            overall_comment={review.overall_comment}
+            periode_overzicht={review.periode_overzicht}
+          />
+        </section>
 
-        <hr className="border-border" />
-        <div className="flex flex-col gap-4">
-          <p className="font-body text-xs uppercase tracking-wider text-muted">Trades in periode ({taken.length + missed.length})</p>
-          <TradeRows label="Trades genomen" rows={taken} emptyLabel="Geen genomen trades." />
-          <TradeRows label="Missed trades" rows={missed} emptyLabel="Geen missed trades deze periode." muted />
-        </div>
+        <section className="flex flex-col gap-4 border-t border-border pt-6">
+          <p className="font-body text-xs uppercase tracking-wider text-gold">Trades in periode ({taken.length + missed.length})</p>
+          <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
+        </section>
       </div>
     </Card>
   );

@@ -89,11 +89,6 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
   function resultaatOf(review: WeeklyReview): number {
     return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
   }
-  function winRateOf(review: WeeklyReview): number {
-    const taken = takenTradesOf(review);
-    if (taken.length === 0) return 0;
-    return taken.filter((t) => t.outcome === "Win").length / taken.length;
-  }
   function tradeCountOf(review: WeeklyReview): number {
     return takenTradesOf(review).length;
   }
@@ -159,7 +154,6 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
             <ReviewDetail
               review={selected}
               trades={trades}
-              winRate={winRateOf(selected)}
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
               onRelink={handleRelink}
@@ -170,7 +164,7 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
         </div>
       )}
 
-      {formOpen && <ReviewForm review={editingReview} onSubmit={handleSubmit} onClose={() => setFormOpen(false)} />}
+      {formOpen && <ReviewForm review={editingReview} trades={trades} onSubmit={handleSubmit} onClose={() => setFormOpen(false)} />}
     </>
   );
 }
@@ -206,11 +200,6 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
   }
   function resultaatOf(review: PeriodicReview): number {
     return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
-  }
-  function winRateOf(review: PeriodicReview): number {
-    const taken = takenTradesOf(review);
-    if (taken.length === 0) return 0;
-    return taken.filter((t) => t.outcome === "Win").length / taken.length;
   }
   function tradeCountOf(review: PeriodicReview): number {
     return takenTradesOf(review).length;
@@ -273,7 +262,6 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
               review={selected}
               taken={takenTradesOf(selected)}
               missed={missedTradesOf(selected)}
-              winRate={winRateOf(selected)}
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
             />

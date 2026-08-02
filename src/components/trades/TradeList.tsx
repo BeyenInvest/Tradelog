@@ -4,26 +4,13 @@ import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
 import type { Trade } from "@/lib/types";
 import { TradeListItem } from "./TradeListItem";
+import { TradeListHeader } from "./TradeListHeader";
 
 interface TradeListProps {
   trades: Trade[];
   onEdit: (trade: Trade) => void;
   onDelete: (trade: Trade) => void;
   title?: string;
-}
-
-function ListHeader() {
-  return (
-    <div className="grid grid-cols-7 gap-3 font-body text-[11px] uppercase tracking-wide pb-2 mb-1 text-muted border-b border-border">
-      <span>Datum</span>
-      <span>Pair</span>
-      <span>Fase</span>
-      <span>Concept</span>
-      <span>Outcome</span>
-      <span className="text-right">Resultaat</span>
-      <span />
-    </div>
-  );
 }
 
 /** Full trade history, grouped by month or ISO week (collapsible) with a free-text search — this is a deliberate full view, not a capped preview. */
@@ -127,7 +114,7 @@ export function TradeList({ trades, onEdit, onDelete, title = "Trades" }: TradeL
                 </button>
                 {!isCollapsed && (
                   <div className="px-3 pb-1 pt-2">
-                    <ListHeader />
+                    <TradeListHeader />
                     {g.trades.map((t) => (
                       <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
                     ))}

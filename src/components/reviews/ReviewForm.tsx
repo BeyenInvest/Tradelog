@@ -1,13 +1,18 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
-import { isoWeekOf } from "@/lib/isoWeek";
+import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
+import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
+import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { ReviewContentFields, type ReviewContentValue } from "@/components/reviews/ReviewContentFields";
+import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
+import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
+import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
 
 interface ReviewFormProps {
   review?: WeeklyReview;
+  trades: Trade[];
   onSubmit: (input: WeeklyReviewInput) => Promise<void>;
   onClose: () => void;
 }
@@ -16,7 +21,7 @@ function defaultWeek() {
   return isoWeekOf(new Date().toISOString().slice(0, 10));
 }
 
-export function ReviewForm({ review, onSubmit, onClose }: ReviewFormProps) {
+export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProps) {
   const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
   const [jaar, setJaar] = useState(startWeek.jaar);
   const [weekNummer, setWeekNummer] = useState(startWeek.week_nummer);
@@ -44,6 +49,14 @@ export function ReviewForm({ review, onSubmit, onClose }: ReviewFormProps) {
   const handleWeekChange = withDirty(setWeekNummer);
   const handleTitelChange = withDirty(setTitel);
   const handleContentChange = withDirty(setContent);
+
+  const tradesInWeek = useMemo(() => {
+    const { start, end } = isoWeekRange(jaar, weekNummer);
+    return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
+  }, [trades, jaar, weekNummer]);
+  const takenPreview = takenTrades(tradesInWeek);
+  const missedPreview = missedTrades(tradesInWeek);
+  const errorCounts = useMemo(() => computeErrorCounts(takenPreview, missedPreview), [takenPreview, missedPreview]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -95,7 +108,15 @@ export function ReviewForm({ review, onSubmit, onClose }: ReviewFormProps) {
             </div>
           </div>
 
+          <ReviewStatsHeader taken={takenPreview} missed={missedPreview} />
+          <ReviewErrorStats {...errorCounts} />
+
           <ReviewContentFields value={content} onChange={handleContentChange} />
+
+          <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
+            <p className="font-body text-xs uppercase tracking-wider text-muted">Trades in week ({tradesInWeek.length})</p>
+            <ReviewTradeGroups taken={takenPreview} missed={missedPreview} />
+          </div>
 
           {error && <p className="text-sm text-loss">{error}</p>}
 
