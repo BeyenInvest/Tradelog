@@ -48,7 +48,7 @@ Registratie staat by default nog uit op het Supabase-project (bewust, om misbrui
 1. Registreer een gratis Turnstile-site bij Cloudflare → noteer de **site key** en **secret key**.
 2. Zet `VITE_TURNSTILE_SITE_KEY` (de site key) in de env-variabelen van je Vercel-project.
 3. Supabase dashboard → **Authentication → Attack Protection**: zet CAPTCHA-bescherming aan, provider Turnstile, plak de **secret key**.
-4. Supabase dashboard → **Authentication → URL Configuration**: Site URL = je productie-URL (bv. `https://tradelog-three-alpha.vercel.app`), en voeg `/login` en `/reset-password` toe aan de Redirect URLs.
+4. Supabase dashboard → **Authentication → URL Configuration**: Site URL = je productie-URL (`https://beyen.app`), en voeg `/login` en `/reset-password` toe aan de Redirect URLs.
 5. Supabase dashboard → **Authentication → Sign In / Providers**: zet **"Allow new users to sign up"** aan.
 6. Loop de verificatiestappen in het interne bouwplan door (signup → e-mailbevestiging → login → wachtwoord vergeten → reset → login) op de productieomgeving voor je dit aankondigt.
 

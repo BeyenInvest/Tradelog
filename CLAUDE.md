@@ -2,7 +2,7 @@
 
 Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (Postgres + Auth), deployed on Vercel.
 
-- Production: https://tradelog-three-alpha.vercel.app
+- Production: https://beyen.app (custom domain via Combell DNS → Vercel; underlying deployment still reachable at https://tradelog-three-alpha.vercel.app)
 - GitHub: BeyenInvest/Tradelog
 - Full product spec: `beyen-invest-spec.md`
 - Setup/ops instructions: `README.md` (Supabase bootstrap, env vars, signup rollout steps)
