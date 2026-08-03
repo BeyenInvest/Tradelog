@@ -20,8 +20,8 @@ export default function PrivacyPage() {
     <div className="min-h-screen w-full flex items-start justify-center bg-bg font-body py-12 px-4">
       <div className="w-full max-w-2xl rounded-xl p-8 bg-surface border border-border">
         <div className="flex items-center gap-2 mb-6">
-          <LogoMark size={22} className="text-gold" />
-          <span className="font-display text-2xl italic text-ink"><Wordmark /></span>
+          <LogoMark size={30} className="text-gold" />
+          <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
         </div>
 
         <h1 className="font-display text-2xl italic text-ink mb-1">Privacybeleid</h1>

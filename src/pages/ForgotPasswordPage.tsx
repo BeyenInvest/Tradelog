@@ -39,8 +39,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
         <div className="flex items-center gap-2 mb-8">
-          <LogoMark size={22} className="text-gold" />
-          <span className="font-display text-2xl italic text-ink"><Wordmark /></span>
+          <LogoMark size={32} className="text-gold" />
+          <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
         </div>
 
         {sent ? (

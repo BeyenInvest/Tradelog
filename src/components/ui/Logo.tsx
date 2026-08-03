@@ -12,7 +12,7 @@ export function LogoMark({ size = 20, className }: LogoMarkProps) {
       viewBox="0 0 120 120"
       fill="none"
       stroke="currentColor"
-      strokeWidth={9}
+      strokeWidth={11}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -21,7 +21,7 @@ export function LogoMark({ size = 20, className }: LogoMarkProps) {
       <path d="M86,14 L106,14 L106,34" />
       <path d="M106,86 L106,106 L86,106" />
       <path d="M34,106 L14,106 L14,86" />
-      <circle cx="60" cy="60" r="17" strokeWidth={6.5} />
+      <circle cx="60" cy="60" r="17" strokeWidth={8} />
       <circle cx="60" cy="60" r="6" fill="currentColor" stroke="none" />
     </svg>
   );
