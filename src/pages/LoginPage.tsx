@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
 
 export default function LoginPage() {
@@ -30,9 +30,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
-        <div className="flex items-center gap-2 mb-8">
-          <BullBearLogo size={22} className="text-gold" />
-          <span className="font-display text-2xl italic text-ink">Beyen Invest</span>
+        <div className="mb-8">
+          <div className="flex items-center gap-2">
+            <LogoMark size={22} className="text-gold" />
+            <span className="font-display text-2xl italic text-ink"><Wordmark /></span>
+          </div>
+          <p className="mt-1 text-xs text-muted font-body">Eyes on every trade.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

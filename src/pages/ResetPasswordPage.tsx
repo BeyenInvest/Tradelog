@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
-import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "@/lib/validation";
 
@@ -39,8 +39,8 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
         <div className="flex items-center gap-2 mb-8">
-          <BullBearLogo size={22} className="text-gold" />
-          <span className="font-display text-2xl italic text-ink">Beyen Invest</span>
+          <LogoMark size={22} className="text-gold" />
+          <span className="font-display text-2xl italic text-ink"><Wordmark /></span>
         </div>
 
         {loading ? (

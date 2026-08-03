@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { LogoMark, Wordmark } from "@/components/ui/Logo";
 
 /**
  * Concept-tekst — NOT reviewed by a lawyer. Must be replaced/confirmed by real
@@ -20,8 +20,8 @@ export default function PrivacyPage() {
     <div className="min-h-screen w-full flex items-start justify-center bg-bg font-body py-12 px-4">
       <div className="w-full max-w-2xl rounded-xl p-8 bg-surface border border-border">
         <div className="flex items-center gap-2 mb-6">
-          <BullBearLogo size={22} className="text-gold" />
-          <span className="font-display text-2xl italic text-ink">Beyen Invest</span>
+          <LogoMark size={22} className="text-gold" />
+          <span className="font-display text-2xl italic text-ink"><Wordmark /></span>
         </div>
 
         <h1 className="font-display text-2xl italic text-ink mb-1">Privacybeleid</h1>

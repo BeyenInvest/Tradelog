@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { BullBearLogo } from "@/components/ui/BullBearLogo";
+import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 // Account deletion (DeleteAccountModal + useAuth.deleteAccount) is built but
 // deliberately not exposed here yet — too easy to stumble into from the main
@@ -23,8 +23,8 @@ export function Sidebar() {
   return (
     <aside className="w-full md:w-56 md:shrink-0 flex flex-row md:flex-col items-center md:items-stretch justify-between py-3 md:py-6 px-4 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto">
       <div className="flex items-center gap-2 md:px-2 md:mb-8">
-        <BullBearLogo size={20} className="text-gold" />
-        <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink">Beyen Invest</span>
+        <LogoMark size={20} className="text-gold" />
+        <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink"><Wordmark /></span>
       </div>
 
       <nav className="flex flex-row md:flex-col gap-1">
