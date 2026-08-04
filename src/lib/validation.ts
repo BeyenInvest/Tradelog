@@ -31,9 +31,9 @@ function nullableEnum<T extends readonly [string, ...string[]]>(values: T) {
 /**
  * Mirrors TradeInput (src/lib/types.ts). Enum fields use z.enum bound to the
  * same constant arrays as the DB schema (rekenregel 7 — strict validation,
- * one list, no free text). Fase-conditional requiredness (spec 3.2) is
- * enforced here via superRefine, deliberately NOT as a DB constraint (schema.sql
- * stays permissive for a future bulk migration import).
+ * one list, no free text). Fase-kenmerken are optional, not required — accounts
+ * get shared with users who don't use those fields, so answering them is a
+ * choice, not a gate on saving the trade.
  */
 export const tradeSchema = z
   .object({
@@ -74,38 +74,6 @@ export const tradeSchema = z
     fase4_weekly_bevestigingscandle: boolField,
   })
   .superRefine((data, ctx) => {
-    if (data.fase === "Fase 1") {
-      if (data.fase1_daily_respecteert_zone == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase1_daily_respecteert_zone"], message: "Verplicht voor Fase 1" });
-      }
-      if (data.fase1_spelers_verleden == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase1_spelers_verleden"], message: "Verplicht voor Fase 1" });
-      }
-    }
-    if (data.fase === "Fase 2") {
-      if (data.fase2_daily_respecteert_zone == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase2_daily_respecteert_zone"], message: "Verplicht voor Fase 2" });
-      }
-      if (data.fase2_structuur == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase2_structuur"], message: "Verplicht voor Fase 2" });
-      }
-    }
-    if (data.fase === "Fase 3") {
-      if (data.fase3_zone_min_2_touches == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase3_zone_min_2_touches"], message: "Verplicht voor Fase 3" });
-      }
-      if (data.fase3_engulfing_candle == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase3_engulfing_candle"], message: "Verplicht voor Fase 3" });
-      }
-      if (data.fase3_structuur == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase3_structuur"], message: "Verplicht voor Fase 3" });
-      }
-    }
-    if (data.fase === "Fase 4") {
-      if (data.fase4_weekly_bevestigingscandle == null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fase4_weekly_bevestigingscandle"], message: "Verplicht voor Fase 4" });
-      }
-    }
     if (data.datum_sluiting && data.datum_sluiting < data.datum_open) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["datum_sluiting"], message: "Kan niet voor datum open liggen" });
     }

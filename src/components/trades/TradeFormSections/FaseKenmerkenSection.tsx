@@ -16,8 +16,8 @@ export function FaseKenmerkenSection() {
   const fase3Touches = watch("fase3_zone_min_2_touches");
   const fase3Engulfing = watch("fase3_engulfing_candle");
 
-  // Every non-computed fase-kenmerk is required for its fase (see the superRefine block in
-  // validation.ts) — marked up front here instead of only surfacing as an error after submit.
+  // Fase-kenmerken are optional (not every account holder tracks them) — no required
+  // marker, no superRefine gate in validation.ts.
   const fields = FASE_KENMERKEN.filter((k) => k.fase === fase && !k.computed);
 
   return (
@@ -28,7 +28,6 @@ export function FaseKenmerkenSection() {
           <Field
             key={k.field}
             label={k.label}
-            required
             error={errors[k.field as keyof TradeFormValues]?.message as string | undefined}
           >
             {k.values === "boolean" ? (
