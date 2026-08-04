@@ -141,4 +141,14 @@ export interface BacktestProject {
 
 export type BacktestProjectInput = Omit<BacktestProject, "id" | "user_id" | "created_at" | "updated_at">;
 
+export interface Profile {
+  id: string;
+  email: string;
+  display_name: string | null;
+  plan: string;
+  role: "user" | "admin";
+  created_at: string;
+  updated_at: string;
+}
+
 export { type Currency };

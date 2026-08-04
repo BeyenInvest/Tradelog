@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
+import type { Profile } from "@/lib/types";
 
 interface AuthContextValue {
   session: Session | null;
+  /** The signed-in user's own profiles row (role, plan, display_name), fetched once alongside the session. */
+  profile: Profile | null;
+  isAdmin: boolean;
   loading: boolean;
   /**
    * True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the
@@ -24,19 +28,29 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function fetchProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) return null; // non-fatal — profile is only used for role gating, never blocks core auth
+  return data as Profile | null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
+      setProfile(data.session ? await fetchProfile(data.session.user.id) : null);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (newSession) void fetchProfile(newSession.user.id).then(setProfile);
+      else setProfile(null);
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       if (event === "SIGNED_IN" && pendingAuthRedirectType === "invite") setPasswordRecovery(true);
       if (event === "SIGNED_OUT") setPasswordRecovery(false);
@@ -94,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         session,
+        profile,
+        isAdmin: profile?.role === "admin",
         loading,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",

@@ -15,6 +15,8 @@ import ReviewsPage from "@/pages/ReviewsPage";
 import AccountsPage from "@/pages/AccountsPage";
 import EconomicCalendarPage from "@/pages/EconomicCalendarPage";
 import LotSizeCalculatorPage from "@/pages/LotSizeCalculatorPage";
+import AdminUsersListPage from "@/pages/AdminUsersListPage";
+import AdminUserDetailPage from "@/pages/AdminUserDetailPage";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, passwordRecovery } = useAuth();
@@ -32,6 +34,13 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   // fires a plain SIGNED_IN for invites — see useAuth). Route through the same "set a password"
   // gate as an in-progress recovery before letting either into the app.
   if (passwordRecovery) return <Navigate to="/reset-password" replace />;
+  return <>{children}</>;
+}
+
+/** Nested inside ProtectedRoute, so session/loading are already handled — only the role check is new here. */
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/journal" replace />;
   return <>{children}</>;
 }
 
@@ -59,6 +68,22 @@ export function AppRouter() {
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/calendar" element={<EconomicCalendarPage />} />
         <Route path="/lot-size" element={<LotSizeCalculatorPage />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminUsersListPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:userId"
+          element={
+            <AdminRoute>
+              <AdminUserDetailPage />
+            </AdminRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/journal" replace />} />
       </Route>
     </Routes>

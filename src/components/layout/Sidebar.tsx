@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut } from "lucide-react";
+import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -20,8 +20,9 @@ const NAV = [
 ];
 
 export function Sidebar() {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const nav = isAdmin ? [...NAV, { to: "/admin", label: "Admin", icon: ShieldCheck }] : NAV;
 
   async function handleSignOut() {
     setSignOutError(null);
@@ -48,7 +49,7 @@ export function Sidebar() {
           content size on mobile, so overflow-x-auto actually kicks in instead of the row silently
           clipping under AppShell's overflow-hidden when there isn't room for every nav item. */}
       <nav className="flex flex-row md:flex-col flex-1 md:flex-none gap-1 min-w-0 overflow-x-auto md:overflow-visible px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {NAV.map((n) => {
+        {nav.map((n) => {
           const Icon = n.icon;
           return (
             <NavLink

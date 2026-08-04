@@ -42,6 +42,7 @@ create table profiles (
   email text not null,
   display_name text,
   plan text not null default 'free',
+  role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -253,6 +254,20 @@ $$;
 revoke all on function delete_own_account() from public;
 grant execute on function delete_own_account() to authenticated;
 
+-- ---------- admin read-only access (debugging, future coaching foundation) ----------
+-- SECURITY DEFINER for the same reason as delete_own_account() above: the
+-- calling client can't safely read another admin-check row without RLS
+-- recursion, so this runs with elevated privileges scoped to a single
+-- boolean read. Used only to grant additional SELECT-only RLS policies
+-- below — never write access.
+create or replace function is_admin() returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists(select 1 from profiles where id = auth.uid() and role = 'admin')
+$$;
+
+revoke all on function is_admin() from public;
+grant execute on function is_admin() to authenticated;
+
 -- ---------- auto-link trade -> weekly_review on INSERT only ----------
 -- (created after its trades already exist? use the manual relink action in-app,
 --  see linkTradesToReview in src/hooks/useWeeklyReviews.ts)
@@ -308,3 +323,21 @@ create policy "prop_accounts_owner_all" on prop_accounts
 create policy "payouts_owner_all" on payouts
   for all using (exists (select 1 from prop_accounts pa where pa.id = payouts.account_id and pa.user_id = auth.uid()))
   with check (exists (select 1 from prop_accounts pa where pa.id = payouts.account_id and pa.user_id = auth.uid()));
+
+-- Admin read-only carve-out: additive permissive SELECT policies (Postgres
+-- ORs multiple permissive policies together), so every owner policy above
+-- is untouched — admins simply gain read access on top.
+create policy "profiles_admin_select" on profiles
+  for select using (is_admin());
+create policy "trades_admin_select" on trades
+  for select using (is_admin());
+create policy "weekly_reviews_admin_select" on weekly_reviews
+  for select using (is_admin());
+create policy "periodic_reviews_admin_select" on periodic_reviews
+  for select using (is_admin());
+create policy "backtest_projects_admin_select" on backtest_projects
+  for select using (is_admin());
+create policy "prop_accounts_admin_select" on prop_accounts
+  for select using (is_admin());
+create policy "payouts_admin_select" on payouts
+  for select using (is_admin());

@@ -40,7 +40,7 @@ export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
   );
 }
 
-function ImagePreviewModal({ src, label, onClose }: { src: string; label: string; onClose: () => void }) {
+export function ImagePreviewModal({ src, label, onClose }: { src: string; label: string; onClose: () => void }) {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -51,10 +51,16 @@ function ImagePreviewModal({ src, label, onClose }: { src: string; label: string
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  // This can render nested inside another modal's own backdrop-click-to-close handler (e.g. TradeForm,
+  // ReadOnlyTradeDetailModal) — every click here must stop propagation, or closing the screenshot
+  // bubbles up and closes the parent modal too.
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6"
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div className="absolute top-4 right-4 flex items-center gap-3">
         <a
@@ -67,7 +73,14 @@ function ImagePreviewModal({ src, label, onClose }: { src: string; label: string
         >
           <ExternalLink size={18} />
         </a>
-        <button onClick={onClose} title="Sluiten" className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          title="Sluiten"
+          className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5"
+        >
           <X size={20} />
         </button>
       </div>
