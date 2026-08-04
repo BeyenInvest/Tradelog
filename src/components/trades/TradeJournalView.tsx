@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, Flame } from "lucide-react";
+import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -49,7 +49,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [viewMode, setViewMode] = useState<"calendar" | "list" | "sessies">("calendar");
 
   const isLive = scope.type === "live";
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
@@ -152,6 +152,16 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                 >
                   <ListIcon size={14} /> Lijst
                 </button>
+                {!isLive && (
+                  <button
+                    onClick={() => setViewMode("sessies")}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-body transition-colors ${
+                      viewMode === "sessies" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                    }`}
+                  >
+                    <CalendarClock size={14} /> Sessies
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -195,7 +205,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
           {viewMode === "calendar" ? (
             <CalendarView trades={realTrades} missedTrades={isLive && showMissed ? missedTrades : undefined} />
-          ) : (
+          ) : viewMode === "list" ? (
             <TradeList
               trades={listTrades}
               onEdit={openEdit}
@@ -203,6 +213,16 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               title="Trades"
               filtersActive={filtersActive}
               onResetFilters={resetFilters}
+            />
+          ) : (
+            <TradeList
+              trades={realTrades}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              title="Backtestsessies"
+              filtersActive={filtersActive}
+              onResetFilters={resetFilters}
+              fixedGroupBy="backtestDag"
             />
           )}
         </div>

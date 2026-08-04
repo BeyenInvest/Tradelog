@@ -38,7 +38,7 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
         <Field label="Trade evaluation" error={errors.trade_evaluation?.message}>
           <EnumSelect options={allowMissedTrade ? TRADE_EVALUATIONS : TRADE_EVALUATIONS_NO_MISSED} {...register("trade_evaluation")} />
         </Field>
-        <Field label="TPFS % (hypothetisch)" error={errors.tpfs_pct?.message}>
+        <Field label="TPFS % (optioneel)" error={errors.tpfs_pct?.message}>
           <input type="number" step="0.01" className="input" {...register("tpfs_pct")} />
         </Field>
         <Field label="Datum sluiting" error={errors.datum_sluiting?.message}>

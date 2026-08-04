@@ -17,7 +17,7 @@ import EconomicCalendarPage from "@/pages/EconomicCalendarPage";
 import LotSizeCalculatorPage from "@/pages/LotSizeCalculatorPage";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecovery } = useAuth();
 
   if (loading) {
     return (
@@ -28,6 +28,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!session) return <Navigate to="/login" replace />;
+  // An accepted invite lands here fully authenticated but with no password ever set (Supabase
+  // fires a plain SIGNED_IN for invites — see useAuth). Route through the same "set a password"
+  // gate as an in-progress recovery before letting either into the app.
+  if (passwordRecovery) return <Navigate to="/reset-password" replace />;
   return <>{children}</>;
 }
 

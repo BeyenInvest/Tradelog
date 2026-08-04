@@ -1,6 +1,6 @@
 import { Controller, useFormContext } from "react-hook-form";
 import type { TradeFormValues } from "@/lib/validation";
-import { CCS, CC_TO_SESSIE, ENTRIES, FASES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
+import { CCS, ENTRIES, FASES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
@@ -9,10 +9,8 @@ export function EntrySection() {
   const {
     register,
     control,
-    watch,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
-  const cc = watch("cc");
 
   return (
     <div className="flex flex-col gap-4">
@@ -29,9 +27,6 @@ export function EntrySection() {
         </Field>
         <Field label="4H Candle Close (CC)" error={errors.cc?.message}>
           <EnumSelect options={CCS} {...register("cc")} />
-        </Field>
-        <Field label="Sessie (afgeleid)">
-          <input type="text" disabled value={cc ? CC_TO_SESSIE[cc] : ""} className="input opacity-60" />
         </Field>
         <Field label="Trade concept" error={errors.trade_concept?.message}>
           <EnumSelect options={TRADE_CONCEPTS} {...register("trade_concept")} />

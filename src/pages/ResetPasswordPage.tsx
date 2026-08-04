@@ -12,18 +12,20 @@ import { resetPasswordSchema, type ResetPasswordFormValues } from "@/lib/validat
 const RECOVERY_EVENT_GRACE_MS = 2500;
 
 /**
- * Lands here from the Supabase recovery email link, which the client SDK
- * exchanges for a live session before this page renders. The form only
- * unlocks once `passwordRecovery` is true (the PASSWORD_RECOVERY auth event
- * actually fired) — an ordinary logged-in session is NOT enough. Without this,
- * anyone with access to an already-authenticated browser tab (shared/kiosk
- * machine, forgotten laptop) could navigate straight here and take over the
- * account with no re-authentication. The event can lag a fast page load, so
- * we show a brief "verifying" state instead of immediately declaring the link
- * expired, and only give up after a short grace period.
+ * Lands here from the Supabase recovery email link — or is routed here by
+ * ProtectedRoute after an accepted invite, which has no dedicated event of its
+ * own (see useAuth) but sets the same `passwordRecovery` flag. Either way the
+ * client SDK exchanges the link for a live session before this page renders,
+ * and the form only unlocks once `passwordRecovery` is true — an ordinary
+ * logged-in session is NOT enough. Without this, anyone with access to an
+ * already-authenticated browser tab (shared/kiosk machine, forgotten laptop)
+ * could navigate straight here and take over the account with no
+ * re-authentication. The event can lag a fast page load, so we show a brief
+ * "verifying" state instead of immediately declaring the link expired, and
+ * only give up after a short grace period.
  */
 export default function ResetPasswordPage() {
-  const { session, passwordRecovery, loading, updatePassword } = useAuth();
+  const { session, passwordRecovery, isInvite, loading, updatePassword } = useAuth();
   const navigate = useNavigate();
   const {
     register,
@@ -65,26 +67,34 @@ export default function ResetPasswordPage() {
         {loading ? (
           <p className="text-sm text-muted">Laden...</p>
         ) : done ? (
-          <p className="text-sm text-win">Wachtwoord bijgewerkt — je wordt doorgestuurd...</p>
+          <p className="text-sm text-win">
+            {isInvite ? "Account geactiveerd — je wordt doorgestuurd..." : "Wachtwoord bijgewerkt — je wordt doorgestuurd..."}
+          </p>
         ) : linkInvalid ? (
           <div className="flex flex-col gap-3">
             <h1 className="font-display text-xl italic text-ink">Link verlopen</h1>
             <p className="text-sm text-muted">
-              Deze link om je wachtwoord opnieuw in te stellen is ongeldig of verlopen. Vraag een nieuwe aan.
+              {isInvite
+                ? "Deze uitnodigingslink is ongeldig of verlopen. Vraag een nieuwe uitnodiging aan."
+                : "Deze link om je wachtwoord opnieuw in te stellen is ongeldig of verlopen. Vraag een nieuwe aan."}
             </p>
-            <Link to="/forgot-password" className="text-xs text-gold hover:underline w-fit">
-              Nieuwe link aanvragen
-            </Link>
+            {!isInvite && (
+              <Link to="/forgot-password" className="text-xs text-gold hover:underline w-fit">
+                Nieuwe link aanvragen
+              </Link>
+            )}
           </div>
         ) : !verified ? (
           <p className="text-sm text-muted">Link verifiëren...</p>
         ) : (
           <form onSubmit={handleSubmit(handleReset)} className="flex flex-col gap-4">
-            <p className="text-sm text-muted">Kies een nieuw wachtwoord.</p>
+            <p className="text-sm text-muted">
+              {isInvite ? "Welkom bij Beyen — kies een wachtwoord om je account te activeren." : "Kies een nieuw wachtwoord."}
+            </p>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="newPassword">
-                Nieuw wachtwoord
+                {isInvite ? "Wachtwoord" : "Nieuw wachtwoord"}
               </label>
               <input
                 id="newPassword"
@@ -117,7 +127,7 @@ export default function ResetPasswordPage() {
               disabled={isSubmitting}
               className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
-              {isSubmitting ? "Bezig..." : "Wachtwoord bijwerken"}
+              {isSubmitting ? "Bezig..." : isInvite ? "Account activeren" : "Wachtwoord bijwerken"}
             </button>
           </form>
         )}

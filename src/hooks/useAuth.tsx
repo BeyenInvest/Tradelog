@@ -1,12 +1,19 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
 
 interface AuthContextValue {
   session: Session | null;
   loading: boolean;
-  /** True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the sole guard (see ResetPasswordPage). */
+  /**
+   * True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the
+   * sole guard (see ResetPasswordPage). Also set for an accepted invite: Supabase fires a plain
+   * SIGNED_IN for `type=invite` (no dedicated event), so an invited user would otherwise land in
+   * the app fully authenticated with no password ever set. `isInvite` distinguishes the two only
+   * for copy — both are gated through the same reset-password flow.
+   */
   passwordRecovery: boolean;
+  isInvite: boolean;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
@@ -31,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (event === "SIGNED_IN" && pendingAuthRedirectType === "invite") setPasswordRecovery(true);
       if (event === "SIGNED_OUT") setPasswordRecovery(false);
     });
 
@@ -88,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         passwordRecovery,
+        isInvite: pendingAuthRedirectType === "invite",
         signIn,
         signOut,
         signUp,

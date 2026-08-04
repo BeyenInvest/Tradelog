@@ -36,6 +36,18 @@ describe("groupTrades", () => {
     ];
     expect(groupTrades(trades, "month")[0].resultaatTotal).toBe(1);
   });
+
+  it("backtestDag: groups by the day a trade was logged (created_at), not its historical datum_open", () => {
+    const trades = [
+      makeTrade({ datum_open: "2020-01-01", created_at: "2026-08-04T09:00:00Z" }),
+      makeTrade({ datum_open: "2019-06-15", created_at: "2026-08-04T14:00:00Z" }),
+      makeTrade({ datum_open: "2021-03-03", created_at: "2026-08-03T09:00:00Z" }),
+    ];
+    const groups = groupTrades(trades, "backtestDag");
+    expect(groups).toHaveLength(2);
+    expect(groups[0].trades).toHaveLength(2);
+    expect(groups[1].trades).toHaveLength(1);
+  });
 });
 
 describe("matchesSearch", () => {
