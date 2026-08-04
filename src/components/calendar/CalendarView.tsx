@@ -2,7 +2,15 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade } from "@/lib/types";
-import { WEEKDAYS } from "@/lib/constants";
+import { WEEKDAYS, type Outcome } from "@/lib/constants";
+
+interface PairChip {
+  pair: string;
+  outcome: Outcome;
+}
+
+/** Same outcome→color mapping OutcomePill uses elsewhere, applied here to a small leading dot rather than the whole pill — a calmer look than a fully colored chip. */
+const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
 
 interface CalendarViewProps {
   trades: Trade[];
@@ -33,6 +41,38 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
     }
     return m;
   }, [trades, year, month]);
+
+  /** Unique (pair, outcome) combos per day, in first-taken order — a pair traded twice with the same outcome shows once, but a pair that won once and lost once still shows both, since the outcome drives the chip's color. */
+  const pairsByDay = useMemo(() => {
+    const m = new Map<number, PairChip[]>();
+    for (const [day, dayTrades] of byDay) {
+      const seen = new Set<string>();
+      const chips: PairChip[] = [];
+      for (const t of dayTrades) {
+        const key = `${t.pair}|${t.outcome}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        chips.push({ pair: t.pair, outcome: t.outcome });
+      }
+      m.set(day, chips);
+    }
+    return m;
+  }, [byDay]);
+
+  const missedPairsByDay = useMemo(() => {
+    const m = new Map<number, PairChip[]>();
+    for (const t of missedTrades) {
+      const d = new Date(t.datum_open + "T00:00:00");
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        const chips = m.get(day) ?? [];
+        const key = `${t.pair}|${t.outcome}`;
+        if (!chips.some((c) => `${c.pair}|${c.outcome}` === key)) chips.push({ pair: t.pair, outcome: t.outcome });
+        m.set(day, chips);
+      }
+    }
+    return m;
+  }, [missedTrades, year, month]);
 
   const errorDayTypes = useMemo(() => {
     const m = new Map<number, Set<string>>();
@@ -127,21 +167,24 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
               displayColor = "rgb(var(--color-gold))";
             }
             if (missedResult != null) {
-              // Real result stays the displayed value — the missed trade only flags via the dashed grey border.
-              border = "rgb(var(--color-be) / 0.6)";
+              // Real result stays the displayed value — the missed trade only flags via the dashed grey border. Deliberately neutral (muted), not the be/orange token — that now means an actual breakeven outcome, not "hypothetical".
+              border = "rgb(var(--color-muted) / 0.6)";
               borderStyle = "dashed";
             }
           } else if (missedResult != null) {
-            bg = "rgb(var(--color-be) / 0.08)";
-            border = "rgb(var(--color-be) / 0.5)";
+            bg = "rgb(var(--color-muted) / 0.08)";
+            border = "rgb(var(--color-muted) / 0.5)";
             borderStyle = "dashed";
             displayValue = missedResult;
-            displayColor = "rgb(var(--color-be))";
+            displayColor = "rgb(var(--color-muted))";
             displayMissed = true;
           }
 
           const dateIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const errorTypes = errorDayTypes.get(d);
+          const dayPairs = dayTrades ? pairsByDay.get(d) : missedResult != null ? missedPairsByDay.get(d) : undefined;
+          const visiblePairs = dayPairs?.slice(0, 2) ?? [];
+          const extraPairCount = dayPairs ? dayPairs.length - visiblePairs.length : 0;
 
           return (
             <button
@@ -150,10 +193,59 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
               onClick={() => onDayClick?.(dateIso)}
               className="relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left"
               style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
-              title={displayMissed ? "Missed trade (hypothetisch)" : errorTypes ? Array.from(errorTypes).join(", ") : undefined}
+              title={
+                displayMissed
+                  ? "Missed trade (hypothetisch)"
+                  : errorTypes
+                    ? Array.from(errorTypes).join(", ")
+                    : dayPairs?.map((c) => c.pair).join(", ")
+              }
             >
               {errorTypes && <TriangleAlert size={11} strokeWidth={2.5} className="absolute top-1 right-1 text-gold" />}
-              <span className="font-mono text-[11px] text-muted">{d}</span>
+              <span className="flex items-center gap-1">
+                <span className="font-mono text-[11px] text-muted">{d}</span>
+                {/* Narrow cells (mobile, <640px viewport): no room for readable pair text — a dot per pair inline with the day number instead. Full names are always one tap away via the day modal. */}
+                {dayPairs && dayPairs.length > 0 && (
+                  <span className="flex sm:hidden items-center gap-0.5">
+                    {dayPairs.slice(0, 4).map((chip) => (
+                      <span
+                        key={`${chip.pair}-${chip.outcome}`}
+                        className="w-[4px] h-[4px] rounded-full border"
+                        style={{
+                          borderColor: displayMissed
+                            ? "rgb(var(--color-muted) / 0.8)"
+                            : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / 0.9)`,
+                        }}
+                      />
+                    ))}
+                  </span>
+                )}
+              </span>
+              {visiblePairs.length > 0 && (
+                <div className="hidden sm:flex sm:flex-col items-start gap-0.5 overflow-hidden">
+                  {visiblePairs.map((chip) => (
+                    <span
+                      key={`${chip.pair}-${chip.outcome}`}
+                      className={`inline-flex items-center gap-1 font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-muted whitespace-nowrap ${
+                        displayMissed ? "italic" : ""
+                      }`}
+                    >
+                      <span
+                        className="w-[4px] h-[4px] rounded-full shrink-0"
+                        style={{
+                          background: displayMissed ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
+                        }}
+                      />
+                      {chip.pair}
+                    </span>
+                  ))}
+                  {extraPairCount > 0 && (
+                    <span className="font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-faint">
+                      +{extraPairCount}
+                    </span>
+                  )}
+                </div>
+              )}
               {displayValue != null && (
                 <span
                   className="font-mono text-[11px] font-medium self-end"

@@ -1,10 +1,10 @@
 import type { EconomicImpact } from "@/lib/economicCalendar";
 
 const IMPACT_STYLE: Record<EconomicImpact, string> = {
-  Low: "bg-be/15 text-be",
+  Low: "bg-muted/15 text-muted",
   Medium: "bg-gold/15 text-gold",
   High: "bg-loss/15 text-loss",
-  Holiday: "bg-be/15 text-be",
+  Holiday: "bg-muted/15 text-muted",
 };
 
 export function ImpactBadge({ impact }: { impact: EconomicImpact }) {

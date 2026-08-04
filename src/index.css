@@ -17,7 +17,7 @@
   --color-gold: 212 166 74;
   --color-win: 95 174 130;
   --color-loss: 224 102 90;
-  --color-be: 139 147 167;
+  --color-be: 214 145 92;
 }
 
 :root.light {
@@ -33,7 +33,7 @@
   --color-gold: 166 121 28;
   --color-win: 47 133 88;
   --color-loss: 199 71 58;
-  --color-be: 91 98 112;
+  --color-be: 176 112 58;
 }
 
 html,
