@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { CalendarView } from "@/components/calendar/CalendarView";
+import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
@@ -45,11 +46,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
+  const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
   const [showMissed, setShowMissed] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
   const [viewMode, setViewMode] = useState<"calendar" | "list" | "sessies">("calendar");
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const isLive = scope.type === "live";
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
@@ -65,15 +68,23 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
   const kpis = useMemo(() => computeOverviewKpis(realTrades), [realTrades]);
   const equityData = useMemo(() => computeEquityCurve(realTrades), [realTrades]);
+  const selectedDayTrades = useMemo(
+    () => (selectedDay ? scopedTrades.filter((t) => t.datum_open === selectedDay) : []),
+    [scopedTrades, selectedDay]
+  );
 
-  function openCreate() {
+  function openCreate(dateIso?: string) {
     setEditingTrade(undefined);
+    setNewTradeDate(dateIso ?? null);
     setFormOpen(true);
+    setSelectedDay(null);
   }
 
   function openEdit(trade: Trade) {
     setEditingTrade(trade);
+    setNewTradeDate(null);
     setFormOpen(true);
+    setSelectedDay(null);
   }
 
   async function handleSubmit(input: Parameters<typeof createTrade>[0]) {
@@ -102,7 +113,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
         subtitle={subtitle ?? `${realTrades.length} trades`}
         action={
           <button
-            onClick={openCreate}
+            onClick={() => openCreate()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
           >
             <Plus size={15} /> Nieuwe trade
@@ -204,7 +215,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           </div>
 
           {viewMode === "calendar" ? (
-            <CalendarView trades={realTrades} missedTrades={isLive && showMissed ? missedTrades : undefined} />
+            <CalendarView
+              trades={realTrades}
+              missedTrades={isLive && showMissed ? missedTrades : undefined}
+              onDayClick={setSelectedDay}
+            />
           ) : viewMode === "list" ? (
             <TradeList
               trades={listTrades}
@@ -228,8 +243,25 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
         </div>
       )}
 
+      {selectedDay && (
+        <DayTradesModal
+          dateIso={selectedDay}
+          trades={selectedDayTrades}
+          onClose={() => setSelectedDay(null)}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onAddTrade={openCreate}
+        />
+      )}
+
       {formOpen && (
-        <TradeForm trade={editingTrade} onSubmit={handleSubmit} onClose={() => setFormOpen(false)} allowMissedTrade={isLive} />
+        <TradeForm
+          trade={editingTrade}
+          onSubmit={handleSubmit}
+          onClose={() => setFormOpen(false)}
+          allowMissedTrade={isLive}
+          initialDate={newTradeDate ?? undefined}
+        />
       )}
     </>
   );

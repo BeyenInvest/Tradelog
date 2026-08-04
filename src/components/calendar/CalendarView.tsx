@@ -8,7 +8,8 @@ interface CalendarViewProps {
   trades: Trade[];
   /** Missed trades to render, e.g. only passed when the "toon missed trades" toggle is on. Never affects a day's real coloring/value — that's driven by `trades` alone; missed-only days get their own dashed gold styling. */
   missedTrades?: Trade[];
-  onDayClick?: (dateIso: string, trades: Trade[]) => void;
+  /** Fires for any clicked day, even empty ones — the caller decides whether that means "show trades" or "add a trade here". */
+  onDayClick?: (dateIso: string) => void;
 }
 
 export function CalendarView({ trades, missedTrades = [], onDayClick }: CalendarViewProps) {
@@ -146,7 +147,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
             <button
               key={i}
               type="button"
-              onClick={() => dayTrades && onDayClick?.(dateIso, dayTrades)}
+              onClick={() => onDayClick?.(dateIso)}
               className="relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left"
               style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
               title={displayMissed ? "Missed trade (hypothetisch)" : errorTypes ? Array.from(errorTypes).join(", ") : undefined}

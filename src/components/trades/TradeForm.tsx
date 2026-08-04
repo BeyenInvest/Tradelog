@@ -17,6 +17,8 @@ interface TradeFormProps {
   onClose: () => void;
   /** false when opened from within a backtest project — "Missed trade" isn't offered there. */
   allowMissedTrade: boolean;
+  /** Pre-fills datum_open for a new trade, e.g. when opened from a calendar day. Ignored when editing (`trade` wins). */
+  initialDate?: string;
 }
 
 const EMPTY_DEFAULTS: TradeFormValues = {
@@ -89,10 +91,14 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
   };
 }
 
-export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeFormProps) {
+export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
-    defaultValues: trade ? tradeToDefaults(trade) : EMPTY_DEFAULTS,
+    defaultValues: trade
+      ? tradeToDefaults(trade)
+      : initialDate
+        ? { ...EMPTY_DEFAULTS, datum_open: initialDate }
+        : EMPTY_DEFAULTS,
   });
   const {
     handleSubmit,
