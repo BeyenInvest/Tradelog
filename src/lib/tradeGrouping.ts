@@ -1,5 +1,6 @@
 import type { Trade } from "./types";
 import { MONTH_NAMES, type Outcome } from "./constants";
+import { isMissed, round2 } from "./stats/core";
 
 export type GroupBy = "month" | "week" | "quarter";
 
@@ -10,8 +11,9 @@ export interface TradeGroup {
   resultaatTotal: number;
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+/** Missed trades are hypothetical and must never count toward a group's real resultaat total, even though they still appear in `trades` for display when a caller chooses to include them. */
+function realResultaatTotal(trades: Trade[]): number {
+  return round2(trades.reduce((s, t) => (isMissed(t) ? s : s + t.resultaat_pct), 0));
 }
 
 function monthKey(dateIso: string): { key: string; label: string } {
@@ -60,7 +62,7 @@ export function groupTrades(trades: Trade[], groupBy: GroupBy): TradeGroup[] {
       key,
       label: labels.get(key)!,
       trades: bucketTrades,
-      resultaatTotal: round2(bucketTrades.reduce((s, t) => s + t.resultaat_pct, 0)),
+      resultaatTotal: realResultaatTotal(bucketTrades),
     };
   });
 }
@@ -75,7 +77,7 @@ export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
       key: outcome,
       label: outcome,
       trades: bucketTrades,
-      resultaatTotal: round2(bucketTrades.reduce((s, t) => s + t.resultaat_pct, 0)),
+      resultaatTotal: realResultaatTotal(bucketTrades),
     };
   });
 }

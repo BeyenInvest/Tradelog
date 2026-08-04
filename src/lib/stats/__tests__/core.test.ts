@@ -1,6 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeOutcomeCounts } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeOutcomeCounts, round2 } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
+
+describe("round2", () => {
+  it("normalizes an exact-zero negative sum (-0) to 0", () => {
+    expect(Object.is(round2(-0.001), -0)).toBe(false);
+    expect(round2(-0.001)).toBe(0);
+  });
+
+  it("rounds to 2 decimals otherwise", () => {
+    expect(round2(1.239)).toBe(1.24);
+    expect(round2(-1.234)).toBe(-1.23);
+  });
+});
 
 describe("computeStreaks", () => {
   it("BE pauses a winning streak — does not reset or extend it", () => {

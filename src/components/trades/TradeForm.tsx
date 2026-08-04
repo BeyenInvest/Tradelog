@@ -99,7 +99,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
     formState: { isSubmitting, isDirty },
   } = methods;
   const [error, setError] = useState<string | null>(null);
-  const requestClose = useModalGuard(isDirty, onClose);
+  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   async function handleFormSubmit(values: TradeFormValues) {
     setError(null);
@@ -114,11 +114,15 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade }: TradeF
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={requestClose}>
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trade-form-title"
         className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-2xl italic text-ink">{trade ? "Trade bewerken" : "Nieuwe trade"}</h2>
+          <h2 id="trade-form-title" className="font-display text-2xl italic text-ink">{trade ? "Trade bewerken" : "Nieuwe trade"}</h2>
           <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>

@@ -11,6 +11,12 @@ const nullableNumber = z.preprocess(
   z.coerce.number().nullable()
 );
 
+/** Empty-string inputs must fail as "required", not silently coerce to 0 — same z.coerce.number() footgun as above, but for a required field. */
+const requiredNumber = z.preprocess(
+  (val) => (val === "" || val == null ? undefined : val),
+  z.coerce.number({ required_error: "Verplicht", invalid_type_error: "Moet een getal zijn" })
+);
+
 /** An empty <input type="date"> submits "" — must become null, not an invalid empty-string date. */
 const nullableDateString = z.preprocess(
   (val) => (val === "" || val == null ? null : val),
@@ -36,7 +42,7 @@ export const tradeSchema = z
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),
     outcome: z.enum(OUTCOMES),
-    resultaat_pct: z.coerce.number(),
+    resultaat_pct: requiredNumber,
     trade_evaluation: nullableEnum(TRADE_EVALUATIONS).optional().default(null),
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),

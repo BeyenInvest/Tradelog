@@ -11,10 +11,13 @@ interface TradeListProps {
   onEdit: (trade: Trade) => void;
   onDelete: (trade: Trade) => void;
   title?: string;
+  /** When `trades` is empty only because active period/filters exclude everything (not because there's truly no history yet), show a reset affordance instead of "Nog geen trades." */
+  filtersActive?: boolean;
+  onResetFilters?: () => void;
 }
 
 /** Full trade history, grouped by month or ISO week (collapsible) with a free-text search — this is a deliberate full view, not a capped preview. */
-export function TradeList({ trades, onEdit, onDelete, title = "Trades" }: TradeListProps) {
+export function TradeList({ trades, onEdit, onDelete, title = "Trades", filtersActive = false, onResetFilters }: TradeListProps) {
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>("week");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -80,13 +83,31 @@ export function TradeList({ trades, onEdit, onDelete, title = "Trades" }: TradeL
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-sm text-muted py-4">{search ? `Geen trades gevonden voor "${search}".` : "Nog geen trades."}</p>
+        <p className="text-sm text-muted py-4">
+          {search ? (
+            `Geen trades gevonden voor "${search}".`
+          ) : filtersActive ? (
+            <>
+              Geen trades voor de huidige periode/filters.{" "}
+              {onResetFilters && (
+                <button type="button" onClick={onResetFilters} className="text-gold hover:underline">
+                  Filters wissen
+                </button>
+              )}
+            </>
+          ) : (
+            "Nog geen trades."
+          )}
+        </p>
       )}
 
       <div className="overflow-x-auto">
         <div className="flex flex-col min-w-[640px] gap-2.5">
           {groups.map((g) => {
-            const isCollapsed = collapsed.has(g.key);
+            // While actively searching, every visible group already only contains matches (matchesSearch
+            // runs before grouping) — force it open rather than leaving a stale collapse from before the
+            // search started, which used to hide real matches with no indication they existed.
+            const isCollapsed = search ? false : collapsed.has(g.key);
             return (
               <div key={g.key} className="rounded-lg border border-border-soft overflow-hidden">
                 <button

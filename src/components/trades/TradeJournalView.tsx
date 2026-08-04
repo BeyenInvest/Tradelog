@@ -12,7 +12,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
 import { computeOverviewKpis, computeEquityCurve, takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
-import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
@@ -52,6 +52,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const isLive = scope.type === "live";
+  const filtersActive = period !== null || activeFilterCount(filters) > 0;
+  function resetFilters() {
+    setPeriod(null);
+    setFilters(EMPTY_FILTERS);
+  }
   const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
   const realTrades = useMemo(() => takenTrades(scopedTrades), [scopedTrades]);
   const missedTrades = useMemo(() => filterMissedTrades(scopedTrades), [scopedTrades]);
@@ -158,7 +163,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
             />
-            <StatCard label="Max drawdown" value={`-${kpis.maxDrawdownPct}%`} tone="down" />
+            <StatCard label="Max drawdown" value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
               <div>
@@ -191,7 +196,14 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           {viewMode === "calendar" ? (
             <CalendarView trades={realTrades} missedTrades={isLive && showMissed ? missedTrades : undefined} />
           ) : (
-            <TradeList trades={listTrades} onEdit={openEdit} onDelete={handleDelete} title="Trades" />
+            <TradeList
+              trades={listTrades}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              title="Trades"
+              filtersActive={filtersActive}
+              onResetFilters={resetFilters}
+            />
           )}
         </div>
       )}

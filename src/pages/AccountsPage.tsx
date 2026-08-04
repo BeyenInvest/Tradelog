@@ -4,11 +4,12 @@ import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountList } from "@/components/accounts/AccountList";
 
 export default function AccountsPage() {
-  const { accounts, payouts, loading, createAccount, deleteAccount, createPayout, deletePayout } = usePropAccounts();
+  const { accounts, payouts, loading, error, createAccount, deleteAccount, createPayout, deletePayout } = usePropAccounts();
 
   return (
     <>
       <PageHeader title="Accounts" subtitle="Prop firm-accounts en payouts — handmatig, geen live koppeling" />
+      {error && <p className="text-sm text-loss mb-4">{error}</p>}
       {loading ? (
         <p className="text-muted text-sm">Laden...</p>
       ) : (

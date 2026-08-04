@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarRange, ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { monthRange, quarterRange, yearRange, type DateRange } from "@/lib/periodRanges";
@@ -56,14 +56,24 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
 
+  // Decoupled from `value` while editing: clearing one date field (to re-pick it) must not collapse
+  // the whole applied range back to "Alle periodes" — only a complete, valid pair commits upward.
+  const [customStart, setCustomStart] = useState(value?.start ?? "");
+  const [customEnd, setCustomEnd] = useState(value?.end ?? "");
+
+  useEffect(() => {
+    setCustomStart(value?.start ?? "");
+    setCustomEnd(value?.end ?? "");
+  }, [value]);
+
   function setStart(v: string) {
-    if (!v) return onChange(null);
-    onChange({ start: v, end: value && value.end >= v ? value.end : v });
+    setCustomStart(v);
+    if (v && customEnd) onChange({ start: v <= customEnd ? v : customEnd, end: v <= customEnd ? customEnd : v });
   }
 
   function setEnd(v: string) {
-    if (!v) return onChange(null);
-    onChange({ start: value && value.start <= v ? value.start : v, end: v });
+    setCustomEnd(v);
+    if (v && customStart) onChange({ start: customStart <= v ? customStart : v, end: customStart <= v ? v : customStart });
   }
 
   return (
@@ -106,16 +116,16 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
             <div className="flex items-center gap-2">
               <input
                 type="date"
-                value={value?.start ?? ""}
-                max={value?.end ?? isoToday()}
+                value={customStart}
+                max={customEnd || isoToday()}
                 onChange={(e) => setStart(e.target.value)}
                 className="input text-xs py-1.5 flex-1"
               />
               <span className="text-muted text-xs shrink-0">t/m</span>
               <input
                 type="date"
-                value={value?.end ?? ""}
-                min={value?.start}
+                value={customEnd}
+                min={customStart || undefined}
                 onChange={(e) => setEnd(e.target.value)}
                 className="input text-xs py-1.5 flex-1"
               />

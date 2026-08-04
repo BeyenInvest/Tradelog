@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { ArrowLeft, Trash2, Pencil } from "lucide-react";
 import { TradeJournalView } from "@/components/trades/TradeJournalView";
 import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
@@ -10,6 +10,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function ProjectDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const { projects, loading: projectsLoading, updateProject, deleteProject } = useBacktestProjects();
   const [tab, setTab] = useState<"journal" | "analyse">("journal");
   const [editing, setEditing] = useState(false);
@@ -38,7 +39,7 @@ export default function ProjectDashboardPage() {
       setError(null);
       try {
         await deleteProject(project!.id);
-        window.location.href = "/backtesting";
+        navigate("/backtesting");
       } catch (err) {
         setError(toErrorMessage(err, "Verwijderen van project is mislukt"));
       }

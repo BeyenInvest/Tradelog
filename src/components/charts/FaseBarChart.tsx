@@ -2,6 +2,14 @@ import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Cartes
 import type { BreakdownRow } from "@/lib/stats";
 
 export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
+  if (data.every((d) => d.n === 0)) {
+    return (
+      <div className="h-[220px] flex items-center justify-center">
+        <p className="font-body text-sm text-muted">Nog geen trades per fase.</p>
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>

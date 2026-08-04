@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import type { BreakdownRow } from "@/lib/stats";
 import { Card } from "@/components/ui/Card";
-import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
 
 interface BreakdownTableProps {
   title: string;
@@ -30,10 +29,7 @@ export function BreakdownTable({ title, rows }: BreakdownTableProps) {
               key={r.key}
               className="grid grid-cols-5 gap-2 font-mono text-xs py-1.5 items-center border-b border-border-soft"
             >
-              <span className="text-ink font-body truncate flex items-center gap-1.5">
-                {r.label}
-                {r.isLowSample && <SampleSizeBadge n={r.n} />}
-              </span>
+              <span className="text-ink font-body truncate">{r.label}</span>
               <span className="text-right text-muted">{r.n}</span>
               <span
                 className={clsx("text-right", r.resultaatTotal > 0 ? "text-win" : r.resultaatTotal < 0 ? "text-loss" : "text-be")}

@@ -2,7 +2,6 @@ import clsx from "clsx";
 import type { BreakdownRowWithFaseSplit } from "@/lib/stats";
 import { FASES } from "@/lib/constants";
 import { Card } from "@/components/ui/Card";
-import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
 
 interface BreakdownGridProps {
   title: string;
@@ -36,11 +35,14 @@ export function BreakdownGrid({ title, rows }: BreakdownGridProps) {
               {FASES.map((f) => {
                 const cell = r.byFase[f];
                 return (
-                  <span key={f} className="text-right flex items-center justify-end gap-1">
-                    <span className={clsx(cell.resultaatTotal > 0 ? "text-win" : cell.resultaatTotal < 0 ? "text-loss" : "text-be")}>
-                      {cell.n ? `${cell.resultaatTotal > 0 ? "+" : ""}${cell.resultaatTotal}%` : "—"}
-                    </span>
-                    {cell.n > 0 && cell.isLowSample && <SampleSizeBadge n={cell.n} />}
+                  <span
+                    key={f}
+                    className={clsx(
+                      "text-right",
+                      cell.resultaatTotal > 0 ? "text-win" : cell.resultaatTotal < 0 ? "text-loss" : "text-be"
+                    )}
+                  >
+                    {cell.n ? `${cell.resultaatTotal > 0 ? "+" : ""}${cell.resultaatTotal}%` : "—"}
                   </span>
                 );
               })}

@@ -35,15 +35,29 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       </span>
       <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
       <span className="flex items-center gap-1.5">
-        <OutcomePill outcome={trade.outcome} />
+        <OutcomePill outcome={trade.outcome} muted={missed} />
         {evalBadge && (
-          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border text-faint" title={evalBadge.title}>
+          <span
+            className={`font-mono text-[10px] px-1.5 py-0.5 rounded border text-faint ${
+              missed ? "border-gold/50 text-gold" : "border-border"
+            }`}
+            title={evalBadge.title}
+          >
             {evalBadge.label}
           </span>
         )}
       </span>
       <span
-        className={clsx("text-right", trade.resultaat_pct > 0 ? "text-win" : trade.resultaat_pct < 0 ? "text-loss" : "text-be")}
+        className={clsx(
+          "text-right",
+          missed
+            ? "text-faint"
+            : trade.resultaat_pct > 0
+              ? "text-win"
+              : trade.resultaat_pct < 0
+                ? "text-loss"
+                : "text-be"
+        )}
       >
         {trade.resultaat_pct > 0 ? "+" : ""}
         {trade.resultaat_pct}%

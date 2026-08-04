@@ -6,11 +6,18 @@ import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
 
 export function FaseKenmerkenSection() {
-  const { control, register, watch } = useFormContext<TradeFormValues>();
+  const {
+    control,
+    register,
+    watch,
+    formState: { errors },
+  } = useFormContext<TradeFormValues>();
   const fase = watch("fase");
   const fase3Touches = watch("fase3_zone_min_2_touches");
   const fase3Engulfing = watch("fase3_engulfing_candle");
 
+  // Every non-computed fase-kenmerk is required for its fase (see the superRefine block in
+  // validation.ts) — marked up front here instead of only surfacing as an error after submit.
   const fields = FASE_KENMERKEN.filter((k) => k.fase === fase && !k.computed);
 
   return (
@@ -18,7 +25,12 @@ export function FaseKenmerkenSection() {
       <h3 className="font-display text-lg italic text-ink">Fase-specifieke kenmerken — {fase}</h3>
       <div className="grid grid-cols-2 gap-4">
         {fields.map((k) => (
-          <Field key={k.field} label={k.label}>
+          <Field
+            key={k.field}
+            label={k.label}
+            required
+            error={errors[k.field as keyof TradeFormValues]?.message as string | undefined}
+          >
             {k.values === "boolean" ? (
               <Controller
                 name={k.field as keyof TradeFormValues}

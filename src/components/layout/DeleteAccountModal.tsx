@@ -15,7 +15,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestClose = useModalGuard(false, onClose);
+  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(typed.length > 0, onClose);
   const canConfirm = typed === CONFIRM_PHRASE && !deleting;
 
   async function handleConfirm() {
@@ -33,11 +33,15 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={requestClose}>
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-account-title"
         className="w-full max-w-sm rounded-xl bg-surface border border-border p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl italic text-loss">Account verwijderen</h2>
+          <h2 id="delete-account-title" className="font-display text-xl italic text-loss">Account verwijderen</h2>
           <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>

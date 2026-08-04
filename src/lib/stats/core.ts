@@ -243,6 +243,8 @@ function mean(values: number[]): number {
   return values.reduce((s, v) => s + v, 0) / values.length;
 }
 
+/** Rounds to 2 decimals, normalizing an exact-zero negative sum (-0) to 0 — Math.round(-0.001 * 100) / 100 is -0, which is falsy and renders as "-0%". */
 export function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+  const r = Math.round(n * 100) / 100;
+  return Object.is(r, -0) ? 0 : r;
 }

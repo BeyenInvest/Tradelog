@@ -9,7 +9,8 @@
       (function () {
         try {
           var stored = localStorage.getItem("theme");
-          if (stored === "light") document.documentElement.classList.add("light");
+          var light = stored === "light" || (stored !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches);
+          if (light) document.documentElement.classList.add("light");
         } catch (e) {}
       })();
     </script>

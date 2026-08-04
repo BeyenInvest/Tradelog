@@ -5,7 +5,7 @@ import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { computeOverviewKpis, computeEquityCurve, round2 } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
-type View = "taken" | "missed" | "both";
+type View = "taken" | "missed";
 
 function signedPct(n: number): string {
   return `${n > 0 ? "+" : ""}${n}%`;
@@ -13,9 +13,11 @@ function signedPct(n: number): string {
 
 /**
  * The "Resultaat" block for a review detail: the real numbers (trades, total
- * result, avg RR) + win-rate gauge + equity curve, with a Genomen/Missed/Beide
- * toggle mirroring the reference. Avg RR = total result / decisive trades
- * (wins + losses, BE excluded).
+ * result, avg RR) + win-rate gauge + equity curve, with a Genomen/Missed
+ * toggle. There is no combined "Beide" view — missed trades are hypothetical
+ * and must never be blended into real performance numbers (resultaat,
+ * win-rate, streaks, equity curve), so each tab is computed in isolation.
+ * Avg RR = total result / decisive trades (wins + losses, BE excluded).
  */
 export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: Trade[] }) {
   const [view, setView] = useState<View>("taken");
@@ -23,7 +25,7 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
 
   if (taken.length === 0 && missed.length === 0) return null;
 
-  const rows = view === "taken" ? taken : view === "missed" ? missed : [...taken, ...missed];
+  const rows = view === "taken" ? taken : missed;
   const kpis = computeOverviewKpis(rows);
   const equityData = computeEquityCurve(rows);
   const decisive = kpis.wins + kpis.losses;
@@ -32,7 +34,6 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
   const options: { key: View; label: string }[] = [
     { key: "taken", label: "Genomen" },
     { key: "missed", label: "Missed" },
-    { key: "both", label: "Beide" },
   ];
 
   return (

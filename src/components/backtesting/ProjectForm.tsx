@@ -16,7 +16,10 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!naam.trim()) return;
+    if (!naam.trim()) {
+      setError("Vul een naam in.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import { groupTrades, groupTradesByOutcome, type TradeGroup } from "@/lib/tradeGrouping";
+import { sortChronological } from "@/lib/stats";
 import type { PeriodType } from "@/lib/constants";
 import { TradeListItem } from "@/components/trades/TradeListItem";
 import { TradeListHeader } from "@/components/trades/TradeListHeader";
@@ -15,8 +16,9 @@ const MODE_LABELS: Record<GroupMode, string> = {
   quarter: "Per kwartaal",
 };
 
+/** Most-recent-first, via the same datum_open+id tie-break as everywhere else that sorts chronologically. */
 function sortDesc(trades: Trade[]): Trade[] {
-  return [...trades].sort((a, b) => b.datum_open.localeCompare(a.datum_open));
+  return sortChronological(trades).reverse();
 }
 
 function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defaultOpenKey: string | null }) {

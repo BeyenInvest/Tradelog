@@ -14,7 +14,7 @@ import { PeriodicReviewForm } from "@/components/reviews/PeriodicReviewForm";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
-import { takenTrades, missedTrades } from "@/lib/stats";
+import { takenTrades, missedTrades, round2 } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 
 type ReviewTab = "week" | PeriodType;
@@ -86,11 +86,24 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
   function takenTradesOf(review: WeeklyReview) {
     return takenTrades(tradesByReview.get(review.id) ?? []);
   }
+
+  // Precomputed once per reviews/trades change instead of re-filtering+reducing per row on every
+  // ReviewList render (resultaatOf and tradeCountOf used to each independently call takenTradesOf).
+  const statsByReview = useMemo(() => {
+    const m = new Map<string, { resultaat: number; count: number }>();
+    for (const review of reviews) {
+      const taken = takenTradesOf(review);
+      m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviews, tradesByReview]);
+
   function resultaatOf(review: WeeklyReview): number {
-    return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
+    return statsByReview.get(review.id)?.resultaat ?? 0;
   }
   function tradeCountOf(review: WeeklyReview): number {
-    return takenTradesOf(review).length;
+    return statsByReview.get(review.id)?.count ?? 0;
   }
 
   function openCreate() {
@@ -198,11 +211,24 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
   function missedTradesOf(review: PeriodicReview) {
     return missedTrades(tradesInPeriod(trades, review));
   }
+
+  // Precomputed once per reviews/trades change instead of re-filtering+reducing per row on every
+  // PeriodicReviewList render (resultaatOf and tradeCountOf used to each independently call takenTradesOf).
+  const statsByReview = useMemo(() => {
+    const m = new Map<string, { resultaat: number; count: number }>();
+    for (const review of reviews) {
+      const taken = takenTradesOf(review);
+      m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviews, trades]);
+
   function resultaatOf(review: PeriodicReview): number {
-    return Math.round(takenTradesOf(review).reduce((s, t) => s + t.resultaat_pct, 0) * 100) / 100;
+    return statsByReview.get(review.id)?.resultaat ?? 0;
   }
   function tradeCountOf(review: PeriodicReview): number {
-    return takenTradesOf(review).length;
+    return statsByReview.get(review.id)?.count ?? 0;
   }
 
   function openCreate() {

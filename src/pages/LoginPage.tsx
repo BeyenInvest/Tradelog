@@ -3,6 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
+import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function LoginPage() {
   const { session, signIn } = useAuth();
@@ -21,7 +22,7 @@ export default function LoginPage() {
     try {
       await signIn(email, password, captchaToken);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Inloggen mislukt");
+      setError(toErrorMessage(err, "Inloggen mislukt"));
     } finally {
       setSubmitting(false);
     }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { SampleSizeBadge } from "@/components/ui/SampleSizeBadge";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
@@ -10,7 +9,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
-  computeTpfsStats, computeDurationByOutcome, computeEquityCurve, groupIntoSeries,
+  computeTpfsStats, computeDurationByOutcome, computeEquityCurve, groupIntoSeries, takenTrades,
 } from "@/lib/stats";
 import { BREAKDOWN_DIMENSIONS } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
@@ -34,7 +33,12 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
 
-  const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
+  // Backtest projects don't offer "Missed trade" as an evaluation in the UI, but there's no DB
+  // constraint enforcing that — filter defensively so a stray one can never dilute these KPIs.
+  const scopedTrades = useMemo(
+    () => takenTrades(applyJournalFilters(trades, period, filters)),
+    [trades, period, filters]
+  );
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
   const byFase = useMemo(() => breakdownBy(scopedTrades, (t) => t.fase, { sortOrder: FASES }), [scopedTrades]);
@@ -54,7 +58,10 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
   );
   // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
   // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
-  const kenmerkenSplit = BREAKDOWN_DIMENSIONS.findIndex((d) => d.id === "weekly_kenmerk") + 1;
+  // Falls back to splitting after the first dimension if "weekly_kenmerk" is ever renamed/removed, rather
+  // than silently collapsing this whole section to 0 rows (findIndex returning -1 would do that).
+  const weeklyKenmerkIdx = BREAKDOWN_DIMENSIONS.findIndex((d) => d.id === "weekly_kenmerk");
+  const kenmerkenSplit = weeklyKenmerkIdx === -1 ? 1 : weeklyKenmerkIdx + 1;
 
   const kenmerkRows = useMemo(
     () =>
@@ -82,7 +89,7 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
           tone={kpis.totalResultaat >= 0 ? "up" : "down"}
         />
         <StatCard label="Win / BE / Loss rate" value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
-        <StatCard label="Max drawdown" value={`-${kpis.maxDrawdownPct}%`} tone="down" />
+        <StatCard label="Max drawdown" value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
         <StatCard label="Max losing streak" value={kpis.maxLosingStreak} tone="down" />
         <StatCard label="Max winning streak" value={kpis.maxWinningStreak} tone="up" />
         <StatCard label="Huidige streak" value={`${kpis.currentStreak.count} ${kpis.currentStreak.type}`} />
@@ -101,7 +108,6 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
               <p className="font-display text-2xl italic text-gold">{f.label}</p>
               <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
                 {f.n} <span className="text-xs text-muted font-body">trades</span>
-                {f.isLowSample && <SampleSizeBadge n={f.n} />}
               </p>
               <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
                 {f.resultaatTotal > 0 ? "+" : ""}
@@ -238,7 +244,6 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
               compact
               label={`Duur ${o}`}
               value={duration[o].avgDays != null ? `${duration[o].avgDays}d` : "—"}
-              sub={`n=${duration[o].n}`}
             />
           ))}
         </div>

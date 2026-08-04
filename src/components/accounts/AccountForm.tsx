@@ -14,11 +14,19 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!naam || !accountSize) return;
+    const size = Number(accountSize);
+    if (!naam.trim()) {
+      setError("Vul een naam in.");
+      return;
+    }
+    if (!accountSize || !Number.isFinite(size) || size <= 0) {
+      setError("Vul een account size groter dan 0 in.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ naam, account_size: Number(accountSize), fase, actief: true });
+      await onSubmit({ naam: naam.trim(), account_size: size, fase, actief: true });
       setNaam("");
       setAccountSize("");
       setFase("Phase 1");
@@ -39,7 +47,7 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs uppercase tracking-wider text-muted">Account size</label>
-          <input type="number" step="0.01" className="input w-32" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} />
+          <input type="number" step="0.01" min="0.01" className="input w-32" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs uppercase tracking-wider text-muted">Fase</label>

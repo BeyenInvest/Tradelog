@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,14 +7,23 @@ import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "@/lib/validation";
 
+// Grace period to let a genuine PASSWORD_RECOVERY event catch up to a fast page load before
+// falling back to "link expired" — see the passwordRecovery gate below.
+const RECOVERY_EVENT_GRACE_MS = 2500;
+
 /**
  * Lands here from the Supabase recovery email link, which the client SDK
- * exchanges for a live session before this page renders. Guards on `session`
- * itself (not just the PASSWORD_RECOVERY event) since the event can lag a
- * fast page load — an authenticated session is what actually matters here.
+ * exchanges for a live session before this page renders. The form only
+ * unlocks once `passwordRecovery` is true (the PASSWORD_RECOVERY auth event
+ * actually fired) — an ordinary logged-in session is NOT enough. Without this,
+ * anyone with access to an already-authenticated browser tab (shared/kiosk
+ * machine, forgotten laptop) could navigate straight here and take over the
+ * account with no re-authentication. The event can lag a fast page load, so
+ * we show a brief "verifying" state instead of immediately declaring the link
+ * expired, and only give up after a short grace period.
  */
 export default function ResetPasswordPage() {
-  const { session, loading, updatePassword } = useAuth();
+  const { session, passwordRecovery, loading, updatePassword } = useAuth();
   const navigate = useNavigate();
   const {
     register,
@@ -23,6 +32,16 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormValues>({ resolver: zodResolver(resetPasswordSchema) });
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [graceExpired, setGraceExpired] = useState(false);
+
+  useEffect(() => {
+    if (loading || passwordRecovery) return;
+    const timer = setTimeout(() => setGraceExpired(true), RECOVERY_EVENT_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [loading, passwordRecovery]);
+
+  const verified = session && passwordRecovery;
+  const linkInvalid = !loading && (!session || graceExpired) && !verified;
 
   async function handleReset(values: ResetPasswordFormValues) {
     setError(null);
@@ -47,7 +66,7 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-muted">Laden...</p>
         ) : done ? (
           <p className="text-sm text-win">Wachtwoord bijgewerkt — je wordt doorgestuurd...</p>
-        ) : !session ? (
+        ) : linkInvalid ? (
           <div className="flex flex-col gap-3">
             <h1 className="font-display text-xl italic text-ink">Link verlopen</h1>
             <p className="text-sm text-muted">
@@ -57,6 +76,8 @@ export default function ResetPasswordPage() {
               Nieuwe link aanvragen
             </Link>
           </div>
+        ) : !verified ? (
+          <p className="text-sm text-muted">Link verifiëren...</p>
         ) : (
           <form onSubmit={handleSubmit(handleReset)} className="flex flex-col gap-4">
             <p className="text-sm text-muted">Kies een nieuw wachtwoord.</p>

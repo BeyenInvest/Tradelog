@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Payout, PayoutInput, PropAccount } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { formatEUR } from "@/lib/format";
 import { PayoutList } from "./PayoutList";
 
 interface AccountListProps {
@@ -16,10 +17,11 @@ interface AccountListProps {
 export function AccountList({ accounts, payouts, onDeleteAccount, onCreatePayout, onDeletePayout }: AccountListProps) {
   const [error, setError] = useState<string | null>(null);
 
-  async function handleDeleteAccount(id: string) {
+  async function handleDeleteAccount(acc: PropAccount) {
+    if (!confirm(`Account "${acc.naam}" verwijderen? Alle bijbehorende payouts worden ook verwijderd.`)) return;
     setError(null);
     try {
-      await onDeleteAccount(id);
+      await onDeleteAccount(acc.id);
     } catch (err) {
       setError(toErrorMessage(err, "Verwijderen van account is mislukt"));
     }
@@ -43,11 +45,11 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onCreatePayout
               <div>
                 <p className="font-display text-xl italic text-ink">{acc.naam}</p>
                 <p className="font-mono text-xs mt-1 text-muted">
-                  €{acc.account_size.toLocaleString("nl-BE")} · {acc.fase}
+                  €{formatEUR(acc.account_size)} · {acc.fase}
                   {!acc.actief && " · inactief"}
                 </p>
               </div>
-              <button onClick={() => void handleDeleteAccount(acc.id)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
+              <button onClick={() => void handleDeleteAccount(acc)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
                 <Trash2 size={14} />
               </button>
             </div>

@@ -12,6 +12,7 @@ export function BooleanToggle({ value, onChange, labels = ["Ja", "Nee"] }: Boole
       <button
         type="button"
         onClick={() => onChange(true)}
+        aria-pressed={value === true}
         className={`px-3 py-1.5 text-xs font-body transition-colors ${
           value === true ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
         }`}
@@ -21,6 +22,7 @@ export function BooleanToggle({ value, onChange, labels = ["Ja", "Nee"] }: Boole
       <button
         type="button"
         onClick={() => onChange(false)}
+        aria-pressed={value === false}
         className={`px-3 py-1.5 text-xs font-body transition-colors ${
           value === false ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
         }`}

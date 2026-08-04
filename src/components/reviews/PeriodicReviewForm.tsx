@@ -41,7 +41,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  const requestClose = useModalGuard(dirty, onClose);
+  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(dirty, onClose);
 
   function withDirty<T>(setter: (v: T) => void) {
     return (v: T) => {
@@ -91,9 +91,16 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={requestClose}>
-      <div className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="periodic-review-form-title"
+        className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-display text-2xl italic text-ink">
+          <h2 id="periodic-review-form-title" className="font-display text-2xl italic text-ink">
             {review ? "Review bewerken" : `Nieuwe ${PERIOD_TYPE_LABELS[periodType].toLowerCase()} review`}
           </h2>
           <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">

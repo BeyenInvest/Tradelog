@@ -6,7 +6,7 @@ import { EconomicEventRow } from "@/components/economic/EconomicEventRow";
 import { useEconomicCalendar } from "@/hooks/useEconomicCalendar";
 import { groupEventsByDay, type EconomicImpact } from "@/lib/economicCalendar";
 
-const IMPACT_OPTIONS: EconomicImpact[] = ["Low", "Medium", "High"];
+const IMPACT_OPTIONS: EconomicImpact[] = ["Low", "Medium", "High", "Holiday"];
 
 export default function EconomicCalendarPage() {
   const { events, loading, error, refresh } = useEconomicCalendar();
@@ -40,7 +40,7 @@ export default function EconomicCalendarPage() {
     <>
       <PageHeader
         title="Economic Calendar"
-        subtitle="Deze week — bron: ForexFactory (niet-officiële feed, elke minuut ververst)"
+        subtitle="Deze week — bron: ForexFactory (niet-officiële feed, cache ververst elke 30 min server-side)"
         action={
           <button
             onClick={() => void refresh()}
@@ -70,6 +70,7 @@ export default function EconomicCalendarPage() {
             <button
               key={impact}
               onClick={() => toggleImpact(impact)}
+              aria-pressed={impactFilter.has(impact)}
               className={`px-3 py-2 text-xs font-body transition-colors ${
                 impactFilter.has(impact) ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"
               }`}

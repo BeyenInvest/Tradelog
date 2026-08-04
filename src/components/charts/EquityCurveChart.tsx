@@ -2,6 +2,14 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import type { EquityPoint } from "@/lib/stats";
 
 export function EquityCurveChart({ data }: { data: EquityPoint[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center">
+        <p className="font-body text-sm text-muted">Nog geen trades voor een cumulatieve curve.</p>
+      </div>
+    );
+  }
+
   // A single point has nothing to draw a line between — Recharts just renders a dot.
   // Prepend a synthetic zero-baseline point so it reads as a line from start to result.
   const chartData = data.length === 1 ? [{ ...data[0], idx: 0, cum: 0 }, data[0]] : data;
