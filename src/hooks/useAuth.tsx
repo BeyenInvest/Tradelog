@@ -8,6 +8,8 @@ interface AuthContextValue {
   /** The signed-in user's own profiles row (role, plan, display_name), fetched once alongside the session. */
   profile: Profile | null;
   isAdmin: boolean;
+  /** profile?.hide_fase — user opted out of the fixed 4-fasen system, so every fase-related field/breakdown hides in their own UI. */
+  hideFase: boolean;
   loading: boolean;
   /**
    * True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the
@@ -23,6 +25,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -104,12 +107,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }
 
+  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name">>) {
+    if (!session) throw new Error("Niet ingelogd");
+    const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
+    if (error) throw error;
+    setProfile(data as Profile);
+  }
+
   return (
     <AuthContext.Provider
       value={{
         session,
         profile,
         isAdmin: profile?.role === "admin",
+        hideFase: profile?.hide_fase ?? false,
         loading,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",
@@ -118,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         sendPasswordReset,
         updatePassword,
+        updateProfile,
         deleteAccount,
       }}
     >

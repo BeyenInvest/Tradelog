@@ -1,8 +1,11 @@
+import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import type { TradeFormValues } from "@/lib/validation";
 import { CCS, ENTRIES, FASES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
+import { useAuth } from "@/hooks/useAuth";
+import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { Field } from "./Field";
 
 export function EntrySection() {
@@ -11,14 +14,22 @@ export function EntrySection() {
     control,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
+  const { hideFase } = useAuth();
+  const { options: customEntries } = useCustomOptions("entry");
+  const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
 
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">Entry</h3>
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Fase" error={errors.fase?.message}>
-          <EnumSelect options={FASES} {...register("fase")} />
-        </Field>
+        {hideFase ? (
+          // Still submitted (DB column stays `not null`) — just not editable/visible for a user who doesn't use fasen.
+          <input type="hidden" {...register("fase")} />
+        ) : (
+          <Field label="Fase" error={errors.fase?.message}>
+            <EnumSelect options={FASES} {...register("fase")} />
+          </Field>
+        )}
         <Field label="Datum open" error={errors.datum_open?.message}>
           <input type="date" className="input" {...register("datum_open")} />
         </Field>
@@ -32,7 +43,7 @@ export function EntrySection() {
           <EnumSelect options={TRADE_CONCEPTS} {...register("trade_concept")} />
         </Field>
         <Field label="Entry" error={errors.entry?.message}>
-          <EnumSelect options={ENTRIES} {...register("entry")} />
+          <EnumSelect options={entryOptions} {...register("entry")} />
         </Field>
         <Field label="Weekly criteria" error={errors.weekly_criteria?.message}>
           <EnumSelect options={WEEKLY_CRITERIA} {...register("weekly_criteria")} />

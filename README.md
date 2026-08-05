@@ -66,6 +66,6 @@ Zolang bovenstaande niet is doorlopen, faalt `/signup` gewoon met een Supabase-f
 
 ## 7. Buiten scope (bewust nog niet gebouwd)
 
-- Per-gebruiker instelbare trading-methodologie (iedereen krijgt nu dezelfde vaste "4 fasen"-strategie).
+- Per-gebruiker instelbare trading-methodologie (iedereen krijgt nog steeds dezelfde vaste "4 fasen"-strategie en vaste lijsten). Alleen het tónen van fasen is nu per gebruiker uit te zetten via `/settings` (`profiles.hide_fase`).
 - Betaling/abonnementen (Stripe) — de `profiles.plan`-kolom (default `'free'`) is de enige voorbereiding hierop.
 - Migratie vanuit de oude Google Sheets, missed-trades log, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling. Zie sectie 7-8 van de spec.

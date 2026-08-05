@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck } from "lucide-react";
+import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -17,6 +17,7 @@ const NAV = [
   { to: "/accounts", label: "Accounts", icon: Wallet },
   { to: "/calendar", label: "Economic Calendar", icon: CalendarClock },
   { to: "/lot-size", label: "Lot Size Calculator (Beta)", icon: Calculator },
+  { to: "/settings", label: "Instellingen", icon: Settings },
 ];
 
 export function Sidebar() {

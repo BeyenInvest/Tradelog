@@ -15,6 +15,7 @@ import ReviewsPage from "@/pages/ReviewsPage";
 import AccountsPage from "@/pages/AccountsPage";
 import EconomicCalendarPage from "@/pages/EconomicCalendarPage";
 import LotSizeCalculatorPage from "@/pages/LotSizeCalculatorPage";
+import SettingsPage from "@/pages/SettingsPage";
 import AdminUsersListPage from "@/pages/AdminUsersListPage";
 import AdminUserDetailPage from "@/pages/AdminUserDetailPage";
 
@@ -68,6 +69,7 @@ export function AppRouter() {
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/calendar" element={<EconomicCalendarPage />} />
         <Route path="/lot-size" element={<LotSizeCalculatorPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route
           path="/admin"
           element={

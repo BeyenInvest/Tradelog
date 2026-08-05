@@ -1,12 +1,14 @@
 import { Controller, useFormContext } from "react-hook-form";
 import type { TradeFormValues } from "@/lib/validation";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
+import { useAuth } from "@/hooks/useAuth";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
 import { FaseKenmerkenSection } from "./FaseKenmerkenSection";
 
 export function TechnicalSection() {
   const { register, control } = useFormContext<TradeFormValues>();
+  const { hideFase } = useAuth();
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,7 +28,7 @@ export function TechnicalSection() {
         </Field>
       </div>
 
-      <FaseKenmerkenSection />
+      {!hideFase && <FaseKenmerkenSection />}
 
       <div className="grid grid-cols-2 gap-4">
         <UrlPreviewField name="w_screenshot" label="Weekly screenshot (url)" />

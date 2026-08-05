@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  CCS, ENTRIES, FASES, OUTCOMES, PAIRS, STRUCTUREN, TRADE_CONCEPTS, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
+  CCS, FASES, OUTCOMES, PAIRS, STRUCTUREN, TRADE_CONCEPTS, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
 } from "./constants";
 
 const boolField = z.boolean().nullable().optional().default(null);
@@ -28,6 +28,9 @@ function nullableEnum<T extends readonly [string, ...string[]]>(values: T) {
   return z.preprocess((val) => (val === "" || val == null ? null : val), z.enum(values).nullable());
 }
 
+/** Same "" -> null coercion as nullableEnum, but for `entry` (see below) which isn't a static enum. */
+const nullableString = z.preprocess((val) => (val === "" || val == null ? null : val), z.string().nullable());
+
 /**
  * Mirrors TradeInput (src/lib/types.ts). Enum fields use z.enum bound to the
  * same constant arrays as the DB schema (rekenregel 7 — strict validation,
@@ -47,7 +50,11 @@ export const tradeSchema = z
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
     trade_concept: nullableEnum(TRADE_CONCEPTS).optional().default(null),
-    entry: nullableEnum(ENTRIES).optional().default(null),
+    // Deliberate exception to "one shared enum, no free text" above: a user can register their own
+    // extra values (useCustomOptions, field="entry") on top of ENTRIES, so this can't be a static
+    // z.enum. The <select> in EntrySection.tsx — ENTRIES + that user's own custom_options rows — is
+    // still the only way to set this from the UI.
+    entry: nullableString.optional().default(null),
     cc: z.enum(CCS),
     nieuws: z.boolean().default(false),
     w_confirm: boolField,

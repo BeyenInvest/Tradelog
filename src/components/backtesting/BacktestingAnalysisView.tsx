@@ -16,6 +16,7 @@ import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Overview KPIs, per-Fase cards, TPFS block, duration, series-of-5, and every
@@ -29,6 +30,7 @@ import type { Trade } from "@/lib/types";
  * never mix with another's.
  */
 export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
+  const { hideFase } = useAuth();
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
@@ -102,41 +104,45 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
 
       {/* Per Fase KPI cards + bar chart */}
       <section className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {byFase.map((f) => (
-            <Card key={f.key}>
-              <p className="font-display text-2xl italic text-gold">{f.label}</p>
-              <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
-                {f.n} <span className="text-xs text-muted font-body">trades</span>
-              </p>
-              <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
-                {f.resultaatTotal > 0 ? "+" : ""}
-                {f.resultaatTotal}%
-              </p>
-              <p className="font-body text-xs mt-1 text-muted">
-                <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
-                {" · "}
-                <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
-              </p>
-              <p className="font-mono text-[11px] mt-1 text-muted">
-                <span className="text-win">{f.wins}W</span>
-                {" / "}
-                <span className="text-be">{f.be}BE</span>
-                {" / "}
-                <span className="text-loss">{f.losses}L</span>
-              </p>
-            </Card>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {!hideFase && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {byFase.map((f) => (
+              <Card key={f.key}>
+                <p className="font-display text-2xl italic text-gold">{f.label}</p>
+                <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
+                  {f.n} <span className="text-xs text-muted font-body">trades</span>
+                </p>
+                <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
+                  {f.resultaatTotal > 0 ? "+" : ""}
+                  {f.resultaatTotal}%
+                </p>
+                <p className="font-body text-xs mt-1 text-muted">
+                  <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
+                  {" · "}
+                  <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
+                </p>
+                <p className="font-mono text-[11px] mt-1 text-muted">
+                  <span className="text-win">{f.wins}W</span>
+                  {" / "}
+                  <span className="text-be">{f.be}BE</span>
+                  {" / "}
+                  <span className="text-loss">{f.losses}L</span>
+                </p>
+              </Card>
+            ))}
+          </div>
+        )}
+        <div className={`grid grid-cols-1 gap-5 ${hideFase ? "" : "lg:grid-cols-2"}`}>
           <Card>
             <h3 className="font-display text-xl italic mb-4 text-ink">Cumulatief resultaat</h3>
             <EquityCurveChart data={equityData} />
           </Card>
-          <Card>
-            <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
-            <FaseBarChart data={byFase} />
-          </Card>
+          {!hideFase && (
+            <Card>
+              <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
+              <FaseBarChart data={byFase} />
+            </Card>
+          )}
         </div>
       </section>
 
@@ -168,20 +174,22 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl italic text-ink">Uitsplitsingen</h2>
-          <div className="inline-flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setViewMode("totaal")}
-              className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-            >
-              Totaal
-            </button>
-            <button
-              onClick={() => setViewMode("per-fase")}
-              className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-            >
-              Per Fase
-            </button>
-          </div>
+          {!hideFase && (
+            <div className="inline-flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setViewMode("totaal")}
+                className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+              >
+                Totaal
+              </button>
+              <button
+                onClick={() => setViewMode("per-fase")}
+                className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+              >
+                Per Fase
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">
@@ -194,23 +202,25 @@ export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
         </div>
 
         {/* Fase-kenmerken */}
-        <div className="flex flex-col gap-4">
-          <h3 className="font-display text-lg italic text-ink">Fase-kenmerken</h3>
-          {FASES.map((fase) => {
-            const configs = kenmerkRows.filter((k) => k.config.fase === fase);
-            if (configs.length === 0) return null;
-            return (
-              <div key={fase} className="flex flex-col gap-3">
-                <h4 className="font-body text-sm text-muted">{fase}</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  {configs.map(({ config, rows }) => (
-                    <BreakdownTable key={config.field} title={config.label} rows={rows} />
-                  ))}
+        {!hideFase && (
+          <div className="flex flex-col gap-4">
+            <h3 className="font-display text-lg italic text-ink">Fase-kenmerken</h3>
+            {FASES.map((fase) => {
+              const configs = kenmerkRows.filter((k) => k.config.fase === fase);
+              if (configs.length === 0) return null;
+              return (
+                <div key={fase} className="flex flex-col gap-3">
+                  <h4 className="font-body text-sm text-muted">{fase}</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {configs.map(({ config, rows }) => (
+                      <BreakdownTable key={config.field} title={config.label} rows={rows} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <h3 className="font-display text-lg italic text-ink">Timing &amp; Instrument</h3>

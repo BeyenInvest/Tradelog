@@ -4,6 +4,7 @@ import { useClickOutside } from "@/hooks/useClickOutside";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { FASES, PAIRS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import { useAuth } from "@/hooks/useAuth";
 
 interface FilterPanelProps {
   value: JournalFilters;
@@ -18,6 +19,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
+  const { hideFase } = useAuth();
 
   return (
     <div className="relative" ref={ref}>
@@ -48,15 +50,17 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Fase">
-              <EnumSelect
-                options={FASES}
-                value={value.fase ?? ""}
-                onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : (e.target.value as (typeof FASES)[number]) })}
-                placeholder="Alle fases"
-                className="w-full text-xs py-1.5"
-              />
-            </Field>
+            {!hideFase && (
+              <Field label="Fase">
+                <EnumSelect
+                  options={FASES}
+                  value={value.fase ?? ""}
+                  onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : (e.target.value as (typeof FASES)[number]) })}
+                  placeholder="Alle fases"
+                  className="w-full text-xs py-1.5"
+                />
+              </Field>
+            )}
             <Field label="Pair">
               <EnumSelect
                 options={PAIRS}

@@ -4,6 +4,7 @@ import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
 import { isMissed } from "@/lib/stats";
 import { OutcomePill } from "@/components/ui/OutcomePill";
+import { useAuth } from "@/hooks/useAuth";
 
 const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; title: string }>> = {
   "Missed trade": { label: "missed", title: "Hypothetisch — deze trade is niet genomen" },
@@ -19,20 +20,23 @@ interface TradeListItemProps {
 }
 
 export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
+  const { hideFase } = useAuth();
   const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
   return (
     <div
-      className={`grid grid-cols-7 gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${missed ? "opacity-60" : ""}`}
+      className={`grid ${hideFase ? "grid-cols-6" : "grid-cols-7"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${missed ? "opacity-60" : ""}`}
     >
       <span className="text-muted">
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "2-digit" })}
       </span>
       <span className="text-ink">{trade.pair}</span>
-      <span>
-        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
-      </span>
+      {!hideFase && (
+        <span>
+          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
+        </span>
+      )}
       <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
       <span className="flex items-center gap-1.5">
         <OutcomePill outcome={trade.outcome} muted={missed} />

@@ -1,5 +1,5 @@
 import type {
-  CC, Currency, Entry, Fase, Outcome, Pair, PeriodType, PropFase, Sessie,
+  CC, Currency, Fase, Outcome, Pair, PeriodType, PropFase, Sessie,
   Structuur, TradeConcept, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
 } from "./constants";
 
@@ -21,7 +21,8 @@ export interface Trade {
   weekly_criteria: WeeklyCriteria | null;
   weekly_kenmerk: WeeklyKenmerk | null;
   trade_concept: TradeConcept | null;
-  entry: Entry | null;
+  /** ENTRIES (constants.ts) or one of this user's own custom_options rows for field='entry' — see useCustomOptions. */
+  entry: string | null;
 
   cc: CC;
   sessie: Sessie; // DB-generated, read-only
@@ -147,8 +148,19 @@ export interface Profile {
   display_name: string | null;
   plan: string;
   role: "user" | "admin";
+  hide_fase: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export interface CustomOption {
+  id: string;
+  user_id: string;
+  field: string;
+  value: string;
+  created_at: string;
+}
+
+export type CustomOptionInput = Pick<CustomOption, "field" | "value">;
 
 export { type Currency };

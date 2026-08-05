@@ -13,6 +13,8 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 - **"Missed trade" is hypothetical** — a setup seen but never taken, logged with a hypothetical `resultaat_pct`. It must never dilute real performance numbers (resultaat, win-rate, streaks, drawdown, review stats, equity curves, ...). Every view enforces this through the shared helpers in `src/lib/stats/core.ts` — `isMissed()`, `takenTrades()`, `missedTrades()` — rather than re-filtering locally. When adding any new stat, route it through these, don't hand-roll a filter.
 - Not selectable within a backtest project — `ResultSection.tsx` hides both the "Trade evaluation" and "TPFS %" fields entirely there (gated on the same `allowMissedTrade` flag), since neither is meaningful outside the live Journal.
 - `round2()` in `core.ts` normalizes `-0` to `0` — needed because `Math.round` on an exact-zero negative sum can yield `-0`, which breaks both `toEqual` in tests and risks rendering "-0%" in the UI.
+- `profiles.hide_fase` (per-user, toggled on `/settings`, exposed as `hideFase` from `useAuth`) hides every fase-related field/column/breakdown from that user's UI (trade form, filters, journal list, backtesting analysis). It's a display-only toggle — `trades.fase` stays `not null` in the DB (defaults to `"Fase 1"` silently via a hidden form field), the fixed 4-fasen system itself is unchanged. Any new fase-related UI should check this flag the same way.
+- `custom_options` table (`user_id`, `field`, `value`) lets a user register their own extra values for a fixed-list form field without touching the shared constant list — currently wired up only for `entry` (`useCustomOptions("entry")`, merged into the Entry `<select>` in `EntrySection.tsx`). This is why `trades.entry` is plain `text`, not a native Postgres enum like every other categorical column, and why `tradeSchema`'s `entry` field is a nullable string instead of `z.enum(ENTRIES)` — a deliberate, narrow exception to this project's "one shared enum, no free text" rule, scoped to just this field. Extend the same pattern (new `field` value + a merge in the relevant section) before ever adding a one-off entry to a shared constants.ts list for a single user.
 
 ## Architecture conventions
 
@@ -34,7 +36,7 @@ Terms/Privacy pages are placeholder copy only, not legally reviewed — flag thi
 
 ## Deliberately out of scope for now (don't build unprompted)
 
-- Per-user configurable trading methodology — every user gets the same fixed "4 fasen" system (`constants.ts`). Wanted eventually, explicitly not now.
+- Per-user configurable trading methodology (e.g. custom fase/entry/concept lists) — every user still gets the same fixed "4 fasen" system and constant lists (`constants.ts`). Only the display of fasen is now user-toggleable (`hide_fase`, see Domain rules), not the methodology itself.
 - Stripe/billing — `profiles.plan` defaults to `'free'` as the only hook for this later.
 - Migration from the old Google Sheets workflow, MAE/MFE tracking, discipline/execution tracking, live broker integration. See spec §7-8.
 

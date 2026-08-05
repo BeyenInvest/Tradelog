@@ -24,10 +24,6 @@ create type trade_concept_enum as enum (
   'Reversal','Continuation','Daily retrace','Pattern in Pattern',
   'Push IC Push','Weekly-4H','Reclaim','Small daily pattern'
 );
-create type entry_enum as enum (
-  'Decel','Reversal','Continuation met ruimte','Continuation zonder ruimte',
-  '2H Entry','Reclaim','100 Fib','Instant limiet'
-);
 create type cc_enum as enum ('03','07','11','15','19','23');
 create type sessie_enum as enum ('Asia','London','Overlap','New York');
 create type structuur_enum as enum ('Inner','Outer');
@@ -43,6 +39,7 @@ create table profiles (
   display_name text,
   plan text not null default 'free',
   role text not null default 'user' check (role in ('user', 'admin')),
+  hide_fase boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -120,7 +117,7 @@ create table trades (
   weekly_criteria weekly_criteria_enum,
   weekly_kenmerk weekly_kenmerk_enum,
   trade_concept trade_concept_enum,
-  entry entry_enum,
+  entry text, -- fixed ENTRIES list + per-user custom_options, not a native enum (see custom_options below)
 
   cc cc_enum not null,
   sessie sessie_enum generated always as (
@@ -189,6 +186,18 @@ create table payouts (
   datum date not null,
   notes text,
   created_at timestamptz not null default now()
+);
+
+-- ---------- CUSTOM OPTIONS ----------
+-- Per-user extra values for a fixed-list form field (e.g. field='entry'), merged
+-- client-side on top of the shared constant list — see useCustomOptions.
+create table custom_options (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  field text not null,
+  value text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, field, value)
 );
 
 -- ---------- INDEXES ----------
@@ -302,6 +311,7 @@ alter table payouts enable row level security;
 alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
 alter table profiles enable row level security;
+alter table custom_options enable row level security;
 
 -- No insert/delete policy for profiles: rows are created only by the
 -- handle_new_user() trigger above and removed via the auth.users FK cascade.
@@ -309,6 +319,9 @@ create policy "profiles_owner_select" on profiles
   for select using (id = auth.uid());
 create policy "profiles_owner_update" on profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
+
+create policy "custom_options_owner_all" on custom_options
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 create policy "trades_owner_all" on trades
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
