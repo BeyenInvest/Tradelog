@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import type { PeriodicReview, PeriodicReviewInput } from "@/lib/types";
 import type { PeriodType } from "@/lib/constants";
 
 export function usePeriodicReviews(periodType: PeriodType) {
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const [reviews, setReviews] = useState<PeriodicReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,9 +14,11 @@ export function usePeriodicReviews(periodType: PeriodType) {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
     const { data, error: fetchError } = await supabase
       .from("periodic_reviews")
       .select("*")
+      .eq("user_id", userId)
       .eq("period_type", periodType)
       .order("jaar", { ascending: false })
       .order("periode_nummer", { ascending: false, nullsFirst: false });
@@ -23,7 +28,7 @@ export function usePeriodicReviews(periodType: PeriodType) {
       setReviews(data as PeriodicReview[]);
     }
     setLoading(false);
-  }, [periodType]);
+  }, [periodType, userId]);
 
   useEffect(() => {
     void refresh();

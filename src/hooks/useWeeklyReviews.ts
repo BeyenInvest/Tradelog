@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import { isoWeekRange } from "@/lib/isoWeek";
 
 export function useWeeklyReviews() {
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const [reviews, setReviews] = useState<WeeklyReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,9 +14,11 @@ export function useWeeklyReviews() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
     const { data, error: fetchError } = await supabase
       .from("weekly_reviews")
       .select("*")
+      .eq("user_id", userId)
       .order("jaar", { ascending: false })
       .order("week_nummer", { ascending: false });
     if (fetchError) {
@@ -22,7 +27,7 @@ export function useWeeklyReviews() {
       setReviews(data as WeeklyReview[]);
     }
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();

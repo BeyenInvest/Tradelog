@@ -1,0 +1,78 @@
+import { useMemo } from "react";
+import { X } from "lucide-react";
+import { useModalGuard } from "@/hooks/useModalGuard";
+import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
+import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
+import { PeriodicReviewContentDisplay } from "@/components/reviews/PeriodicReviewContentDisplay";
+import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
+import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import type { PeriodicReview, Trade } from "@/lib/types";
+
+/** Read-only equivalent of PeriodicReviewDetail — no edit/delete, for the admin debug view. */
+export function ReadOnlyPeriodicReviewModal({
+  review, trades, onClose,
+}: {
+  review: PeriodicReview;
+  /** Live-journal trades for the user — filtered here to the review's period range, same as ReviewsPage's tradesInPeriod. */
+  trades: Trade[];
+  onClose: () => void;
+}) {
+  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(false, onClose);
+
+  const inPeriod = useMemo(() => {
+    const { start, end } = rangeOfPeriod(review.period_type, review.jaar, review.periode_nummer);
+    return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
+  }, [trades, review]);
+  const taken = useMemo(() => takenTrades(inPeriod), [inPeriod]);
+  const missed = useMemo(() => missedTrades(inPeriod), [inPeriod]);
+  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={requestClose}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-periodic-review-title"
+        className="w-full max-w-2xl rounded-xl bg-surface border border-border p-6 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 id="admin-periodic-review-title" className="font-display text-xl italic text-ink">
+              {periodLabel(review.period_type, review.jaar, review.periode_nummer)}
+            </h2>
+            {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
+          </div>
+          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <ReviewStatsHeader taken={taken} missed={missed} />
+          <ReviewErrorStats {...errorCounts} />
+
+          <section className="flex flex-col gap-4 border-t border-border pt-6">
+            <PeriodicReviewContentDisplay
+              periodType={review.period_type}
+              technisch={review.technisch}
+              mentaal_owner={review.mentaal_owner}
+              mentaal_trader={review.mentaal_trader}
+              acties={review.acties}
+              takeaway={review.takeaway}
+              overall_comment={review.overall_comment}
+              periode_overzicht={review.periode_overzicht}
+            />
+          </section>
+
+          <section className="flex flex-col gap-4 border-t border-border pt-6">
+            <p className="font-body text-xs uppercase tracking-wider text-gold">Trades in periode ({taken.length + missed.length})</p>
+            <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}

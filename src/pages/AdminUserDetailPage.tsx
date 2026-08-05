@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, CalendarDays, List as ListIcon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
-import { ReadOnlyTradeTable } from "@/components/admin/ReadOnlyTradeTable";
-import { ReadOnlyDayTradesModal } from "@/components/admin/ReadOnlyDayTradesModal";
-import { ReadOnlyTradeDetailModal } from "@/components/admin/ReadOnlyTradeDetailModal";
-import { CalendarView } from "@/components/calendar/CalendarView";
+import { ReadOnlyTradesViewer } from "@/components/admin/ReadOnlyTradesViewer";
+import { ReadOnlyProjectModal } from "@/components/admin/ReadOnlyProjectModal";
+import { ReadOnlyWeeklyReviewModal } from "@/components/admin/ReadOnlyWeeklyReviewModal";
+import { ReadOnlyPeriodicReviewModal } from "@/components/admin/ReadOnlyPeriodicReviewModal";
 import {
   getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser, getBacktestProjectsForUser,
 } from "@/lib/admin/adminQueries";
@@ -24,9 +24,9 @@ export default function AdminUserDetailPage() {
   const [projects, setProjects] = useState<BacktestProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [selectedProject, setSelectedProject] = useState<BacktestProject | null>(null);
+  const [selectedWeeklyReview, setSelectedWeeklyReview] = useState<WeeklyReview | null>(null);
+  const [selectedPeriodicReview, setSelectedPeriodicReview] = useState<PeriodicReview | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -63,10 +63,6 @@ export default function AdminUserDetailPage() {
   const liveTrades = trades.filter((t) => t.backtest_project_id === null);
   const taken = takenTrades(liveTrades);
   const missed = missedTrades(liveTrades);
-  const selectedDayTrades = useMemo(
-    () => (selectedDay ? liveTrades.filter((t) => t.datum_open === selectedDay) : []),
-    [liveTrades, selectedDay]
-  );
 
   return (
     <>
@@ -93,44 +89,23 @@ export default function AdminUserDetailPage() {
           <>
             <ReviewStatsHeader taken={taken} missed={missed} />
 
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg italic text-ink">Journal trades</h3>
-              <div className="inline-flex rounded-lg border border-border overflow-hidden">
-                <button
-                  onClick={() => setViewMode("calendar")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-body transition-colors ${
-                    viewMode === "calendar" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-                  }`}
-                >
-                  <CalendarDays size={14} /> Kalender
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-body transition-colors ${
-                    viewMode === "list" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-                  }`}
-                >
-                  <ListIcon size={14} /> Lijst
-                </button>
-              </div>
-            </div>
-
-            {viewMode === "calendar" ? (
-              <CalendarView trades={liveTrades} onDayClick={setSelectedDay} />
-            ) : (
-              <Card>
-                <ReadOnlyTradeTable trades={liveTrades} onRowClick={setSelectedTrade} />
-              </Card>
-            )}
+            <ReadOnlyTradesViewer trades={liveTrades} title="Journal trades" />
 
             <Card>
               <h3 className="font-display text-lg italic mb-3 text-ink">Backtestprojecten ({projects.length})</h3>
               {projects.length === 0 ? (
                 <p className="font-body text-sm text-muted">Geen backtestprojecten.</p>
               ) : (
-                <ul className="flex flex-col gap-2 font-body text-sm text-ink">
+                <ul className="flex flex-col gap-2 font-body text-sm">
                   {projects.map((p) => (
-                    <li key={p.id}>{p.naam}</li>
+                    <li key={p.id}>
+                      <button
+                        onClick={() => setSelectedProject(p)}
+                        className="text-ink hover:text-gold underline-offset-2 hover:underline"
+                      >
+                        {p.naam}
+                      </button>
+                    </li>
                   ))}
                 </ul>
               )}
@@ -144,10 +119,12 @@ export default function AdminUserDetailPage() {
                 <ul className="flex flex-col gap-3">
                   {weeklyReviews.map((r) => (
                     <li key={r.id} className="border-b border-border/50 pb-2 last:border-0">
-                      <p className="font-body text-sm text-ink">
-                        Week {r.week_nummer}, {r.jaar} {r.titel && `— ${r.titel}`}
-                      </p>
-                      {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
+                      <button onClick={() => setSelectedWeeklyReview(r)} className="text-left w-full">
+                        <p className="font-body text-sm text-ink hover:text-gold">
+                          Week {r.week_nummer}, {r.jaar} {r.titel && `— ${r.titel}`}
+                        </p>
+                        {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -162,10 +139,12 @@ export default function AdminUserDetailPage() {
                 <ul className="flex flex-col gap-3">
                   {periodicReviews.map((r) => (
                     <li key={r.id} className="border-b border-border/50 pb-2 last:border-0">
-                      <p className="font-body text-sm text-ink">
-                        {r.period_type} {r.jaar} {r.titel && `— ${r.titel}`}
-                      </p>
-                      {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
+                      <button onClick={() => setSelectedPeriodicReview(r)} className="text-left w-full">
+                        <p className="font-body text-sm text-ink hover:text-gold">
+                          {r.period_type} {r.jaar} {r.titel && `— ${r.titel}`}
+                        </p>
+                        {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -175,16 +154,21 @@ export default function AdminUserDetailPage() {
         )}
       </div>
 
-      {selectedDay && (
-        <ReadOnlyDayTradesModal
-          dateIso={selectedDay}
-          trades={selectedDayTrades}
-          onClose={() => setSelectedDay(null)}
-          onSelectTrade={setSelectedTrade}
+      {selectedProject && (
+        <ReadOnlyProjectModal
+          project={selectedProject}
+          trades={trades.filter((t) => t.backtest_project_id === selectedProject.id)}
+          onClose={() => setSelectedProject(null)}
         />
       )}
 
-      {selectedTrade && <ReadOnlyTradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />}
+      {selectedWeeklyReview && (
+        <ReadOnlyWeeklyReviewModal review={selectedWeeklyReview} trades={liveTrades} onClose={() => setSelectedWeeklyReview(null)} />
+      )}
+
+      {selectedPeriodicReview && (
+        <ReadOnlyPeriodicReviewModal review={selectedPeriodicReview} trades={liveTrades} onClose={() => setSelectedPeriodicReview(null)} />
+      )}
     </>
   );
 }

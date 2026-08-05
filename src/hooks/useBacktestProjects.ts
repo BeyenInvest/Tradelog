@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import type { BacktestProject, BacktestProjectInput } from "@/lib/types";
 
 export function useBacktestProjects() {
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const [projects, setProjects] = useState<BacktestProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -10,9 +13,11 @@ export function useBacktestProjects() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
     const { data, error: fetchError } = await supabase
       .from("backtest_projects")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (fetchError) {
       setError(fetchError.message);
@@ -20,7 +25,7 @@ export function useBacktestProjects() {
       setProjects(data as BacktestProject[]);
     }
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();

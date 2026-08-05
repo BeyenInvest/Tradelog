@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import type { Trade, TradeInput } from "@/lib/types";
 
 /** A trade either belongs to the live Journal or to exactly one backtest project — never both. */
@@ -16,6 +17,8 @@ export type TradeSubmitInput = Omit<TradeInput, "backtest_project_id">;
 export type TradesApi = ReturnType<typeof useTrades>;
 
 export function useTrades(scope: TradeScope) {
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,10 @@ export function useTrades(scope: TradeScope) {
     // month you scrolled the calendar to, which would otherwise snap back to today).
     if (loadedScopeRef.current !== scopeKey) setLoading(true);
     setError(null);
-    let query = supabase.from("trades").select("*").order("datum_open", { ascending: true });
+    // Explicit user_id filter, not left to implicit RLS scoping — an admin account
+    // also has a blanket read-all RLS policy (supabase/migrations/0008_admin_role.sql),
+    // so an unfiltered query here would return every user's trades on this page.
+    let query = supabase.from("trades").select("*").eq("user_id", userId).order("datum_open", { ascending: true });
     query = scope.type === "live" ? query.is("backtest_project_id", null) : query.eq("backtest_project_id", scope.projectId);
     const { data, error: fetchError } = await query;
     if (requestId !== requestIdRef.current) return; // a newer request has since superseded this one
@@ -47,7 +53,7 @@ export function useTrades(scope: TradeScope) {
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey]);
+  }, [scopeKey, userId]);
 
   useEffect(() => {
     void refresh();

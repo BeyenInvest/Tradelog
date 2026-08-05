@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 
 export function usePropAccounts() {
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const [accounts, setAccounts] = useState<PropAccount[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,16 +14,29 @@ export function usePropAccounts() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [accountsRes, payoutsRes] = await Promise.all([
-      supabase.from("prop_accounts").select("*").order("created_at", { ascending: false }),
-      supabase.from("payouts").select("*").order("datum", { ascending: false }),
-    ]);
-    if (accountsRes.error) setError(accountsRes.error.message);
-    else setAccounts(accountsRes.data as PropAccount[]);
+    // Explicit user_id filter on accounts — see useTrades for why this can't be left to RLS
+    // alone. Payouts has no user_id of its own, so it's scoped indirectly via account_id once
+    // we know which accounts are ours (same pattern as adminQueries.getPropAccountsForUser).
+    const accountsRes = await supabase.from("prop_accounts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    if (accountsRes.error) {
+      setError(accountsRes.error.message);
+      setLoading(false);
+      return;
+    }
+    const accounts = accountsRes.data as PropAccount[];
+    setAccounts(accounts);
+
+    const accountIds = accounts.map((a) => a.id);
+    if (accountIds.length === 0) {
+      setPayouts([]);
+      setLoading(false);
+      return;
+    }
+    const payoutsRes = await supabase.from("payouts").select("*").in("account_id", accountIds).order("datum", { ascending: false });
     if (payoutsRes.error) setError(payoutsRes.error.message);
     else setPayouts(payoutsRes.data as Payout[]);
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();
