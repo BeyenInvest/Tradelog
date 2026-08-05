@@ -11,7 +11,7 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 
 - `trade_evaluation` enum (`src/lib/constants.ts`): `"Good trade" | "Emotional error" | "Technical error" | "Missed trade"`. This is *execution quality*, separate from `outcome` (`Win/Loss/BE`, the actual P&L).
 - **"Missed trade" is hypothetical** — a setup seen but never taken, logged with a hypothetical `resultaat_pct`. It must never dilute real performance numbers (resultaat, win-rate, streaks, drawdown, review stats, equity curves, ...). Every view enforces this through the shared helpers in `src/lib/stats/core.ts` — `isMissed()`, `takenTrades()`, `missedTrades()` — rather than re-filtering locally. When adding any new stat, route it through these, don't hand-roll a filter.
-- Not selectable within a backtest project (`TRADE_EVALUATIONS_NO_MISSED`) — only meaningful in the live Journal.
+- Not selectable within a backtest project — `ResultSection.tsx` hides both the "Trade evaluation" and "TPFS %" fields entirely there (gated on the same `allowMissedTrade` flag), since neither is meaningful outside the live Journal.
 - `round2()` in `core.ts` normalizes `-0` to `0` — needed because `Math.round` on an exact-zero negative sum can yield `-0`, which breaks both `toEqual` in tests and risks rendering "-0%" in the UI.
 
 ## Architecture conventions

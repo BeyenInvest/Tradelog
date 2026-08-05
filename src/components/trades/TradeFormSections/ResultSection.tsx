@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import type { TradeFormValues } from "@/lib/validation";
-import { OUTCOMES, TRADE_EVALUATIONS, TRADE_EVALUATIONS_NO_MISSED } from "@/lib/constants";
+import { OUTCOMES, TRADE_EVALUATIONS } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { Field } from "./Field";
 
@@ -35,12 +35,16 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
         <Field label="Resultaat % (R)" error={errors.resultaat_pct?.message}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
-        <Field label="Trade evaluation" error={errors.trade_evaluation?.message}>
-          <EnumSelect options={allowMissedTrade ? TRADE_EVALUATIONS : TRADE_EVALUATIONS_NO_MISSED} {...register("trade_evaluation")} />
-        </Field>
-        <Field label="TPFS % (optioneel)" error={errors.tpfs_pct?.message}>
-          <input type="number" step="0.01" className="input" {...register("tpfs_pct")} />
-        </Field>
+        {allowMissedTrade && (
+          <Field label="Trade evaluation" error={errors.trade_evaluation?.message}>
+            <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
+          </Field>
+        )}
+        {allowMissedTrade && (
+          <Field label="TPFS % (optioneel)" error={errors.tpfs_pct?.message}>
+            <input type="number" step="0.01" className="input" {...register("tpfs_pct")} />
+          </Field>
+        )}
         <Field label="Datum sluiting" error={errors.datum_sluiting?.message}>
           <input type="date" className="input" {...register("datum_sluiting")} />
         </Field>

@@ -14,9 +14,6 @@ export type Outcome = (typeof OUTCOMES)[number];
 export const TRADE_EVALUATIONS = ["Good trade", "Emotional error", "Technical error", "Missed trade"] as const;
 export type TradeEvaluation = (typeof TRADE_EVALUATIONS)[number];
 
-/** TRADE_EVALUATIONS minus "Missed trade" — for the trade form when it's opened from within a backtest project, where a missed trade isn't a meaningful concept. */
-export const TRADE_EVALUATIONS_NO_MISSED = TRADE_EVALUATIONS.filter((v) => v !== "Missed trade");
-
 export const PAIRS = [
   "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD",
   "CADCHF", "CADJPY", "CHFJPY",
