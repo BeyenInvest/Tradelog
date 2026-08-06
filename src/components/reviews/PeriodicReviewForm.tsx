@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import { MONTH_NAMES, PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
@@ -24,6 +25,7 @@ function defaultPeriodeNummer(periodType: PeriodType, now: Date): number {
 }
 
 export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClose }: PeriodicReviewFormProps) {
+  const { t } = useTranslation();
   const now = new Date();
   const [jaar, setJaar] = useState(review?.jaar ?? now.getFullYear());
   const [periodeNummer, setPeriodeNummer] = useState(review?.periode_nummer ?? defaultPeriodeNummer(periodType, now));
@@ -89,7 +91,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
 
   return (
     <ReviewFormModal
-      title={review ? "Review bewerken" : `Nieuwe ${PERIOD_TYPE_LABELS[periodType].toLowerCase()} review`}
+      title={review ? t("reviewForm.editTitle") : t("reviewForm.newPeriodic", { type: PERIOD_TYPE_LABELS[periodType].toLowerCase() })}
       titleId="periodic-review-form-title"
       isDirty={dirty}
       onClose={onClose}
@@ -100,7 +102,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
       <div className="grid grid-cols-2 gap-4">
         {periodType === "month" && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted">Maand</label>
+            <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.maand")}</label>
             <select className="input" value={periodeNummer} onChange={(e) => handlePeriodeNummerChange(Number(e.target.value))}>
               {MONTH_NAMES.map((m, i) => (
                 <option key={m} value={i + 1}>
@@ -112,7 +114,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
         )}
         {periodType === "quarter" && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted">Kwartaal</label>
+            <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.kwartaal")}</label>
             <select className="input" value={periodeNummer} onChange={(e) => handlePeriodeNummerChange(Number(e.target.value))}>
               {[1, 2, 3, 4].map((q) => (
                 <option key={q} value={q}>
@@ -123,7 +125,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
           </div>
         )}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Jaar</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.jaar")}</label>
           <input type="number" className="input" value={jaar} onChange={(e) => handleJaarChange(Number(e.target.value))} />
         </div>
       </div>
@@ -132,14 +134,14 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
       <ReviewErrorStats {...errorCounts} />
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs uppercase tracking-wider text-muted">Titel</label>
+        <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.titel")}</label>
         <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
       </div>
 
       <PeriodicReviewContentFields periodType={periodType} value={content} onChange={handleContentChange} />
 
       <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">Trades in periode ({tradesInPeriod.length})</p>
+        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("reviewForm.tradesInPeriod", { count: tradesInPeriod.length })}</p>
         <ReviewTradeGroups taken={takenPreview} missed={missedPreview} extraGroupModes={periodicExtraGroupModes(periodType)} />
       </div>
     </ReviewFormModal>

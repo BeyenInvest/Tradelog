@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { PeriodType } from "@/lib/constants";
 import { ContentBlock, ActiesList, TakeawayQuote, OverallCommentBlock } from "./ReviewContentBlocks";
 
@@ -12,9 +13,9 @@ interface PeriodicReviewContentDisplayProps {
   periode_overzicht: string | null;
 }
 
-const OVERZICHT_LABEL: Partial<Record<PeriodType, string>> = {
-  quarter: "Maandoverzicht",
-  year: "Kwartaaloverzicht",
+const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
+  quarter: "reviewContent.maandoverzicht",
+  year: "reviewContent.kwartaaloverzicht",
 };
 
 /** Read-only rendering of a monthly/quarterly/yearly review — same columns as the weekly display, relabeled. */
@@ -28,16 +29,17 @@ export function PeriodicReviewContentDisplay({
   overall_comment,
   periode_overzicht,
 }: PeriodicReviewContentDisplayProps) {
-  const overzichtLabel = OVERZICHT_LABEL[periodType];
+  const { t } = useTranslation();
+  const overzichtLabelKey = OVERZICHT_LABEL_KEY[periodType];
 
   return (
     <>
-      {technisch && <ContentBlock label="Genomen trades">{technisch}</ContentBlock>}
-      {mentaal_owner && <ContentBlock label="Genomen trades met errors">{mentaal_owner}</ContentBlock>}
-      {mentaal_trader && <ContentBlock label="Gemiste trades">{mentaal_trader}</ContentBlock>}
-      <ActiesList label="Werkpunten" items={acties} />
-      {takeaway && <TakeawayQuote label="Conclusie">{takeaway}</TakeawayQuote>}
-      {overzichtLabel && periode_overzicht && <ContentBlock label={overzichtLabel}>{periode_overzicht}</ContentBlock>}
+      {technisch && <ContentBlock label={t("reviewContent.genomenTrades")}>{technisch}</ContentBlock>}
+      {mentaal_owner && <ContentBlock label={t("reviewContent.genomenTradesErrors")}>{mentaal_owner}</ContentBlock>}
+      {mentaal_trader && <ContentBlock label={t("reviewContent.gemisteTrades")}>{mentaal_trader}</ContentBlock>}
+      <ActiesList label={t("reviewContent.werkpunten")} items={acties} />
+      {takeaway && <TakeawayQuote label={t("reviewContent.conclusie")}>{takeaway}</TakeawayQuote>}
+      {overzichtLabelKey && periode_overzicht && <ContentBlock label={t(overzichtLabelKey)}>{periode_overzicht}</ContentBlock>}
       {overall_comment && <OverallCommentBlock>{overall_comment}</OverallCommentBlock>}
     </>
   );

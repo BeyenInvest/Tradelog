@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
@@ -21,6 +22,7 @@ function defaultWeek() {
 }
 
 export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProps) {
+  const { t } = useTranslation();
   const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
   const [jaar, setJaar] = useState(startWeek.jaar);
   const [weekNummer, setWeekNummer] = useState(startWeek.week_nummer);
@@ -82,7 +84,7 @@ export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProp
 
   return (
     <ReviewFormModal
-      title={review ? "Review bewerken" : "Nieuwe weekly review"}
+      title={review ? t("reviewForm.editTitle") : t("reviewForm.newWeekly")}
       titleId="review-form-title"
       isDirty={dirty}
       onClose={onClose}
@@ -92,15 +94,15 @@ export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProp
     >
       <div className="grid grid-cols-3 gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Week</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.week")}</label>
           <input type="number" min={1} max={53} className="input" value={weekNummer} onChange={(e) => handleWeekChange(Number(e.target.value))} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Jaar</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.jaar")}</label>
           <input type="number" className="input" value={jaar} onChange={(e) => handleJaarChange(Number(e.target.value))} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Titel</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.titel")}</label>
           <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
         </div>
       </div>
@@ -111,7 +113,7 @@ export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProp
       <ReviewContentFields value={content} onChange={handleContentChange} />
 
       <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">Trades in week ({tradesInWeek.length})</p>
+        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("reviewForm.tradesInWeek", { count: tradesInWeek.length })}</p>
         <ReviewTradeGroups taken={takenPreview} missed={missedPreview} />
       </div>
     </ReviewFormModal>

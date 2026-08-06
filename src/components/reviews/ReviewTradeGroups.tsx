@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import { groupTrades, groupTradesByOutcome, type TradeGroup } from "@/lib/tradeGrouping";
@@ -9,11 +10,11 @@ import { TradeListHeader } from "@/components/trades/TradeListHeader";
 
 export type GroupMode = "outcome" | "week" | "month" | "quarter";
 
-const MODE_LABELS: Record<GroupMode, string> = {
-  outcome: "Win/BE/Loss",
-  week: "Per week",
-  month: "Per maand",
-  quarter: "Per kwartaal",
+const MODE_LABEL_KEYS: Record<GroupMode, string> = {
+  outcome: "reviews.modeOutcome",
+  week: "reviews.modeWeek",
+  month: "reviews.modeMonth",
+  quarter: "reviews.modeQuarter",
 };
 
 /** Most-recent-first, via the same datum_open+id tie-break as everywhere else that sorts chronologically. */
@@ -22,6 +23,7 @@ function sortDesc(trades: Trade[]): Trade[] {
 }
 
 function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defaultOpenKey: string | null }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(groups.map((g) => g.key).filter((k) => k !== defaultOpenKey))
   );
@@ -58,7 +60,7 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
                   <ChevronDown size={14} className="text-muted" />
                 )}
                 {g.label}
-                <span className="font-mono text-[11px] text-muted">· {g.trades.length} trades</span>
+                <span className="font-mono text-[11px] text-muted">· {t("journal.tradesCount", { count: g.trades.length })}</span>
               </span>
               <span
                 className={`font-mono text-xs ${
@@ -71,7 +73,7 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
             </button>
             {!isCollapsed &&
               (g.trades.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-muted">Geen trades.</p>
+                <p className="px-3 py-2 text-xs text-muted">{t("reviews.noTradesShort")}</p>
               ) : (
                 <div className="px-3 pb-1 pt-2 overflow-x-auto">
                   <div className="min-w-[560px]">
@@ -137,6 +139,7 @@ interface ReviewTradeGroupsProps {
 
 /** Collapsible Win/BE/Loss (or, for periodic reviews, per-week/month/quarter) trade groups for a review — read-only, replaces the old flat TradeRows. */
 export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: ReviewTradeGroupsProps) {
+  const { t } = useTranslation();
   const modes: GroupMode[] = ["outcome", ...extraGroupModes];
   const [groupMode, setGroupMode] = useState<GroupMode>("outcome");
 
@@ -153,15 +156,15 @@ export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: Revie
                 groupMode === mode ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
               }`}
             >
-              {MODE_LABELS[mode]}
+              {t(MODE_LABEL_KEYS[mode])}
             </button>
           ))}
         </div>
       )}
 
-      <ReviewTradeSection label="Trades genomen" trades={taken} emptyLabel="Geen genomen trades." groupMode={groupMode} />
+      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} />
       {missed.length > 0 && (
-        <ReviewTradeSection label="Missed trades" trades={missed} emptyLabel="Geen missed trades." groupMode={groupMode} />
+        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} />
       )}
     </div>
   );

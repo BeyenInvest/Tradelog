@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
@@ -59,6 +60,7 @@ export default function ReviewsPage() {
 }
 
 function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshTrades: () => Promise<void> }) {
+  const { t } = useTranslation();
   const { reviews, loading, createReview, updateReview, deleteReview, linkTradesToReview } = useWeeklyReviews();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -125,13 +127,13 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
   }
 
   async function handleDelete(review: WeeklyReview) {
-    if (confirm(`Review W${review.week_nummer} · ${review.jaar} verwijderen?`)) {
+    if (confirm(t("reviews.deleteWeeklyConfirm", { week: review.week_nummer, year: review.jaar }))) {
       setError(null);
       try {
         await deleteReview(review.id);
         if (selectedId === review.id) setSelectedId(null);
       } catch (err) {
-        setError(toErrorMessage(err, "Verwijderen van review is mislukt"));
+        setError(toErrorMessage(err, t("reviews.deleteFailed")));
       }
     }
   }
@@ -146,14 +148,14 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
     <>
       <div className="flex justify-end mb-4">
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
-          <Plus size={15} /> Nieuwe review
+          <Plus size={15} /> {t("reviews.newReview")}
         </button>
       </div>
 
       {error && <p className="text-sm text-loss mb-4">{error}</p>}
 
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <ReviewList
@@ -172,7 +174,7 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
               onRelink={handleRelink}
             />
           ) : (
-            <div className="col-span-2 flex items-center justify-center text-sm text-muted">Selecteer of maak een review.</div>
+            <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>
           )}
         </div>
       )}
@@ -188,6 +190,7 @@ function tradesInPeriod(trades: Trade[], review: PeriodicReview): Trade[] {
 }
 
 function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; trades: Trade[] }) {
+  const { t } = useTranslation();
   const { reviews, loading, createReview, updateReview, deleteReview } = usePeriodicReviews(periodType);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -250,13 +253,20 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
   }
 
   async function handleDelete(review: PeriodicReview) {
-    if (confirm(`${PERIOD_TYPE_LABELS[periodType]} review "${periodLabel(review.period_type, review.jaar, review.periode_nummer)}" verwijderen?`)) {
+    if (
+      confirm(
+        t("reviews.deletePeriodicConfirm", {
+          type: PERIOD_TYPE_LABELS[periodType],
+          label: periodLabel(review.period_type, review.jaar, review.periode_nummer),
+        })
+      )
+    ) {
       setError(null);
       try {
         await deleteReview(review.id);
         if (selectedId === review.id) setSelectedId(null);
       } catch (err) {
-        setError(toErrorMessage(err, "Verwijderen van review is mislukt"));
+        setError(toErrorMessage(err, t("reviews.deleteFailed")));
       }
     }
   }
@@ -265,14 +275,14 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
     <>
       <div className="flex justify-end mb-4">
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
-          <Plus size={15} /> Nieuwe {PERIOD_TYPE_LABELS[periodType].toLowerCase()} review
+          <Plus size={15} /> {t("reviews.newPeriodicReview", { type: PERIOD_TYPE_LABELS[periodType].toLowerCase() })}
         </button>
       </div>
 
       {error && <p className="text-sm text-loss mb-4">{error}</p>}
 
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <PeriodicReviewList
@@ -292,7 +302,7 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
               onDelete={() => void handleDelete(selected)}
             />
           ) : (
-            <div className="col-span-2 flex items-center justify-center text-sm text-muted">Selecteer of maak een review.</div>
+            <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>
           )}
         </div>
       )}

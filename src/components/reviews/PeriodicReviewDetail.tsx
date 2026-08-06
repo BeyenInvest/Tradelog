@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
@@ -19,6 +20,7 @@ interface PeriodicReviewDetailProps {
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
 export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete }: PeriodicReviewDetailProps) {
+  const { t } = useTranslation();
   const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
 
   return (
@@ -56,7 +58,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete }
         </section>
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">
-          <p className="font-body text-xs uppercase tracking-wider text-gold">Trades in periode ({taken.length + missed.length})</p>
+          <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.tradesInPeriod", { count: taken.length + missed.length })}</p>
           <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
         </section>
       </div>

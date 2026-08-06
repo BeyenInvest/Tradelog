@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ContentBlock, VoiceBlock, ActiesList, TakeawayQuote, OverallCommentBlock } from "./ReviewContentBlocks";
 
 interface ReviewContentDisplayProps {
@@ -11,17 +12,18 @@ interface ReviewContentDisplayProps {
 
 /** Read-only rendering of the technisch/mentaal/acties/takeaway/overall-comment fields, shared by weekly and periodic review detail views. */
 export function ReviewContentDisplay({ technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
+  const { t } = useTranslation();
   return (
     <>
-      {technisch && <ContentBlock label="Technisch">{technisch}</ContentBlock>}
+      {technisch && <ContentBlock label={t("reviewContent.technisch")}>{technisch}</ContentBlock>}
       {(mentaal_owner || mentaal_trader) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {mentaal_owner && <VoiceBlock label="Mentaal — Owner">{mentaal_owner}</VoiceBlock>}
-          {mentaal_trader && <VoiceBlock label="Mentaal — Trader">{mentaal_trader}</VoiceBlock>}
+          {mentaal_owner && <VoiceBlock label={t("reviewContent.mentaalOwner")}>{mentaal_owner}</VoiceBlock>}
+          {mentaal_trader && <VoiceBlock label={t("reviewContent.mentaalTrader")}>{mentaal_trader}</VoiceBlock>}
         </div>
       )}
-      <ActiesList label="Acties" items={acties} />
-      {takeaway && <TakeawayQuote label="Wat neem ik mee?">{takeaway}</TakeawayQuote>}
+      <ActiesList label={t("reviewContent.acties")} items={acties} />
+      {takeaway && <TakeawayQuote label={t("reviewContent.takeaway")}>{takeaway}</TakeawayQuote>}
       {overall_comment && <OverallCommentBlock>{overall_comment}</OverallCommentBlock>}
     </>
   );
