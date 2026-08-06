@@ -1,19 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
-import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReadOnlyTradesViewer } from "@/components/admin/ReadOnlyTradesViewer";
 import { ReadOnlyProjectModal } from "@/components/admin/ReadOnlyProjectModal";
 import { ReadOnlyWeeklyReviewModal } from "@/components/admin/ReadOnlyWeeklyReviewModal";
 import { ReadOnlyPeriodicReviewModal } from "@/components/admin/ReadOnlyPeriodicReviewModal";
+import { ReadOnlyAccountList } from "@/components/admin/ReadOnlyAccountList";
+import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
+import { ReviewList } from "@/components/reviews/ReviewList";
+import { PeriodicReviewList } from "@/components/reviews/PeriodicReviewList";
 import {
-  getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser, getBacktestProjectsForUser,
+  getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser,
+  getBacktestProjectsForUser, getPropAccountsForUser,
 } from "@/lib/admin/adminQueries";
-import { takenTrades, missedTrades } from "@/lib/stats";
+import { takenTrades, round2 } from "@/lib/stats";
+import type { PeriodType } from "@/lib/constants";
+import { rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
-import type { BacktestProject, PeriodicReview, Profile, Trade, WeeklyReview } from "@/lib/types";
+import type { BacktestProject, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
+
+type MainTab = "journal" | "backtesting" | "reviews" | "accounts";
+type ReviewTab = "week" | PeriodType;
+
+const MAIN_TABS: { key: MainTab; label: string }[] = [
+  { key: "journal", label: "Journal" },
+  { key: "backtesting", label: "Backtesting" },
+  { key: "reviews", label: "Reviews" },
+  { key: "accounts", label: "Accounts" },
+];
+
+const REVIEW_TABS: { key: ReviewTab; label: string }[] = [
+  { key: "week", label: "Weekly" },
+  { key: "month", label: "Monthly" },
+  { key: "quarter", label: "Quarterly" },
+  { key: "year", label: "Yearly" },
+];
 
 export default function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -22,8 +46,15 @@ export default function AdminUserDetailPage() {
   const [weeklyReviews, setWeeklyReviews] = useState<WeeklyReview[]>([]);
   const [periodicReviews, setPeriodicReviews] = useState<PeriodicReview[]>([]);
   const [projects, setProjects] = useState<BacktestProject[]>([]);
+  const [accounts, setAccounts] = useState<PropAccount[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [mainTab, setMainTab] = useState<MainTab>("journal");
+  const [journalTab, setJournalTab] = useState<"journal" | "analyse">("journal");
+  const [reviewTab, setReviewTab] = useState<ReviewTab>("week");
+
   const [selectedProject, setSelectedProject] = useState<BacktestProject | null>(null);
   const [selectedWeeklyReview, setSelectedWeeklyReview] = useState<WeeklyReview | null>(null);
   const [selectedPeriodicReview, setSelectedPeriodicReview] = useState<PeriodicReview | null>(null);
@@ -38,14 +69,17 @@ export default function AdminUserDetailPage() {
       getWeeklyReviewsForUser(userId),
       getPeriodicReviewsForUser(userId),
       getBacktestProjectsForUser(userId),
+      getPropAccountsForUser(userId),
     ])
-      .then(([p, t, wr, pr, bp]) => {
+      .then(([p, t, wr, pr, bp, pa]) => {
         if (cancelled) return;
         setProfile(p);
         setTrades(t);
         setWeeklyReviews(wr);
         setPeriodicReviews(pr);
         setProjects(bp);
+        setAccounts(pa.accounts);
+        setPayouts(pa.payouts);
       })
       .catch((err) => {
         if (!cancelled) setError(toErrorMessage(err, "Laden van gebruikersdata is mislukt"));
@@ -60,9 +94,43 @@ export default function AdminUserDetailPage() {
 
   // Same "live Journal only" scope as JournalPage — backtest-project trades get their own
   // isolated view, and missed trades stay separate from real performance (see CLAUDE.md).
-  const liveTrades = trades.filter((t) => t.backtest_project_id === null);
-  const taken = takenTrades(liveTrades);
-  const missed = missedTrades(liveTrades);
+  const liveTrades = useMemo(() => trades.filter((t) => t.backtest_project_id === null), [trades]);
+  const taken = useMemo(() => takenTrades(liveTrades), [liveTrades]);
+
+  const tradesByWeeklyReview = useMemo(() => {
+    const m = new Map<string, Trade[]>();
+    for (const t of liveTrades) {
+      if (!t.weekly_review_id) continue;
+      const bucket = m.get(t.weekly_review_id) ?? [];
+      bucket.push(t);
+      m.set(t.weekly_review_id, bucket);
+    }
+    return m;
+  }, [liveTrades]);
+
+  const weeklyStats = useMemo(() => {
+    const m = new Map<string, { resultaat: number; count: number }>();
+    for (const r of weeklyReviews) {
+      const rt = takenTrades(tradesByWeeklyReview.get(r.id) ?? []);
+      m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
+    }
+    return m;
+  }, [weeklyReviews, tradesByWeeklyReview]);
+
+  const periodicReviewsForTab = useMemo(
+    () => (reviewTab === "week" ? [] : periodicReviews.filter((r) => r.period_type === reviewTab)),
+    [periodicReviews, reviewTab]
+  );
+
+  const periodicStats = useMemo(() => {
+    const m = new Map<string, { resultaat: number; count: number }>();
+    for (const r of periodicReviewsForTab) {
+      const { start, end } = rangeOfPeriod(r.period_type, r.jaar, r.periode_nummer);
+      const rt = takenTrades(liveTrades.filter((t) => t.datum_open >= start && t.datum_open <= end));
+      m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
+    }
+    return m;
+  }, [periodicReviewsForTab, liveTrades]);
 
   return (
     <>
@@ -76,21 +144,54 @@ export default function AdminUserDetailPage() {
         }
       />
 
-      <div className="flex flex-col gap-6">
-        {error && (
-          <Card className="border-loss/40">
-            <p className="text-sm text-loss">{error}</p>
-          </Card>
-        )}
+      {error && (
+        <Card className="border-loss/40 mb-5">
+          <p className="text-sm text-loss">{error}</p>
+        </Card>
+      )}
 
-        {loading ? (
-          <p className="text-muted text-sm">Laden...</p>
-        ) : (
-          <>
-            <ReviewStatsHeader taken={taken} missed={missed} />
+      {loading ? (
+        <p className="text-muted text-sm">Laden...</p>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
+            {MAIN_TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setMainTab(t.key)}
+                className={`px-4 py-2 text-sm font-body ${mainTab === t.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-            <ReadOnlyTradesViewer trades={liveTrades} title="Journal trades" />
+          {mainTab === "journal" && (
+            <div className="flex flex-col gap-5">
+              <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
+                <button
+                  onClick={() => setJournalTab("journal")}
+                  className={`px-4 py-2 text-sm font-body ${journalTab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+                >
+                  Journal
+                </button>
+                <button
+                  onClick={() => setJournalTab("analyse")}
+                  className={`px-4 py-2 text-sm font-body ${journalTab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+                >
+                  Analyse
+                </button>
+              </div>
 
+              {journalTab === "journal" ? (
+                <ReadOnlyTradesViewer trades={liveTrades} title="Journal trades" />
+              ) : (
+                <BacktestingAnalysisView trades={taken} hideFaseOverride={profile?.hide_fase} />
+              )}
+            </div>
+          )}
+
+          {mainTab === "backtesting" && (
             <Card>
               <h3 className="font-display text-lg italic mb-3 text-ink">Backtestprojecten ({projects.length})</h3>
               {projects.length === 0 ? (
@@ -110,54 +211,55 @@ export default function AdminUserDetailPage() {
                 </ul>
               )}
             </Card>
+          )}
 
-            <Card>
-              <h3 className="font-display text-lg italic mb-3 text-ink">Weekly reviews ({weeklyReviews.length})</h3>
-              {weeklyReviews.length === 0 ? (
-                <p className="font-body text-sm text-muted">Geen weekly reviews.</p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {weeklyReviews.map((r) => (
-                    <li key={r.id} className="border-b border-border/50 pb-2 last:border-0">
-                      <button onClick={() => setSelectedWeeklyReview(r)} className="text-left w-full">
-                        <p className="font-body text-sm text-ink hover:text-gold">
-                          Week {r.week_nummer}, {r.jaar} {r.titel && `— ${r.titel}`}
-                        </p>
-                        {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+          {mainTab === "reviews" && (
+            <div className="flex flex-col gap-5">
+              <div className="flex gap-1 border-b border-border">
+                {REVIEW_TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setReviewTab(t.key)}
+                    className={clsx(
+                      "px-4 py-2 font-body text-sm -mb-px border-b-2 transition-colors",
+                      reviewTab === t.key ? "border-gold text-ink" : "border-transparent text-muted"
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-            <Card>
-              <h3 className="font-display text-lg italic mb-3 text-ink">Periodic reviews ({periodicReviews.length})</h3>
-              {periodicReviews.length === 0 ? (
-                <p className="font-body text-sm text-muted">Geen periodic reviews.</p>
+              {reviewTab === "week" ? (
+                <ReviewList
+                  reviews={weeklyReviews}
+                  selectedId={selectedWeeklyReview?.id ?? null}
+                  onSelect={(id) => setSelectedWeeklyReview(weeklyReviews.find((r) => r.id === id) ?? null)}
+                  resultaatOf={(r) => weeklyStats.get(r.id)?.resultaat ?? 0}
+                  tradeCountOf={(r) => weeklyStats.get(r.id)?.count ?? 0}
+                />
               ) : (
-                <ul className="flex flex-col gap-3">
-                  {periodicReviews.map((r) => (
-                    <li key={r.id} className="border-b border-border/50 pb-2 last:border-0">
-                      <button onClick={() => setSelectedPeriodicReview(r)} className="text-left w-full">
-                        <p className="font-body text-sm text-ink hover:text-gold">
-                          {r.period_type} {r.jaar} {r.titel && `— ${r.titel}`}
-                        </p>
-                        {r.takeaway && <p className="font-body text-xs text-muted mt-1">{r.takeaway}</p>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <PeriodicReviewList
+                  periodType={reviewTab}
+                  reviews={periodicReviewsForTab}
+                  selectedId={selectedPeriodicReview?.id ?? null}
+                  onSelect={(id) => setSelectedPeriodicReview(periodicReviewsForTab.find((r) => r.id === id) ?? null)}
+                  resultaatOf={(r) => periodicStats.get(r.id)?.resultaat ?? 0}
+                  tradeCountOf={(r) => periodicStats.get(r.id)?.count ?? 0}
+                />
               )}
-            </Card>
-          </>
-        )}
-      </div>
+            </div>
+          )}
+
+          {mainTab === "accounts" && <ReadOnlyAccountList accounts={accounts} payouts={payouts} />}
+        </div>
+      )}
 
       {selectedProject && (
         <ReadOnlyProjectModal
           project={selectedProject}
           trades={trades.filter((t) => t.backtest_project_id === selectedProject.id)}
+          hideFaseOverride={profile?.hide_fase}
           onClose={() => setSelectedProject(null)}
         />
       )}

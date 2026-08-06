@@ -29,8 +29,15 @@ import { useAuth } from "@/hooks/useAuth";
  * deep-analysis half, reused per backtest project so each project's numbers
  * never mix with another's.
  */
-export function BacktestingAnalysisView({ trades }: { trades: Trade[] }) {
-  const { hideFase } = useAuth();
+export function BacktestingAnalysisView({
+  trades, hideFaseOverride,
+}: {
+  trades: Trade[];
+  /** Admin read-only view passes the viewed profile's own hide_fase here instead of the viewer's — see AdminUserDetailPage. */
+  hideFaseOverride?: boolean;
+}) {
+  const { hideFase: ownHideFase } = useAuth();
+  const hideFase = hideFaseOverride ?? ownHideFase;
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
