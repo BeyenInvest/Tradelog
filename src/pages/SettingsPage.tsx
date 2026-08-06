@@ -31,7 +31,7 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-5 max-w-xl">
         <Card>
           <div className="flex items-center justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="font-body text-sm text-ink">Fasen tonen</p>
               <p className="font-mono text-xs mt-1 text-muted">
                 Schakelt het "4 fasen"-systeem uit in het trade-formulier, filters, journal en backtesting-analyse. Je

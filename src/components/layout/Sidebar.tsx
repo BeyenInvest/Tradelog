@@ -17,7 +17,6 @@ const NAV = [
   { to: "/accounts", label: "Accounts", icon: Wallet },
   { to: "/calendar", label: "Economic Calendar", icon: CalendarClock },
   { to: "/lot-size", label: "Lot Size Calculator (Beta)", icon: Calculator },
-  { to: "/settings", label: "Instellingen", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -76,6 +75,14 @@ export function Sidebar() {
 
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">
         <ThemeToggle />
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-2 text-xs font-body transition-colors ${isActive ? "text-ink" : "text-muted hover:text-ink"}`
+          }
+        >
+          <Settings size={14} /> Instellingen
+        </NavLink>
         <button
           onClick={() => void handleSignOut()}
           className="flex items-center gap-2 text-xs font-body text-muted hover:text-ink transition-colors"
@@ -85,6 +92,13 @@ export function Sidebar() {
       </div>
       <div className="flex items-center gap-1 md:hidden shrink-0">
         <ThemeToggle iconOnly />
+        <NavLink
+          to="/settings"
+          aria-label="Instellingen"
+          className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-ink" : "text-muted hover:text-ink"}`}
+        >
+          <Settings size={16} />
+        </NavLink>
         <button
           onClick={() => void handleSignOut()}
           aria-label="Uitloggen"
