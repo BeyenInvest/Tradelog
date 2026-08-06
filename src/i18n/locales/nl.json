@@ -2,9 +2,7 @@
   "chart": {
     "equityEmpty": "Nog geen trades voor een cumulatieve curve.",
     "equityTooltip": "Cumulatief",
-    "equityTradeLabel": "Trade #{{n}}",
-    "equityModeSimple": "Enkelvoudig",
-    "equityModeCompound": "Samengesteld"
+    "equityTradeLabel": "Trade #{{n}}"
   },
   "common": {
     "tagline": "Eyes on every trade.",
@@ -113,6 +111,8 @@
     "deleteConfirm": "Trade {{pair}} op {{date}} verwijderen?",
     "deleteFailed": "Verwijderen van trade is mislukt",
     "disciplineTrend": "Discipline-trend",
+    "showDisciplineChart": "Toon discipline-trend",
+    "showEquityChart": "Toon cumulatief resultaat",
     "disciplineRate": "{{pct}}% goede trades",
     "disciplineGood_one": "{{count}} goede trade",
     "disciplineGood_other": "{{count}} goede trades",

@@ -275,25 +275,6 @@ describe("computeEquityCurve", () => {
     expect(computeEquityCurve(trades).map((p) => p.cum)).toEqual([10, 6, 8]);
   });
 
-  it("compound mode applies each result to the running balance (rente-op-rente)", () => {
-    const trades = makeSequence([
-      { outcome: "Win", resultaat_pct: 10 },
-      { outcome: "Win", resultaat_pct: 10 },
-    ]);
-    // 1.1 * 1.1 = 1.21 -> +21% vs. the simple +20%
-    expect(computeEquityCurve(trades, "compound").map((p) => p.cum)).toEqual([10, 21]);
-  });
-
-  it("compound and simple agree on the first point but diverge after a moved balance", () => {
-    const trades = makeSequence([
-      { outcome: "Win", resultaat_pct: 50 },
-      { outcome: "Loss", resultaat_pct: -50 },
-    ]);
-    expect(computeEquityCurve(trades, "simple").map((p) => p.cum)).toEqual([50, 0]);
-    // 1.5 * 0.5 = 0.75 -> a 50% loss on a grown balance leaves -25%, not break-even
-    expect(computeEquityCurve(trades, "compound").map((p) => p.cum)).toEqual([50, -25]);
-  });
-
   it("orders chronologically by datum_open regardless of input order", () => {
     const trades = [
       makeTrade({ id: "b", datum_open: "2026-01-02", resultaat_pct: 3 }),

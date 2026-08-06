@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame } from "lucide-react";
+import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -262,39 +262,84 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             </Card>
 
             <Card className="lg:col-span-2">
-              <h3 className="font-display text-xl italic mb-4 text-ink">{t("journal.cumulativeResult")}</h3>
-              <EquityCurveChart trades={windowedTrades} />
-            </Card>
-          </div>
-
-          {isLive && (
-            <Card>
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
-                <h3 className="font-display text-xl italic text-ink">{t("journal.disciplineTrend")}</h3>
-                {disciplineStats.rate != null && (
-                  <div className="flex flex-wrap gap-4 font-mono text-xs">
-                    <span className="text-ink">
-                      {t("journal.disciplineRate", { pct: Math.round(disciplineStats.rate * 100) })}
-                    </span>
-                    <span className="text-win">
-                      {t("journal.disciplineGood", { count: disciplineStats.good })}
-                    </span>
-                    {disciplineStats.emotional > 0 && (
-                      <span className="text-loss">
-                        {t("journal.disciplineEmotional", { count: disciplineStats.emotional })}
-                      </span>
-                    )}
-                    {disciplineStats.technical > 0 && (
-                      <span className="text-loss">
-                        {t("journal.disciplineTechnical", { count: disciplineStats.technical })}
-                      </span>
+              {isLive ? (
+                // Equity curve and discipline trend share one card, flipped by the
+                // arrows — keeps the two related charts together without a second
+                // full-width block cluttering the page.
+                <>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setChartPanel((p) => (p === "equity" ? "discipline" : "equity"))}
+                        aria-label={t(
+                          chartPanel === "equity" ? "journal.showDisciplineChart" : "journal.showEquityChart"
+                        )}
+                        className="shrink-0 rounded-md p-1 text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <h3 className="font-display text-xl italic text-ink truncate">
+                        {t(chartPanel === "equity" ? "journal.cumulativeResult" : "journal.disciplineTrend")}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setChartPanel((p) => (p === "equity" ? "discipline" : "equity"))}
+                        aria-label={t(
+                          chartPanel === "equity" ? "journal.showDisciplineChart" : "journal.showEquityChart"
+                        )}
+                        className="shrink-0 rounded-md p-1 text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                      <div className="ml-1 flex shrink-0 items-center gap-1" aria-hidden="true">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                            chartPanel === "equity" ? "bg-gold" : "bg-border"
+                          }`}
+                        />
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                            chartPanel === "discipline" ? "bg-gold" : "bg-border"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    {chartPanel === "discipline" && disciplineStats.rate != null && (
+                      <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 font-mono text-xs">
+                        <span className="text-ink">
+                          {t("journal.disciplineRate", { pct: Math.round(disciplineStats.rate * 100) })}
+                        </span>
+                        <span className="text-win">
+                          {t("journal.disciplineGood", { count: disciplineStats.good })}
+                        </span>
+                        {disciplineStats.emotional > 0 && (
+                          <span className="text-loss">
+                            {t("journal.disciplineEmotional", { count: disciplineStats.emotional })}
+                          </span>
+                        )}
+                        {disciplineStats.technical > 0 && (
+                          <span className="text-loss">
+                            {t("journal.disciplineTechnical", { count: disciplineStats.technical })}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-              <DisciplineTrendChart data={disciplineData} />
+                  {chartPanel === "equity" ? (
+                    <EquityCurveChart trades={windowedTrades} />
+                  ) : (
+                    <DisciplineTrendChart data={disciplineData} />
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 className="font-display text-xl italic mb-4 text-ink">{t("journal.cumulativeResult")}</h3>
+                  <EquityCurveChart trades={windowedTrades} />
+                </>
+              )}
             </Card>
-          )}
+          </div>
 
           {viewMode === "calendar" ? (
             <CalendarView

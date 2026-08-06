@@ -1,23 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useTranslation } from "react-i18next";
-import { computeEquityCurve, type EquityMode } from "@/lib/stats";
+import { computeEquityCurve } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
 /**
- * Cumulative equity curve with a simple/compound toggle. Takes the already-scoped,
+ * Cumulative equity curve (running sum of resultaat_pct). Takes the already-scoped,
  * missed-decided trade list (Reviews plots missed rows here) and computes the curve
- * itself so the toggle state lives in one place across every view that renders it.
+ * itself.
  */
 export function EquityCurveChart({ trades }: { trades: Trade[] }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<EquityMode>("simple");
-  const data = useMemo(() => computeEquityCurve(trades, mode), [trades, mode]);
-
-  const modes: { key: EquityMode; label: string }[] = [
-    { key: "simple", label: t("chart.equityModeSimple") },
-    { key: "compound", label: t("chart.equityModeCompound") },
-  ];
+  const data = useMemo(() => computeEquityCurve(trades), [trades]);
 
   if (data.length === 0) {
     return (
@@ -33,22 +27,6 @@ export function EquityCurveChart({ trades }: { trades: Trade[] }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-2">
-        <div className="inline-flex rounded-lg border border-border overflow-hidden">
-          {modes.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setMode(m.key)}
-              className={`px-3 py-1 text-xs font-body transition-colors ${
-                mode === m.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <defs>

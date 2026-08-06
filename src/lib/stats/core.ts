@@ -217,34 +217,16 @@ export interface EquityPoint {
 }
 
 /**
- * Which way the equity curve accumulates:
- *  - "simple": arithmetic sum of resultaat_pct — the classic "add the %'s up" view,
- *    and the one that matches every other cumulative total in the app.
- *  - "compound": rente-op-rente — each result is applied to the running balance, so
- *    later trades weigh on a larger (or smaller) base, the way a real percent-risk
- *    account actually grows.
+ * Cumulative equity curve, chronological by datum_open (id-tiebroken): the arithmetic
+ * sum of resultaat_pct as a running % return from the start, matching every other
+ * cumulative total in the app. Callers pass an already-scoped, missed-decided list
+ * (Reviews deliberately plots missed rows here).
  */
-export type EquityMode = "simple" | "compound";
-
-/**
- * Cumulative equity curve, chronological by datum_open (id-tiebroken). Both modes are
- * reported as cumulative % return from the start, so the two curves are drawn on the
- * same axis and can be compared directly with the toggle. Compound tracks a growth
- * factor (starts at 1) and plots (factor - 1) * 100; at a flat run the two only diverge
- * once results start landing on a moved balance. Callers pass an already-scoped,
- * missed-decided list (Reviews deliberately plots missed rows here).
- */
-export function computeEquityCurve(trades: Trade[], mode: EquityMode = "simple"): EquityPoint[] {
+export function computeEquityCurve(trades: Trade[]): EquityPoint[] {
   const sorted = sortChronological(trades);
   let cum = 0;
-  let factor = 1;
   return sorted.map((t, i) => {
-    if (mode === "compound") {
-      factor *= 1 + t.resultaat_pct / 100;
-      cum = (factor - 1) * 100;
-    } else {
-      cum += t.resultaat_pct;
-    }
+    cum += t.resultaat_pct;
     return { idx: i + 1, tradeId: t.id, datumOpen: t.datum_open, cum: round2(cum) };
   });
 }
