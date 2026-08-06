@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
@@ -18,6 +19,7 @@ export function ReadOnlyPeriodicReviewModal({
   trades: Trade[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const inPeriod = useMemo(() => {
     const { start, end } = rangeOfPeriod(review.period_type, review.jaar, review.periode_nummer);
     return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
@@ -60,7 +62,7 @@ export function ReadOnlyPeriodicReviewModal({
             </section>
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">
-              <p className="font-body text-xs uppercase tracking-wider text-gold">Trades in periode ({taken.length + missed.length})</p>
+              <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.tradesInPeriod", { count: taken.length + missed.length })}</p>
               <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
             </section>
           </div>

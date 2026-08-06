@@ -1,8 +1,11 @@
+import { useTranslation } from "react-i18next";
 import type { EconomicEvent } from "@/lib/economicCalendar";
+import { dateLocale } from "@/lib/format";
 import { ImpactBadge } from "./ImpactBadge";
 
 export function EconomicEventRow({ event }: { event: EconomicEvent }) {
-  const time = new Date(event.date).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" });
+  const { i18n } = useTranslation();
+  const time = new Date(event.date).toLocaleTimeString(dateLocale(i18n.language), { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="grid grid-cols-[64px_60px_1fr_90px_80px_80px] gap-3 items-center py-2 border-b border-border-soft font-mono text-xs">

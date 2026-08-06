@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2 } from "lucide-react";
 import type { Payout, PayoutInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -12,6 +13,7 @@ interface PayoutListProps {
 }
 
 export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutListProps) {
+  const { t } = useTranslation();
   const [bedrag, setBedrag] = useState("");
   const [datum, setDatum] = useState(new Date().toISOString().slice(0, 10));
   const [adding, setAdding] = useState(false);
@@ -21,7 +23,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
     e.preventDefault();
     const amount = Number(bedrag);
     if (!bedrag || !Number.isFinite(amount) || amount <= 0) {
-      setError("Vul een bedrag groter dan 0 in.");
+      setError(t("accounts.amountRequired"));
       return;
     }
     setAdding(true);
@@ -30,19 +32,19 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
       await onCreate({ account_id: accountId, bedrag: amount, datum, notes: null });
       setBedrag("");
     } catch (err) {
-      setError(toErrorMessage(err, "Toevoegen van payout is mislukt"));
+      setError(toErrorMessage(err, t("accounts.addPayoutFailed")));
     } finally {
       setAdding(false);
     }
   }
 
   async function handleDelete(payout: Payout) {
-    if (!confirm(`Payout van €${formatEUR(payout.bedrag)} op ${payout.datum} verwijderen?`)) return;
+    if (!confirm(t("accounts.deletePayoutConfirm", { amount: formatEUR(payout.bedrag), date: payout.datum }))) return;
     setError(null);
     try {
       await onDelete(payout.id);
     } catch (err) {
-      setError(toErrorMessage(err, "Verwijderen van payout is mislukt"));
+      setError(toErrorMessage(err, t("accounts.deletePayoutFailed")));
     }
   }
 
@@ -51,8 +53,8 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
   return (
     <div className="flex flex-col gap-2 mt-3">
       <div className="flex items-center justify-between">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">Payouts</p>
-        <span className="font-mono text-xs text-win">totaal €{formatEUR(total)}</span>
+        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("accounts.payouts")}</p>
+        <span className="font-mono text-xs text-win">{t("accounts.payoutsTotal", { amount: formatEUR(total) })}</span>
       </div>
       {payouts.map((p) => (
         <div key={p.id} className="flex items-center justify-between font-mono text-xs py-1 border-b border-border-soft">
@@ -69,7 +71,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
           type="number"
           step="0.01"
           min="0.01"
-          placeholder="bedrag"
+          placeholder={t("accounts.amountPlaceholder")}
           className="input text-xs py-1"
           value={bedrag}
           onChange={(e) => setBedrag(e.target.value)}

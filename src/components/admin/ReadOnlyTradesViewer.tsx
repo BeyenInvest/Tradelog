@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CalendarDays, List as ListIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CalendarView } from "@/components/calendar/CalendarView";
@@ -13,6 +14,7 @@ import type { Trade } from "@/lib/types";
  * as the owner-facing Journal, just without any edit/delete/add-trade affordances.
  */
 export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title?: string }) {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
@@ -33,7 +35,7 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
               viewMode === "calendar" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
             }`}
           >
-            <CalendarDays size={14} /> Kalender
+            <CalendarDays size={14} /> {t("journal.viewCalendar")}
           </button>
           <button
             onClick={() => setViewMode("list")}
@@ -41,7 +43,7 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
               viewMode === "list" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
             }`}
           >
-            <ListIcon size={14} /> Lijst
+            <ListIcon size={14} /> {t("journal.viewList")}
           </button>
         </div>
       </div>

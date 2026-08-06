@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
@@ -16,6 +17,7 @@ interface AccountListProps {
 }
 
 function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: AccountListProps["onUpdateAccount"] }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(account.current_pnl_pct?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: Ac
     const trimmed = value.trim();
     const parsed = trimmed === "" ? null : Number(trimmed);
     if (parsed !== null && !Number.isFinite(parsed)) {
-      setError("Ongeldig percentage.");
+      setError(t("accounts.invalidPct"));
       return;
     }
     setSaving(true);
@@ -33,7 +35,7 @@ function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: Ac
     try {
       await onUpdate(account.id, { current_pnl_pct: parsed });
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan van P&L% is mislukt"));
+      setError(toErrorMessage(err, t("accounts.savePnlFailed")));
     } finally {
       setSaving(false);
     }
@@ -41,11 +43,11 @@ function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: Ac
 
   return (
     <form onSubmit={handleSave} className="flex items-center gap-2 mt-2">
-      <label className="text-xs uppercase tracking-wider text-muted">Lopend P&L</label>
+      <label className="text-xs uppercase tracking-wider text-muted">{t("accounts.runningPnl")}</label>
       <input type="number" step="0.01" placeholder="—" className="input text-xs py-1 w-20" value={value} onChange={(e) => setValue(e.target.value)} />
       <span className="text-xs text-muted">%</span>
       <button type="submit" disabled={saving} className="px-2 py-1 rounded-md text-xs bg-surface-2 text-muted hover:text-ink">
-        Opslaan
+        {t("common.save")}
       </button>
       {error && <span className="text-xs text-loss">{error}</span>}
     </form>
@@ -53,22 +55,23 @@ function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: Ac
 }
 
 export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccount, onCreatePayout, onDeletePayout }: AccountListProps) {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
   async function handleDeleteAccount(acc: PropAccount) {
-    if (!confirm(`Account "${acc.naam}" verwijderen? Alle bijbehorende payouts worden ook verwijderd.`)) return;
+    if (!confirm(t("accounts.deleteConfirm", { name: acc.naam }))) return;
     setError(null);
     try {
       await onDeleteAccount(acc.id);
     } catch (err) {
-      setError(toErrorMessage(err, "Verwijderen van account is mislukt"));
+      setError(toErrorMessage(err, t("accounts.deleteFailed")));
     }
   }
 
   if (accounts.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-muted">Nog geen accounts.</p>
+        <p className="text-sm text-muted">{t("accounts.noAccounts")}</p>
       </Card>
     );
   }
@@ -84,13 +87,13 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccoun
                 <p className="font-display text-xl italic text-ink">{acc.naam}</p>
                 <p className="font-mono text-xs mt-1 text-muted">
                   €{formatEUR(acc.account_size)} · {acc.fase}
-                  {!acc.actief && " · inactief"}
+                  {!acc.actief && ` · ${t("accounts.inactive")}`}
                   {acc.current_pnl_pct != null && (
                     <>
                       {" · "}
                       <span className={acc.current_pnl_pct > 0 ? "text-win" : acc.current_pnl_pct < 0 ? "text-loss" : ""}>
                         {acc.current_pnl_pct > 0 ? "+" : ""}
-                        {acc.current_pnl_pct}% P&L
+                        {acc.current_pnl_pct}% {t("accounts.pnlLabel")}
                       </span>
                     </>
                   )}

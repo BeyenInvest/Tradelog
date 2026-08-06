@@ -1,14 +1,17 @@
 import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EconomicEventRow } from "@/components/economic/EconomicEventRow";
 import { useEconomicCalendar } from "@/hooks/useEconomicCalendar";
 import { groupEventsByDay, type EconomicImpact } from "@/lib/economicCalendar";
+import { dateLocale } from "@/lib/format";
 
 const IMPACT_OPTIONS: EconomicImpact[] = ["Low", "Medium", "High", "Holiday"];
 
 export default function EconomicCalendarPage() {
+  const { t, i18n } = useTranslation();
   const { events, loading, error, refresh } = useEconomicCalendar();
   const [currencyFilter, setCurrencyFilter] = useState("");
   const [impactFilter, setImpactFilter] = useState<Set<EconomicImpact>>(new Set(["Medium", "High"]));
@@ -39,14 +42,14 @@ export default function EconomicCalendarPage() {
   return (
     <>
       <PageHeader
-        title="Economic Calendar"
-        subtitle="Deze week — bron: ForexFactory (niet-officiële feed, cache ververst elke 30 min server-side)"
+        title={t("economicCalendar.title")}
+        subtitle={t("economicCalendar.subtitle")}
         action={
           <button
             onClick={() => void refresh()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Ververs
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> {t("economicCalendar.refresh")}
           </button>
         }
       />
@@ -57,7 +60,7 @@ export default function EconomicCalendarPage() {
           onChange={(e) => setCurrencyFilter(e.target.value)}
           className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
         >
-          <option value="">Alle valuta</option>
+          <option value="">{t("economicCalendar.allCurrencies")}</option>
           {currencies.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -75,7 +78,7 @@ export default function EconomicCalendarPage() {
                 impactFilter.has(impact) ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"
               }`}
             >
-              {impact}
+              {t(`economicCalendar.impact.${impact}`)}
             </button>
           ))}
         </div>
@@ -88,29 +91,29 @@ export default function EconomicCalendarPage() {
       )}
 
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : groups.length === 0 ? (
         <Card>
-          <p className="text-sm text-muted">Geen events voor deze filters.</p>
+          <p className="text-sm text-muted">{t("economicCalendar.noEvents")}</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-5">
           {groups.map((group) => (
             <Card key={group.dateKey}>
               <h3 className="font-display text-lg italic mb-3 text-ink capitalize">
-                {new Date(group.dateKey + "T00:00:00").toLocaleDateString("nl-BE", {
+                {new Date(group.dateKey + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), {
                   weekday: "long",
                   day: "2-digit",
                   month: "long",
                 })}
               </h3>
               <div className="grid grid-cols-[64px_60px_1fr_90px_80px_80px] gap-3 font-body text-[11px] uppercase tracking-wide pb-2 mb-1 text-muted border-b border-border">
-                <span>Tijd</span>
-                <span>Valuta</span>
-                <span>Event</span>
-                <span>Impact</span>
-                <span className="text-right">Forecast</span>
-                <span className="text-right">Previous</span>
+                <span>{t("economicCalendar.colTime")}</span>
+                <span>{t("economicCalendar.colCurrency")}</span>
+                <span>{t("economicCalendar.colEvent")}</span>
+                <span>{t("economicCalendar.colImpact")}</span>
+                <span className="text-right">{t("economicCalendar.colForecast")}</span>
+                <span className="text-right">{t("economicCalendar.colPrevious")}</span>
               </div>
               {group.events.map((event, i) => (
                 <EconomicEventRow key={`${event.title}-${event.date}-${i}`} event={event} />

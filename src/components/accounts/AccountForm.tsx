@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { PROP_FASES, type PropFase } from "@/lib/constants";
@@ -6,6 +7,7 @@ import type { PropAccountInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) => Promise<unknown> }) {
+  const { t } = useTranslation();
   const [naam, setNaam] = useState("");
   const [accountSize, setAccountSize] = useState("");
   const [fase, setFase] = useState<PropFase>("Phase 1");
@@ -16,11 +18,11 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
     e.preventDefault();
     const size = Number(accountSize);
     if (!naam.trim()) {
-      setError("Vul een naam in.");
+      setError(t("accounts.nameRequired"));
       return;
     }
     if (!accountSize || !Number.isFinite(size) || size <= 0) {
-      setError("Vul een account size groter dan 0 in.");
+      setError(t("accounts.sizeRequired"));
       return;
     }
     setSubmitting(true);
@@ -31,7 +33,7 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
       setAccountSize("");
       setFase("Phase 1");
     } catch (err) {
-      setError(toErrorMessage(err, "Aanmaken van account is mislukt"));
+      setError(toErrorMessage(err, t("accounts.createFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -39,22 +41,22 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
 
   return (
     <Card>
-      <h3 className="font-display text-lg italic mb-3 text-ink">Nieuw account</h3>
+      <h3 className="font-display text-lg italic mb-3 text-ink">{t("accounts.newAccount")}</h3>
       <form onSubmit={handleSubmit} className="flex gap-3 items-end flex-wrap">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Naam</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("accounts.name")}</label>
           <input type="text" className="input w-48" value={naam} onChange={(e) => setNaam(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Account size</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("accounts.accountSize")}</label>
           <input type="number" step="0.01" min="0.01" className="input w-32" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted">Fase</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("accounts.fase")}</label>
           <EnumSelect options={PROP_FASES} value={fase} onChange={(e) => setFase(e.target.value as PropFase)} className="w-36" />
         </div>
         <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60">
-          {submitting ? "Bezig..." : "Toevoegen"}
+          {submitting ? t("common.submitting") : t("accounts.add")}
         </button>
       </form>
       {error && <p className="text-sm text-loss mt-2">{error}</p>}

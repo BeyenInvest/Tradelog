@@ -1,6 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReadOnlyTradeTable } from "@/components/admin/ReadOnlyTradeTable";
+import { dateLocale } from "@/lib/format";
 import type { Trade } from "@/lib/types";
 
 /** Read-only equivalent of DayTradesModal — no edit/delete/add-trade affordances. */
@@ -12,7 +14,8 @@ export function ReadOnlyDayTradesModal({
   onClose: () => void;
   onSelectTrade: (trade: Trade) => void;
 }) {
-  const label = new Date(dateIso + "T00:00:00").toLocaleDateString("nl-BE", {
+  const { i18n } = useTranslation();
+  const label = new Date(dateIso + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), {
     weekday: "long",
     day: "numeric",
     month: "long",

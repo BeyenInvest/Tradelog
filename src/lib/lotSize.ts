@@ -56,7 +56,8 @@ export interface LotSizeResult {
 
 export interface LotSizeFieldError {
   field: "accountBalance" | "riskPercent" | "stopLossPips" | "currentPrice" | "quoteToAccountRate";
-  message: string;
+  /** Stable error code — the view maps this to a localized message (see LotSizeCalculatorPage). */
+  code: "mustBePositive" | "requiredForCombo";
 }
 
 export type LotSizeOutcome = { ok: true; result: LotSizeResult } | { ok: false; errors: LotSizeFieldError[] };
@@ -78,17 +79,17 @@ export function pipSizeOf(pair: ForexPair): number {
 export function calculateLotSize(input: LotSizeInput): LotSizeOutcome {
   const errors: LotSizeFieldError[] = [];
 
-  if (!(input.accountBalance > 0)) errors.push({ field: "accountBalance", message: "Moet groter dan 0 zijn" });
-  if (!(input.riskPercent > 0)) errors.push({ field: "riskPercent", message: "Moet groter dan 0 zijn" });
-  if (!(input.stopLossPips > 0)) errors.push({ field: "stopLossPips", message: "Moet groter dan 0 zijn" });
+  if (!(input.accountBalance > 0)) errors.push({ field: "accountBalance", code: "mustBePositive" });
+  if (!(input.riskPercent > 0)) errors.push({ field: "riskPercent", code: "mustBePositive" });
+  if (!(input.stopLossPips > 0)) errors.push({ field: "stopLossPips", code: "mustBePositive" });
 
   const conversionCase = getConversionCase(input.pair, input.accountCurrency);
 
   if (conversionCase === "inverse" && !(input.currentPrice! > 0)) {
-    errors.push({ field: "currentPrice", message: "Verplicht voor deze pair/accountvaluta-combinatie" });
+    errors.push({ field: "currentPrice", code: "requiredForCombo" });
   }
   if (conversionCase === "cross" && !(input.quoteToAccountRate! > 0)) {
-    errors.push({ field: "quoteToAccountRate", message: "Verplicht voor deze pair/accountvaluta-combinatie" });
+    errors.push({ field: "quoteToAccountRate", code: "requiredForCombo" });
   }
 
   if (errors.length > 0) return { ok: false, errors };

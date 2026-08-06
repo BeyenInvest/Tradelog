@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { EconomicImpact } from "@/lib/economicCalendar";
 
 const IMPACT_STYLE: Record<EconomicImpact, string> = {
@@ -8,12 +9,13 @@ const IMPACT_STYLE: Record<EconomicImpact, string> = {
 };
 
 export function ImpactBadge({ impact }: { impact: EconomicImpact }) {
+  const { t } = useTranslation();
   const className = IMPACT_STYLE[impact] ?? IMPACT_STYLE.Low;
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[11px] uppercase tracking-wide ${className}`}
     >
-      {impact}
+      {t(`economicCalendar.impact.${impact}`)}
     </span>
   );
 }

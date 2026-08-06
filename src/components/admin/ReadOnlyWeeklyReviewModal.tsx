@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
@@ -16,6 +17,7 @@ export function ReadOnlyWeeklyReviewModal({
   trades: Trade[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
@@ -53,7 +55,7 @@ export function ReadOnlyWeeklyReviewModal({
             </section>
 
             <section className="border-t border-border pt-6">
-              <p className="font-body text-xs uppercase tracking-wider text-muted mb-4">Gekoppelde trades ({linked.length})</p>
+              <p className="font-body text-xs uppercase tracking-wider text-muted mb-4">{t("reviews.linkedTrades", { count: linked.length })}</p>
               <ReviewTradeGroups taken={taken} missed={missed} />
             </section>
           </div>

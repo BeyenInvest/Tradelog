@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -40,6 +41,7 @@ const REVIEW_TABS: { key: ReviewTab; label: string }[] = [
 ];
 
 export default function AdminUserDetailPage() {
+  const { t } = useTranslation();
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -82,7 +84,7 @@ export default function AdminUserDetailPage() {
         setPayouts(pa.payouts);
       })
       .catch((err) => {
-        if (!cancelled) setError(toErrorMessage(err, "Laden van gebruikersdata is mislukt"));
+        if (!cancelled) setError(toErrorMessage(err, t("admin.loadUserDataFailed")));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -135,11 +137,11 @@ export default function AdminUserDetailPage() {
   return (
     <>
       <PageHeader
-        title={profile ? profile.display_name || profile.email : "Gebruiker"}
-        subtitle={profile ? `${profile.email} — alleen-lezen` : undefined}
+        title={profile ? profile.display_name || profile.email : t("admin.userFallback")}
+        subtitle={profile ? t("admin.readOnlySubtitle", { email: profile.email }) : undefined}
         action={
           <Link to="/admin" className="flex items-center gap-1.5 text-sm font-body text-muted hover:text-ink">
-            <ChevronLeft size={16} /> Terug naar gebruikers
+            <ChevronLeft size={16} /> {t("admin.backToUsers")}
           </Link>
         }
       />
@@ -151,7 +153,7 @@ export default function AdminUserDetailPage() {
       )}
 
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : (
         <div className="flex flex-col gap-5">
           <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
@@ -184,7 +186,7 @@ export default function AdminUserDetailPage() {
               </div>
 
               {journalTab === "journal" ? (
-                <ReadOnlyTradesViewer trades={liveTrades} title="Journal trades" />
+                <ReadOnlyTradesViewer trades={liveTrades} title={t("admin.journalTradesTitle")} />
               ) : (
                 <BacktestingAnalysisView trades={taken} hideFaseOverride={profile?.hide_fase} />
               )}
@@ -193,9 +195,9 @@ export default function AdminUserDetailPage() {
 
           {mainTab === "backtesting" && (
             <Card>
-              <h3 className="font-display text-lg italic mb-3 text-ink">Backtestprojecten ({projects.length})</h3>
+              <h3 className="font-display text-lg italic mb-3 text-ink">{t("admin.backtestProjects", { count: projects.length })}</h3>
               {projects.length === 0 ? (
-                <p className="font-body text-sm text-muted">Geen backtestprojecten.</p>
+                <p className="font-body text-sm text-muted">{t("backtesting.noProjects")}</p>
               ) : (
                 <ul className="flex flex-col gap-2 font-body text-sm">
                   {projects.map((p) => (

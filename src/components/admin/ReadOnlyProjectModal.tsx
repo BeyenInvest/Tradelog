@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReadOnlyTradesViewer } from "@/components/admin/ReadOnlyTradesViewer";
@@ -15,6 +16,7 @@ export function ReadOnlyProjectModal({
   hideFaseOverride?: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"journal" | "analyse">("journal");
 
   return (
@@ -38,18 +40,18 @@ export function ReadOnlyProjectModal({
               onClick={() => setTab("journal")}
               className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
             >
-              Journal
+              {t("journal.tabJournal")}
             </button>
             <button
               onClick={() => setTab("analyse")}
               className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
             >
-              Analyse
+              {t("journal.tabAnalyse")}
             </button>
           </div>
 
           {tab === "journal" ? (
-            <ReadOnlyTradesViewer trades={trades} title={`${trades.length} trades`} />
+            <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} />
           ) : (
             <BacktestingAnalysisView trades={trades} hideFaseOverride={hideFaseOverride} />
           )}

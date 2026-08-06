@@ -1,17 +1,19 @@
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePropAccounts } from "@/hooks/usePropAccounts";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountList } from "@/components/accounts/AccountList";
 
 export default function AccountsPage() {
+  const { t } = useTranslation();
   const { accounts, payouts, loading, error, createAccount, updateAccount, deleteAccount, createPayout, deletePayout } = usePropAccounts();
 
   return (
     <>
-      <PageHeader title="Accounts" subtitle="Prop firm-accounts en payouts — handmatig, geen live koppeling" />
+      <PageHeader title={t("nav.accounts")} subtitle={t("accounts.subtitle")} />
       {error && <p className="text-sm text-loss mb-4">{error}</p>}
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : (
         <div className="flex flex-col gap-5">
           <AccountForm onSubmit={createAccount} />

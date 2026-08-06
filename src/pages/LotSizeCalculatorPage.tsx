@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EnumSelect } from "@/components/ui/EnumSelect";
@@ -7,13 +8,15 @@ import { calculateLotSize, requiresCrossRate, requiresCurrentPrice, pipSizeOf, t
 
 const ACCOUNT_CURRENCIES: AccountCurrency[] = ["USD", "EUR"];
 
-const CASE_LABEL: Record<string, string> = {
-  direct: "Direct — je accountvaluta is de quote-valuta van deze pair. Geen koers nodig, de pipwaarde staat al vast in je accountvaluta.",
-  inverse: "Invers — je accountvaluta is de base-valuta van deze pair, omgerekend via de ingevulde koers.",
-  cross: "Cross — je accountvaluta zit niet in deze pair, omgerekend via de extra koers hieronder.",
+/** conversionCase → i18n key describing why (or why not) a conversion rate is needed. */
+const CASE_LABEL_KEY: Record<string, string> = {
+  direct: "lotSize.caseDirect",
+  inverse: "lotSize.caseInverse",
+  cross: "lotSize.caseCross",
 };
 
 export default function LotSizeCalculatorPage() {
+  const { t } = useTranslation();
   const [accountCurrency, setAccountCurrency] = useState<AccountCurrency>("USD");
   const [pair, setPair] = useState<ForexPair>("EURUSD");
   const [accountBalance, setAccountBalance] = useState("");
@@ -50,30 +53,28 @@ export default function LotSizeCalculatorPage() {
 
   function errorFor(field: string): string | undefined {
     if (!outcome || outcome.ok) return undefined;
-    return outcome.errors.find((e) => e.field === field)?.message;
+    const err = outcome.errors.find((e) => e.field === field);
+    if (!err) return undefined;
+    return err.code === "mustBePositive" ? t("lotSize.errMustBePositive") : t("lotSize.errRequiredForCombo");
   }
 
   return (
     <>
-      <PageHeader
-        title="Lot Size Calculator (Beta)"
-        subtitle="Positiegrootte op basis van risico% — jij vult de actuele koers in, niets wordt geraden of live opgehaald"
-      />
+      <PageHeader title={t("nav.lotSize")} subtitle={t("lotSize.subtitle")} />
 
       <Card className="mb-5 border-gold/40">
         <p className="text-xs text-muted">
-          <span className="text-gold font-medium">Beta.</span> Controleer de uitkomst altijd zelf voor je 'm gebruikt om een
-          order te plaatsen — vooral bij grote posities. Vragen of iets klopt niet? Meld het voor het verder gebruikt wordt.
+          <span className="text-gold font-medium">{t("lotSize.betaLabel")}</span> {t("lotSize.betaWarning")}
         </p>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card className="flex flex-col gap-4">
-          <h3 className="font-display text-lg italic text-ink">Invoer</h3>
+          <h3 className="font-display text-lg italic text-ink">{t("lotSize.inputHeading")}</h3>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted">Accountvaluta</label>
+              <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.accountCurrency")}</label>
               <EnumSelect
                 options={ACCOUNT_CURRENCIES}
                 value={accountCurrency}
@@ -81,12 +82,12 @@ export default function LotSizeCalculatorPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted">Pair</label>
+              <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.pair")}</label>
               <EnumSelect options={FOREX_PAIRS} value={pair} onChange={(e) => setPair(e.target.value as ForexPair)} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted">Account balance ({accountCurrency})</label>
+              <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.accountBalance", { currency: accountCurrency })}</label>
               <input
                 type="number"
                 step="0.01"
@@ -97,7 +98,7 @@ export default function LotSizeCalculatorPage() {
               {errorFor("accountBalance") && <p className="text-xs text-loss">{errorFor("accountBalance")}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted">Risico %</label>
+              <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.riskPercent")}</label>
               <input
                 type="number"
                 step="0.01"
@@ -109,7 +110,7 @@ export default function LotSizeCalculatorPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs uppercase tracking-wider text-muted">Stop loss (pips)</label>
+              <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.stopLossPips")}</label>
               <input
                 type="number"
                 step="0.1"
@@ -121,14 +122,14 @@ export default function LotSizeCalculatorPage() {
             </div>
             {needsCurrentPrice && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs uppercase tracking-wider text-muted">Huidige koers {pair}</label>
+                <label className="text-xs uppercase tracking-wider text-muted">{t("lotSize.currentPrice", { pair })}</label>
                 <input
                   type="number"
                   step="0.00001"
                   className="input"
                   value={currentPrice}
                   onChange={(e) => setCurrentPrice(e.target.value)}
-                  placeholder={quote === "JPY" ? "bv. 150.234" : "bv. 1.09234"}
+                  placeholder={quote === "JPY" ? t("lotSize.currentPricePlaceholderJpy") : t("lotSize.currentPricePlaceholder")}
                 />
                 {errorFor("currentPrice") && <p className="text-xs text-loss">{errorFor("currentPrice")}</p>}
               </div>
@@ -137,7 +138,7 @@ export default function LotSizeCalculatorPage() {
             {needsCrossRate && (
               <div className="col-span-2 flex flex-col gap-1.5">
                 <label className="text-xs uppercase tracking-wider text-gold">
-                  Omrekenkoers — 1 {quote} = ? {accountCurrency}
+                  {t("lotSize.crossRateLabel", { quote, currency: accountCurrency })}
                 </label>
                 <input
                   type="number"
@@ -145,7 +146,7 @@ export default function LotSizeCalculatorPage() {
                   className="input"
                   value={quoteToAccountRate}
                   onChange={(e) => setQuoteToAccountRate(e.target.value)}
-                  placeholder={`bv. koers van ${quote}${accountCurrency} of het omgekeerde van ${accountCurrency}${quote}`}
+                  placeholder={t("lotSize.crossRatePlaceholder", { quote, currency: accountCurrency })}
                 />
                 {errorFor("quoteToAccountRate") && <p className="text-xs text-loss">{errorFor("quoteToAccountRate")}</p>}
               </div>
@@ -153,41 +154,41 @@ export default function LotSizeCalculatorPage() {
           </div>
 
           <p className="font-mono text-[11px] text-faint">
-            {pair} · base {base} / quote {quote} · pip size {pipSize}
+            {t("lotSize.meta", { pair, base, quote, pipSize })}
           </p>
         </Card>
 
         <Card className="flex flex-col gap-4">
-          <h3 className="font-display text-lg italic text-ink">Resultaat</h3>
+          <h3 className="font-display text-lg italic text-ink">{t("lotSize.resultHeading")}</h3>
 
           {!outcome ? (
-            <p className="text-sm text-muted">Vul alle velden in.</p>
+            <p className="text-sm text-muted">{t("lotSize.fillAll")}</p>
           ) : !outcome.ok ? (
-            <p className="text-sm text-loss">Corrigeer de gemarkeerde velden hierboven.</p>
+            <p className="text-sm text-loss">{t("lotSize.fixErrors")}</p>
           ) : (
             <div className="flex flex-col gap-4">
               <div>
-                <p className="font-body text-xs uppercase tracking-wider text-muted">Positiegrootte</p>
-                <p className="font-mono text-4xl mt-1 text-gold">{outcome.result.lots} lots</p>
-                <p className="font-mono text-sm text-muted mt-1">{outcome.result.units.toLocaleString("nl-BE")} units</p>
+                <p className="font-body text-xs uppercase tracking-wider text-muted">{t("lotSize.positionSize")}</p>
+                <p className="font-mono text-4xl mt-1 text-gold">{outcome.result.lots} {t("lotSize.lotsUnit")}</p>
+                <p className="font-mono text-sm text-muted mt-1">{outcome.result.units.toLocaleString("nl-BE")} {t("lotSize.unitsUnit")}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div>
-                  <p className="font-body text-xs uppercase tracking-wider text-muted">Risicobedrag</p>
+                  <p className="font-body text-xs uppercase tracking-wider text-muted">{t("lotSize.riskAmount")}</p>
                   <p className="font-mono text-lg text-ink">
                     {outcome.result.riskAmount.toLocaleString("nl-BE")} {accountCurrency}
                   </p>
                 </div>
                 <div>
-                  <p className="font-body text-xs uppercase tracking-wider text-muted">Pipwaarde / lot</p>
+                  <p className="font-body text-xs uppercase tracking-wider text-muted">{t("lotSize.pipValuePerLot")}</p>
                   <p className="font-mono text-lg text-ink">
                     {outcome.result.pipValuePerLot} {accountCurrency}
                   </p>
                 </div>
               </div>
 
-              <p className="font-body text-xs text-muted pt-2 border-t border-border">{CASE_LABEL[outcome.result.conversionCase]}</p>
+              <p className="font-body text-xs text-muted pt-2 border-t border-border">{t(CASE_LABEL_KEY[outcome.result.conversionCase])}</p>
             </div>
           )}
         </Card>
