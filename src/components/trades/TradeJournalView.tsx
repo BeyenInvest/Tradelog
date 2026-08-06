@@ -68,6 +68,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   // Rolling window ("recent form"): null = all trades, else the last N. Live only.
   const [perfWindow, setPerfWindow] = useState<number | null>(null);
+  // Which chart fills the shared equity/discipline card. Live only — a backtest
+  // scope has no discipline trend, so it always shows the equity curve.
+  const [chartPanel, setChartPanel] = useState<"equity" | "discipline">("equity");
 
   const isLive = scope.type === "live";
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
