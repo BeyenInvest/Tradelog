@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { EnumSelect } from "@/components/ui/EnumSelect";
@@ -15,6 +16,7 @@ const NIEUWS_OPTIONS = ["Ja", "Nee"] as const;
 
 /** Extra filter tool next to the PeriodPicker — same popover pattern, scoped to the fields our data model actually has. */
 export function FilterPanel({ value, onChange }: FilterPanelProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -31,80 +33,80 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
         }`}
       >
         <SlidersHorizontal size={15} />
-        Filters
+        {t("filters.title")}
         {count > 0 && <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-gold text-on-gold">{count}</span>}
       </button>
 
       {open && (
         <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-surface p-4 shadow-lg">
           <div className="flex items-center justify-between mb-3">
-            <p className="font-display text-base italic text-ink">Filters</p>
+            <p className="font-display text-base italic text-ink">{t("filters.title")}</p>
             {count > 0 && (
               <button
                 type="button"
                 onClick={() => onChange(EMPTY_FILTERS)}
                 className="flex items-center gap-1 text-xs text-muted hover:text-ink transition-colors"
               >
-                <X size={12} /> Reset
+                <X size={12} /> {t("common.reset")}
               </button>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             {!hideFase && (
-              <Field label="Fase">
+              <Field label={t("filters.fase")}>
                 <EnumSelect
                   options={FASES}
                   value={value.fase ?? ""}
                   onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : (e.target.value as (typeof FASES)[number]) })}
-                  placeholder="Alle fases"
+                  placeholder={t("filters.allFases")}
                   className="w-full text-xs py-1.5"
                 />
               </Field>
             )}
-            <Field label="Pair">
+            <Field label={t("filters.pair")}>
               <EnumSelect
                 options={PAIRS}
                 value={value.pair ?? ""}
                 onChange={(e) => onChange({ ...value, pair: e.target.value === "" ? undefined : (e.target.value as (typeof PAIRS)[number]) })}
-                placeholder="Alle pairs"
+                placeholder={t("filters.allPairs")}
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label="Outcome">
+            <Field label={t("filters.outcome")}>
               <EnumSelect
                 options={OUTCOMES}
                 value={value.outcome ?? ""}
                 onChange={(e) => onChange({ ...value, outcome: e.target.value === "" ? undefined : (e.target.value as (typeof OUTCOMES)[number]) })}
-                placeholder="Alle outcomes"
+                placeholder={t("filters.allOutcomes")}
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label="Sessie">
+            <Field label={t("filters.sessie")}>
               <EnumSelect
                 options={SESSIES}
                 value={value.sessie ?? ""}
                 onChange={(e) => onChange({ ...value, sessie: e.target.value === "" ? undefined : (e.target.value as (typeof SESSIES)[number]) })}
-                placeholder="Alle sessies"
+                placeholder={t("filters.allSessions")}
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label="Evaluatie">
+            <Field label={t("filters.evaluation")}>
               <EnumSelect
                 options={TRADE_EVALUATIONS}
                 value={value.tradeEvaluation ?? ""}
                 onChange={(e) =>
                   onChange({ ...value, tradeEvaluation: e.target.value === "" ? undefined : (e.target.value as (typeof TRADE_EVALUATIONS)[number]) })
                 }
-                placeholder="Alle"
+                placeholder={t("filters.all")}
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label="Nieuws">
+            <Field label={t("filters.news")}>
               <EnumSelect
                 options={NIEUWS_OPTIONS}
                 value={value.nieuws === undefined ? "" : value.nieuws ? "Ja" : "Nee"}
                 onChange={(e) => onChange({ ...value, nieuws: e.target.value === "" ? undefined : e.target.value === "Ja" })}
-                placeholder="Alle"
+                placeholder={t("filters.all")}
                 className="w-full text-xs py-1.5"
               />
             </Field>

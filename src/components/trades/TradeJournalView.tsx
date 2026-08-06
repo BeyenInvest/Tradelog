@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -43,6 +44,7 @@ interface TradeJournalViewProps {
  * clearly badged, never the numbers.
  */
 export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJournalViewProps) {
+  const { t } = useTranslation();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
@@ -96,12 +98,12 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   }
 
   async function handleDelete(trade: Trade) {
-    if (confirm(`Trade ${trade.pair} op ${trade.datum_open} verwijderen?`)) {
+    if (confirm(t("journal.deleteConfirm", { pair: trade.pair, date: trade.datum_open }))) {
       setDeleteError(null);
       try {
         await deleteTrade(trade.id);
       } catch (err) {
-        setDeleteError(toErrorMessage(err, "Verwijderen van trade is mislukt"));
+        setDeleteError(toErrorMessage(err, t("journal.deleteFailed")));
       }
     }
   }
@@ -110,13 +112,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
     <>
       <PageHeader
         title={title}
-        subtitle={subtitle ?? `${realTrades.length} trades`}
+        subtitle={subtitle ?? t("journal.tradesCount", { count: realTrades.length })}
         action={
           <button
             onClick={() => openCreate()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
           >
-            <Plus size={15} /> Nieuwe trade
+            <Plus size={15} /> {t("journal.newTrade")}
           </button>
         }
       />
@@ -128,7 +130,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
       )}
 
       {loading ? (
-        <p className="text-muted text-sm">Laden...</p>
+        <p className="text-muted text-sm">{t("common.loading")}</p>
       ) : (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -143,7 +145,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                   className="flex items-center gap-1.5 text-xs font-body text-muted hover:text-ink transition-colors disabled:opacity-40 disabled:hover:text-muted disabled:cursor-default"
                 >
                   {showMissed ? <EyeOff size={13} /> : <Eye size={13} />}
-                  {showMissed ? "Verberg missed trades" : `Toon missed trades (${missedCount})`}
+                  {showMissed ? t("journal.hideMissed") : t("journal.showMissed", { count: missedCount })}
                 </button>
               )}
               <div className="inline-flex rounded-lg border border-border overflow-hidden">
@@ -153,7 +155,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                     viewMode === "calendar" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                   }`}
                 >
-                  <CalendarDays size={14} /> Kalender
+                  <CalendarDays size={14} /> {t("journal.viewCalendar")}
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
@@ -161,7 +163,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                     viewMode === "list" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                   }`}
                 >
-                  <ListIcon size={14} /> Lijst
+                  <ListIcon size={14} /> {t("journal.viewList")}
                 </button>
                 {!isLive && (
                   <button
@@ -170,7 +172,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                       viewMode === "sessies" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                     }`}
                   >
-                    <CalendarClock size={14} /> Sessies
+                    <CalendarClock size={14} /> {t("journal.viewSessions")}
                   </button>
                 )}
               </div>
@@ -178,19 +180,19 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Totaal trades" value={kpis.totalTrades} />
+            <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
-              label="Resultaat"
+              label={t("journal.statResult")}
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
             />
-            <StatCard label="Max drawdown" value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
+            <StatCard label={t("journal.statMaxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
               <div>
-                <p className="font-body text-xs uppercase tracking-wider text-muted">Streaks</p>
+                <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.statStreaks")}</p>
                 <p className="font-mono text-sm mt-1 text-ink">
-                  max verlies <span className="text-loss">{kpis.maxLosingStreak}</span> · max winst{" "}
+                  {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
                   <span className="text-win">{kpis.maxWinningStreak}</span>
                 </p>
               </div>
@@ -199,7 +201,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <Card className="flex flex-col items-center justify-center">
-              <h3 className="font-display text-xl italic mb-2 self-start text-ink">Win rate</h3>
+              <h3 className="font-display text-xl italic mb-2 self-start text-ink">{t("journal.winRate")}</h3>
               <WinRatePieChart wins={kpis.wins} be={kpis.be} losses={kpis.losses} />
               <div className="flex gap-4 mt-3 font-mono text-xs">
                 <span className="text-win">{kpis.wins}W</span>
@@ -209,7 +211,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             </Card>
 
             <Card className="lg:col-span-2">
-              <h3 className="font-display text-xl italic mb-4 text-ink">Cumulatief resultaat</h3>
+              <h3 className="font-display text-xl italic mb-4 text-ink">{t("journal.cumulativeResult")}</h3>
               <EquityCurveChart data={equityData} />
             </Card>
           </div>
@@ -225,7 +227,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               trades={listTrades}
               onEdit={openEdit}
               onDelete={handleDelete}
-              title="Trades"
+              title={t("journal.trades")}
               filtersActive={filtersActive}
               onResetFilters={resetFilters}
             />
@@ -234,7 +236,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               trades={realTrades}
               onEdit={openEdit}
               onDelete={handleDelete}
-              title="Backtestsessies"
+              title={t("journal.backtestSessions")}
               filtersActive={filtersActive}
               onResetFilters={resetFilters}
               fixedGroupBy="backtestDag"

@@ -1,0 +1,84 @@
+{
+  "common": {
+    "tagline": "Eyes on every trade.",
+    "loading": "Laden...",
+    "submitting": "Bezig...",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "reset": "Reset",
+    "yes": "Ja",
+    "no": "Nee"
+  },
+  "nav": {
+    "journal": "Journal",
+    "backtesting": "Backtesting",
+    "reviews": "Reviews",
+    "accounts": "Accounts",
+    "calendar": "Economic Calendar",
+    "lotSize": "Lot Size Calculator (Beta)",
+    "admin": "Admin",
+    "settings": "Instellingen",
+    "logout": "Uitloggen",
+    "logoutFailed": "Uitloggen is mislukt"
+  },
+  "auth": {
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "login": "Inloggen",
+    "loginFailed": "Inloggen mislukt",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "noAccount": "Nog geen account? Registreren"
+  },
+  "language": {
+    "nl": "Nederlands",
+    "en": "Engels"
+  },
+  "journal": {
+    "title": "Journal",
+    "tabJournal": "Journal",
+    "tabAnalyse": "Analyse",
+    "newTrade": "Nieuwe trade",
+    "tradesCount": "{{count}} trades",
+    "statTotalTrades": "Totaal trades",
+    "statResult": "Resultaat",
+    "statMaxDrawdown": "Max drawdown",
+    "statStreaks": "Streaks",
+    "maxLoss": "max verlies",
+    "maxWin": "max winst",
+    "winRate": "Win rate",
+    "cumulativeResult": "Cumulatief resultaat",
+    "viewCalendar": "Kalender",
+    "viewList": "Lijst",
+    "viewSessions": "Sessies",
+    "showMissed": "Toon missed trades ({{count}})",
+    "hideMissed": "Verberg missed trades",
+    "trades": "Trades",
+    "backtestSessions": "Backtestsessies",
+    "deleteConfirm": "Trade {{pair}} op {{date}} verwijderen?",
+    "deleteFailed": "Verwijderen van trade is mislukt"
+  },
+  "filters": {
+    "title": "Filters",
+    "fase": "Fase",
+    "pair": "Pair",
+    "outcome": "Outcome",
+    "sessie": "Sessie",
+    "evaluation": "Evaluatie",
+    "news": "Nieuws",
+    "allFases": "Alle fases",
+    "allPairs": "Alle pairs",
+    "allOutcomes": "Alle outcomes",
+    "allSessions": "Alle sessies",
+    "all": "Alle"
+  },
+  "period": {
+    "all": "Alle periodes",
+    "presetAll": "Alles",
+    "thisWeek": "Deze week",
+    "thisMonth": "Deze maand",
+    "thisQuarter": "Dit kwartaal",
+    "thisYear": "Dit jaar",
+    "custom": "Aangepaste periode",
+    "to": "t/m"
+  }
+}

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
 // Account deletion (DeleteAccountModal + useAuth.deleteAccount) is built but
 // deliberately not exposed here yet — too easy to stumble into from the main
@@ -11,25 +13,26 @@ import { toErrorMessage } from "@/lib/errorMessage";
 // exists (e.g. alongside subscription management at public launch).
 
 const NAV = [
-  { to: "/journal", label: "Journal", icon: BookOpen },
-  { to: "/backtesting", label: "Backtesting", icon: Target },
-  { to: "/reviews", label: "Reviews", icon: NotebookPen },
-  { to: "/accounts", label: "Accounts", icon: Wallet },
-  { to: "/calendar", label: "Economic Calendar", icon: CalendarClock },
-  { to: "/lot-size", label: "Lot Size Calculator (Beta)", icon: Calculator },
+  { to: "/journal", labelKey: "nav.journal", icon: BookOpen },
+  { to: "/backtesting", labelKey: "nav.backtesting", icon: Target },
+  { to: "/reviews", labelKey: "nav.reviews", icon: NotebookPen },
+  { to: "/accounts", labelKey: "nav.accounts", icon: Wallet },
+  { to: "/calendar", labelKey: "nav.calendar", icon: CalendarClock },
+  { to: "/lot-size", labelKey: "nav.lotSize", icon: Calculator },
 ];
 
 export function Sidebar() {
   const { signOut, isAdmin } = useAuth();
+  const { t } = useTranslation();
   const [signOutError, setSignOutError] = useState<string | null>(null);
-  const nav = isAdmin ? [...NAV, { to: "/admin", label: "Admin", icon: ShieldCheck }] : NAV;
+  const nav = isAdmin ? [...NAV, { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck }] : NAV;
 
   async function handleSignOut() {
     setSignOutError(null);
     try {
       await signOut();
     } catch (err) {
-      setSignOutError(toErrorMessage(err, "Uitloggen is mislukt"));
+      setSignOutError(toErrorMessage(err, t("nav.logoutFailed")));
     }
   }
 
@@ -55,7 +58,7 @@ export function Sidebar() {
             <NavLink
               key={n.to}
               to={n.to}
-              aria-label={n.label}
+              aria-label={t(n.labelKey)}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-2.5 md:px-3 py-2 rounded-lg font-body text-sm transition-colors shrink-0 ${
                   isActive ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
@@ -65,7 +68,7 @@ export function Sidebar() {
               {({ isActive }) => (
                 <>
                   <Icon size={16} className={isActive ? "text-gold" : "text-muted"} />
-                  <span className="hidden md:inline">{n.label}</span>
+                  <span className="hidden md:inline">{t(n.labelKey)}</span>
                 </>
               )}
             </NavLink>
@@ -75,33 +78,35 @@ export function Sidebar() {
 
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">
         <ThemeToggle />
+        <LanguageToggle />
         <NavLink
           to="/settings"
           className={({ isActive }) =>
             `flex items-center gap-2 text-xs font-body transition-colors ${isActive ? "text-ink" : "text-muted hover:text-ink"}`
           }
         >
-          <Settings size={14} /> Instellingen
+          <Settings size={14} /> {t("nav.settings")}
         </NavLink>
         <button
           onClick={() => void handleSignOut()}
           className="flex items-center gap-2 text-xs font-body text-muted hover:text-ink transition-colors"
         >
-          <LogOut size={14} /> Uitloggen
+          <LogOut size={14} /> {t("nav.logout")}
         </button>
       </div>
       <div className="flex items-center gap-1 md:hidden shrink-0">
         <ThemeToggle iconOnly />
+        <LanguageToggle iconOnly />
         <NavLink
           to="/settings"
-          aria-label="Instellingen"
+          aria-label={t("nav.settings")}
           className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-ink" : "text-muted hover:text-ink"}`}
         >
           <Settings size={16} />
         </NavLink>
         <button
           onClick={() => void handleSignOut()}
-          aria-label="Uitloggen"
+          aria-label={t("nav.logout")}
           className="p-2 rounded-lg text-muted hover:text-ink"
         >
           <LogOut size={16} />

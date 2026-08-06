@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function LoginPage() {
   const { session, signIn } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +25,7 @@ export default function LoginPage() {
     try {
       await signIn(email, password, captchaToken);
     } catch (err) {
-      setError(toErrorMessage(err, "Inloggen mislukt"));
+      setError(toErrorMessage(err, t("auth.loginFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -31,18 +34,21 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
-        <div className="mb-8">
-          <div className="flex items-center gap-2.5">
-            <LogoMark size={32} className="text-gold" />
-            <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <LogoMark size={32} className="text-gold" />
+              <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted font-body">{t("common.tagline")}</p>
           </div>
-          <p className="mt-1.5 text-xs text-muted font-body">Eyes on every trade.</p>
+          <LanguageToggle iconOnly />
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs uppercase tracking-wider text-muted" htmlFor="email">
-              E-mail
+              {t("auth.email")}
             </label>
             <input
               id="email"
@@ -57,7 +63,7 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs uppercase tracking-wider text-muted" htmlFor="password">
-              Wachtwoord
+              {t("auth.password")}
             </label>
             <input
               id="password"
@@ -79,15 +85,15 @@ export default function LoginPage() {
             disabled={submitting}
             className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
           >
-            {submitting ? "Bezig..." : "Inloggen"}
+            {submitting ? t("common.submitting") : t("auth.login")}
           </button>
 
           <div className="flex items-center justify-between text-xs text-muted">
             <Link to="/forgot-password" className="hover:text-gold">
-              Wachtwoord vergeten?
+              {t("auth.forgotPassword")}
             </Link>
             <Link to="/signup" className="hover:text-gold">
-              Nog geen account? Registreren
+              {t("auth.noAccount")}
             </Link>
           </div>
         </form>

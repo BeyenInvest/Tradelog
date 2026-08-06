@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CalendarRange, ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { monthRange, quarterRange, yearRange, type DateRange } from "@/lib/periodRanges";
@@ -30,28 +31,29 @@ function sameRange(a: DateRange | null, b: DateRange | null): boolean {
   return a.start === b.start && a.end === b.end;
 }
 
-const PRESETS: { label: string; range: () => DateRange | null }[] = [
-  { label: "Alles", range: () => null },
-  { label: "Deze week", range: thisWeekRange },
+const PRESETS: { labelKey: string; range: () => DateRange | null }[] = [
+  { labelKey: "period.presetAll", range: () => null },
+  { labelKey: "period.thisWeek", range: thisWeekRange },
   {
-    label: "Deze maand",
+    labelKey: "period.thisMonth",
     range: () => {
       const n = new Date();
       return monthRange(n.getFullYear(), n.getMonth() + 1);
     },
   },
   {
-    label: "Dit kwartaal",
+    labelKey: "period.thisQuarter",
     range: () => {
       const n = new Date();
       return quarterRange(n.getFullYear(), Math.floor(n.getMonth() / 3) + 1);
     },
   },
-  { label: "Dit jaar", range: () => yearRange(new Date().getFullYear()) },
+  { labelKey: "period.thisYear", range: () => yearRange(new Date().getFullYear()) },
 ];
 
 /** Compact period tool: quick presets + a custom Van/Tot range, scoping the whole Journal view. */
 export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
@@ -84,7 +86,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
         className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-surface-2 text-sm font-body text-ink hover:border-faint transition-colors"
       >
         <CalendarRange size={15} className="text-muted" />
-        {value ? `${formatNl(value.start)} — ${formatNl(value.end)}` : "Alle periodes"}
+        {value ? `${formatNl(value.start)} — ${formatNl(value.end)}` : t("period.all")}
         <ChevronDown size={13} className="text-muted" />
       </button>
 
@@ -96,7 +98,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
               const active = sameRange(value, r);
               return (
                 <button
-                  key={p.label}
+                  key={p.labelKey}
                   type="button"
                   onClick={() => {
                     onChange(r);
@@ -106,13 +108,13 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
                     active ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                   }`}
                 >
-                  {p.label}
+                  {t(p.labelKey)}
                 </button>
               );
             })}
           </div>
           <div className="border-t border-border-soft pt-3">
-            <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-2">Aangepaste periode</p>
+            <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-2">{t("period.custom")}</p>
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -121,7 +123,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
                 onChange={(e) => setStart(e.target.value)}
                 className="input text-xs py-1.5 flex-1"
               />
-              <span className="text-muted text-xs shrink-0">t/m</span>
+              <span className="text-muted text-xs shrink-0">{t("period.to")}</span>
               <input
                 type="date"
                 value={customEnd}

@@ -1,0 +1,84 @@
+{
+  "common": {
+    "tagline": "Eyes on every trade.",
+    "loading": "Loading...",
+    "submitting": "Working...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "journal": "Journal",
+    "backtesting": "Backtesting",
+    "reviews": "Reviews",
+    "accounts": "Accounts",
+    "calendar": "Economic Calendar",
+    "lotSize": "Lot Size Calculator (Beta)",
+    "admin": "Admin",
+    "settings": "Settings",
+    "logout": "Log out",
+    "logoutFailed": "Sign-out failed"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "login": "Log in",
+    "loginFailed": "Login failed",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "No account yet? Sign up"
+  },
+  "language": {
+    "nl": "Dutch",
+    "en": "English"
+  },
+  "journal": {
+    "title": "Journal",
+    "tabJournal": "Journal",
+    "tabAnalyse": "Analysis",
+    "newTrade": "New trade",
+    "tradesCount": "{{count}} trades",
+    "statTotalTrades": "Total trades",
+    "statResult": "Result",
+    "statMaxDrawdown": "Max drawdown",
+    "statStreaks": "Streaks",
+    "maxLoss": "max loss",
+    "maxWin": "max win",
+    "winRate": "Win rate",
+    "cumulativeResult": "Cumulative result",
+    "viewCalendar": "Calendar",
+    "viewList": "List",
+    "viewSessions": "Sessions",
+    "showMissed": "Show missed trades ({{count}})",
+    "hideMissed": "Hide missed trades",
+    "trades": "Trades",
+    "backtestSessions": "Backtest sessions",
+    "deleteConfirm": "Delete trade {{pair}} on {{date}}?",
+    "deleteFailed": "Deleting the trade failed"
+  },
+  "filters": {
+    "title": "Filters",
+    "fase": "Phase",
+    "pair": "Pair",
+    "outcome": "Outcome",
+    "sessie": "Session",
+    "evaluation": "Evaluation",
+    "news": "News",
+    "allFases": "All phases",
+    "allPairs": "All pairs",
+    "allOutcomes": "All outcomes",
+    "allSessions": "All sessions",
+    "all": "All"
+  },
+  "period": {
+    "all": "All periods",
+    "presetAll": "All",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "thisQuarter": "This quarter",
+    "thisYear": "This year",
+    "custom": "Custom period",
+    "to": "to"
+  }
+}
