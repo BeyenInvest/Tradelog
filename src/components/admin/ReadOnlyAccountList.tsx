@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { formatEUR } from "@/lib/format";
+import { propAccountTypeLabel } from "@/lib/constants";
 import type { Payout, PropAccount } from "@/lib/types";
+import { PropFirmProgress } from "@/components/accounts/PropFirmProgress";
 
 /** Read-only equivalent of AccountList — no edit/delete/payout-entry affordances, for the admin debug view. */
 export function ReadOnlyAccountList({ accounts, payouts }: { accounts: PropAccount[]; payouts: Payout[] }) {
@@ -23,7 +25,7 @@ export function ReadOnlyAccountList({ accounts, payouts }: { accounts: PropAccou
           <Card key={acc.id}>
             <p className="font-display text-xl italic text-ink">{acc.naam}</p>
             <p className="font-mono text-xs mt-1 text-muted">
-              €{formatEUR(acc.account_size)} · {acc.fase}
+              €{formatEUR(acc.account_size)} · {propAccountTypeLabel(acc.fase, t)}
               {!acc.actief && ` · ${t("accounts.inactive")}`}
               {acc.current_pnl_pct != null && (
                 <>
@@ -35,6 +37,8 @@ export function ReadOnlyAccountList({ accounts, payouts }: { accounts: PropAccou
                 </>
               )}
             </p>
+
+            <PropFirmProgress account={acc} />
 
             <div className="flex flex-col gap-2 mt-3">
               <div className="flex items-center justify-between">

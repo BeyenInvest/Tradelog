@@ -37,6 +37,9 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
         <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
+        <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
+          <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
+        </Field>
         {allowMissedTrade && (
           <Field label={t("tradeForm.tradeEvaluation")} error={errors.trade_evaluation?.message}>
             <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />

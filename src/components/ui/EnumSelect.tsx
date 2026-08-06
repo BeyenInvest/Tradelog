@@ -3,11 +3,13 @@ import { forwardRef, type SelectHTMLAttributes } from "react";
 interface EnumSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: readonly string[];
   placeholder?: string;
+  /** Optional display label per option value — the option value stays the raw enum string, only the shown text changes. */
+  getLabel?: (opt: string) => string;
 }
 
 /** Generic <select> bound to a fixed enum list — used with react-hook-form's register() via ref forwarding. */
 export const EnumSelect = forwardRef<HTMLSelectElement, EnumSelectProps>(function EnumSelect(
-  { options, placeholder = "Selecteer...", className, ...props },
+  { options, placeholder = "Selecteer...", getLabel, className, ...props },
   ref
 ) {
   return (
@@ -22,7 +24,7 @@ export const EnumSelect = forwardRef<HTMLSelectElement, EnumSelectProps>(functio
       <option value="">{placeholder}</option>
       {options.map((opt) => (
         <option key={opt} value={opt}>
-          {opt}
+          {getLabel ? getLabel(opt) : opt}
         </option>
       ))}
     </select>

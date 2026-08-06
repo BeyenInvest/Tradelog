@@ -72,8 +72,20 @@ export const CC_TO_SESSIE: Record<CC, Sessie> = {
 export const STRUCTUREN = ["Inner", "Outer"] as const;
 export type Structuur = (typeof STRUCTUREN)[number];
 
-export const PROP_FASES = ["Phase 1", "Phase 2", "Funded"] as const;
+/**
+ * Account "type" (DB column `fase`, prop_fase_enum). Phase 1/2/Funded are the
+ * prop-firm challenge stages (kept as English jargon, shown literally everywhere
+ * like OUTCOMES/FASES); "Private" is a personal (own-capital) account. The UI
+ * labels this field "Type", not "Fase" — see AccountForm. Only "Private" gets a
+ * translated display label (via propAccountTypeLabel); the jargon values stay literal.
+ */
+export const PROP_FASES = ["Phase 1", "Phase 2", "Funded", "Private"] as const;
 export type PropFase = (typeof PROP_FASES)[number];
+
+/** Display label for an account type value — only "Private" is translated (→ "Privé"/"Private"); prop-firm jargon stays literal. */
+export function propAccountTypeLabel(value: string, t: (key: string) => string): string {
+  return value === "Private" ? t("accounts.typePrivate") : value;
+}
 
 export const WEEKDAYS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
@@ -98,6 +110,15 @@ export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
 
 /** Minimum trades in a breakdown bucket before it's considered statistically meaningful (rekenregel 6). */
 export const MIN_SAMPLE_SIZE = 15;
+
+/**
+ * Default planned risk % assumed for a trade with no explicit `risk_pct` (i.e. every
+ * legacy trade, and anyone on the flat-1% workflow). It's the denominator for
+ * R-multiples (R = resultaat_pct / risk_pct), so at this default R ≡ resultaat_pct —
+ * the whole point of keeping R non-intrusive. Routed through riskPct() in stats/core.ts;
+ * never divide by risk_pct directly.
+ */
+export const DEFAULT_RISK_PCT = 1;
 
 /**
  * Fase-specifieke kenmerken (spec tabel 3.2), config-driven zodat de Backtesting

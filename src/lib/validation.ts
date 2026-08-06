@@ -46,6 +46,9 @@ export const tradeSchema = z
     pair: z.enum(PAIRS),
     outcome: z.enum(OUTCOMES),
     resultaat_pct: requiredNumber,
+    // Optional planned risk %; null = the default 1% (DEFAULT_RISK_PCT). Positivity is
+    // checked in the superRefine below (null passes; any entered value must be > 0).
+    risk_pct: nullableNumber.optional().default(null),
     trade_evaluation: nullableEnum(TRADE_EVALUATIONS).optional().default(null),
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
@@ -82,6 +85,9 @@ export const tradeSchema = z
   .superRefine((data, ctx) => {
     if (data.datum_sluiting && data.datum_sluiting < data.datum_open) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["datum_sluiting"], message: "tradeForm.closeBeforeOpen" });
+    }
+    if (data.risk_pct != null && data.risk_pct <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["risk_pct"], message: "tradeForm.riskMustBePositive" });
     }
   });
 

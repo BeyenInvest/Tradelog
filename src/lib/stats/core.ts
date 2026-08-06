@@ -1,5 +1,6 @@
 import type { Trade } from "../types";
 import type { Outcome } from "../constants";
+import { DEFAULT_RISK_PCT } from "../constants";
 
 /**
  * Missed trades (trade_evaluation = "Missed trade") are hypothetical — a setup
@@ -27,6 +28,19 @@ export function sortChronological(trades: Trade[]): Trade[] {
     if (d !== 0) return d;
     return a.id.localeCompare(b.id);
   });
+}
+
+/**
+ * The last `n` trades chronologically (most recent by datum_open, tie-broken by
+ * id) — the "rolling window" / recent-form snapshot. Returns a chronologically
+ * ascending slice, so downstream stats (streaks, equity curve, R) read it the
+ * same as a full list. `n <= 0` returns []; fewer than `n` trades returns them
+ * all. Caller passes an already-scoped, missed-excluded list (recent form is a
+ * real-performance metric — hypothetical "Missed" trades must not reach it).
+ */
+export function lastNChronological(trades: Trade[], n: number): Trade[] {
+  if (n <= 0) return [];
+  return sortChronological(trades).slice(-n);
 }
 
 export interface OutcomeCounts {
@@ -155,6 +169,46 @@ export function computeExpectancy(trades: Trade[]): ExpectancyResult {
   return { avgWin, avgLoss, winLossRatio };
 }
 
+/**
+ * Planned risk % for a trade — falls back to DEFAULT_RISK_PCT when risk_pct is
+ * unset (null) or non-positive. This single guard is what makes R-multiples
+ * non-intrusive: every legacy trade (risk_pct null) is treated as 1% risk, so
+ * its R equals its resultaat_pct. Never divide by trade.risk_pct directly.
+ */
+export function riskPct(trade: Pick<Trade, "risk_pct">): number {
+  return trade.risk_pct != null && trade.risk_pct > 0 ? trade.risk_pct : DEFAULT_RISK_PCT;
+}
+
+/**
+ * R-multiple of a single trade: realised result relative to the planned risk it
+ * was taken with (resultaat_pct / risk). Sign is preserved (a loss is negative
+ * R). At the default 1% risk this is exactly resultaat_pct.
+ */
+export function rMultiple(trade: Pick<Trade, "resultaat_pct" | "risk_pct">): number {
+  return round2(trade.resultaat_pct / riskPct(trade));
+}
+
+export interface RStats {
+  /** Sum of every trade's R-multiple. */
+  totalR: number;
+  /** Mean R per trade — expectancy expressed in R. null when there are no trades. */
+  avgR: number | null;
+}
+
+/**
+ * Aggregate R-multiples across a set of trades. Callers pass an already-scoped,
+ * missed-excluded list (same contract as computeOutcomeCounts) — R is a real
+ * performance metric, so hypothetical "Missed" trades must not reach it.
+ */
+export function computeRStats(trades: Pick<Trade, "resultaat_pct" | "risk_pct">[]): RStats {
+  const n = trades.length;
+  if (n === 0) return { totalR: 0, avgR: null };
+  // Sum the raw (unrounded) R-multiples, then round once — avoids compounding
+  // per-trade rounding error into the total/average.
+  const total = trades.reduce((s, t) => s + t.resultaat_pct / riskPct(t), 0);
+  return { totalR: round2(total), avgR: round2(total / n) };
+}
+
 export interface EquityPoint {
   idx: number;
   tradeId: string;
@@ -162,11 +216,35 @@ export interface EquityPoint {
   cum: number;
 }
 
-export function computeEquityCurve(trades: Trade[]): EquityPoint[] {
+/**
+ * Which way the equity curve accumulates:
+ *  - "simple": arithmetic sum of resultaat_pct — the classic "add the %'s up" view,
+ *    and the one that matches every other cumulative total in the app.
+ *  - "compound": rente-op-rente — each result is applied to the running balance, so
+ *    later trades weigh on a larger (or smaller) base, the way a real percent-risk
+ *    account actually grows.
+ */
+export type EquityMode = "simple" | "compound";
+
+/**
+ * Cumulative equity curve, chronological by datum_open (id-tiebroken). Both modes are
+ * reported as cumulative % return from the start, so the two curves are drawn on the
+ * same axis and can be compared directly with the toggle. Compound tracks a growth
+ * factor (starts at 1) and plots (factor - 1) * 100; at a flat run the two only diverge
+ * once results start landing on a moved balance. Callers pass an already-scoped,
+ * missed-decided list (Reviews deliberately plots missed rows here).
+ */
+export function computeEquityCurve(trades: Trade[], mode: EquityMode = "simple"): EquityPoint[] {
   const sorted = sortChronological(trades);
   let cum = 0;
+  let factor = 1;
   return sorted.map((t, i) => {
-    cum += t.resultaat_pct;
+    if (mode === "compound") {
+      factor *= 1 + t.resultaat_pct / 100;
+      cum = (factor - 1) * 100;
+    } else {
+      cum += t.resultaat_pct;
+    }
     return { idx: i + 1, tradeId: t.id, datumOpen: t.datum_open, cum: round2(cum) };
   });
 }
@@ -187,6 +265,8 @@ export interface OverviewKpis {
   avgLoss: number | null;
   winLossRatio: number | null;
   maxDrawdownPct: number;
+  totalR: number;
+  avgR: number | null;
 }
 
 /**
@@ -198,6 +278,7 @@ export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
   const streaks = computeStreaks(trades);
   const drawdown = computeMaxDrawdown(trades);
   const expectancy = computeExpectancy(trades);
+  const rStats = computeRStats(trades);
 
   return {
     totalTrades: counts.n,
@@ -215,6 +296,8 @@ export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
     avgLoss: expectancy.avgLoss,
     winLossRatio: expectancy.winLossRatio,
     maxDrawdownPct: drawdown.maxDrawdownPct,
+    totalR: rStats.totalR,
+    avgR: rStats.avgR,
   };
 }
 
@@ -237,6 +320,60 @@ export function computeErrorCounts(taken: Trade[], missed: Trade[]): ErrorCounts
     missedCount: missed.length,
     missedResultaat: round2(missed.reduce((s, t) => s + t.resultaat_pct, 0)),
   };
+}
+
+export interface DisciplineStats {
+  /** Taken trades carrying an execution grade (Good/Emotional/Technical). Ungraded taken trades are excluded — neither disciplined nor a lapse. */
+  evaluated: number;
+  good: number;
+  emotional: number;
+  technical: number;
+  /** Share of graded trades marked "Good trade", 0..1. null when nothing is graded yet. */
+  rate: number | null;
+}
+
+/**
+ * Discipline = execution quality (trade_evaluation), independent of P&L. Only
+ * graded taken trades count; "Missed trade" is hypothetical (caller passes an
+ * already missed-excluded list) and an ungraded taken trade counts toward
+ * neither the numerator nor the denominator.
+ */
+export function computeDisciplineStats(taken: Pick<Trade, "trade_evaluation">[]): DisciplineStats {
+  const good = taken.filter((t) => t.trade_evaluation === "Good trade").length;
+  const emotional = taken.filter((t) => t.trade_evaluation === "Emotional error").length;
+  const technical = taken.filter((t) => t.trade_evaluation === "Technical error").length;
+  const evaluated = good + emotional + technical;
+  return { evaluated, good, emotional, technical, rate: evaluated ? good / evaluated : null };
+}
+
+export interface DisciplinePoint {
+  /** 1-based index among graded taken trades (an ungraded trade produces no point). */
+  idx: number;
+  tradeId: string;
+  datumOpen: string;
+  /** Cumulative % of graded trades up to and including this one that were "Good trade" (0..100). */
+  cumRate: number;
+}
+
+/**
+ * Chronological discipline trend: the running share of "Good trade" among all
+ * graded taken trades so far, one point per graded trade (sorted by datum_open,
+ * tie-broken by id). Shows whether execution quality is trending up or down over
+ * the sequence. Caller passes an already missed-excluded list (same contract as
+ * the other real-performance helpers).
+ */
+export function computeDisciplineCurve(trades: Trade[]): DisciplinePoint[] {
+  const graded = sortChronological(trades).filter(
+    (t) =>
+      t.trade_evaluation === "Good trade" ||
+      t.trade_evaluation === "Emotional error" ||
+      t.trade_evaluation === "Technical error"
+  );
+  let goodSoFar = 0;
+  return graded.map((t, i) => {
+    if (t.trade_evaluation === "Good trade") goodSoFar += 1;
+    return { idx: i + 1, tradeId: t.id, datumOpen: t.datum_open, cumRate: round2((goodSoFar / (i + 1)) * 100) };
+  });
 }
 
 function mean(values: number[]): number {

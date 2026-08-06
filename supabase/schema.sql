@@ -27,7 +27,7 @@ create type trade_concept_enum as enum (
 create type cc_enum as enum ('03','07','11','15','19','23');
 create type sessie_enum as enum ('Asia','London','Overlap','New York');
 create type structuur_enum as enum ('Inner','Outer');
-create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded');
+create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded','Private');
 
 -- ---------- PROFILES ----------
 -- 1:1 with auth.users, auto-provisioned by the trigger below. `plan` defaults
@@ -112,6 +112,9 @@ create table trades (
   pair pair_enum not null,
   outcome outcome_enum not null,
   resultaat_pct numeric(7,2) not null,
+  -- Planned risk % the trade was taken with. NULL = the default 1% (DEFAULT_RISK_PCT),
+  -- which keeps R ≡ resultaat_pct for everyone on the flat-1% workflow. See 0012_risk_pct.sql.
+  risk_pct numeric(7,2) check (risk_pct > 0),
   trade_evaluation trade_evaluation_enum,
 
   weekly_criteria weekly_criteria_enum,
@@ -175,6 +178,11 @@ create table prop_accounts (
   fase prop_fase_enum not null default 'Phase 1',
   actief boolean not null default true,
   current_pnl_pct numeric(6,2),
+  -- Prop-firm rules (% of account size, nullable = not configured, manually entered).
+  -- See migration 0013_prop_firm_rules.sql.
+  profit_target_pct numeric(6,2) check (profit_target_pct > 0),
+  max_drawdown_pct numeric(6,2) check (max_drawdown_pct > 0),
+  daily_loss_limit_pct numeric(6,2) check (daily_loss_limit_pct > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
-import { computeOverviewKpis, computeEquityCurve, round2 } from "@/lib/stats";
+import { computeOverviewKpis, round2 } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
 type View = "taken" | "missed";
@@ -29,7 +29,6 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
 
   const rows = view === "taken" ? taken : missed;
   const kpis = computeOverviewKpis(rows);
-  const equityData = computeEquityCurve(rows);
   const decisive = kpis.wins + kpis.losses;
   const avgRR = decisive > 0 ? round2(kpis.totalResultaat / decisive) : 0;
 
@@ -83,7 +82,7 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
           </div>
           <div className="rounded-xl border border-border bg-surface-2 p-4 lg:col-span-2">
             <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">{t("journal.cumulativeResult")}</p>
-            <EquityCurveChart data={equityData} />
+            <EquityCurveChart trades={rows} />
           </div>
         </div>
       ) : (

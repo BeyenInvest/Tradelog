@@ -1,0 +1,22 @@
+-- =========================================================
+-- Beyen Invest — migration: planned risk % + R-multiples
+--
+-- Adds the planned risk (as % of account) a trade was taken with. This is the
+-- denominator for R-multiples: R = resultaat_pct / risk_pct.
+--
+-- Deliberately nullable and NON-INTRUSIVE: a NULL risk_pct means "the default
+-- 1% risk" (DEFAULT_RISK_PCT in src/lib/constants.ts). For every existing trade
+-- (all NULL) and for anyone who keeps trading at a flat 1%, R therefore equals
+-- resultaat_pct exactly — the current %/1% workflow is unchanged and no numbers
+-- move. R only starts to "live" once a trader logs a variable risk per trade
+-- (e.g. the RR-based workflow: 1:3 / 1:2 / 1:1).
+--
+-- CHECK (risk_pct > 0): risk can never be zero or negative — the app never
+-- writes such a value (the trade form validates > 0), and it would make the
+-- R-multiple division meaningless. No RLS change needed; existing
+-- trades_owner_all / trades_admin_select policies already cover the new column.
+--
+-- Paste into the Supabase SQL editor and run once.
+-- =========================================================
+
+alter table trades add column risk_pct numeric(7,2) check (risk_pct > 0);

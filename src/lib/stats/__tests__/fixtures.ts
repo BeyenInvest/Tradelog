@@ -16,6 +16,7 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
     pair: "EURUSD",
     outcome: "Win",
     resultaat_pct: 1,
+    risk_pct: null,
     trade_evaluation: null,
     weekly_criteria: null,
     weekly_kenmerk: null,

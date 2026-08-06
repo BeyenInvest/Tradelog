@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { DisciplineTrendChart } from "@/components/charts/DisciplineTrendChart";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
@@ -13,11 +14,21 @@ import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
-import { computeOverviewKpis, computeEquityCurve, takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
+import {
+  computeOverviewKpis,
+  computeDisciplineCurve,
+  computeDisciplineStats,
+  lastNChronological,
+  takenTrades,
+  missedTrades as filterMissedTrades,
+} from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
+
+/** Rolling-window options for the "recent form" toggle: null = all trades, else the last N. */
+const ROLLING_WINDOWS: (number | null)[] = [null, 50, 20];
 
 interface TradeJournalViewProps {
   scope: TradeScope;
@@ -55,6 +66,8 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
   const [viewMode, setViewMode] = useState<"calendar" | "list" | "sessies">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Rolling window ("recent form"): null = all trades, else the last N. Live only.
+  const [perfWindow, setPerfWindow] = useState<number | null>(null);
 
   const isLive = scope.type === "live";
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
@@ -68,8 +81,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const missedCount = missedTrades.length;
   const listTrades = isLive && showMissed ? scopedTrades : realTrades;
 
-  const kpis = useMemo(() => computeOverviewKpis(realTrades), [realTrades]);
-  const equityData = useMemo(() => computeEquityCurve(realTrades), [realTrades]);
+  // Scopes only the performance snapshot (KPI row + win-rate + equity curve) to
+  // the last N taken trades — never the calendar, list, or discipline trend
+  // below (a trend chart is meaningless over a 20-trade window). Applied after
+  // filters/period, so it's "the last N of the currently-filtered set".
+  const windowedTrades = useMemo(
+    () => (perfWindow == null ? realTrades : lastNChronological(realTrades, perfWindow)),
+    [realTrades, perfWindow]
+  );
+  const kpis = useMemo(() => computeOverviewKpis(windowedTrades), [windowedTrades]);
+  const disciplineData = useMemo(() => computeDisciplineCurve(realTrades), [realTrades]);
+  const disciplineStats = useMemo(() => computeDisciplineStats(realTrades), [realTrades]);
   const selectedDayTrades = useMemo(
     () => (selectedDay ? scopedTrades.filter((t) => t.datum_open === selectedDay) : []),
     [scopedTrades, selectedDay]
@@ -179,12 +201,37 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
+          <div className="flex flex-col gap-3">
+            {isLive && (
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.windowLabel")}</p>
+                <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                  {ROLLING_WINDOWS.map((w) => (
+                    <button
+                      key={w ?? "all"}
+                      onClick={() => setPerfWindow(w)}
+                      className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                        perfWindow === w ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                      }`}
+                    >
+                      {w == null ? t("journal.windowAll") : t("journal.windowLast", { n: w })}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
               label={t("journal.statResult")}
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              label={t("journal.statAvgR")}
+              value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+              tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
+              sub={kpis.avgR != null ? t("journal.statTotalR", { total: kpis.totalR.toFixed(2) }) : undefined}
             />
             <StatCard label={t("journal.statMaxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
             <Card className="flex items-center gap-3">
@@ -197,6 +244,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                 </p>
               </div>
             </Card>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -212,9 +260,38 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
             <Card className="lg:col-span-2">
               <h3 className="font-display text-xl italic mb-4 text-ink">{t("journal.cumulativeResult")}</h3>
-              <EquityCurveChart data={equityData} />
+              <EquityCurveChart trades={windowedTrades} />
             </Card>
           </div>
+
+          {isLive && (
+            <Card>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
+                <h3 className="font-display text-xl italic text-ink">{t("journal.disciplineTrend")}</h3>
+                {disciplineStats.rate != null && (
+                  <div className="flex flex-wrap gap-4 font-mono text-xs">
+                    <span className="text-ink">
+                      {t("journal.disciplineRate", { pct: Math.round(disciplineStats.rate * 100) })}
+                    </span>
+                    <span className="text-win">
+                      {t("journal.disciplineGood", { count: disciplineStats.good })}
+                    </span>
+                    {disciplineStats.emotional > 0 && (
+                      <span className="text-loss">
+                        {t("journal.disciplineEmotional", { count: disciplineStats.emotional })}
+                      </span>
+                    )}
+                    {disciplineStats.technical > 0 && (
+                      <span className="text-loss">
+                        {t("journal.disciplineTechnical", { count: disciplineStats.technical })}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <DisciplineTrendChart data={disciplineData} />
+            </Card>
+          )}
 
           {viewMode === "calendar" ? (
             <CalendarView

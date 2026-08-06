@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeOutcomeCounts, round2 } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
 
 describe("round2", () => {
@@ -128,10 +128,184 @@ describe("computeExpectancy", () => {
   });
 });
 
+describe("riskPct / rMultiple (non-intrusive R)", () => {
+  it("treats a null risk_pct as the default 1% — R equals resultaat_pct", () => {
+    const t = makeTrade({ resultaat_pct: 3, risk_pct: null });
+    expect(riskPct(t)).toBe(1);
+    expect(rMultiple(t)).toBe(3);
+  });
+
+  it("treats a zero/negative risk_pct as the default 1% (defensive guard)", () => {
+    expect(riskPct(makeTrade({ risk_pct: 0 }))).toBe(1);
+    expect(riskPct(makeTrade({ risk_pct: -2 }))).toBe(1);
+  });
+
+  it("divides result by an explicit risk — RR-style trades", () => {
+    expect(rMultiple(makeTrade({ resultaat_pct: 3, risk_pct: 1 }))).toBe(3); // 1:3
+    expect(rMultiple(makeTrade({ resultaat_pct: 3, risk_pct: 3 }))).toBe(1); // 1:1 at 3% risk
+    expect(rMultiple(makeTrade({ resultaat_pct: 1.5, risk_pct: 0.5 }))).toBe(3);
+  });
+
+  it("preserves sign for losses", () => {
+    expect(rMultiple(makeTrade({ resultaat_pct: -2, risk_pct: 2 }))).toBe(-1);
+  });
+});
+
+describe("computeRStats", () => {
+  it("returns totalR 0 and avgR null for no trades", () => {
+    expect(computeRStats([])).toEqual({ totalR: 0, avgR: null });
+  });
+
+  it("for legacy (all null risk) trades, totalR equals total resultaat_pct", () => {
+    const trades = [
+      makeTrade({ resultaat_pct: 3, risk_pct: null }),
+      makeTrade({ resultaat_pct: -1, risk_pct: null }),
+      makeTrade({ resultaat_pct: 2, risk_pct: null }),
+    ];
+    expect(computeRStats(trades)).toEqual({ totalR: 4, avgR: round2(4 / 3) });
+  });
+
+  it("aggregates mixed variable-risk trades", () => {
+    const trades = [
+      makeTrade({ resultaat_pct: 3, risk_pct: 1 }), // +3R
+      makeTrade({ resultaat_pct: -3, risk_pct: 3 }), // -1R
+      makeTrade({ resultaat_pct: 2, risk_pct: 2 }), // +1R
+    ];
+    expect(computeRStats(trades)).toEqual({ totalR: 3, avgR: 1 });
+  });
+});
+
+describe("lastNChronological (rolling window)", () => {
+  it("returns the last n trades chronologically, even from an unordered input", () => {
+    const seq = makeSequence(["Win", "Loss", "Win", "BE", "Loss"]); // 2026-01-01..05
+    const shuffled = [seq[3], seq[0], seq[4], seq[1], seq[2]];
+    expect(lastNChronological(shuffled, 3).map((t) => t.datum_open)).toEqual([
+      "2026-01-03",
+      "2026-01-04",
+      "2026-01-05",
+    ]);
+  });
+
+  it("returns all trades (sorted) when n exceeds the count", () => {
+    const seq = makeSequence(["Win", "Loss"]);
+    expect(lastNChronological([seq[1], seq[0]], 10).map((t) => t.datum_open)).toEqual([
+      "2026-01-01",
+      "2026-01-02",
+    ]);
+  });
+
+  it("returns [] for n <= 0", () => {
+    const seq = makeSequence(["Win", "Loss"]);
+    expect(lastNChronological(seq, 0)).toEqual([]);
+    expect(lastNChronological(seq, -5)).toEqual([]);
+  });
+});
+
 describe("computeOutcomeCounts", () => {
   it("computes rates and total against a hand count", () => {
     const trades = makeSequence(["Win", "Win", "Loss", "BE"]);
     const result = computeOutcomeCounts(trades);
     expect(result).toMatchObject({ n: 4, wins: 2, losses: 1, be: 1, winRate: 0.5, resultaatTotal: 1 });
+  });
+});
+
+describe("computeDisciplineStats", () => {
+  it("rate is null when nothing is graded", () => {
+    const trades = [makeTrade({ trade_evaluation: null }), makeTrade({ trade_evaluation: null })];
+    expect(computeDisciplineStats(trades)).toEqual({ evaluated: 0, good: 0, emotional: 0, technical: 0, rate: null });
+  });
+
+  it("counts each grade and rate = good / graded", () => {
+    const trades = [
+      makeTrade({ trade_evaluation: "Good trade" }),
+      makeTrade({ trade_evaluation: "Good trade" }),
+      makeTrade({ trade_evaluation: "Good trade" }),
+      makeTrade({ trade_evaluation: "Emotional error" }),
+    ];
+    expect(computeDisciplineStats(trades)).toEqual({ evaluated: 4, good: 3, emotional: 1, technical: 0, rate: 0.75 });
+  });
+
+  it("ungraded taken trades count toward neither numerator nor denominator", () => {
+    const trades = [
+      makeTrade({ trade_evaluation: "Good trade" }),
+      makeTrade({ trade_evaluation: null }),
+      makeTrade({ trade_evaluation: "Emotional error" }),
+    ];
+    const result = computeDisciplineStats(trades);
+    expect(result.evaluated).toBe(2);
+    expect(result.rate).toBe(0.5);
+  });
+});
+
+describe("computeDisciplineCurve", () => {
+  it("returns one point per graded trade, ignoring ungraded ones", () => {
+    const trades = [
+      makeTrade({ datum_open: "2026-01-01", trade_evaluation: "Good trade" }),
+      makeTrade({ datum_open: "2026-01-02", trade_evaluation: null }),
+      makeTrade({ datum_open: "2026-01-03", trade_evaluation: "Emotional error" }),
+    ];
+    const curve = computeDisciplineCurve(trades);
+    expect(curve.map((p) => p.cumRate)).toEqual([100, 50]);
+    expect(curve.map((p) => p.idx)).toEqual([1, 2]);
+  });
+
+  it("tracks the running good-rate chronologically regardless of input order", () => {
+    const trades = [
+      makeTrade({ datum_open: "2026-01-04", trade_evaluation: "Good trade" }),
+      makeTrade({ datum_open: "2026-01-01", trade_evaluation: "Emotional error" }),
+      makeTrade({ datum_open: "2026-01-03", trade_evaluation: "Good trade" }),
+      makeTrade({ datum_open: "2026-01-02", trade_evaluation: "Technical error" }),
+    ];
+    // Chronological grades: Emotional, Technical, Good, Good -> good-so-far/n
+    expect(computeDisciplineCurve(trades).map((p) => p.cumRate)).toEqual([0, 0, round2((1 / 3) * 100), 50]);
+  });
+
+  it("is empty when nothing is graded", () => {
+    expect(computeDisciplineCurve([makeTrade({ trade_evaluation: null })])).toEqual([]);
+  });
+});
+
+describe("computeEquityCurve", () => {
+  it("simple mode sums resultaat_pct chronologically", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 10 },
+      { outcome: "Loss", resultaat_pct: -4 },
+      { outcome: "Win", resultaat_pct: 2 },
+    ]);
+    expect(computeEquityCurve(trades).map((p) => p.cum)).toEqual([10, 6, 8]);
+  });
+
+  it("compound mode applies each result to the running balance (rente-op-rente)", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 10 },
+      { outcome: "Win", resultaat_pct: 10 },
+    ]);
+    // 1.1 * 1.1 = 1.21 -> +21% vs. the simple +20%
+    expect(computeEquityCurve(trades, "compound").map((p) => p.cum)).toEqual([10, 21]);
+  });
+
+  it("compound and simple agree on the first point but diverge after a moved balance", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 50 },
+      { outcome: "Loss", resultaat_pct: -50 },
+    ]);
+    expect(computeEquityCurve(trades, "simple").map((p) => p.cum)).toEqual([50, 0]);
+    // 1.5 * 0.5 = 0.75 -> a 50% loss on a grown balance leaves -25%, not break-even
+    expect(computeEquityCurve(trades, "compound").map((p) => p.cum)).toEqual([50, -25]);
+  });
+
+  it("orders chronologically by datum_open regardless of input order", () => {
+    const trades = [
+      makeTrade({ id: "b", datum_open: "2026-01-02", resultaat_pct: 3 }),
+      makeTrade({ id: "a", datum_open: "2026-01-01", resultaat_pct: 1 }),
+    ];
+    expect(computeEquityCurve(trades).map((p) => ({ id: p.tradeId, cum: p.cum }))).toEqual([
+      { id: "a", cum: 1 },
+      { id: "b", cum: 4 },
+    ]);
+  });
+
+  it("is empty for no trades", () => {
+    expect(computeEquityCurve([])).toEqual([]);
   });
 });

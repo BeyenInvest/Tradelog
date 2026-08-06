@@ -16,6 +16,8 @@ export interface Trade {
   pair: Pair;
   outcome: Outcome;
   resultaat_pct: number;
+  /** Planned risk % this trade was taken with. null = the default 1% (DEFAULT_RISK_PCT). Denominator for R-multiples — read it via riskPct() in stats/core.ts, never divide directly. */
+  risk_pct: number | null;
   trade_evaluation: TradeEvaluation | null;
 
   weekly_criteria: WeeklyCriteria | null;
@@ -114,6 +116,10 @@ export interface PropAccount {
   fase: PropFase;
   actief: boolean;
   current_pnl_pct: number | null;
+  // Prop-firm rules (% of account size, null = not configured). See stats/propFirm.ts.
+  profit_target_pct: number | null;
+  max_drawdown_pct: number | null;
+  daily_loss_limit_pct: number | null;
   created_at: string;
   updated_at: string;
 }

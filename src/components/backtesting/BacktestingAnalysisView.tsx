@@ -10,7 +10,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
-  computeDurationByOutcome, computeEquityCurve, groupIntoSeries, takenTrades,
+  computeDurationByOutcome, groupIntoSeries, takenTrades,
 } from "@/lib/stats";
 import { BREAKDOWN_DIMENSIONS } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
@@ -53,7 +53,6 @@ export function BacktestingAnalysisView({
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
   const byFase = useMemo(() => breakdownBy(scopedTrades, (t) => t.fase, { sortOrder: FASES }), [scopedTrades]);
-  const equityData = useMemo(() => computeEquityCurve(scopedTrades), [scopedTrades]);
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(scopedTrades, 5), [scopedTrades]);
 
@@ -99,6 +98,12 @@ export function BacktestingAnalysisView({
           tone={kpis.totalResultaat >= 0 ? "up" : "down"}
         />
         <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
+        <StatCard
+          label={t("backtestingAnalysis.avgR")}
+          value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+          tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
+          sub={kpis.avgR != null ? t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) }) : undefined}
+        />
         <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
         <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
         <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
@@ -143,7 +148,7 @@ export function BacktestingAnalysisView({
         <div className={`grid grid-cols-1 gap-5 ${hideFase ? "" : "lg:grid-cols-2"}`}>
           <Card>
             <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
-            <EquityCurveChart data={equityData} />
+            <EquityCurveChart trades={scopedTrades} />
           </Card>
           {!hideFase && (
             <Card>
