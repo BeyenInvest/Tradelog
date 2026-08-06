@@ -97,6 +97,7 @@
     "windowLabel": "Prestatievenster",
     "windowAll": "Alles",
     "windowLast": "Laatste {{n}}",
+    "windowCustom": "Aangepast",
     "maxLoss": "max verlies",
     "maxWin": "max winst",
     "winRate": "Win rate",

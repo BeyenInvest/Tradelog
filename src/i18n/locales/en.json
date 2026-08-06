@@ -97,6 +97,7 @@
     "windowLabel": "Performance window",
     "windowAll": "All",
     "windowLast": "Last {{n}}",
+    "windowCustom": "Custom",
     "maxLoss": "max loss",
     "maxWin": "max win",
     "winRate": "Win rate",

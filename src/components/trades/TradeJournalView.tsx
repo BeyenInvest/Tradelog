@@ -208,18 +208,39 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             {isLive && (
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.windowLabel")}</p>
-                <div className="inline-flex rounded-lg border border-border overflow-hidden">
-                  {ROLLING_WINDOWS.map((w) => (
-                    <button
-                      key={w ?? "all"}
-                      onClick={() => setPerfWindow(w)}
-                      className={`px-3 py-1.5 text-xs font-body transition-colors ${
-                        perfWindow === w ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-                      }`}
-                    >
-                      {w == null ? t("journal.windowAll") : t("journal.windowLast", { n: w })}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                    {ROLLING_WINDOWS.map((w) => (
+                      <button
+                        key={w ?? "all"}
+                        onClick={() => setPerfWindow(w)}
+                        className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                          perfWindow === w ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                        }`}
+                      >
+                        {w == null ? t("journal.windowAll") : t("journal.windowLast", { n: w })}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Free-form window: type any N. Empty/0/invalid → null (= all trades). Mirrors perfWindow so the presets pre-fill it. */}
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder={t("journal.windowCustom")}
+                    value={perfWindow ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (raw === "") {
+                        setPerfWindow(null);
+                        return;
+                      }
+                      const n = Math.floor(Number(raw));
+                      setPerfWindow(Number.isFinite(n) && n > 0 ? n : null);
+                    }}
+                    className="input text-xs py-1.5 w-24"
+                    aria-label={t("journal.windowCustom")}
+                  />
                 </div>
               </div>
             )}
