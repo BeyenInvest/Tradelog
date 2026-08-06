@@ -26,7 +26,7 @@ export function AccountForm({ onSubmit }: { onSubmit: (input: PropAccountInput) 
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ naam: naam.trim(), account_size: size, fase, actief: true });
+      await onSubmit({ naam: naam.trim(), account_size: size, fase, actief: true, current_pnl_pct: null });
       setNaam("");
       setAccountSize("");
       setFase("Phase 1");

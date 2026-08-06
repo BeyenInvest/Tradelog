@@ -114,6 +114,7 @@ export interface PropAccount {
   account_size: number;
   fase: PropFase;
   actief: boolean;
+  current_pnl_pct: number | null;
   created_at: string;
   updated_at: string;
 }

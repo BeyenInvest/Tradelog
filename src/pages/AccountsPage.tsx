@@ -4,7 +4,7 @@ import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountList } from "@/components/accounts/AccountList";
 
 export default function AccountsPage() {
-  const { accounts, payouts, loading, error, createAccount, deleteAccount, createPayout, deletePayout } = usePropAccounts();
+  const { accounts, payouts, loading, error, createAccount, updateAccount, deleteAccount, createPayout, deletePayout } = usePropAccounts();
 
   return (
     <>
@@ -19,6 +19,7 @@ export default function AccountsPage() {
             accounts={accounts}
             payouts={payouts}
             onDeleteAccount={deleteAccount}
+            onUpdateAccount={updateAccount}
             onCreatePayout={createPayout}
             onDeletePayout={deletePayout}
           />

@@ -175,6 +175,7 @@ create table prop_accounts (
   account_size numeric(12,2) not null,
   fase prop_fase_enum not null default 'Phase 1',
   actief boolean not null default true,
+  current_pnl_pct numeric(6,2),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
