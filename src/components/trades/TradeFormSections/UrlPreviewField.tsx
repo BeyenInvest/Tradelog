@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Eye, X, ImageOff, ExternalLink } from "lucide-react";
 import { useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import { Field } from "./Field";
 
@@ -13,6 +14,7 @@ interface UrlPreviewFieldProps {
 
 /** URL input with an eye button that opens the screenshot large, in-app — for looking back at a trade's charts later. */
 export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
+  const { t } = useTranslation();
   const { register, watch } = useFormContext<TradeFormValues>();
   const value = watch(name);
   const url = typeof value === "string" ? value.trim() : "";
@@ -29,7 +31,7 @@ export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
           type="button"
           onClick={() => hasUrl && setOpen(true)}
           disabled={!hasUrl}
-          title={hasUrl ? "Screenshot bekijken" : "Vul eerst een URL in"}
+          title={hasUrl ? t("tradeForm.viewScreenshot") : t("tradeForm.fillUrlFirst")}
           className="shrink-0 px-3 rounded-lg border border-border bg-surface-2 text-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Eye size={15} />
@@ -41,6 +43,7 @@ export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
 }
 
 export function ImagePreviewModal({ src, label, onClose }: { src: string; label: string; onClose: () => void }) {
+  const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          title="Openen in nieuw tabblad"
+          title={t("tradeForm.openNewTab")}
           className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5"
         >
           <ExternalLink size={18} />
@@ -78,7 +81,7 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
             e.stopPropagation();
             onClose();
           }}
-          title="Sluiten"
+          title={t("common.close")}
           className="p-2 rounded-lg text-muted hover:text-ink hover:bg-ink/5"
         >
           <X size={20} />
@@ -91,8 +94,8 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
           onClick={(e) => e.stopPropagation()}
         >
           <ImageOff size={28} className="text-muted" />
-          <p className="text-sm text-ink">Kon dit niet als afbeelding tonen.</p>
-          <p className="text-xs text-muted">{label} bevat mogelijk een link naar een pagina, geen directe afbeelding.</p>
+          <p className="text-sm text-ink">{t("tradeForm.imgFailed")}</p>
+          <p className="text-xs text-muted">{t("tradeForm.imgFailedHint", { label })}</p>
           <a
             href={src}
             target="_blank"
@@ -100,7 +103,7 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
             onClick={(e) => e.stopPropagation()}
             className="mt-1 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
           >
-            Openen in nieuw tabblad
+            {t("tradeForm.openNewTab")}
           </a>
         </div>
       ) : (

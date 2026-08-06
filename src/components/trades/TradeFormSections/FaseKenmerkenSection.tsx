@@ -1,4 +1,5 @@
 import { Controller, useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import { FASE_KENMERKEN } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
@@ -6,6 +7,7 @@ import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
 
 export function FaseKenmerkenSection() {
+  const { t } = useTranslation();
   const {
     control,
     register,
@@ -22,12 +24,12 @@ export function FaseKenmerkenSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="font-display text-lg italic text-ink">Fase-specifieke kenmerken — {fase}</h3>
+      <h3 className="font-display text-lg italic text-ink">{t("tradeForm.faseKenmerkenHeading")} — {fase}</h3>
       <div className="grid grid-cols-2 gap-4">
         {fields.map((k) => (
           <Field
             key={k.field}
-            label={k.label}
+            label={t(`faseKenmerken.${k.field}`)}
             error={errors[k.field as keyof TradeFormValues]?.message as string | undefined}
           >
             {k.values === "boolean" ? (
@@ -45,11 +47,11 @@ export function FaseKenmerkenSection() {
         ))}
 
         {fase === "Fase 3" && (
-          <Field label="Beide? (afgeleid)">
+          <Field label={t("tradeForm.both")}>
             <input
               type="text"
               disabled
-              value={fase3Touches && fase3Engulfing ? "Ja" : "Nee"}
+              value={fase3Touches && fase3Engulfing ? t("common.yes") : t("common.no")}
               className="input opacity-60"
             />
           </Field>

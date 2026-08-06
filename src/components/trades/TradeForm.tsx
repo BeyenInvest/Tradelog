@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { tradeSchema, type TradeFormValues } from "@/lib/validation";
 import type { Trade } from "@/lib/types";
@@ -92,6 +93,7 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
 }
 
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
+  const { t } = useTranslation();
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: trade
@@ -113,7 +115,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
       await onSubmit(values as TradeSubmitInput);
       onClose();
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan van de trade is mislukt"));
+      setError(toErrorMessage(err, t("tradeForm.saveFailed")));
     }
   }
 
@@ -128,7 +130,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 id="trade-form-title" className="font-display text-2xl italic text-ink">{trade ? "Trade bewerken" : "Nieuwe trade"}</h2>
+          <h2 id="trade-form-title" className="font-display text-2xl italic text-ink">{trade ? t("tradeForm.editTitle") : t("journal.newTrade")}</h2>
           <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>
@@ -146,14 +148,14 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
 
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={requestClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
-                Annuleren
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
               >
-                {isSubmitting ? "Bezig..." : trade ? "Opslaan" : "Trade toevoegen"}
+                {isSubmitting ? t("common.submitting") : trade ? t("common.save") : t("tradeForm.addTrade")}
               </button>
             </div>
           </form>
