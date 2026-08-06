@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Trash2, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +15,7 @@ import type { Trade } from "@/lib/types";
 type ProjectTradeSummaryRow = Pick<Trade, "backtest_project_id" | "outcome" | "resultaat_pct">;
 
 export default function ProjectsListPage() {
+  const { t } = useTranslation();
   const { projects, loading, createProject, deleteProject } = useBacktestProjects();
   const [projectTrades, setProjectTrades] = useState<ProjectTradeSummaryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -43,19 +45,19 @@ export default function ProjectsListPage() {
   }, [projects, projectTrades]);
 
   async function handleDelete(id: string, naam: string) {
-    if (confirm(`Project "${naam}" en al zijn trades definitief verwijderen?`)) {
+    if (confirm(t("backtesting.deleteConfirm", { name: naam }))) {
       setError(null);
       try {
         await deleteProject(id);
       } catch (err) {
-        setError(toErrorMessage(err, "Verwijderen van project is mislukt"));
+        setError(toErrorMessage(err, t("backtesting.deleteFailed")));
       }
     }
   }
 
   return (
     <>
-      <PageHeader title="Backtesting" subtitle="Elk project is een volledig geïsoleerde testomgeving — eigen trades, eigen journal, eigen analyse" />
+      <PageHeader title={t("nav.backtesting")} subtitle={t("backtesting.subtitle")} />
 
       <div className="flex flex-col gap-5">
         {error && (
@@ -65,15 +67,15 @@ export default function ProjectsListPage() {
         )}
 
         <Card>
-          <h3 className="font-display text-lg italic mb-3 text-ink">Nieuw project</h3>
+          <h3 className="font-display text-lg italic mb-3 text-ink">{t("backtesting.newProject")}</h3>
           <ProjectForm onSubmit={createProject} />
         </Card>
 
         {loading ? (
-          <p className="text-muted text-sm">Laden...</p>
+          <p className="text-muted text-sm">{t("common.loading")}</p>
         ) : projects.length === 0 ? (
           <Card>
-            <p className="text-sm text-muted">Nog geen backtestprojecten.</p>
+            <p className="text-sm text-muted">{t("backtesting.noProjects")}</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -95,7 +97,7 @@ export default function ProjectsListPage() {
                   </div>
 
                   <div className="flex items-center gap-4 font-mono text-sm">
-                    <span className="text-ink">{summary?.n ?? 0} trades</span>
+                    <span className="text-ink">{t("journal.tradesCount", { count: summary?.n ?? 0 })}</span>
                     {summary && summary.n > 0 && (
                       <span className={summary.resultaatTotal >= 0 ? "text-win" : "text-loss"}>
                         {summary.resultaatTotal > 0 ? "+" : ""}
@@ -108,7 +110,7 @@ export default function ProjectsListPage() {
                     to={`/backtesting/${p.id}`}
                     className="flex items-center justify-center gap-1.5 mt-1 px-4 py-2 rounded-lg font-body text-sm bg-surface-2 text-ink hover:bg-ink/5"
                   >
-                    Openen <ChevronRight size={14} />
+                    {t("backtesting.open")} <ChevronRight size={14} />
                   </Link>
                 </Card>
               );

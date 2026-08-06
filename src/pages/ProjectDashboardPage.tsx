@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Trash2, Pencil } from "lucide-react";
 import { TradeJournalView } from "@/components/trades/TradeJournalView";
 import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
@@ -9,6 +10,7 @@ import { useTrades } from "@/hooks/useTrades";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function ProjectDashboardPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { projects, loading: projectsLoading, updateProject, deleteProject } = useBacktestProjects();
@@ -22,26 +24,26 @@ export default function ProjectDashboardPage() {
   const analysisTrades = tradesApi.trades;
 
   if (!projectId) return <Navigate to="/backtesting" replace />;
-  if (projectsLoading) return <p className="text-muted text-sm">Laden...</p>;
+  if (projectsLoading) return <p className="text-muted text-sm">{t("common.loading")}</p>;
   if (!project) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted">Project niet gevonden.</p>
+        <p className="text-sm text-muted">{t("backtesting.projectNotFound")}</p>
         <Link to="/backtesting" className="text-sm text-gold w-fit">
-          &larr; Terug naar projecten
+          &larr; {t("backtesting.backToProjects")}
         </Link>
       </div>
     );
   }
 
   async function handleDelete() {
-    if (confirm(`Project "${project!.naam}" en al zijn trades definitief verwijderen?`)) {
+    if (confirm(t("backtesting.deleteConfirm", { name: project!.naam }))) {
       setError(null);
       try {
         await deleteProject(project!.id);
         navigate("/backtesting");
       } catch (err) {
-        setError(toErrorMessage(err, "Verwijderen van project is mislukt"));
+        setError(toErrorMessage(err, t("backtesting.deleteFailed")));
       }
     }
   }
@@ -50,7 +52,7 @@ export default function ProjectDashboardPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <Link to="/backtesting" className="flex items-center gap-1.5 text-sm text-muted hover:text-ink w-fit">
-          <ArrowLeft size={14} /> Projecten
+          <ArrowLeft size={14} /> {t("backtesting.backToProjects")}
         </Link>
         <div className="flex items-center gap-2">
           <button onClick={() => setEditing((v) => !v)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
@@ -85,13 +87,13 @@ export default function ProjectDashboardPage() {
           onClick={() => setTab("journal")}
           className={`px-4 py-2 text-sm font-body ${tab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
-          Journal
+          {t("journal.tabJournal")}
         </button>
         <button
           onClick={() => setTab("analyse")}
           className={`px-4 py-2 text-sm font-body ${tab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
         >
-          Analyse
+          {t("journal.tabAnalyse")}
         </button>
       </div>
 
@@ -100,7 +102,7 @@ export default function ProjectDashboardPage() {
           scope={{ type: "project", projectId: project.id }}
           tradesApi={tradesApi}
           title={project.naam}
-          subtitle={`${analysisTrades.length} trades in dit project`}
+          subtitle={t("backtesting.tradesInProject", { count: analysisTrades.length })}
         />
       ) : (
         <BacktestingAnalysisView trades={analysisTrades} />

@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 import type { BreakdownRowWithFaseSplit } from "@/lib/stats";
 import { FASES } from "@/lib/constants";
 import { Card } from "@/components/ui/Card";
@@ -10,15 +11,16 @@ interface BreakdownGridProps {
 
 /** "Per Fase-opsplitsing": same dimension, Fase 1-4 shown side by side. */
 export function BreakdownGrid({ title, rows }: BreakdownGridProps) {
+  const { t } = useTranslation();
   return (
     <Card>
-      <h3 className="font-display text-lg italic mb-3 text-ink">{title} — per fase</h3>
+      <h3 className="font-display text-lg italic mb-3 text-ink">{title} — {t("breakdown.perFaseSuffix")}</h3>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted">Geen data.</p>
+        <p className="text-sm text-muted">{t("breakdown.noData")}</p>
       ) : (
         <div className="overflow-x-auto">
           <div className="grid gap-2 font-body text-[10px] uppercase tracking-wide pb-1.5 mb-1.5 text-muted border-b border-border" style={{ gridTemplateColumns: `1.5fr repeat(${FASES.length}, 1fr)` }}>
-            <span>Waarde</span>
+            <span>{t("breakdown.colValue")}</span>
             {FASES.map((f) => (
               <span key={f} className="text-right">
                 {f.replace("Fase ", "F")}

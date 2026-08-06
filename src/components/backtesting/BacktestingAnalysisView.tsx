@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
@@ -36,6 +37,7 @@ export function BacktestingAnalysisView({
   /** Admin read-only view passes the viewed profile's own hide_fase here instead of the viewer's — see AdminUserDetailPage. */
   hideFaseOverride?: boolean;
 }) {
+  const { t } = useTranslation();
   const { hideFase: ownHideFase } = useAuth();
   const hideFase = hideFaseOverride ?? ownHideFase;
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
@@ -91,21 +93,21 @@ export function BacktestingAnalysisView({
 
       {/* Overview KPIs */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Totaal trades" value={kpis.totalTrades} />
+        <StatCard label={t("backtestingAnalysis.totalTrades")} value={kpis.totalTrades} />
         <StatCard
-          label="Resultaat"
+          label={t("backtestingAnalysis.result")}
           value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
           tone={kpis.totalResultaat >= 0 ? "up" : "down"}
         />
-        <StatCard label="Win / BE / Loss rate" value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
-        <StatCard label="Max drawdown" value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
-        <StatCard label="Max losing streak" value={kpis.maxLosingStreak} tone="down" />
-        <StatCard label="Max winning streak" value={kpis.maxWinningStreak} tone="up" />
-        <StatCard label="Huidige streak" value={`${kpis.currentStreak.count} ${kpis.currentStreak.type}`} />
+        <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
+        <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
+        <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
+        <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
+        <StatCard label={t("backtestingAnalysis.currentStreak")} value={`${kpis.currentStreak.count} ${kpis.currentStreak.type}`} />
         <StatCard
-          label="Win/Loss ratio"
+          label={t("backtestingAnalysis.winLossRatio")}
           value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}
-          sub={kpis.avgWin != null && kpis.avgLoss != null ? `avg win ${kpis.avgWin}% / avg loss ${kpis.avgLoss}%` : undefined}
+          sub={kpis.avgWin != null && kpis.avgLoss != null ? t("backtestingAnalysis.avgWinLoss", { win: kpis.avgWin, loss: kpis.avgLoss }) : undefined}
         />
       </section>
 
@@ -117,7 +119,7 @@ export function BacktestingAnalysisView({
               <Card key={f.key}>
                 <p className="font-display text-2xl italic text-gold">{f.label}</p>
                 <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
-                  {f.n} <span className="text-xs text-muted font-body">trades</span>
+                  {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
                 </p>
                 <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
                   {f.resultaatTotal > 0 ? "+" : ""}
@@ -141,12 +143,12 @@ export function BacktestingAnalysisView({
         )}
         <div className={`grid grid-cols-1 gap-5 ${hideFase ? "" : "lg:grid-cols-2"}`}>
           <Card>
-            <h3 className="font-display text-xl italic mb-4 text-ink">Cumulatief resultaat</h3>
+            <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
             <EquityCurveChart data={equityData} />
           </Card>
           {!hideFase && (
             <Card>
-              <h3 className="font-display text-xl italic mb-4 text-ink">Resultaat per Fase</h3>
+              <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
               <FaseBarChart data={byFase} />
             </Card>
           )}
@@ -155,7 +157,7 @@ export function BacktestingAnalysisView({
 
       {/* Series of 5 */}
       <section>
-        <h2 className="font-display text-xl italic mb-3 text-ink">Series van 5 opeenvolgende trades</h2>
+        <h2 className="font-display text-xl italic mb-3 text-ink">{t("backtestingAnalysis.seriesHeading")}</h2>
         <Card>
           <div className="flex flex-wrap gap-2">
             {series.map((s) => (
@@ -172,7 +174,7 @@ export function BacktestingAnalysisView({
                 <span className="text-muted">{s.winCount}/{s.trades.length}W</span>
               </div>
             ))}
-            {series.length === 0 && <p className="text-sm text-muted">Nog geen trades.</p>}
+            {series.length === 0 && <p className="text-sm text-muted">{t("backtestingAnalysis.noTrades")}</p>}
           </div>
         </Card>
       </section>
@@ -180,38 +182,38 @@ export function BacktestingAnalysisView({
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl italic text-ink">Uitsplitsingen</h2>
+          <h2 className="font-display text-xl italic text-ink">{t("backtestingAnalysis.breakdownsHeading")}</h2>
           {!hideFase && (
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => setViewMode("totaal")}
                 className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
               >
-                Totaal
+                {t("backtestingAnalysis.total")}
               </button>
               <button
                 onClick={() => setViewMode("per-fase")}
                 className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
               >
-                Per Fase
+                {t("backtestingAnalysis.perFase")}
               </button>
             </div>
           )}
         </div>
 
         <div className="flex flex-col gap-3">
-          <h3 className="font-display text-lg italic text-ink">Setup &amp; Weekly-data</h3>
+          <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {viewMode === "totaal"
-              ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
-              : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+              ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
+              : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
           </div>
         </div>
 
         {/* Fase-kenmerken */}
         {!hideFase && (
           <div className="flex flex-col gap-4">
-            <h3 className="font-display text-lg italic text-ink">Fase-kenmerken</h3>
+            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
             {FASES.map((fase) => {
               const configs = kenmerkRows.filter((k) => k.config.fase === fase);
               if (configs.length === 0) return null;
@@ -220,7 +222,7 @@ export function BacktestingAnalysisView({
                   <h4 className="font-body text-sm text-muted">{fase}</h4>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {configs.map(({ config, rows }) => (
-                      <BreakdownTable key={config.field} title={config.label} rows={rows} />
+                      <BreakdownTable key={config.field} title={t(`faseKenmerken.${config.field}`)} rows={rows} />
                     ))}
                   </div>
                 </div>
@@ -230,36 +232,36 @@ export function BacktestingAnalysisView({
         )}
 
         <div className="flex flex-col gap-3">
-          <h3 className="font-display text-lg italic text-ink">Timing &amp; Instrument</h3>
+          <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {viewMode === "totaal"
-              ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={dim.label} rows={rows} />)
-              : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={dim.label} rows={rows} />)}
+              ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
+              : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
           </div>
         </div>
       </section>
 
       {/* TPFS + duration — supplementary/hypothetical numbers, so compact and last, not competing with the real KPIs at top */}
       <section className="flex flex-col gap-3">
-        <h3 className="font-body text-sm uppercase tracking-wider text-muted">TPFS &amp; Gemiddelde duur per outcome</h3>
+        <h3 className="font-body text-sm uppercase tracking-wider text-muted">{t("backtestingAnalysis.tpfsDurationHeading")}</h3>
         <p className="font-body text-xs text-muted -mt-1">
-          TPFS is hypothetisch, parallel resultaat — telt nooit mee in de statistieken hierboven.
+          {t("backtestingAnalysis.tpfsDisclaimer")}
         </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard compact label="Trades met TPFS" value={tpfs.n} />
+          <StatCard compact label={t("backtestingAnalysis.tpfsTrades")} value={tpfs.n} />
           <StatCard
             compact
-            label="TPFS resultaat"
+            label={t("backtestingAnalysis.tpfsResult")}
             value={`${tpfs.totalTpfs > 0 ? "+" : ""}${tpfs.totalTpfs}%`}
             tone={tpfs.totalTpfs >= 0 ? "up" : "down"}
           />
-          <StatCard compact label="TPFS win rate" value={`${(tpfs.winRate * 100).toFixed(0)}%`} />
-          <StatCard compact label="TPFS gemiddeld" value={`${tpfs.avgTpfs}%`} />
+          <StatCard compact label={t("backtestingAnalysis.tpfsWinRate")} value={`${(tpfs.winRate * 100).toFixed(0)}%`} />
+          <StatCard compact label={t("backtestingAnalysis.tpfsAvg")} value={`${tpfs.avgTpfs}%`} />
           {OUTCOMES.map((o) => (
             <StatCard
               key={o}
               compact
-              label={`Duur ${o}`}
+              label={t("backtestingAnalysis.durationFor", { outcome: o })}
               value={duration[o].avgDays != null ? `${duration[o].avgDays}d` : "—"}
             />
           ))}

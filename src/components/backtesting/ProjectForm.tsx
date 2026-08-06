@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { BacktestProject, BacktestProjectInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
@@ -9,6 +10,7 @@ interface ProjectFormProps {
 }
 
 export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
+  const { t } = useTranslation();
   const [naam, setNaam] = useState(project?.naam ?? "");
   const [beschrijving, setBeschrijving] = useState(project?.beschrijving ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -17,7 +19,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!naam.trim()) {
-      setError("Vul een naam in.");
+      setError(t("projectForm.nameRequired"));
       return;
     }
     setSubmitting(true);
@@ -29,7 +31,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
         setBeschrijving("");
       }
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan van project is mislukt"));
+      setError(toErrorMessage(err, t("projectForm.saveFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -39,21 +41,21 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div className="flex gap-3 items-end flex-wrap">
         <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-          <label className="text-xs uppercase tracking-wider text-muted">Naam</label>
-          <input type="text" className="input" value={naam} onChange={(e) => setNaam(e.target.value)} placeholder="bv. EURUSD reversal test" />
+          <label className="text-xs uppercase tracking-wider text-muted">{t("projectForm.name")}</label>
+          <input type="text" className="input" value={naam} onChange={(e) => setNaam(e.target.value)} placeholder={t("projectForm.namePlaceholder")} />
         </div>
         <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-          <label className="text-xs uppercase tracking-wider text-muted">Beschrijving (optioneel)</label>
+          <label className="text-xs uppercase tracking-wider text-muted">{t("projectForm.description")}</label>
           <input type="text" className="input" value={beschrijving} onChange={(e) => setBeschrijving(e.target.value)} />
         </div>
         <div className="flex gap-2">
           {onCancel && (
             <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
-              Annuleren
+              {t("common.cancel")}
             </button>
           )}
           <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60">
-            {submitting ? "Bezig..." : project ? "Opslaan" : "Project aanmaken"}
+            {submitting ? t("common.submitting") : project ? t("common.save") : t("projectForm.create")}
           </button>
         </div>
       </div>
