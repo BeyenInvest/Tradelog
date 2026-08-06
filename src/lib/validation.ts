@@ -14,7 +14,7 @@ const nullableNumber = z.preprocess(
 /** Empty-string inputs must fail as "required", not silently coerce to 0 — same z.coerce.number() footgun as above, but for a required field. */
 const requiredNumber = z.preprocess(
   (val) => (val === "" || val == null ? undefined : val),
-  z.coerce.number({ required_error: "Verplicht", invalid_type_error: "Moet een getal zijn" })
+  z.coerce.number({ required_error: "tradeForm.required", invalid_type_error: "tradeForm.mustBeNumber" })
 );
 
 /** An empty <input type="date"> submits "" — must become null, not an invalid empty-string date. */
@@ -41,7 +41,7 @@ const nullableString = z.preprocess((val) => (val === "" || val == null ? null :
 export const tradeSchema = z
   .object({
     fase: z.enum(FASES),
-    datum_open: z.string().min(1, "Verplicht"),
+    datum_open: z.string().min(1, "tradeForm.required"),
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),
     outcome: z.enum(OUTCOMES),
@@ -82,7 +82,7 @@ export const tradeSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.datum_sluiting && data.datum_sluiting < data.datum_open) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["datum_sluiting"], message: "Kan niet voor datum open liggen" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["datum_sluiting"], message: "tradeForm.closeBeforeOpen" });
     }
   });
 
