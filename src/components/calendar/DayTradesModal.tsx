@@ -1,6 +1,8 @@
 import { Plus, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Modal } from "@/components/ui/Modal";
 import { isMissed } from "@/lib/stats";
+import { dateLocale } from "@/lib/format";
 import { OUTCOMES } from "@/lib/constants";
 import type { Trade } from "@/lib/types";
 import { TradeListHeader } from "@/components/trades/TradeListHeader";
@@ -26,8 +28,9 @@ function sortDayTrades(trades: Trade[]): Trade[] {
 }
 
 export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onAddTrade }: DayTradesModalProps) {
+  const { t, i18n } = useTranslation();
   const sorted = sortDayTrades(trades);
-  const label = new Date(dateIso + "T00:00:00").toLocaleDateString("nl-BE", {
+  const label = new Date(dateIso + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -48,7 +51,7 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
           </div>
 
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted py-4">Geen trades op deze dag.</p>
+            <p className="text-sm text-muted py-4">{t("calendar.noTradesOnDay")}</p>
           ) : (
             <div className="overflow-x-auto mb-4">
               <div className="min-w-[560px]">
@@ -66,7 +69,7 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
               onClick={() => onAddTrade(dateIso)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
             >
-              <Plus size={15} /> Trade toevoegen op deze dag
+              <Plus size={15} /> {t("calendar.addTradeOnDay")}
             </button>
           </div>
         </>

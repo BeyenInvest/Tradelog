@@ -130,5 +130,39 @@
     "fase3_engulfing_candle": "Engulfing candle?",
     "fase3_structuur": "Structure",
     "fase4_weekly_bevestigingscandle": "Weekly confirmation candle?"
+  },
+  "list": {
+    "searchPlaceholder": "Search by pair, phase, concept...",
+    "groupWeek": "Week",
+    "groupMonth": "Month",
+    "noSearchResults": "No trades found for \"{{query}}\".",
+    "noForFilters": "No trades for the current period/filters.",
+    "clearFilters": "Clear filters",
+    "noTrades": "No trades yet.",
+    "colDate": "Date",
+    "colPair": "Pair",
+    "colFase": "Phase",
+    "colConcept": "Concept",
+    "colOutcome": "Outcome",
+    "colResult": "Result"
+  },
+  "calendar": {
+    "addTradeOnDay": "Add trade on this day",
+    "noTradesOnDay": "No trades on this day.",
+    "missedHypothetical": "Missed trade (hypothetical)"
+  },
+  "tradeBadge": {
+    "missedTitle": "Hypothetical — this trade wasn't taken",
+    "emotionalTitle": "Self-assessment: emotional error",
+    "technicalTitle": "Self-assessment: technical error"
+  },
+  "weekdays": {
+    "Ma": "Mon",
+    "Di": "Tue",
+    "Wo": "Wed",
+    "Do": "Thu",
+    "Vr": "Fri",
+    "Za": "Sat",
+    "Zo": "Sun"
   }
 }

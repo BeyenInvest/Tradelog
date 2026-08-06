@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
@@ -28,6 +29,7 @@ export function TradeList({
   onResetFilters,
   fixedGroupBy,
 }: TradeListProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>(fixedGroupBy ?? "week");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -59,7 +61,7 @@ export function TradeList({
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <h3 className="font-display text-xl italic text-ink">{title}</h3>
-          <span className="font-mono text-xs text-muted">{sorted.length} trades</span>
+          <span className="font-mono text-xs text-muted">{t("journal.tradesCount", { count: sorted.length })}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -68,7 +70,7 @@ export function TradeList({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op pair, fase, concept..."
+              placeholder={t("list.searchPlaceholder")}
               className="input pl-8 text-xs py-1.5 w-52"
             />
           </div>
@@ -81,7 +83,7 @@ export function TradeList({
                   groupBy === "week" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                 }`}
               >
-                Week
+                {t("list.groupWeek")}
               </button>
               <button
                 type="button"
@@ -90,7 +92,7 @@ export function TradeList({
                   groupBy === "month" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
                 }`}
               >
-                Maand
+                {t("list.groupMonth")}
               </button>
             </div>
           )}
@@ -100,18 +102,18 @@ export function TradeList({
       {filtered.length === 0 && (
         <p className="text-sm text-muted py-4">
           {search ? (
-            `Geen trades gevonden voor "${search}".`
+            t("list.noSearchResults", { query: search })
           ) : filtersActive ? (
             <>
-              Geen trades voor de huidige periode/filters.{" "}
+              {t("list.noForFilters")}{" "}
               {onResetFilters && (
                 <button type="button" onClick={onResetFilters} className="text-gold hover:underline">
-                  Filters wissen
+                  {t("list.clearFilters")}
                 </button>
               )}
             </>
           ) : (
-            "Nog geen trades."
+            t("list.noTrades")
           )}
         </p>
       )}
@@ -137,7 +139,7 @@ export function TradeList({
                       <ChevronDown size={14} className="text-muted" />
                     )}
                     {g.label}
-                    <span className="font-mono text-[11px] text-muted normal-case">· {g.trades.length} trades</span>
+                    <span className="font-mono text-[11px] text-muted normal-case">· {t("journal.tradesCount", { count: g.trades.length })}</span>
                   </span>
                   <span
                     className={`font-mono text-xs ${

@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
+import { dateLocale } from "@/lib/format";
 
 interface PairChip {
   pair: string;
@@ -21,6 +23,7 @@ interface CalendarViewProps {
 }
 
 export function CalendarView({ trades, missedTrades = [], onDayClick }: CalendarViewProps) {
+  const { t, i18n } = useTranslation();
   const [monthDate, setMonthDate] = useState(() => new Date());
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -105,7 +108,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const monthLabel = monthDate.toLocaleDateString("nl-BE", { month: "long", year: "numeric" });
+  const monthLabel = monthDate.toLocaleDateString(dateLocale(i18n.language), { month: "long", year: "numeric" });
 
   return (
     <Card>
@@ -133,7 +136,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
       <div className="grid grid-cols-7 gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted">
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-center">
-            {d}
+            {t(`weekdays.${d}`)}
           </div>
         ))}
       </div>
@@ -195,7 +198,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
               style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
               title={
                 displayMissed
-                  ? "Missed trade (hypothetisch)"
+                  ? t("calendar.missedHypothetical")
                   : errorTypes
                     ? Array.from(errorTypes).join(", ")
                     : dayPairs?.map((c) => c.pair).join(", ")

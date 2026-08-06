@@ -1,15 +1,17 @@
 import clsx from "clsx";
 import { Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
 import { isMissed } from "@/lib/stats";
+import { dateLocale } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { useAuth } from "@/hooks/useAuth";
 
-const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; title: string }>> = {
-  "Missed trade": { label: "missed", title: "Hypothetisch — deze trade is niet genomen" },
-  "Emotional error": { label: "emotional", title: "Zelfbeoordeling: emotionele fout" },
-  "Technical error": { label: "technical", title: "Zelfbeoordeling: technische fout" },
+const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; titleKey: string }>> = {
+  "Missed trade": { label: "missed", titleKey: "tradeBadge.missedTitle" },
+  "Emotional error": { label: "emotional", titleKey: "tradeBadge.emotionalTitle" },
+  "Technical error": { label: "technical", titleKey: "tradeBadge.technicalTitle" },
 };
 
 interface TradeListItemProps {
@@ -20,6 +22,7 @@ interface TradeListItemProps {
 }
 
 export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
+  const { t, i18n } = useTranslation();
   const { hideFase } = useAuth();
   const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
@@ -29,7 +32,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       className={`grid ${hideFase ? "grid-cols-6" : "grid-cols-7"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${missed ? "opacity-60" : ""}`}
     >
       <span className="text-muted">
-        {new Date(trade.datum_open + "T00:00:00").toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+        {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
       </span>
       <span className="text-ink">{trade.pair}</span>
       {!hideFase && (
@@ -45,7 +48,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
             className={`font-mono text-[10px] px-1.5 py-0.5 rounded border text-faint ${
               missed ? "border-gold/50 text-gold" : "border-border"
             }`}
-            title={evalBadge.title}
+            title={t(evalBadge.titleKey)}
           >
             {evalBadge.label}
           </span>
