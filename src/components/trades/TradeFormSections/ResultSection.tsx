@@ -31,20 +31,20 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionResult")}</h3>
       <div className="grid grid-cols-2 gap-4">
-        <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
-          <EnumSelect options={OUTCOMES} {...register("outcome")} />
-        </Field>
+        {allowMissedTrade && (
+          <Field label={t("tradeForm.tradeEvaluation")} error={errors.trade_evaluation?.message}>
+            <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
+          </Field>
+        )}
         <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
         <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
           <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
         </Field>
-        {allowMissedTrade && (
-          <Field label={t("tradeForm.tradeEvaluation")} error={errors.trade_evaluation?.message}>
-            <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
-          </Field>
-        )}
+        <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
+          <EnumSelect options={OUTCOMES} {...register("outcome")} />
+        </Field>
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
           <input type="date" className="input" {...register("datum_sluiting")} />
         </Field>
