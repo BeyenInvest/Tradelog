@@ -1,6 +1,6 @@
 # Beyen Invest
 
-Trading- en backtesting-journal (React + Supabase), gebouwd richting een self-serve multi-tenant app. Zie `beyen-invest-spec.md` voor de volledige productspecificatie.
+Trading- en backtesting-journal (React + Supabase), gebouwd richting een self-serve multi-tenant app. De domeinregels en niet-vanzelfsprekende conventies staan in [`CLAUDE.md`](CLAUDE.md); de rekenregels leven als pure functies in [`src/lib/stats/`](src/lib/stats).
 
 ## 1. Vereisten
 
@@ -31,7 +31,10 @@ Vul in `.env.local` de waarden uit stap 2 in:
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=xxxx
 VITE_TURNSTILE_SITE_KEY=xxxx   # optioneel lokaal — zonder deze key wordt de captcha-widget gewoon overgeslagen
+VITE_SENTRY_DSN=xxxx           # optioneel — zonder DSN blijft error monitoring volledig uit (Sentry wordt niet geladen)
 ```
+
+Error monitoring (Sentry) is opt-in: vul `VITE_SENTRY_DSN` (uit je Sentry-project) in de env-variabelen van je Vercel-project in om het aan te zetten. Zonder DSN wordt de Sentry-SDK niet eens geladen en verlaat er niets de app — errors gaan dan alleen naar de browserconsole. Het is bewust errors-only, zonder PII (geen IP/cookies).
 
 ## 4. Draaien
 
@@ -68,4 +71,4 @@ Zolang bovenstaande niet is doorlopen, faalt `/signup` gewoon met een Supabase-f
 
 - Per-gebruiker instelbare trading-methodologie (iedereen krijgt nog steeds dezelfde vaste "4 fasen"-strategie en vaste lijsten). Alleen het tónen van fasen is nu per gebruiker uit te zetten via `/settings` (`profiles.hide_fase`).
 - Betaling/abonnementen (Stripe) — de `profiles.plan`-kolom (default `'free'`) is de enige voorbereiding hierop.
-- Migratie vanuit de oude Google Sheets, missed-trades log, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling. Zie sectie 7-8 van de spec.
+- Migratie vanuit de oude Google Sheets, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling.

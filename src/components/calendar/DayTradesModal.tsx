@@ -1,5 +1,5 @@
 import { Plus, X } from "lucide-react";
-import { useModalGuard } from "@/hooks/useModalGuard";
+import { Modal } from "@/components/ui/Modal";
 import { isMissed } from "@/lib/stats";
 import { OUTCOMES } from "@/lib/constants";
 import type { Trade } from "@/lib/types";
@@ -26,7 +26,6 @@ function sortDayTrades(trades: Trade[]): Trade[] {
 }
 
 export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onAddTrade }: DayTradesModalProps) {
-  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(false, onClose);
   const sorted = sortDayTrades(trades);
   const label = new Date(dateIso + "T00:00:00").toLocaleDateString("nl-BE", {
     weekday: "long",
@@ -36,47 +35,42 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={requestClose}>
-      <div
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="day-trades-title"
-        className="w-full max-w-2xl rounded-xl bg-surface border border-border p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="day-trades-title" className="font-display text-xl italic text-ink capitalize">
-            {label}
-          </h2>
-          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
-            <X size={18} />
-          </button>
-        </div>
-
-        {sorted.length === 0 ? (
-          <p className="text-sm text-muted py-4">Geen trades op deze dag.</p>
-        ) : (
-          <div className="overflow-x-auto mb-4">
-            <div className="min-w-[560px]">
-              <TradeListHeader />
-              {sorted.map((t) => (
-                <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
-              ))}
-            </div>
+    <Modal labelledBy="day-trades-title" maxWidthClass="max-w-2xl" onClose={onClose}>
+      {(requestClose) => (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h2 id="day-trades-title" className="font-display text-xl italic text-ink capitalize">
+              {label}
+            </h2>
+            <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
+              <X size={18} />
+            </button>
           </div>
-        )}
 
-        <div className="flex justify-end pt-2">
-          <button
-            type="button"
-            onClick={() => onAddTrade(dateIso)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
-          >
-            <Plus size={15} /> Trade toevoegen op deze dag
-          </button>
-        </div>
-      </div>
-    </div>
+          {sorted.length === 0 ? (
+            <p className="text-sm text-muted py-4">Geen trades op deze dag.</p>
+          ) : (
+            <div className="overflow-x-auto mb-4">
+              <div className="min-w-[560px]">
+                <TradeListHeader />
+                {sorted.map((t) => (
+                  <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => onAddTrade(dateIso)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
+            >
+              <Plus size={15} /> Trade toevoegen op deze dag
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }
