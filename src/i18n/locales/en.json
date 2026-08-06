@@ -294,5 +294,22 @@
     "colLoss": "Loss%",
     "noData": "No data.",
     "perFaseSuffix": "per phase"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Personal preferences for your account",
+    "showFases": "Show phases",
+    "showFasesDescription": "Turns off the \"4 phases\" system in the trade form, filters, journal and backtesting analysis. Your own history stays unchanged.",
+    "on": "On",
+    "off": "Off",
+    "saving": "Saving...",
+    "saveFailed": "Saving failed",
+    "customEntryOptions": "Custom Entry options",
+    "customEntryOptionsDescription": "Extra values for the \"Entry\" field, alongside the fixed list — only visible in your own trade form.",
+    "valueExists": "This value already exists",
+    "addFailed": "Adding failed",
+    "newEntryPlaceholder": "New entry...",
+    "add": "Add",
+    "removeOption": "Remove {{value}}"
   }
 }

@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -9,6 +10,7 @@ import { ENTRIES } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { hideFase, updateProfile } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export default function SettingsPage() {
     try {
       await updateProfile({ hide_fase: !showFase });
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan is mislukt"));
+      setError(toErrorMessage(err, t("settings.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -27,20 +29,17 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Instellingen" subtitle="Persoonlijke voorkeuren voor je account" />
+      <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
       <div className="flex flex-col gap-5 max-w-xl">
         <Card>
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="font-body text-sm text-ink">Fasen tonen</p>
-              <p className="font-mono text-xs mt-1 text-muted">
-                Schakelt het "4 fasen"-systeem uit in het trade-formulier, filters, journal en backtesting-analyse. Je
-                eigen historiek blijft ongewijzigd.
-              </p>
+              <p className="font-body text-sm text-ink">{t("settings.showFases")}</p>
+              <p className="font-mono text-xs mt-1 text-muted">{t("settings.showFasesDescription")}</p>
             </div>
-            <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={["Aan", "Uit"]} />
+            <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={[t("settings.on"), t("settings.off")]} />
           </div>
-          {saving && <p className="font-mono text-[11px] mt-3 text-muted">Bezig met opslaan...</p>}
+          {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
           {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
         </Card>
 
@@ -52,6 +51,7 @@ export default function SettingsPage() {
 
 /** Extra "Entry"-waarden bovenop de vaste ENTRIES-lijst — alleen zichtbaar/bruikbaar voor jezelf, niet voor andere accounts. */
 function CustomEntryOptions() {
+  const { t } = useTranslation();
   const { options, loading, addOption, deleteOption } = useCustomOptions("entry");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ function CustomEntryOptions() {
     const trimmed = value.trim();
     if (!trimmed) return;
     if (existing.has(trimmed.toLowerCase())) {
-      setError("Deze waarde bestaat al");
+      setError(t("settings.valueExists"));
       return;
     }
     setError(null);
@@ -79,7 +79,7 @@ function CustomEntryOptions() {
       await addOption(trimmed);
       setValue("");
     } catch (err) {
-      setError(toErrorMessage(err, "Toevoegen is mislukt"));
+      setError(toErrorMessage(err, t("settings.addFailed")));
     } finally {
       setSaving(false);
     }
@@ -87,10 +87,8 @@ function CustomEntryOptions() {
 
   return (
     <Card>
-      <p className="font-body text-sm text-ink">Eigen Entry-opties</p>
-      <p className="font-mono text-xs mt-1 text-muted">
-        Extra waarden voor het "Entry"-veld, naast de vaste lijst — enkel zichtbaar in jouw eigen trade-formulier.
-      </p>
+      <p className="font-body text-sm text-ink">{t("settings.customEntryOptions")}</p>
+      <p className="font-mono text-xs mt-1 text-muted">{t("settings.customEntryOptionsDescription")}</p>
 
       <div className="flex gap-2 mt-3">
         <input
@@ -98,7 +96,7 @@ function CustomEntryOptions() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Nieuwe entry..."
+          placeholder={t("settings.newEntryPlaceholder")}
           className="input flex-1"
         />
         <button
@@ -107,7 +105,7 @@ function CustomEntryOptions() {
           disabled={saving || !value.trim()}
           className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Toevoegen
+          {t("settings.add")}
         </button>
       </div>
       {error && <p className="font-mono text-[11px] mt-2 text-loss">{error}</p>}
@@ -124,7 +122,7 @@ function CustomEntryOptions() {
                 type="button"
                 onClick={() => void deleteOption(o.id)}
                 className="p-0.5 rounded-full hover:bg-ink/5 text-muted hover:text-loss"
-                aria-label={`${o.value} verwijderen`}
+                aria-label={t("settings.removeOption", { value: o.value })}
               >
                 <X size={12} />
               </button>

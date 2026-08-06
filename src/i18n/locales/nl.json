@@ -294,5 +294,22 @@
     "colLoss": "Loss%",
     "noData": "Geen data.",
     "perFaseSuffix": "per fase"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "subtitle": "Persoonlijke voorkeuren voor je account",
+    "showFases": "Fasen tonen",
+    "showFasesDescription": "Schakelt het \"4 fasen\"-systeem uit in het trade-formulier, filters, journal en backtesting-analyse. Je eigen historiek blijft ongewijzigd.",
+    "on": "Aan",
+    "off": "Uit",
+    "saving": "Bezig met opslaan...",
+    "saveFailed": "Opslaan is mislukt",
+    "customEntryOptions": "Eigen Entry-opties",
+    "customEntryOptionsDescription": "Extra waarden voor het \"Entry\"-veld, naast de vaste lijst — enkel zichtbaar in jouw eigen trade-formulier.",
+    "valueExists": "Deze waarde bestaat al",
+    "addFailed": "Toevoegen is mislukt",
+    "newEntryPlaceholder": "Nieuwe entry...",
+    "add": "Toevoegen",
+    "removeOption": "{{value}} verwijderen"
   }
 }
