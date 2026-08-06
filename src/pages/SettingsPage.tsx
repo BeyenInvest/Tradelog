@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { ENTRIES } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -43,9 +44,41 @@ export default function SettingsPage() {
           {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
         </Card>
 
+        <LanguageSettings />
+
         <CustomEntryOptions />
       </div>
     </>
+  );
+}
+
+function LanguageSettings() {
+  const { t, i18n } = useTranslation();
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("settings.language")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{t("settings.languageDescription")}</p>
+        </div>
+        <div className="inline-flex shrink-0 rounded-lg border border-border divide-x divide-border overflow-hidden">
+          {SUPPORTED_LANGS.map((lang: Lang) => (
+            <button
+              key={lang}
+              type="button"
+              onClick={() => void i18n.changeLanguage(lang)}
+              aria-pressed={i18n.language === lang}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                i18n.language === lang ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              {t(`language.${lang}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }
 

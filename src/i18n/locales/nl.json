@@ -373,6 +373,8 @@
     "subtitle": "Persoonlijke voorkeuren voor je account",
     "showFases": "Fasen tonen",
     "showFasesDescription": "Schakelt het \"4 fasen\"-systeem uit in het trade-formulier, filters, journal en backtesting-analyse. Je eigen historiek blijft ongewijzigd.",
+    "language": "Taal",
+    "languageDescription": "Taal voor de interface, op dit toestel.",
     "on": "Aan",
     "off": "Uit",
     "saving": "Bezig met opslaan...",

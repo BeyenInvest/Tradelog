@@ -373,6 +373,8 @@
     "subtitle": "Personal preferences for your account",
     "showFases": "Show phases",
     "showFasesDescription": "Turns off the \"4 phases\" system in the trade form, filters, journal and backtesting analysis. Your own history stays unchanged.",
+    "language": "Language",
+    "languageDescription": "Language for the interface, on this device.",
     "on": "On",
     "off": "Off",
     "saving": "Saving...",
