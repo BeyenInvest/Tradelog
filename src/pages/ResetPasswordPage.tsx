@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -25,6 +26,7 @@ const RECOVERY_EVENT_GRACE_MS = 2500;
  * only give up after a short grace period.
  */
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const { session, passwordRecovery, isInvite, loading, updatePassword } = useAuth();
   const navigate = useNavigate();
   const {
@@ -52,7 +54,7 @@ export default function ResetPasswordPage() {
       setDone(true);
       setTimeout(() => navigate("/journal"), 1500);
     } catch (err) {
-      setError(toErrorMessage(err, "Wachtwoord bijwerken is mislukt"));
+      setError(toErrorMessage(err, t("auth.resetFailed")));
     }
   }
 
@@ -65,36 +67,34 @@ export default function ResetPasswordPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted">Laden...</p>
+          <p className="text-sm text-muted">{t("common.loading")}</p>
         ) : done ? (
           <p className="text-sm text-win">
-            {isInvite ? "Account geactiveerd — je wordt doorgestuurd..." : "Wachtwoord bijgewerkt — je wordt doorgestuurd..."}
+            {isInvite ? t("auth.inviteDone") : t("auth.resetDone")}
           </p>
         ) : linkInvalid ? (
           <div className="flex flex-col gap-3">
-            <h1 className="font-display text-xl italic text-ink">Link verlopen</h1>
+            <h1 className="font-display text-xl italic text-ink">{t("auth.linkExpiredTitle")}</h1>
             <p className="text-sm text-muted">
-              {isInvite
-                ? "Deze uitnodigingslink is ongeldig of verlopen. Vraag een nieuwe uitnodiging aan."
-                : "Deze link om je wachtwoord opnieuw in te stellen is ongeldig of verlopen. Vraag een nieuwe aan."}
+              {isInvite ? t("auth.inviteInvalid") : t("auth.resetInvalid")}
             </p>
             {!isInvite && (
               <Link to="/forgot-password" className="text-xs text-gold hover:underline w-fit">
-                Nieuwe link aanvragen
+                {t("auth.requestNewLink")}
               </Link>
             )}
           </div>
         ) : !verified ? (
-          <p className="text-sm text-muted">Link verifiëren...</p>
+          <p className="text-sm text-muted">{t("auth.verifyingLink")}</p>
         ) : (
           <form onSubmit={handleSubmit(handleReset)} className="flex flex-col gap-4">
             <p className="text-sm text-muted">
-              {isInvite ? "Welkom bij Beyen — kies een wachtwoord om je account te activeren." : "Kies een nieuw wachtwoord."}
+              {isInvite ? t("auth.inviteIntro") : t("auth.resetIntro")}
             </p>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="newPassword">
-                {isInvite ? "Wachtwoord" : "Nieuw wachtwoord"}
+                {isInvite ? t("auth.password") : t("auth.newPassword")}
               </label>
               <input
                 id="newPassword"
@@ -103,12 +103,12 @@ export default function ResetPasswordPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="new-password"
               />
-              {errors.newPassword && <p className="text-xs text-loss">{errors.newPassword.message}</p>}
+              {errors.newPassword && <p className="text-xs text-loss">{t(errors.newPassword.message!)}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="confirmPassword">
-                Bevestig wachtwoord
+                {t("auth.confirmPassword")}
               </label>
               <input
                 id="confirmPassword"
@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="new-password"
               />
-              {errors.confirmPassword && <p className="text-xs text-loss">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && <p className="text-xs text-loss">{t(errors.confirmPassword.message!)}</p>}
             </div>
 
             {error && <p className="text-xs text-loss">{error}</p>}
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
               disabled={isSubmitting}
               className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
-              {isSubmitting ? "Bezig..." : isInvite ? "Account activeren" : "Wachtwoord bijwerken"}
+              {isSubmitting ? t("common.submitting") : isInvite ? t("auth.activateAccount") : t("auth.updatePassword")}
             </button>
           </form>
         )}

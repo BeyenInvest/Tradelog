@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
@@ -9,6 +10,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/lib/validation";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const { session, sendPasswordReset } = useAuth();
   const {
     register,
@@ -29,7 +31,7 @@ export default function ForgotPasswordPage() {
       // Deliberately still shown as success below even on error, except for
       // hard failures like a captcha rejection — those need to surface so
       // the user can retry, rather than silently going nowhere.
-      setError(toErrorMessage(err, "Versturen is mislukt, probeer het opnieuw"));
+      setError(toErrorMessage(err, t("auth.forgotFailed")));
       return;
     }
     setSent(true);
@@ -45,23 +47,19 @@ export default function ForgotPasswordPage() {
 
         {sent ? (
           <div className="flex flex-col gap-3">
-            <h1 className="font-display text-xl italic text-ink">Check je e-mail</h1>
-            <p className="text-sm text-muted">
-              Als dit e-mailadres bekend is, ontvang je een link om je wachtwoord opnieuw in te stellen.
-            </p>
+            <h1 className="font-display text-xl italic text-ink">{t("auth.checkEmailTitle")}</h1>
+            <p className="text-sm text-muted">{t("auth.forgotSentBody")}</p>
             <Link to="/login" className="text-xs text-gold hover:underline w-fit">
-              Terug naar inloggen
+              {t("auth.backToLogin")}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit(handleForgotPassword)} className="flex flex-col gap-4">
-            <p className="text-sm text-muted">
-              Vul je e-mailadres in en we sturen je een link om je wachtwoord opnieuw in te stellen.
-            </p>
+            <p className="text-sm text-muted">{t("auth.forgotIntro")}</p>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="email">
-                E-mail
+                {t("auth.email")}
               </label>
               <input
                 id="email"
@@ -70,7 +68,7 @@ export default function ForgotPasswordPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="email"
               />
-              {errors.email && <p className="text-xs text-loss">{errors.email.message}</p>}
+              {errors.email && <p className="text-xs text-loss">{t(errors.email.message!)}</p>}
             </div>
 
             <CaptchaWidget onToken={setCaptchaToken} />
@@ -82,11 +80,11 @@ export default function ForgotPasswordPage() {
               disabled={isSubmitting}
               className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
-              {isSubmitting ? "Bezig..." : "Verstuur link"}
+              {isSubmitting ? t("common.submitting") : t("auth.sendLink")}
             </button>
 
             <Link to="/login" className="text-xs text-muted hover:text-gold text-center">
-              Terug naar inloggen
+              {t("auth.backToLogin")}
             </Link>
           </form>
         )}

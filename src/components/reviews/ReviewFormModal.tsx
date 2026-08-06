@@ -1,4 +1,5 @@
 import type { FormEvent, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { useModalGuard } from "@/hooks/useModalGuard";
 
@@ -22,6 +23,7 @@ interface ReviewFormModalProps {
  * in their identity fields and content editor, which they pass as `children`.
  */
 export function ReviewFormModal({ title, titleId, isDirty, onClose, onSubmit, submitting, error, children }: ReviewFormModalProps) {
+  const { t } = useTranslation();
   const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   return (
@@ -48,14 +50,14 @@ export function ReviewFormModal({ title, titleId, isDirty, onClose, onSubmit, su
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={requestClose} className="px-4 py-2 rounded-lg text-sm text-muted hover:text-ink">
-              Annuleren
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
-              {submitting ? "Bezig..." : "Opslaan"}
+              {submitting ? t("common.submitting") : t("common.save")}
             </button>
           </div>
         </form>

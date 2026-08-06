@@ -8,7 +8,8 @@
     "reset": "Reset",
     "yes": "Yes",
     "no": "No",
-    "close": "Close"
+    "close": "Close",
+    "noData": "No data"
   },
   "nav": {
     "journal": "Journal",
@@ -28,7 +29,49 @@
     "login": "Log in",
     "loginFailed": "Login failed",
     "forgotPassword": "Forgot password?",
-    "noAccount": "No account yet? Sign up"
+    "noAccount": "No account yet? Sign up",
+    "notLoggedIn": "Not logged in",
+    "signupFailed": "Sign-up failed",
+    "checkEmailTitle": "Check your email",
+    "signupCheckEmailBody": "We've sent a confirmation link. Click the link in that email to activate your account and then log in.",
+    "backToLogin": "Back to login",
+    "confirmPassword": "Confirm password",
+    "newPassword": "New password",
+    "acceptTermsPre": "I agree to the ",
+    "termsLink": "Terms and Conditions",
+    "acceptTermsMid": " and the ",
+    "privacyLink": "Privacy Policy",
+    "createAccount": "Create account",
+    "alreadyAccount": "Already have an account? ",
+    "forgotFailed": "Sending failed, please try again",
+    "forgotSentBody": "If this email address is known, you'll receive a link to reset your password.",
+    "forgotIntro": "Enter your email address and we'll send you a link to reset your password.",
+    "sendLink": "Send link",
+    "resetFailed": "Updating the password failed",
+    "inviteDone": "Account activated — redirecting...",
+    "resetDone": "Password updated — redirecting...",
+    "linkExpiredTitle": "Link expired",
+    "inviteInvalid": "This invitation link is invalid or expired. Request a new invitation.",
+    "resetInvalid": "This password reset link is invalid or expired. Request a new one.",
+    "requestNewLink": "Request a new link",
+    "verifyingLink": "Verifying link...",
+    "inviteIntro": "Welcome to Beyen — choose a password to activate your account.",
+    "resetIntro": "Choose a new password.",
+    "activateAccount": "Activate account",
+    "updatePassword": "Update password",
+    "emailRequired": "Required",
+    "emailInvalid": "Invalid email address",
+    "passwordMin": "At least 8 characters",
+    "acceptTermsRequired": "Required to continue",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "reviewErrorStats": {
+    "emotional_one": "{{count}} emotional error",
+    "emotional_other": "{{count}} emotional errors",
+    "technical_one": "{{count}} technical error",
+    "technical_other": "{{count}} technical errors",
+    "missed_one": "{{count}} missed trade ({{pct}})",
+    "missed_other": "{{count}} missed trades ({{pct}})"
   },
   "language": {
     "nl": "Dutch",
@@ -406,5 +449,25 @@
     "journalTradesTitle": "Journal trades",
     "ccSessie": "CC / Session",
     "screenshots": "Screenshots"
+  },
+  "deleteAccount": {
+    "confirmPhrase": "DELETE",
+    "title": "Delete account",
+    "warning": "This immediately and irreversibly deletes: all your trades, weekly and periodic reviews, backtest projects, prop accounts and payouts, and your account itself. There is no way to undo or recover this.",
+    "typeToConfirmPre": "Type ",
+    "typeToConfirmPost": " below to confirm.",
+    "deleteFailed": "Deleting the account failed",
+    "deleting": "Deleting...",
+    "confirmDelete": "Delete permanently"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "duplicate": "This combination already exists.",
+    "invalidLogin": "Email or password is incorrect.",
+    "emailNotConfirmed": "Please confirm your email address first via the link we sent.",
+    "userExists": "An account with this email address already exists.",
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "rateLimit": "Too many attempts. Please try again later.",
+    "network": "Can't connect to the server. Check your internet connection."
   }
 }

@@ -1,9 +1,8 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { toErrorMessage } from "@/lib/errorMessage";
-
-const CONFIRM_PHRASE = "VERWIJDEREN";
 
 interface DeleteAccountModalProps {
   onConfirm: () => Promise<void>;
@@ -12,6 +11,8 @@ interface DeleteAccountModalProps {
 
 /** Deliberately heavier friction than the app's other delete confirmations (typed phrase, not just a click) — this one takes everything, not one record. */
 export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalProps) {
+  const { t } = useTranslation();
+  const CONFIRM_PHRASE = t("deleteAccount.confirmPhrase");
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
     try {
       await onConfirm();
     } catch (err) {
-      setError(toErrorMessage(err, "Verwijderen van account is mislukt"));
+      setError(toErrorMessage(err, t("deleteAccount.deleteFailed")));
       setDeleting(false);
     }
   }
@@ -41,18 +42,17 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 id="delete-account-title" className="font-display text-xl italic text-loss">Account verwijderen</h2>
+          <h2 id="delete-account-title" className="font-display text-xl italic text-loss">{t("deleteAccount.title")}</h2>
           <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>
         </div>
 
-        <p className="font-body text-sm text-muted mb-3">
-          Dit verwijdert direct en onomkeerbaar: al je trades, weekly- en periodic reviews, backtestprojecten,
-          prop-accounts en payouts, en je account zelf. Er is geen manier om dit terug te draaien of te herstellen.
-        </p>
+        <p className="font-body text-sm text-muted mb-3">{t("deleteAccount.warning")}</p>
         <p className="font-body text-sm text-muted mb-4">
-          Typ <span className="font-mono text-ink">{CONFIRM_PHRASE}</span> hieronder om te bevestigen.
+          {t("deleteAccount.typeToConfirmPre")}
+          <span className="font-mono text-ink">{CONFIRM_PHRASE}</span>
+          {t("deleteAccount.typeToConfirmPost")}
         </p>
 
         <input
@@ -74,7 +74,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
             onClick={requestClose}
             className="px-4 py-2 rounded-lg font-body text-sm text-muted hover:text-ink"
           >
-            Annuleren
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -82,7 +82,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
             disabled={!canConfirm}
             className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-loss text-white disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {deleting ? "Bezig met verwijderen..." : "Definitief verwijderen"}
+            {deleting ? t("deleteAccount.deleting") : t("deleteAccount.confirmDelete")}
           </button>
         </div>
       </div>

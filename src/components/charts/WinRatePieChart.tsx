@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useTranslation } from "react-i18next";
 
 interface WinRatePieChartProps {
   wins: number;
@@ -14,6 +15,7 @@ const COLORS = {
 };
 
 export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChartProps) {
+  const { t } = useTranslation();
   const total = wins + be + losses;
   const winRate = total ? wins / total : 0;
   const data = [
@@ -27,7 +29,7 @@ export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChar
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={data.length ? data : [{ name: "Geen data", value: 1 }]}
+            data={data.length ? data : [{ name: t("common.noData"), value: 1 }]}
             dataKey="value"
             nameKey="name"
             innerRadius="62%"
@@ -36,7 +38,7 @@ export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChar
             stroke="none"
             isAnimationActive={false}
           >
-            {(data.length ? data : [{ name: "Geen data" }]).map((d, i) => (
+            {(data.length ? data : [{ name: t("common.noData") }]).map((d, i) => (
               <Cell key={i} fill={COLORS[d.name as keyof typeof COLORS] ?? "rgb(var(--color-border))"} />
             ))}
           </Pie>

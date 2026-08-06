@@ -88,8 +88,10 @@ export const tradeSchema = z
 
 export type TradeFormValues = z.infer<typeof tradeSchema>;
 
-const emailField = z.string().min(1, "Verplicht").email("Ongeldig e-mailadres");
-const passwordField = z.string().min(8, "Minimaal 8 tekens");
+// Auth-form validation messages are stored as i18n keys, not literal text — the auth
+// pages resolve them with t(errors.<field>.message) at render (see SignupPage etc.).
+const emailField = z.string().min(1, "auth.emailRequired").email("auth.emailInvalid");
+const passwordField = z.string().min(8, "auth.passwordMin");
 
 export const signupSchema = z
   .object({
@@ -97,12 +99,12 @@ export const signupSchema = z
     password: passwordField,
     confirmPassword: z.string(),
     acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: "Verplicht om verder te gaan" }),
+      errorMap: () => ({ message: "auth.acceptTermsRequired" }),
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Wachtwoorden komen niet overeen",
+    message: "auth.passwordMismatch",
   });
 
 export type SignupFormValues = z.infer<typeof signupSchema>;
@@ -120,7 +122,7 @@ export const resetPasswordSchema = z
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Wachtwoorden komen niet overeen",
+    message: "auth.passwordMismatch",
   });
 
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

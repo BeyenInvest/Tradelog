@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session } from "@supabase/supabase-js";
 import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
+import i18n from "@/i18n";
 
 interface AuthContextValue {
   session: Session | null;
@@ -108,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name">>) {
-    if (!session) throw new Error("Niet ingelogd");
+    if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;
     setProfile(data as Profile);

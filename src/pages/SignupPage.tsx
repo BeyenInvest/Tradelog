@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
@@ -9,6 +10,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { signupSchema, type SignupFormValues } from "@/lib/validation";
 
 export default function SignupPage() {
+  const { t } = useTranslation();
   const { session, signUp } = useAuth();
   const {
     register,
@@ -29,7 +31,7 @@ export default function SignupPage() {
         setCheckEmail(true);
       }
     } catch (err) {
-      setError(toErrorMessage(err, "Registreren is mislukt"));
+      setError(toErrorMessage(err, t("auth.signupFailed")));
     }
   }
 
@@ -41,25 +43,22 @@ export default function SignupPage() {
             <LogoMark size={32} className="text-gold" />
             <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
           </div>
-          <p className="mt-1.5 text-xs text-muted font-body">Eyes on every trade.</p>
+          <p className="mt-1.5 text-xs text-muted font-body">{t("common.tagline")}</p>
         </div>
 
         {checkEmail ? (
           <div className="flex flex-col gap-3">
-            <h1 className="font-display text-xl italic text-ink">Check je e-mail</h1>
-            <p className="text-sm text-muted">
-              We hebben een bevestigingslink gestuurd. Klik op de link in die e-mail om je account te activeren en
-              daarna in te loggen.
-            </p>
+            <h1 className="font-display text-xl italic text-ink">{t("auth.checkEmailTitle")}</h1>
+            <p className="text-sm text-muted">{t("auth.signupCheckEmailBody")}</p>
             <Link to="/login" className="text-xs text-gold hover:underline w-fit">
-              Terug naar inloggen
+              {t("auth.backToLogin")}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit(handleSignup)} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="email">
-                E-mail
+                {t("auth.email")}
               </label>
               <input
                 id="email"
@@ -68,12 +67,12 @@ export default function SignupPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="email"
               />
-              {errors.email && <p className="text-xs text-loss">{errors.email.message}</p>}
+              {errors.email && <p className="text-xs text-loss">{t(errors.email.message!)}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="password">
-                Wachtwoord
+                {t("auth.password")}
               </label>
               <input
                 id="password"
@@ -82,12 +81,12 @@ export default function SignupPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="new-password"
               />
-              {errors.password && <p className="text-xs text-loss">{errors.password.message}</p>}
+              {errors.password && <p className="text-xs text-loss">{t(errors.password.message!)}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="confirmPassword">
-                Bevestig wachtwoord
+                {t("auth.confirmPassword")}
               </label>
               <input
                 id="confirmPassword"
@@ -96,23 +95,23 @@ export default function SignupPage() {
                 className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
                 autoComplete="new-password"
               />
-              {errors.confirmPassword && <p className="text-xs text-loss">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && <p className="text-xs text-loss">{t(errors.confirmPassword.message!)}</p>}
             </div>
 
             <label className="flex items-start gap-2 text-xs text-muted">
               <input type="checkbox" {...register("acceptTerms")} className="mt-0.5" />
               <span>
-                Ik ga akkoord met de{" "}
+                {t("auth.acceptTermsPre")}
                 <Link to="/terms" target="_blank" className="text-gold hover:underline">
-                  Algemene Voorwaarden
-                </Link>{" "}
-                en het{" "}
+                  {t("auth.termsLink")}
+                </Link>
+                {t("auth.acceptTermsMid")}
                 <Link to="/privacy" target="_blank" className="text-gold hover:underline">
-                  Privacybeleid
+                  {t("auth.privacyLink")}
                 </Link>
               </span>
             </label>
-            {errors.acceptTerms && <p className="text-xs text-loss">{errors.acceptTerms.message}</p>}
+            {errors.acceptTerms && <p className="text-xs text-loss">{t(errors.acceptTerms.message!)}</p>}
 
             <CaptchaWidget onToken={setCaptchaToken} />
 
@@ -123,13 +122,13 @@ export default function SignupPage() {
               disabled={isSubmitting}
               className="mt-2 rounded-lg py-2 font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-60"
             >
-              {isSubmitting ? "Bezig..." : "Account aanmaken"}
+              {isSubmitting ? t("common.submitting") : t("auth.createAccount")}
             </button>
 
             <p className="text-xs text-muted text-center">
-              Al een account?{" "}
+              {t("auth.alreadyAccount")}
               <Link to="/login" className="text-gold hover:underline">
-                Inloggen
+                {t("auth.login")}
               </Link>
             </p>
           </form>

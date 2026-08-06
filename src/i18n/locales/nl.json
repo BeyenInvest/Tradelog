@@ -8,7 +8,8 @@
     "reset": "Reset",
     "yes": "Ja",
     "no": "Nee",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "noData": "Geen data"
   },
   "nav": {
     "journal": "Journal",
@@ -28,7 +29,49 @@
     "login": "Inloggen",
     "loginFailed": "Inloggen mislukt",
     "forgotPassword": "Wachtwoord vergeten?",
-    "noAccount": "Nog geen account? Registreren"
+    "noAccount": "Nog geen account? Registreren",
+    "notLoggedIn": "Niet ingelogd",
+    "signupFailed": "Registreren is mislukt",
+    "checkEmailTitle": "Check je e-mail",
+    "signupCheckEmailBody": "We hebben een bevestigingslink gestuurd. Klik op de link in die e-mail om je account te activeren en daarna in te loggen.",
+    "backToLogin": "Terug naar inloggen",
+    "confirmPassword": "Bevestig wachtwoord",
+    "newPassword": "Nieuw wachtwoord",
+    "acceptTermsPre": "Ik ga akkoord met de ",
+    "termsLink": "Algemene Voorwaarden",
+    "acceptTermsMid": " en het ",
+    "privacyLink": "Privacybeleid",
+    "createAccount": "Account aanmaken",
+    "alreadyAccount": "Al een account? ",
+    "forgotFailed": "Versturen is mislukt, probeer het opnieuw",
+    "forgotSentBody": "Als dit e-mailadres bekend is, ontvang je een link om je wachtwoord opnieuw in te stellen.",
+    "forgotIntro": "Vul je e-mailadres in en we sturen je een link om je wachtwoord opnieuw in te stellen.",
+    "sendLink": "Verstuur link",
+    "resetFailed": "Wachtwoord bijwerken is mislukt",
+    "inviteDone": "Account geactiveerd — je wordt doorgestuurd...",
+    "resetDone": "Wachtwoord bijgewerkt — je wordt doorgestuurd...",
+    "linkExpiredTitle": "Link verlopen",
+    "inviteInvalid": "Deze uitnodigingslink is ongeldig of verlopen. Vraag een nieuwe uitnodiging aan.",
+    "resetInvalid": "Deze link om je wachtwoord opnieuw in te stellen is ongeldig of verlopen. Vraag een nieuwe aan.",
+    "requestNewLink": "Nieuwe link aanvragen",
+    "verifyingLink": "Link verifiëren...",
+    "inviteIntro": "Welkom bij Beyen — kies een wachtwoord om je account te activeren.",
+    "resetIntro": "Kies een nieuw wachtwoord.",
+    "activateAccount": "Account activeren",
+    "updatePassword": "Wachtwoord bijwerken",
+    "emailRequired": "Verplicht",
+    "emailInvalid": "Ongeldig e-mailadres",
+    "passwordMin": "Minimaal 8 tekens",
+    "acceptTermsRequired": "Verplicht om verder te gaan",
+    "passwordMismatch": "Wachtwoorden komen niet overeen"
+  },
+  "reviewErrorStats": {
+    "emotional_one": "{{count}} emotionele fout",
+    "emotional_other": "{{count}} emotionele fouten",
+    "technical_one": "{{count}} technische fout",
+    "technical_other": "{{count}} technische fouten",
+    "missed_one": "{{count}} missed trade ({{pct}})",
+    "missed_other": "{{count}} missed trades ({{pct}})"
   },
   "language": {
     "nl": "Nederlands",
@@ -406,5 +449,25 @@
     "journalTradesTitle": "Journal trades",
     "ccSessie": "CC / Sessie",
     "screenshots": "Screenshots"
+  },
+  "deleteAccount": {
+    "confirmPhrase": "VERWIJDEREN",
+    "title": "Account verwijderen",
+    "warning": "Dit verwijdert direct en onomkeerbaar: al je trades, weekly- en periodic reviews, backtestprojecten, prop-accounts en payouts, en je account zelf. Er is geen manier om dit terug te draaien of te herstellen.",
+    "typeToConfirmPre": "Typ ",
+    "typeToConfirmPost": " hieronder om te bevestigen.",
+    "deleteFailed": "Verwijderen van account is mislukt",
+    "deleting": "Bezig met verwijderen...",
+    "confirmDelete": "Definitief verwijderen"
+  },
+  "errors": {
+    "generic": "Er ging iets mis",
+    "duplicate": "Deze combinatie bestaat al.",
+    "invalidLogin": "E-mail of wachtwoord is onjuist.",
+    "emailNotConfirmed": "Bevestig eerst je e-mailadres via de link die we hebben gestuurd.",
+    "userExists": "Er bestaat al een account met dit e-mailadres.",
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
+    "rateLimit": "Te veel pogingen. Probeer het straks opnieuw.",
+    "network": "Kan geen verbinding maken met de server. Controleer je internetverbinding."
   }
 }
