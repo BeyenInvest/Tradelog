@@ -27,9 +27,6 @@ import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
 
-/** Rolling-window options for the "recent form" toggle: null = all trades, else the last N. */
-const ROLLING_WINDOWS: (number | null)[] = [null, 50, 20];
-
 interface TradeJournalViewProps {
   scope: TradeScope;
   /** Owned by the page, not this component — see TradesApi on why it must be a single shared instance. */
@@ -208,26 +205,14 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             {isLive && (
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.windowLabel")}</p>
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex rounded-lg border border-border overflow-hidden">
-                    {ROLLING_WINDOWS.map((w) => (
-                      <button
-                        key={w ?? "all"}
-                        onClick={() => setPerfWindow(w)}
-                        className={`px-3 py-1.5 text-xs font-body transition-colors ${
-                          perfWindow === w ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-                        }`}
-                      >
-                        {w == null ? t("journal.windowAll") : t("journal.windowLast", { n: w })}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Free-form window: type any N. Empty/0/invalid → null (= all trades). Mirrors perfWindow so the presets pre-fill it. */}
+                {/* Free-form window: type any N of recent trades. Empty/0/invalid → null (= all trades). */}
+                <label className="flex items-center gap-2 font-body text-xs text-muted">
+                  <span>{t("journal.windowLastLabel")}</span>
                   <input
                     type="number"
                     min="1"
                     step="1"
-                    placeholder={t("journal.windowCustom")}
+                    placeholder={t("journal.windowAll")}
                     value={perfWindow ?? ""}
                     onChange={(e) => {
                       const raw = e.target.value.trim();
@@ -238,10 +223,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                       const n = Math.floor(Number(raw));
                       setPerfWindow(Number.isFinite(n) && n > 0 ? n : null);
                     }}
-                    className="input text-xs py-1.5 w-24"
-                    aria-label={t("journal.windowCustom")}
+                    className="input text-xs py-1.5 w-20 text-center"
                   />
-                </div>
+                  <span>{t("journal.windowTradesUnit")}</span>
+                  <span className="text-faint">{t("journal.windowEmptyHint")}</span>
+                </label>
               </div>
             )}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
