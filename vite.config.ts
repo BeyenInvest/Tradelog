@@ -9,6 +9,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // recharts is large and shared by several code-split pages (Journal,
+        // Reviews, Backtesting). Pinning it to its own chunk keeps it out of the
+        // initial login bundle and lets the browser cache it across those pages.
+        manualChunks: {
+          recharts: ["recharts"],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       // The unofficial ForexFactory calendar feed has no CORS headers, so the

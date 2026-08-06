@@ -89,6 +89,16 @@ export const tradeSchema = z
     if (data.risk_pct != null && data.risk_pct <= 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["risk_pct"], message: "tradeForm.riskMustBePositive" });
     }
+    // Guard against a fat-fingered sign: win-rate reads the `outcome` enum while
+    // equity/drawdown/expectancy/R read the sign of resultaat_pct — a Loss logged
+    // as +% (or a Win as -%) makes those two lenses silently contradict. BE is
+    // left unconstrained (a scratch can carry a small spread cost either way).
+    if (data.outcome === "Loss" && data.resultaat_pct > 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.lossMustBeNegative" });
+    }
+    if (data.outcome === "Win" && data.resultaat_pct < 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.winMustBePositive" });
+    }
   });
 
 export type TradeFormValues = z.infer<typeof tradeSchema>;

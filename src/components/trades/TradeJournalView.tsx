@@ -243,7 +243,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
               sub={kpis.avgR != null ? t("journal.statTotalR", { total: kpis.totalR.toFixed(2) }) : undefined}
             />
-            <StatCard label={t("journal.statMaxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
+            <StatCard
+              label={t("journal.statMaxDrawdown")}
+              value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`}
+              tone={kpis.maxDrawdownPct > 0 ? "down" : "neutral"}
+            />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
               <div>

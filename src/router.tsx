@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import type { ReactNode } from "react";
+import { lazy, type ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
@@ -8,16 +8,21 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
-import JournalPage from "@/pages/JournalPage";
-import ProjectsListPage from "@/pages/ProjectsListPage";
-import ProjectDashboardPage from "@/pages/ProjectDashboardPage";
-import ReviewsPage from "@/pages/ReviewsPage";
-import AccountsPage from "@/pages/AccountsPage";
-import EconomicCalendarPage from "@/pages/EconomicCalendarPage";
-import LotSizeCalculatorPage from "@/pages/LotSizeCalculatorPage";
-import SettingsPage from "@/pages/SettingsPage";
-import AdminUsersListPage from "@/pages/AdminUsersListPage";
-import AdminUserDetailPage from "@/pages/AdminUserDetailPage";
+
+// The authenticated app pages are code-split: they (and the recharts/heavy
+// deps they pull in) load only once a signed-in user navigates to them, keeping
+// the initial login bundle small. The public/auth pages above stay eager — one
+// of them is always the first paint for a logged-out visitor.
+const JournalPage = lazy(() => import("@/pages/JournalPage"));
+const ProjectsListPage = lazy(() => import("@/pages/ProjectsListPage"));
+const ProjectDashboardPage = lazy(() => import("@/pages/ProjectDashboardPage"));
+const ReviewsPage = lazy(() => import("@/pages/ReviewsPage"));
+const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
+const EconomicCalendarPage = lazy(() => import("@/pages/EconomicCalendarPage"));
+const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const AdminUsersListPage = lazy(() => import("@/pages/AdminUsersListPage"));
+const AdminUserDetailPage = lazy(() => import("@/pages/AdminUserDetailPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, passwordRecovery } = useAuth();

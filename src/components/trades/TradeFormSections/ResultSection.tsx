@@ -30,6 +30,8 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionResult")}</h3>
+      {/* Split into logical column-pairs so hiding "Trade evaluation" (backtest scope)
+          only leaves its own row half-empty — Result/Risk and the dates stay paired. */}
       <div className="grid grid-cols-2 gap-4">
         <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
           <EnumSelect options={OUTCOMES} {...register("outcome")} />
@@ -39,12 +41,16 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
             <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
           </Field>
         )}
-        <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message}>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message} hint={t("tradeForm.resultSignHint")}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
         <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
           <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
         </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
           <input type="date" className="input" {...register("datum_sluiting")} />
         </Field>

@@ -7,10 +7,12 @@ interface FieldProps {
   error?: string;
   /** Marks the label with a "*" so a required field is obvious before submit, not just after a failed one. */
   required?: boolean;
+  /** Optional already-translated helper text shown under the input (hidden while an error is showing). */
+  hint?: string;
   children: ReactNode;
 }
 
-export function Field({ label, error, required, children }: FieldProps) {
+export function Field({ label, error, required, hint, children }: FieldProps) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-1.5">
@@ -19,7 +21,7 @@ export function Field({ label, error, required, children }: FieldProps) {
         {required && <span className="text-gold"> *</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-loss">{t(error)}</p>}
+      {error ? <p className="text-xs text-loss">{t(error)}</p> : hint && <p className="text-xs text-faint">{hint}</p>}
     </div>
   );
 }
