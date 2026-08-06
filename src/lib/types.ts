@@ -37,7 +37,6 @@ export interface Trade {
   h2_screenshot: string | null;
   extra_d_conf: boolean | null;
 
-  tpfs_pct: number | null;
   notes: string | null;
 
   fase1_daily_respecteert_zone: boolean | null;

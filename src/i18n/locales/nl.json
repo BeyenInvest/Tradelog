@@ -147,7 +147,6 @@
     "outcome": "Outcome",
     "resultPct": "Resultaat % (R)",
     "tradeEvaluation": "Trade evaluation",
-    "tpfs": "TPFS % (optioneel)",
     "datumSluiting": "Datum sluiting",
     "durationDerived": "Duur (dagen, afgeleid)",
     "weeklyDirection": "Weekly richting mee?",
@@ -313,12 +312,7 @@
     "setupWeeklyHeading": "Setup & Weekly-data",
     "faseKenmerkenHeading": "Fase-kenmerken",
     "timingInstrumentHeading": "Timing & Instrument",
-    "tpfsDurationHeading": "TPFS & Gemiddelde duur per outcome",
-    "tpfsDisclaimer": "TPFS is hypothetisch, parallel resultaat — telt nooit mee in de statistieken hierboven.",
-    "tpfsTrades": "Trades met TPFS",
-    "tpfsResult": "TPFS resultaat",
-    "tpfsWinRate": "TPFS win rate",
-    "tpfsAvg": "TPFS gemiddeld",
+    "durationHeading": "Gemiddelde duur per outcome",
     "durationFor": "Duur {{outcome}}"
   },
   "breakdown": {

@@ -65,7 +65,6 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
               <Row label={t("tradeForm.entry")} value={trade.entry} />
               <Row label={t("tradeForm.weeklyCriteria")} value={trade.weekly_criteria} />
               <Row label={t("tradeForm.weeklyKenmerk")} value={trade.weekly_kenmerk} />
-              <Row label="TPFS" value={trade.tpfs_pct != null ? `${trade.tpfs_pct}%` : null} />
               <Row label={t("filters.news")} value={trade.nieuws ? t("common.yes") : t("common.no")} />
             </div>
 

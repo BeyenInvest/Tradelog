@@ -42,11 +42,6 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
             <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
           </Field>
         )}
-        {allowMissedTrade && (
-          <Field label={t("tradeForm.tpfs")} error={errors.tpfs_pct?.message}>
-            <input type="number" step="0.01" className="input" {...register("tpfs_pct")} />
-          </Field>
-        )}
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
           <input type="date" className="input" {...register("datum_sluiting")} />
         </Field>

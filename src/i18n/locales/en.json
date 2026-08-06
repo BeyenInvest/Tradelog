@@ -147,7 +147,6 @@
     "outcome": "Outcome",
     "resultPct": "Result % (R)",
     "tradeEvaluation": "Trade evaluation",
-    "tpfs": "TPFS % (optional)",
     "datumSluiting": "Close date",
     "durationDerived": "Duration (days, derived)",
     "weeklyDirection": "Weekly direction aligned?",
@@ -313,12 +312,7 @@
     "setupWeeklyHeading": "Setup & Weekly data",
     "faseKenmerkenHeading": "Phase characteristics",
     "timingInstrumentHeading": "Timing & Instrument",
-    "tpfsDurationHeading": "TPFS & Average duration per outcome",
-    "tpfsDisclaimer": "TPFS is a hypothetical, parallel result — never counts toward the statistics above.",
-    "tpfsTrades": "Trades with TPFS",
-    "tpfsResult": "TPFS result",
-    "tpfsWinRate": "TPFS win rate",
-    "tpfsAvg": "TPFS average",
+    "durationHeading": "Average duration per outcome",
     "durationFor": "Duration {{outcome}}"
   },
   "breakdown": {

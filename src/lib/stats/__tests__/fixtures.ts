@@ -32,7 +32,6 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
     h4_screenshot: null,
     h2_screenshot: null,
     extra_d_conf: null,
-    tpfs_pct: null,
     notes: null,
     fase1_daily_respecteert_zone: null,
     fase1_spelers_verleden: null,

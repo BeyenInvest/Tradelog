@@ -59,7 +59,7 @@ Zolang bovenstaande niet is doorlopen, faalt `/signup` gewoon met een Supabase-f
 
 ## 6. Structuur
 
-- `src/lib/stats/` — alle rekenregels (streaks, drawdown, expectancy, per-dimensie uitsplitsingen, TPFS) als pure, herbruikbare functies. Elke view leest hieruit, niets wordt dubbel berekend.
+- `src/lib/stats/` — alle rekenregels (streaks, drawdown, expectancy, per-dimensie uitsplitsingen) als pure, herbruikbare functies. Elke view leest hieruit, niets wordt dubbel berekend.
 - `src/lib/constants.ts` — vaste lijsten (pairs, fases, fase-kenmerken-config). Voor nu identiek voor elke gebruiker; nog niet per-gebruiker instelbaar.
 - `supabase/schema.sql` — volledige DB-schema, RLS scoped per gebruiker (`user_id = auth.uid()`), inclusief `profiles` + auto-provisioning.
 - `supabase/migrations/` — incrementele wijzigingen op een bestaand project, in volgorde uit te voeren.

@@ -65,7 +65,6 @@ export const tradeSchema = z
     h4_screenshot: z.string().nullable().optional().default(null),
     h2_screenshot: z.string().nullable().optional().default(null),
     extra_d_conf: boolField,
-    tpfs_pct: nullableNumber.optional().default(null),
     notes: z.string().nullable().optional().default(null),
 
     fase1_daily_respecteert_zone: boolField,

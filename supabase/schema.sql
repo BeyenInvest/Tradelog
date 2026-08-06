@@ -141,7 +141,6 @@ create table trades (
   h2_screenshot text,
   extra_d_conf boolean,
 
-  tpfs_pct numeric(7,2),
   notes text,
 
   -- Fase 1

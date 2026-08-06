@@ -10,7 +10,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
-  computeTpfsStats, computeDurationByOutcome, computeEquityCurve, groupIntoSeries, takenTrades,
+  computeDurationByOutcome, computeEquityCurve, groupIntoSeries, takenTrades,
 } from "@/lib/stats";
 import { BREAKDOWN_DIMENSIONS } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
@@ -20,7 +20,7 @@ import type { Trade } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Overview KPIs, per-Fase cards, TPFS block, duration, series-of-5, and every
+ * Overview KPIs, per-Fase cards, duration, series-of-5, and every
  * "Per X" breakdown — all derived from whatever `trades` slice is passed in,
  * scoped further by the period/filter toolbar this component owns itself
  * (same applyJournalFilters gate as TradeJournalView, kept local here since
@@ -54,7 +54,6 @@ export function BacktestingAnalysisView({
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
   const byFase = useMemo(() => breakdownBy(scopedTrades, (t) => t.fase, { sortOrder: FASES }), [scopedTrades]);
   const equityData = useMemo(() => computeEquityCurve(scopedTrades), [scopedTrades]);
-  const tpfs = useMemo(() => computeTpfsStats(scopedTrades), [scopedTrades]);
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(scopedTrades, 5), [scopedTrades]);
 
@@ -241,22 +240,10 @@ export function BacktestingAnalysisView({
         </div>
       </section>
 
-      {/* TPFS + duration — supplementary/hypothetical numbers, so compact and last, not competing with the real KPIs at top */}
+      {/* Duration per outcome — supplementary numbers, so compact and last, not competing with the real KPIs at top */}
       <section className="flex flex-col gap-3">
-        <h3 className="font-body text-sm uppercase tracking-wider text-muted">{t("backtestingAnalysis.tpfsDurationHeading")}</h3>
-        <p className="font-body text-xs text-muted -mt-1">
-          {t("backtestingAnalysis.tpfsDisclaimer")}
-        </p>
+        <h3 className="font-body text-sm uppercase tracking-wider text-muted">{t("backtestingAnalysis.durationHeading")}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard compact label={t("backtestingAnalysis.tpfsTrades")} value={tpfs.n} />
-          <StatCard
-            compact
-            label={t("backtestingAnalysis.tpfsResult")}
-            value={`${tpfs.totalTpfs > 0 ? "+" : ""}${tpfs.totalTpfs}%`}
-            tone={tpfs.totalTpfs >= 0 ? "up" : "down"}
-          />
-          <StatCard compact label={t("backtestingAnalysis.tpfsWinRate")} value={`${(tpfs.winRate * 100).toFixed(0)}%`} />
-          <StatCard compact label={t("backtestingAnalysis.tpfsAvg")} value={`${tpfs.avgTpfs}%`} />
           {OUTCOMES.map((o) => (
             <StatCard
               key={o}
