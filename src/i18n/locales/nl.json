@@ -78,6 +78,17 @@
     "missed_one": "{{count}} missed trade ({{pct}})",
     "missed_other": "{{count}} missed trades ({{pct}})"
   },
+  "reviewPdf": {
+    "download": "PDF",
+    "failed": "Export mislukt",
+    "tagline": "EYES ON EVERY TRADE",
+    "generatedOn": "Gegenereerd op",
+    "colDate": "Datum",
+    "colPair": "Pair",
+    "colOutcome": "Outcome",
+    "colResult": "Resultaat",
+    "colEval": "Evaluatie"
+  },
   "language": {
     "nl": "Nederlands",
     "en": "Engels"
