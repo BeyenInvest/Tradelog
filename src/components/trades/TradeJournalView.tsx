@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Upload, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -11,6 +11,7 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
+import { ImportModal } from "@/components/trades/ImportModal";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
@@ -55,6 +56,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const { t } = useTranslation();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
   const [showMissed, setShowMissed] = useState(false);
@@ -136,12 +138,25 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
         title={title}
         subtitle={subtitle ?? t("journal.tradesCount", { count: realTrades.length })}
         action={
-          <button
-            onClick={() => openCreate()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
-          >
-            <Plus size={15} /> {t("journal.newTrade")}
-          </button>
+          <div className="flex items-center gap-2">
+            {isLive && (
+              <button
+                onClick={() => setImportOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
+              >
+                <Upload size={15} /> {t("journal.importTrades")}
+                <span className="font-mono text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-gold/50 text-gold">
+                  Beta
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => openCreate()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
+            >
+              <Plus size={15} /> {t("journal.newTrade")}
+            </button>
+          </div>
         }
       />
 
@@ -401,6 +416,8 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           initialDate={newTradeDate ?? undefined}
         />
       )}
+
+      {importOpen && <ImportModal tradesApi={tradesApi} onClose={() => setImportOpen(false)} />}
     </>
   );
 }

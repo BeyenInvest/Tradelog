@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import type { Trade, TradeInput } from "@/lib/types";
+import type { ImportTradeRow } from "@/lib/import/types";
 
 /** A trade either belongs to the live Journal or to exactly one backtest project — never both. */
 export type TradeScope = { type: "live" } | { type: "project"; projectId: string };
@@ -84,5 +85,23 @@ export function useTrades(scope: TradeScope) {
     await refresh();
   }
 
-  return { trades, loading, error, refresh, createTrade, updateTrade, deleteTrade };
+  /**
+   * Bulk-insert imported broker trades in one round-trip. Rows already carry
+   * their import_ref (the dedup key); the DB's partial unique index
+   * (trades_user_import_ref_unique) is the last line of defence against a
+   * double-import that slipped past the client-side dedup. Returns how many rows
+   * were inserted. Import only ever targets the live Journal, but the scope is
+   * honoured for symmetry with createTrade.
+   */
+  async function createTradesBulk(rows: ImportTradeRow[]): Promise<number> {
+    if (rows.length === 0) return 0;
+    const backtest_project_id = scope.type === "live" ? null : scope.projectId;
+    const payload = rows.map((r) => ({ ...r, backtest_project_id }));
+    const { data, error: insertError } = await supabase.from("trades").insert(payload).select("id");
+    if (insertError) throw insertError;
+    await refresh();
+    return data?.length ?? 0;
+  }
+
+  return { trades, loading, error, refresh, createTrade, updateTrade, deleteTrade, createTradesBulk };
 }

@@ -59,14 +59,17 @@ export interface Trade {
   /** null = live Journal trade. Set = belongs to exactly that backtest project, isolated from Journal and every other project. */
   backtest_project_id: string | null;
 
+  /** Broker-import dedup reference "{broker}:{ticket}", null for hand-entered trades. Set only by the CSV importer — never editable in the form. See src/lib/import. */
+  import_ref: string | null;
+
   created_at: string;
   updated_at: string;
 }
 
-/** Payload for insert/update — excludes server-managed/generated fields. */
+/** Payload for insert/update — excludes server-managed/generated fields and import-only columns. */
 export type TradeInput = Omit<
   Trade,
-  "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at" | "weekly_review_id"
+  "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at" | "weekly_review_id" | "import_ref"
 >;
 
 export interface WeeklyReview {
