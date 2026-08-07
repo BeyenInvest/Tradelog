@@ -33,7 +33,7 @@ export function ReviewFormModal({ title, titleId, isDirty, onClose, onSubmit, su
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-2xl h-full bg-surface border-l border-border overflow-y-auto p-6"
+        className="w-full max-w-4xl h-full bg-surface border-l border-border overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">

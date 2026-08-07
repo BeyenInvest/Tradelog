@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import { usePeriodicReviews } from "@/hooks/usePeriodicReviews";
-import { useTrades } from "@/hooks/useTrades";
+import { useTrades, type TradeSubmitInput } from "@/hooks/useTrades";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { ReviewDetail } from "@/components/reviews/ReviewDetail";
 import { ReviewForm } from "@/components/reviews/ReviewForm";
@@ -29,7 +29,13 @@ const TABS: { key: ReviewTab; label: string }[] = [
 
 export default function ReviewsPage() {
   const [tab, setTab] = useState<ReviewTab>("week");
-  const { trades, refresh: refreshTrades } = useTrades({ type: "live" });
+  const { trades, refresh: refreshTrades, createTrade } = useTrades({ type: "live" });
+
+  // createTrade already refreshes the shared live-trades state, so the open review form's
+  // preview (trades-in-period, KPIs, error stats) updates the moment the inline trade is saved.
+  async function handleAddTrade(input: TradeSubmitInput) {
+    await createTrade(input);
+  }
 
   return (
     <>
@@ -51,15 +57,23 @@ export default function ReviewsPage() {
       </div>
 
       {tab === "week" ? (
-        <WeeklyReviewsTab trades={trades} refreshTrades={refreshTrades} />
+        <WeeklyReviewsTab trades={trades} refreshTrades={refreshTrades} onAddTrade={handleAddTrade} />
       ) : (
-        <PeriodicReviewsTab periodType={tab} trades={trades} />
+        <PeriodicReviewsTab periodType={tab} trades={trades} onAddTrade={handleAddTrade} />
       )}
     </>
   );
 }
 
-function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshTrades: () => Promise<void> }) {
+function WeeklyReviewsTab({
+  trades,
+  refreshTrades,
+  onAddTrade,
+}: {
+  trades: Trade[];
+  refreshTrades: () => Promise<void>;
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+}) {
   const { t } = useTranslation();
   const { reviews, loading, createReview, updateReview, deleteReview, linkTradesToReview } = useWeeklyReviews();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -179,7 +193,15 @@ function WeeklyReviewsTab({ trades, refreshTrades }: { trades: Trade[]; refreshT
         </div>
       )}
 
-      {formOpen && <ReviewForm review={editingReview} trades={trades} onSubmit={handleSubmit} onClose={() => setFormOpen(false)} />}
+      {formOpen && (
+        <ReviewForm
+          review={editingReview}
+          trades={trades}
+          onSubmit={handleSubmit}
+          onAddTrade={onAddTrade}
+          onClose={() => setFormOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -189,7 +211,15 @@ function tradesInPeriod(trades: Trade[], review: PeriodicReview): Trade[] {
   return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
 }
 
-function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; trades: Trade[] }) {
+function PeriodicReviewsTab({
+  periodType,
+  trades,
+  onAddTrade,
+}: {
+  periodType: PeriodType;
+  trades: Trade[];
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+}) {
   const { t } = useTranslation();
   const { reviews, loading, createReview, updateReview, deleteReview } = usePeriodicReviews(periodType);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -313,6 +343,7 @@ function PeriodicReviewsTab({ periodType, trades }: { periodType: PeriodType; tr
           review={editingReview}
           trades={trades}
           onSubmit={handleSubmit}
+          onAddTrade={onAddTrade}
           onClose={() => setFormOpen(false)}
         />
       )}

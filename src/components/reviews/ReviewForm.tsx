@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
+import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -8,12 +9,13 @@ import { ReviewContentFields, type ReviewContentValue } from "@/components/revie
 import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
-import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
+import { ReviewTradesPanel } from "@/components/reviews/ReviewTradesPanel";
 
 interface ReviewFormProps {
   review?: WeeklyReview;
   trades: Trade[];
   onSubmit: (input: WeeklyReviewInput) => Promise<void>;
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
   onClose: () => void;
 }
 
@@ -21,7 +23,7 @@ function defaultWeek() {
   return isoWeekOf(new Date().toISOString().slice(0, 10));
 }
 
-export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProps) {
+export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: ReviewFormProps) {
   const { t } = useTranslation();
   const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
   const [jaar, setJaar] = useState(startWeek.jaar);
@@ -50,10 +52,15 @@ export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProp
   const handleTitelChange = withDirty(setTitel);
   const handleContentChange = withDirty(setContent);
 
-  const tradesInWeek = useMemo(() => {
-    const { start, end } = isoWeekRange(jaar, weekNummer);
-    return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
-  }, [trades, jaar, weekNummer]);
+  const weekRange = useMemo(() => isoWeekRange(jaar, weekNummer), [jaar, weekNummer]);
+  const tradesInWeek = useMemo(
+    () => trades.filter((t) => t.datum_open >= weekRange.start && t.datum_open <= weekRange.end),
+    [trades, weekRange]
+  );
+  // A trade added inline should default into the week under review: today if it falls in that
+  // week (the common "I just spotted a missed trade" case), otherwise the week's first day.
+  const today = new Date().toISOString().slice(0, 10);
+  const newTradeDate = today >= weekRange.start && today <= weekRange.end ? today : weekRange.start;
   const takenPreview = takenTrades(tradesInWeek);
   const missedPreview = missedTrades(tradesInWeek);
   const errorCounts = useMemo(() => computeErrorCounts(takenPreview, missedPreview), [takenPreview, missedPreview]);
@@ -112,10 +119,13 @@ export function ReviewForm({ review, trades, onSubmit, onClose }: ReviewFormProp
 
       <ReviewContentFields value={content} onChange={handleContentChange} />
 
-      <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("reviewForm.tradesInWeek", { count: tradesInWeek.length })}</p>
-        <ReviewTradeGroups taken={takenPreview} missed={missedPreview} />
-      </div>
+      <ReviewTradesPanel
+        label={t("reviewForm.tradesInWeek", { count: tradesInWeek.length })}
+        taken={takenPreview}
+        missed={missedPreview}
+        onAddTrade={onAddTrade}
+        initialDate={newTradeDate}
+      />
     </ReviewFormModal>
   );
 }

@@ -13,14 +13,12 @@ interface LabeledTextareaProps {
   value: string;
   onChange: (value: string) => void;
   rows?: number;
-  /** Section fields use the gold accent label; the closing "overall comment" is intentionally quieter (muted). */
-  tone?: "gold" | "muted";
 }
 
-export function LabeledTextarea({ label, value, onChange, rows = 3, tone = "gold" }: LabeledTextareaProps) {
+export function LabeledTextarea({ label, value, onChange, rows = 3 }: LabeledTextareaProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className={`text-xs uppercase tracking-wider ${tone === "gold" ? "text-gold" : "text-muted"}`}>{label}</label>
+      <label className="text-xs uppercase tracking-wider text-gold">{label}</label>
       <textarea rows={rows} className="input" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );

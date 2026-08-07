@@ -53,7 +53,7 @@ export function PeriodicReviewContentFields({ periodType, value, onChange }: Per
         <LabeledTextarea label={t(overzichtLabelKey)} rows={4} value={value.periode_overzicht} onChange={(v) => set("periode_overzicht", v)} />
       )}
 
-      <LabeledTextarea label={t("reviewContent.overallComment")} rows={2} tone="muted" value={value.overall_comment} onChange={(v) => set("overall_comment", v)} />
+      <LabeledTextarea label={t("reviewContent.overallComment")} rows={2} value={value.overall_comment} onChange={(v) => set("overall_comment", v)} />
     </>
   );
 }

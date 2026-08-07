@@ -40,7 +40,7 @@ export function ReviewContentFields({ value, onChange }: ReviewContentFieldsProp
       />
 
       <LabeledTextarea label={t("reviewContent.takeaway")} rows={2} value={value.takeaway} onChange={(v) => set("takeaway", v)} />
-      <LabeledTextarea label={t("reviewContent.overallComment")} rows={2} tone="muted" value={value.overall_comment} onChange={(v) => set("overall_comment", v)} />
+      <LabeledTextarea label={t("reviewContent.overallComment")} rows={2} value={value.overall_comment} onChange={(v) => set("overall_comment", v)} />
     </>
   );
 }

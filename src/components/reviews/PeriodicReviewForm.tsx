@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
+import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { MONTH_NAMES, PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
@@ -9,13 +10,15 @@ import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
 import { PeriodicReviewContentFields, type PeriodicReviewContentValue } from "@/components/reviews/PeriodicReviewContentFields";
-import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
+import { periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
+import { ReviewTradesPanel } from "@/components/reviews/ReviewTradesPanel";
 
 interface PeriodicReviewFormProps {
   periodType: PeriodType;
   review?: PeriodicReview;
   trades: Trade[];
   onSubmit: (input: PeriodicReviewInput) => Promise<void>;
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
   onClose: () => void;
 }
 
@@ -24,7 +27,7 @@ function defaultPeriodeNummer(periodType: PeriodType, now: Date): number {
   return Math.floor(now.getMonth() / 3) + 1;
 }
 
-export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClose }: PeriodicReviewFormProps) {
+export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAddTrade, onClose }: PeriodicReviewFormProps) {
   const { t } = useTranslation();
   const now = new Date();
   const [jaar, setJaar] = useState(review?.jaar ?? now.getFullYear());
@@ -55,10 +58,17 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
   const handleContentChange = withDirty(setContent);
 
   const periodeNummerForRange = periodType === "year" ? null : periodeNummer;
-  const tradesInPeriod = useMemo(() => {
-    const { start, end } = rangeOfPeriod(periodType, jaar, periodeNummerForRange);
-    return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
-  }, [trades, periodType, jaar, periodeNummerForRange]);
+  const periodRange = useMemo(
+    () => rangeOfPeriod(periodType, jaar, periodeNummerForRange),
+    [periodType, jaar, periodeNummerForRange]
+  );
+  const tradesInPeriod = useMemo(
+    () => trades.filter((t) => t.datum_open >= periodRange.start && t.datum_open <= periodRange.end),
+    [trades, periodRange]
+  );
+  // A trade added inline defaults into the reviewed period: today if it falls inside it, else the period's first day.
+  const today = new Date().toISOString().slice(0, 10);
+  const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
   const takenPreview = takenTrades(tradesInPeriod);
   const missedPreview = missedTrades(tradesInPeriod);
   const errorCounts = useMemo(() => computeErrorCounts(takenPreview, missedPreview), [takenPreview, missedPreview]);
@@ -140,10 +150,14 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onClo
 
       <PeriodicReviewContentFields periodType={periodType} value={content} onChange={handleContentChange} />
 
-      <div className="flex flex-col gap-3 rounded-lg p-4 bg-bg border border-border">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("reviewForm.tradesInPeriod", { count: tradesInPeriod.length })}</p>
-        <ReviewTradeGroups taken={takenPreview} missed={missedPreview} extraGroupModes={periodicExtraGroupModes(periodType)} />
-      </div>
+      <ReviewTradesPanel
+        label={t("reviewForm.tradesInPeriod", { count: tradesInPeriod.length })}
+        taken={takenPreview}
+        missed={missedPreview}
+        extraGroupModes={periodicExtraGroupModes(periodType)}
+        onAddTrade={onAddTrade}
+        initialDate={newTradeDate}
+      />
     </ReviewFormModal>
   );
 }
