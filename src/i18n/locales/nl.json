@@ -467,9 +467,12 @@
     "saveFailed": "Opslaan is mislukt",
     "customEntryOptions": "Eigen Entry-opties",
     "customEntryOptionsDescription": "Extra waarden voor het \"Entry\"-veld, naast de vaste lijst — enkel zichtbaar in jouw eigen trade-formulier.",
+    "customConceptOptions": "Eigen Trade concept-opties",
+    "customConceptOptionsDescription": "Extra waarden voor het \"Trade concept\"-veld, naast de vaste lijst — enkel zichtbaar in jouw eigen trade-formulier.",
     "valueExists": "Deze waarde bestaat al",
     "addFailed": "Toevoegen is mislukt",
     "newEntryPlaceholder": "Nieuwe entry...",
+    "newConceptPlaceholder": "Nieuw trade concept...",
     "add": "Toevoegen",
     "removeOption": "{{value}} verwijderen"
   },

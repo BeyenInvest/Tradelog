@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
-import { ENTRIES } from "@/lib/constants";
+import { ENTRIES, TRADE_CONCEPTS } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
@@ -46,7 +46,21 @@ export default function SettingsPage() {
 
         <LanguageSettings />
 
-        <CustomEntryOptions />
+        <CustomFieldOptions
+          field="entry"
+          baseList={ENTRIES}
+          titleKey="settings.customEntryOptions"
+          descriptionKey="settings.customEntryOptionsDescription"
+          placeholderKey="settings.newEntryPlaceholder"
+        />
+
+        <CustomFieldOptions
+          field="trade_concept"
+          baseList={TRADE_CONCEPTS}
+          titleKey="settings.customConceptOptions"
+          descriptionKey="settings.customConceptOptionsDescription"
+          placeholderKey="settings.newConceptPlaceholder"
+        />
       </div>
     </>
   );
@@ -82,15 +96,31 @@ function LanguageSettings() {
   );
 }
 
-/** Extra "Entry"-waarden bovenop de vaste ENTRIES-lijst — alleen zichtbaar/bruikbaar voor jezelf, niet voor andere accounts. */
-function CustomEntryOptions() {
+/**
+ * Extra waarden bovenop een vaste lijst (bv. "Entry" of "Trade concept") — alleen
+ * zichtbaar/bruikbaar voor jezelf, niet voor andere accounts. Generiek over het
+ * form-veld: elke categorische lijst met per-user custom_options kan dit hergebruiken.
+ */
+function CustomFieldOptions({
+  field,
+  baseList,
+  titleKey,
+  descriptionKey,
+  placeholderKey,
+}: {
+  field: string;
+  baseList: readonly string[];
+  titleKey: string;
+  descriptionKey: string;
+  placeholderKey: string;
+}) {
   const { t } = useTranslation();
-  const { options, loading, addOption, deleteOption } = useCustomOptions("entry");
+  const { options, loading, addOption, deleteOption } = useCustomOptions(field);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const existing = new Set([...ENTRIES, ...options.map((o) => o.value)].map((v) => v.toLowerCase()));
+  const existing = new Set([...baseList, ...options.map((o) => o.value)].map((v) => v.toLowerCase()));
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -120,8 +150,8 @@ function CustomEntryOptions() {
 
   return (
     <Card>
-      <p className="font-body text-sm text-ink">{t("settings.customEntryOptions")}</p>
-      <p className="font-mono text-xs mt-1 text-muted">{t("settings.customEntryOptionsDescription")}</p>
+      <p className="font-body text-sm text-ink">{t(titleKey)}</p>
+      <p className="font-mono text-xs mt-1 text-muted">{t(descriptionKey)}</p>
 
       <div className="flex gap-2 mt-3">
         <input
@@ -129,7 +159,7 @@ function CustomEntryOptions() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t("settings.newEntryPlaceholder")}
+          placeholder={t(placeholderKey)}
           className="input flex-1"
         />
         <button
