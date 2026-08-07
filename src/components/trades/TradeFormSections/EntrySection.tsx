@@ -19,6 +19,11 @@ export function EntrySection() {
   const { t } = useTranslation();
   const { options: customEntries } = useCustomOptions("entry");
   const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
+  const { options: customConcepts } = useCustomOptions("trade_concept");
+  const conceptOptions = useMemo(
+    () => [...TRADE_CONCEPTS, ...customConcepts.map((o) => o.value)],
+    [customConcepts]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,7 +47,7 @@ export function EntrySection() {
           <EnumSelect options={CCS} {...register("cc")} />
         </Field>
         <Field label={t("tradeForm.tradeConcept")} error={errors.trade_concept?.message}>
-          <EnumSelect options={TRADE_CONCEPTS} {...register("trade_concept")} />
+          <EnumSelect options={conceptOptions} {...register("trade_concept")} />
         </Field>
         <Field label={t("tradeForm.entry")} error={errors.entry?.message}>
           <EnumSelect options={entryOptions} {...register("entry")} />

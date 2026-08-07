@@ -456,9 +456,12 @@
     "saveFailed": "Saving failed",
     "customEntryOptions": "Custom Entry options",
     "customEntryOptionsDescription": "Extra values for the \"Entry\" field, alongside the fixed list — only visible in your own trade form.",
+    "customConceptOptions": "Custom Trade concept options",
+    "customConceptOptionsDescription": "Extra values for the \"Trade concept\" field, alongside the fixed list — only visible in your own trade form.",
     "valueExists": "This value already exists",
     "addFailed": "Adding failed",
     "newEntryPlaceholder": "New entry...",
+    "newConceptPlaceholder": "New trade concept...",
     "add": "Add",
     "removeOption": "Remove {{value}}"
   },

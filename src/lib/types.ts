@@ -1,6 +1,6 @@
 import type {
   CC, Currency, Fase, Outcome, Pair, PeriodType, PropFase, Sessie,
-  Structuur, TradeConcept, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
+  Structuur, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
 } from "./constants";
 
 /** Mirrors the `trades` table in supabase/schema.sql 1:1. */
@@ -22,7 +22,8 @@ export interface Trade {
 
   weekly_criteria: WeeklyCriteria | null;
   weekly_kenmerk: WeeklyKenmerk | null;
-  trade_concept: TradeConcept | null;
+  /** TRADE_CONCEPTS (constants.ts) or one of this user's own custom_options rows for field='trade_concept' — see useCustomOptions. */
+  trade_concept: string | null;
   /** ENTRIES (constants.ts) or one of this user's own custom_options rows for field='entry' — see useCustomOptions. */
   entry: string | null;
 

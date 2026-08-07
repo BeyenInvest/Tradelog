@@ -20,10 +20,9 @@ create type pair_enum as enum (
 );
 create type weekly_criteria_enum as enum ('Pattern','High/Low','IC','Region');
 create type weekly_kenmerk_enum as enum ('Trending market','Corrective market','Ranging market');
-create type trade_concept_enum as enum (
-  'Reversal','Continuation','Daily retrace','Pattern in Pattern',
-  'Push IC Push','Weekly-4H','Reclaim','Small daily pattern'
-);
+-- trade_concept intentionally has no enum type — it's plain text (fixed
+-- TRADE_CONCEPTS list + per-user custom_options), same exception as `entry`
+-- below. See 0018_custom_trade_concepts.sql / 0010_custom_entries.sql.
 create type cc_enum as enum ('03','07','11','15','19','23');
 create type sessie_enum as enum ('Asia','London','Overlap','New York');
 create type structuur_enum as enum ('Inner','Outer');
@@ -119,7 +118,7 @@ create table trades (
 
   weekly_criteria weekly_criteria_enum,
   weekly_kenmerk weekly_kenmerk_enum,
-  trade_concept trade_concept_enum,
+  trade_concept text, -- fixed TRADE_CONCEPTS list + per-user custom_options, not a native enum (see custom_options below)
   entry text, -- fixed ENTRIES list + per-user custom_options, not a native enum (see custom_options below)
 
   cc cc_enum not null,

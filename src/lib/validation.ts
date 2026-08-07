@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  CCS, FASES, OUTCOMES, PAIRS, STRUCTUREN, TRADE_CONCEPTS, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
+  CCS, FASES, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
 } from "./constants";
 
 const boolField = z.boolean().nullable().optional().default(null);
@@ -52,7 +52,11 @@ export const tradeSchema = z
     trade_evaluation: nullableEnum(TRADE_EVALUATIONS).optional().default(null),
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
-    trade_concept: nullableEnum(TRADE_CONCEPTS).optional().default(null),
+    // Deliberate exception to "one shared enum, no free text" above (same as `entry` below):
+    // a user can register their own extra values (useCustomOptions, field="trade_concept") on
+    // top of TRADE_CONCEPTS, so this can't be a static z.enum. The <select> in EntrySection.tsx
+    // — TRADE_CONCEPTS + that user's own custom_options rows — is still the only way to set it.
+    trade_concept: nullableString.optional().default(null),
     // Deliberate exception to "one shared enum, no free text" above: a user can register their own
     // extra values (useCustomOptions, field="entry") on top of ENTRIES, so this can't be a static
     // z.enum. The <select> in EntrySection.tsx — ENTRIES + that user's own custom_options rows — is
