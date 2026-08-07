@@ -150,9 +150,14 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
       {(requestClose) => (
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <h2 id="import-title" className="font-display text-2xl italic text-ink">
-              {t("import.title")}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 id="import-title" className="font-display text-2xl italic text-ink">
+                {t("import.title")}
+              </h2>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-gold/50 text-gold">
+                Beta
+              </span>
+            </div>
             <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
               <X size={18} />
             </button>

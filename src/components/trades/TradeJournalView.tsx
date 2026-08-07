@@ -145,6 +145,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
               >
                 <Upload size={15} /> {t("journal.importTrades")}
+                <span className="font-mono text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-gold/50 text-gold">
+                  Beta
+                </span>
               </button>
             )}
             <button
