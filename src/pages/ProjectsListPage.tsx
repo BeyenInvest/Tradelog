@@ -7,42 +7,47 @@ import { Card } from "@/components/ui/Card";
 import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { supabase } from "@/lib/supabase";
-import { computeOutcomeCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
-import type { Trade } from "@/lib/types";
 
-/** Only the columns computeOutcomeCounts actually reads — the per-project summary cards don't need full trade rows. */
-type ProjectTradeSummaryRow = Pick<Trade, "backtest_project_id" | "outcome" | "resultaat_pct">;
+/**
+ * One aggregated row per project from the get_project_trade_summaries() RPC
+ * (supabase/migrations/0016) — mirrors computeOutcomeCounts server-side so the
+ * list no longer pulls every project trade just to render the summary cards.
+ */
+interface ProjectSummaryRow {
+  backtest_project_id: string;
+  n: number;
+  wins: number;
+  losses: number;
+  be: number;
+  resultaat_total: number;
+}
 
 export default function ProjectsListPage() {
   const { t } = useTranslation();
   const { projects, loading, createProject, deleteProject } = useBacktestProjects();
-  const [projectTrades, setProjectTrades] = useState<ProjectTradeSummaryRow[]>([]);
+  const [summaries, setSummaries] = useState<ProjectSummaryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("trades")
-      .select("backtest_project_id,outcome,resultaat_pct")
-      .not("backtest_project_id", "is", null)
-      .then(({ data, error: fetchError }) => {
-        if (cancelled) return;
-        if (fetchError) setError(fetchError.message);
-        else setProjectTrades((data as ProjectTradeSummaryRow[]) ?? []);
-      });
+    supabase.rpc("get_project_trade_summaries").then(({ data, error: fetchError }) => {
+      if (cancelled) return;
+      if (fetchError) setError(fetchError.message);
+      else setSummaries((data as ProjectSummaryRow[]) ?? []);
+    });
     return () => {
       cancelled = true;
     };
   }, [projects]);
 
   const summaryByProject = useMemo(() => {
-    const m = new Map<string, ReturnType<typeof computeOutcomeCounts>>();
-    for (const p of projects) {
-      m.set(p.id, computeOutcomeCounts(projectTrades.filter((t) => t.backtest_project_id === p.id)));
+    const m = new Map<string, { n: number; resultaatTotal: number }>();
+    for (const s of summaries) {
+      m.set(s.backtest_project_id, { n: s.n, resultaatTotal: s.resultaat_total });
     }
     return m;
-  }, [projects, projectTrades]);
+  }, [summaries]);
 
   async function handleDelete(id: string, naam: string) {
     if (confirm(t("backtesting.deleteConfirm", { name: naam }))) {

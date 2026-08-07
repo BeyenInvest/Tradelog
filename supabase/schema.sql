@@ -165,6 +165,10 @@ create table trades (
   weekly_review_id uuid references weekly_reviews(id) on delete set null,
   backtest_project_id uuid references backtest_projects(id) on delete cascade,
 
+  -- Broker-import dedup reference "{broker}:{ticket}" (NULL for hand-entered
+  -- trades). Makes re-importing the same export idempotent. See 0017_trade_import_ref.sql.
+  import_ref text,
+
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -215,6 +219,7 @@ create index idx_trades_fase on trades(fase);
 create index idx_trades_pair on trades(pair);
 create index idx_trades_weekly_review on trades(weekly_review_id);
 create index idx_trades_backtest_project on trades(backtest_project_id);
+create unique index trades_user_import_ref_unique on trades(user_id, import_ref) where import_ref is not null;
 create index idx_payouts_account on payouts(account_id);
 create index idx_periodic_reviews_user on periodic_reviews(user_id);
 
@@ -284,6 +289,44 @@ $$;
 
 revoke all on function is_admin() from public;
 grant execute on function is_admin() to authenticated;
+
+-- ---------- per-project trade summaries (Fase 2, server-side aggregation) ----------
+-- One aggregated row per backtest project instead of shipping every project
+-- trade to the client for the projects-list summary cards. Mirrors
+-- computeOutcomeCounts() in src/lib/stats/core.ts; excludes missed trades to
+-- honour the shared missed-trade contract server-side. SECURITY INVOKER (default)
+-- so RLS applies; the explicit user_id filter also blocks the admin read-all
+-- policy from summing other users' projects. See 0016_project_trade_summaries.sql.
+create or replace function get_project_trade_summaries()
+returns table (
+  backtest_project_id uuid,
+  n integer,
+  wins integer,
+  losses integer,
+  be integer,
+  resultaat_total numeric
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select
+    t.backtest_project_id,
+    count(*)::int,
+    count(*) filter (where t.outcome = 'Win')::int,
+    count(*) filter (where t.outcome = 'Loss')::int,
+    count(*) filter (where t.outcome = 'BE')::int,
+    round(coalesce(sum(t.resultaat_pct), 0), 2)
+  from trades t
+  where t.backtest_project_id is not null
+    and t.user_id = auth.uid()
+    and t.trade_evaluation is distinct from 'Missed trade'
+  group by t.backtest_project_id;
+$$;
+
+revoke all on function get_project_trade_summaries() from public;
+grant execute on function get_project_trade_summaries() to authenticated;
 
 -- ---------- auto-link trade -> weekly_review on INSERT only ----------
 -- (created after its trades already exist? use the manual relink action in-app,
