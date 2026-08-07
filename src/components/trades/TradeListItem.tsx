@@ -29,7 +29,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
   return (
     <div
-      className={`grid ${hideFase ? "grid-cols-6" : "grid-cols-7"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group ${missed ? "opacity-60" : ""}`}
+      className={`grid ${hideFase ? "grid-cols-6" : "grid-cols-7"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`}
     >
       <span className="text-muted">
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
@@ -42,11 +42,11 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       )}
       <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
       <span className="flex items-center gap-1.5">
-        <OutcomePill outcome={trade.outcome} muted={missed} />
+        <OutcomePill outcome={trade.outcome} />
         {evalBadge && (
           <span
-            className={`font-mono text-[10px] px-1.5 py-0.5 rounded border text-faint ${
-              missed ? "border-gold/50 text-gold" : "border-border"
+            className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+              missed ? "bg-loss text-white border-loss" : "border-border text-faint"
             }`}
             title={t(evalBadge.titleKey)}
           >
@@ -57,13 +57,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       <span
         className={clsx(
           "text-right",
-          missed
-            ? "text-faint"
-            : trade.resultaat_pct > 0
-              ? "text-win"
-              : trade.resultaat_pct < 0
-                ? "text-loss"
-                : "text-be"
+          trade.resultaat_pct > 0 ? "text-win" : trade.resultaat_pct < 0 ? "text-loss" : "text-be"
         )}
       >
         {trade.resultaat_pct > 0 ? "+" : ""}

@@ -110,10 +110,12 @@ function ReviewTradeSection({
   const defaultOpenKey = groupMode === "outcome" ? "Win" : (groups[0]?.key ?? null);
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="font-body text-[11px] uppercase tracking-wide text-faint">
-        {label} ({trades.length})
-      </p>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <span className="h-4 w-1 rounded-full bg-ink/60" />
+        <h4 className="font-display text-base italic text-ink">{label}</h4>
+        <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-full bg-ink/10 text-muted">{trades.length}</span>
+      </div>
       {trades.length === 0 ? (
         <p className="text-xs text-muted">{emptyLabel}</p>
       ) : (
