@@ -186,6 +186,7 @@ function WeeklyReviewsTab({
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
               onRelink={handleRelink}
+              onAddTrade={onAddTrade}
             />
           ) : (
             <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>
@@ -330,6 +331,7 @@ function PeriodicReviewsTab({
               missed={missedTradesOf(selected)}
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
+              onAddTrade={onAddTrade}
             />
           ) : (
             <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>

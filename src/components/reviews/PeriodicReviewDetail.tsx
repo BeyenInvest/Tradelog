@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
-import { periodLabel } from "@/lib/periodRanges";
+import type { TradeSubmitInput } from "@/hooks/useTrades";
+import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { computeErrorCounts } from "@/lib/stats";
+import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodicReviewContentDisplay } from "./PeriodicReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
@@ -16,12 +19,20 @@ interface PeriodicReviewDetailProps {
   missed: Trade[];
   onEdit: () => void;
   onDelete: () => void;
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
-export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete }: PeriodicReviewDetailProps) {
+export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
   const { t } = useTranslation();
   const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+  const [addOpen, setAddOpen] = useState(false);
+
+  // No FK: a trade added inside the period's date range shows up automatically after the refresh.
+  const periodeNummerForRange = review.period_type === "year" ? null : review.periode_nummer;
+  const periodRange = rangeOfPeriod(review.period_type, review.jaar, periodeNummerForRange);
+  const today = new Date().toISOString().slice(0, 10);
+  const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -58,10 +69,24 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete }
         </section>
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">
-          <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.tradesInPeriod", { count: taken.length + missed.length })}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.tradesInPeriod", { count: taken.length + missed.length })}</p>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gold hover:text-ink"
+            >
+              <Plus size={13} /> {t("tradeForm.addTrade")}
+            </button>
+          </div>
           <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
         </section>
       </div>
+
+      {addOpen &&
+        createPortal(
+          <TradeForm onSubmit={onAddTrade} onClose={() => setAddOpen(false)} allowMissedTrade initialDate={newTradeDate} />,
+          document.body
+        )}
     </Card>
   );
 }

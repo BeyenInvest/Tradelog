@@ -54,7 +54,7 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
             <p className="text-sm text-muted py-4">{t("calendar.noTradesOnDay")}</p>
           ) : (
             <div className="overflow-x-auto mb-4">
-              <div className="min-w-[560px]">
+              <div className="min-w-[640px]">
                 <TradeListHeader />
                 {sorted.map((t) => (
                   <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />

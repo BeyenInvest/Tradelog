@@ -119,7 +119,7 @@ export function TradeList({
       )}
 
       <div className="overflow-x-auto">
-        <div className="flex flex-col min-w-[640px] gap-2.5">
+        <div className="flex flex-col min-w-[720px] gap-2.5">
           {groups.map((g) => {
             // While actively searching, every visible group already only contains matches (matchesSearch
             // runs before grouping) — force it open rather than leaving a stale collapse from before the

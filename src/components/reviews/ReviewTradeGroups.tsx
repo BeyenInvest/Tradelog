@@ -76,7 +76,7 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
                 <p className="px-3 py-2 text-xs text-muted">{t("reviews.noTradesShort")}</p>
               ) : (
                 <div className="px-3 pb-1 pt-2 overflow-x-auto">
-                  <div className="min-w-[560px]">
+                  <div className="min-w-[640px]">
                     <TradeListHeader />
                     {g.trades.map((t) => (
                       <TradeListItem key={t.id} trade={t} />
@@ -113,7 +113,7 @@ function ReviewTradeSection({
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-2">
         <span className="h-4 w-1 rounded-full bg-ink/60" />
-        <h4 className="font-display text-base italic text-ink">{label}</h4>
+        <h4 className="font-body text-sm font-semibold text-ink">{label}</h4>
         <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-full bg-ink/10 text-muted">{trades.length}</span>
       </div>
       {trades.length === 0 ? (

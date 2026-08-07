@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
+import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
@@ -14,9 +15,10 @@ interface ReviewDetailProps {
   onEdit: () => void;
   onDelete: () => void;
   onRelink: (reviewId: string, jaar: number, weekNummer: number) => Promise<number>;
+  onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }
 
-export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink }: ReviewDetailProps) {
+export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
@@ -57,7 +59,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink }: Rev
         </section>
 
         <section className="border-t border-border pt-6">
-          <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} />
+          <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} onAddTrade={onAddTrade} />
         </section>
       </div>
     </Card>

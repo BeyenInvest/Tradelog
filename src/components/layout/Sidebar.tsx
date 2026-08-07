@@ -5,7 +5,6 @@ import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOu
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
 // Account deletion (DeleteAccountModal + useAuth.deleteAccount) is built but
 // deliberately not exposed here yet — too easy to stumble into from the main
@@ -78,7 +77,6 @@ export function Sidebar() {
 
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">
         <ThemeToggle />
-        <LanguageToggle />
         <NavLink
           to="/settings"
           className={({ isActive }) =>
@@ -96,7 +94,6 @@ export function Sidebar() {
       </div>
       <div className="flex items-center gap-1 md:hidden shrink-0">
         <ThemeToggle iconOnly />
-        <LanguageToggle iconOnly />
         <NavLink
           to="/settings"
           aria-label={t("nav.settings")}

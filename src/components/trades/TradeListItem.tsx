@@ -29,7 +29,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
   return (
     <div
-      className={`grid ${hideFase ? "grid-cols-6" : "grid-cols-7"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`}
+      className={`grid ${hideFase ? "grid-cols-7" : "grid-cols-8"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`}
     >
       <span className="text-muted">
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
@@ -41,6 +41,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
         </span>
       )}
       <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
+      <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>
       <span className="flex items-center gap-1.5">
         <OutcomePill outcome={trade.outcome} />
         {evalBadge && (
