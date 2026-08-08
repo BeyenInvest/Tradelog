@@ -7,11 +7,13 @@ import type { PeriodicReview, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { computeErrorCounts } from "@/lib/stats";
+import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { PeriodicReviewContentDisplay } from "./PeriodicReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
 import { ReviewTradeGroups, periodicExtraGroupModes } from "./ReviewTradeGroups";
+import { DownloadReviewPdfButton } from "./DownloadReviewPdfButton";
 
 interface PeriodicReviewDetailProps {
   review: PeriodicReview;
@@ -41,7 +43,8 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
           <h3 className="font-display text-2xl italic text-ink">{periodLabel(review.period_type, review.jaar, review.periode_nummer)}</h3>
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <DownloadReviewPdfButton getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed })} />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>

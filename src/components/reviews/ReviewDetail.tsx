@@ -1,13 +1,16 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
+import { DownloadReviewPdfButton } from "./DownloadReviewPdfButton";
 
 interface ReviewDetailProps {
   review: WeeklyReview;
@@ -19,6 +22,7 @@ interface ReviewDetailProps {
 }
 
 export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
+  const { t } = useTranslation();
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
@@ -33,7 +37,8 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
           </h3>
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <DownloadReviewPdfButton getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken, missed })} />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>
