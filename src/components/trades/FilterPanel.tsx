@@ -38,7 +38,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-surface p-4 shadow-lg">
+        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-surface p-4 shadow-lg max-md:fixed max-md:inset-x-3 max-md:w-auto">
           <div className="flex items-center justify-between mb-3">
             <p className="font-display text-base italic text-ink">{t("filters.title")}</p>
             {count > 0 && (
