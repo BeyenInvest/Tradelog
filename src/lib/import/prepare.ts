@@ -19,7 +19,7 @@ export interface PreparedImport {
   unknownSymbols: string[];
   /** True when at least one deal needs an account balance to compute its % (no return/running balance in the export). */
   needsBalance: boolean;
-  /** Deals already imported before (import_ref already present). */
+  /** Deals skipped as duplicates — already in the DB, or a repeat of an earlier deal in this same file. */
   duplicateCount: number;
   /** Deals with no usable date at all — skipped. */
   undatedCount: number;
@@ -36,13 +36,17 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
   const rows: ImportTradeRow[] = [];
   const unknownSet = new Set<string>();
   const unknownSymbols: string[] = [];
+  // Refs already accepted in THIS batch. The DB has a partial unique index on
+  // (user, import_ref), so a duplicate ref within one file would make the single
+  // bulk INSERT fail as a whole — dedup here so a repeat becomes a counted skip.
+  const batchRefs = new Set<string>();
   let needsBalance = false;
   let duplicateCount = 0;
   let undatedCount = 0;
 
   for (const deal of deals) {
     const importRef = `${broker}:${deal.ticket}`;
-    if (opts.existingImportRefs.has(importRef)) {
+    if (opts.existingImportRefs.has(importRef) || batchRefs.has(importRef)) {
       duplicateCount++;
       continue;
     }
@@ -67,6 +71,7 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       continue;
     }
 
+    batchRefs.add(importRef);
     rows.push(dealToImportRow(deal, pair, pct, broker));
   }
 

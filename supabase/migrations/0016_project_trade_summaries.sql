@@ -57,3 +57,10 @@ as $$
     and t.trade_evaluation is distinct from 'Missed trade'
   group by t.backtest_project_id;
 $$;
+
+-- Lock execution to signed-in users. Postgres grants EXECUTE to PUBLIC by default,
+-- which would let the anon role call this too; SECURITY INVOKER + the auth.uid()
+-- filter already return nothing for anon, but keep the grant explicit and matching
+-- schema.sql. Safe to re-run — revoke/grant are idempotent.
+revoke all on function get_project_trade_summaries() from public;
+grant execute on function get_project_trade_summaries() to authenticated;
