@@ -28,6 +28,7 @@ const TABS: { key: ReviewTab; label: string }[] = [
 ];
 
 export default function ReviewsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<ReviewTab>("week");
   const { trades, refresh: refreshTrades, createTrade } = useTrades({ type: "live" });
 
@@ -39,19 +40,19 @@ export default function ReviewsPage() {
 
   return (
     <>
-      <PageHeader title="Reviews" />
+      <PageHeader title={t("nav.reviews")} />
 
       <div className="flex gap-1 mb-5 border-b border-border">
-        {TABS.map((t) => (
+        {TABS.map((item) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={item.key}
+            onClick={() => setTab(item.key)}
             className={clsx(
               "px-4 py-2 font-body text-sm -mb-px border-b-2 transition-colors",
-              tab === t.key ? "border-gold text-ink" : "border-transparent text-muted"
+              tab === item.key ? "border-gold text-ink" : "border-transparent text-muted"
             )}
           >
-            {t.label}
+            {item.label}
           </button>
         ))}
       </div>

@@ -114,6 +114,7 @@ const passwordField = z.string().min(8, "auth.passwordMin");
 
 export const signupSchema = z
   .object({
+    displayName: z.string().trim().min(1, "auth.nameRequired").max(60, "auth.nameTooLong"),
     email: emailField,
     password: passwordField,
     confirmPassword: z.string(),

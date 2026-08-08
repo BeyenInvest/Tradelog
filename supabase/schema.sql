@@ -39,6 +39,10 @@ create table profiles (
   plan text not null default 'free',
   role text not null default 'user' check (role in ('user', 'admin')),
   hide_fase boolean not null default false,
+  -- IANA timezone the user reads candle-close (cc) times in. Drives the
+  -- timezone-aware `trades.sessie` mapping (see compute_sessie / 0019). Default
+  -- is the reference zone the methodology was authored in.
+  timezone text not null default 'Europe/Brussels',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -122,16 +126,10 @@ create table trades (
   entry text, -- fixed ENTRIES list + per-user custom_options, not a native enum (see custom_options below)
 
   cc cc_enum not null,
-  sessie sessie_enum generated always as (
-    case cc
-      when '03' then 'Asia'::sessie_enum
-      when '07' then 'Asia'::sessie_enum
-      when '11' then 'London'::sessie_enum
-      when '15' then 'London'::sessie_enum
-      when '19' then 'Overlap'::sessie_enum
-      when '23' then 'New York'::sessie_enum
-    end
-  ) stored,
+  -- Timezone-aware trading session, derived from cc + datum_open + the owner's
+  -- profiles.timezone. Maintained by trg_trades_set_sessie (not a generated
+  -- column: the tz conversion isn't IMMUTABLE). See compute_sessie() and 0019.
+  sessie sessie_enum not null,
 
   nieuws boolean not null default false,
   w_confirm boolean,
@@ -242,6 +240,69 @@ create trigger trg_periodic_reviews_updated_at before update on periodic_reviews
   for each row execute function set_updated_at();
 create trigger trg_profiles_updated_at before update on profiles
   for each row execute function set_updated_at();
+
+-- ---------- timezone-aware trading session mapping (see 0019) ----------
+-- (cc, date, tz) -> session, anchored to the reference zone the methodology was
+-- authored in (Europe/Brussels). STABLE (depends on the tz database), so it can't
+-- live in a generated column — a trigger maintains trades.sessie instead.
+create or replace function compute_sessie(p_cc cc_enum, p_datum date, p_tz text)
+returns sessie_enum
+language plpgsql
+stable
+as $$
+declare
+  brussels_hour int;
+begin
+  if p_cc is null or p_datum is null then
+    return null;
+  end if;
+
+  brussels_hour := extract(
+    hour from
+      ((p_datum::timestamp + make_interval(hours => p_cc::text::int))
+        at time zone coalesce(p_tz, 'Europe/Brussels'))
+        at time zone 'Europe/Brussels'
+  )::int;
+
+  return case
+    when brussels_hour between 0 and 7  then 'Asia'::sessie_enum
+    when brussels_hour between 8 and 15 then 'London'::sessie_enum
+    when brussels_hour between 16 and 19 then 'Overlap'::sessie_enum
+    else 'New York'::sessie_enum
+  end;
+end;
+$$;
+
+create or replace function trades_set_sessie() returns trigger
+language plpgsql as $$
+declare
+  v_tz text;
+begin
+  select timezone into v_tz from profiles where id = new.user_id;
+  new.sessie := compute_sessie(new.cc, new.datum_open, coalesce(v_tz, 'Europe/Brussels'));
+  return new;
+end;
+$$;
+
+create trigger trg_trades_set_sessie
+  before insert or update of cc, datum_open on trades
+  for each row execute function trades_set_sessie();
+
+-- Re-bucket a user's trades when they change their timezone.
+create or replace function profiles_recompute_sessie() returns trigger
+language plpgsql as $$
+begin
+  if new.timezone is distinct from old.timezone then
+    update trades set sessie = compute_sessie(cc, datum_open, new.timezone)
+    where user_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_profiles_recompute_sessie
+  after update of timezone on profiles
+  for each row execute function profiles_recompute_sessie();
 
 -- ---------- auto-provision profiles row on new auth.users signup ----------
 -- SECURITY DEFINER: the client's JWT has no insert rights on auth.users or a

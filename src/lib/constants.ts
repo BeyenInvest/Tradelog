@@ -60,14 +60,11 @@ export type CC = (typeof CCS)[number];
 export const SESSIES = ["Asia", "London", "Overlap", "New York"] as const;
 export type Sessie = (typeof SESSIES)[number];
 
-export const CC_TO_SESSIE: Record<CC, Sessie> = {
-  "03": "Asia",
-  "07": "Asia",
-  "11": "London",
-  "15": "London",
-  "19": "Overlap",
-  "23": "New York",
-};
+// The cc -> sessie mapping is no longer a static table: it's timezone-aware and
+// computed in the DB (compute_sessie(), see migration 0019). A candle-close slot
+// is interpreted in the user's profiles.timezone and bucketed against the
+// reference zone, so `trades.sessie` is read straight from the DB, never derived
+// client-side.
 
 export const STRUCTUREN = ["Inner", "Outer"] as const;
 export type Structuur = (typeof STRUCTUREN)[number];

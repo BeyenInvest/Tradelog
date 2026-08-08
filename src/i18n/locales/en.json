@@ -2,7 +2,9 @@
   "chart": {
     "equityEmpty": "No trades yet for a cumulative curve.",
     "equityTooltip": "Cumulative",
-    "equityTradeLabel": "Trade #{{n}}"
+    "equityTradeLabel": "Trade #{{n}}",
+    "resultaat": "Result",
+    "faseEmpty": "No trades per phase yet."
   },
   "common": {
     "tagline": "Eyes on every trade.",
@@ -14,7 +16,8 @@
     "yes": "Yes",
     "no": "No",
     "close": "Close",
-    "noData": "No data"
+    "noData": "No data",
+    "selectPlaceholder": "Select..."
   },
   "nav": {
     "journal": "Journal",
@@ -29,6 +32,7 @@
     "logoutFailed": "Sign-out failed"
   },
   "auth": {
+    "name": "Name",
     "email": "Email",
     "password": "Password",
     "login": "Log in",
@@ -67,6 +71,8 @@
     "emailRequired": "Required",
     "emailInvalid": "Invalid email address",
     "passwordMin": "At least 8 characters",
+    "nameRequired": "Enter your name",
+    "nameTooLong": "At most 60 characters",
     "acceptTermsRequired": "Required to continue",
     "passwordMismatch": "Passwords do not match"
   },
@@ -83,8 +89,12 @@
     "failed": "Export failed",
     "tagline": "EYES ON EVERY TRADE",
     "generatedOn": "Generated on",
+    "preparedFor": "Review report for",
+    "chartXTrades": "Number of trades",
     "colDate": "Date",
     "colPair": "Pair",
+    "colConcept": "Concept",
+    "colEntry": "Entry",
     "colOutcome": "Outcome",
     "colResult": "Result",
     "colEval": "Evaluation"
@@ -331,7 +341,8 @@
     "maand": "Month",
     "kwartaal": "Quarter",
     "tradesInWeek": "Trades in week ({{count}})",
-    "tradesInPeriod": "Trades in period ({{count}})"
+    "tradesInPeriod": "Trades in period ({{count}})",
+    "saveFailed": "Saving the review failed"
   },
   "reviewContent": {
     "technisch": "Technical",
@@ -461,9 +472,15 @@
     "showFasesDescription": "Turns off the \"4 phases\" system in the trade form, filters, journal and backtesting analysis. Your own history stays unchanged.",
     "language": "Language",
     "languageDescription": "Language for the interface, on this device.",
+    "timezone": "Timezone",
+    "timezoneDescription": "The timezone you read the candle close (cc) in. Determines which session each trade falls into. Changing it recomputes your existing trades.",
     "on": "On",
     "off": "Off",
+    "displayName": "Display name",
+    "displayNameDescription": "Your name as it appears on your review PDF, among other places. Leaving it empty is fine.",
+    "displayNamePlaceholder": "E.g. Jan Peeters",
     "saving": "Saving...",
+    "saved": "Saved",
     "saveFailed": "Saving failed",
     "customEntryOptions": "Custom Entry options",
     "customEntryOptionsDescription": "Extra values for the \"Entry\" field, alongside the fixed list — only visible in your own trade form.",
@@ -562,6 +579,8 @@
     "userExists": "An account with this email address already exists.",
     "sessionExpired": "Your session has expired. Please log in again.",
     "rateLimit": "Too many attempts. Please try again later.",
-    "network": "Can't connect to the server. Check your internet connection."
+    "network": "Can't connect to the server. Check your internet connection.",
+    "boundaryBody": "An unexpected error occurred. Your data is safe — reload the page to continue.",
+    "reload": "Reload page"
   }
 }

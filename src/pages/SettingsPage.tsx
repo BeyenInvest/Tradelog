@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -32,6 +32,8 @@ export default function SettingsPage() {
     <>
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
       <div className="flex flex-col gap-5 max-w-xl">
+        <DisplayNameSettings />
+
         <Card>
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
@@ -45,6 +47,8 @@ export default function SettingsPage() {
         </Card>
 
         <LanguageSettings />
+
+        <TimezoneSettings />
 
         <CustomFieldOptions
           field="entry"
@@ -63,6 +67,68 @@ export default function SettingsPage() {
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Weergavenaam van de gebruiker (profiles.display_name) — o.a. gebruikt in de
+ * header van de review-PDF. Leeg opslaan wist de naam (null), zodat de PDF het
+ * "Reviewrapport voor …"-regeltje weer weglaat.
+ */
+function DisplayNameSettings() {
+  const { t } = useTranslation();
+  const { profile, updateProfile } = useAuth();
+  const [value, setValue] = useState(profile?.display_name ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const dirty = value.trim() !== (profile?.display_name ?? "");
+
+  async function handleSave() {
+    setError(null);
+    setSaved(false);
+    setSaving(true);
+    try {
+      await updateProfile({ display_name: value.trim() || null });
+      setSaved(true);
+    } catch (err) {
+      setError(toErrorMessage(err, t("settings.saveFailed")));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <p className="font-body text-sm text-ink">{t("settings.displayName")}</p>
+      <p className="font-mono text-xs mt-1 text-muted">{t("settings.displayNameDescription")}</p>
+
+      <div className="flex gap-2 mt-3">
+        <input
+          type="text"
+          value={value}
+          maxLength={60}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+          }}
+          placeholder={t("settings.displayNamePlaceholder")}
+          className="input flex-1"
+        />
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving || !dirty}
+          className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {t("common.save")}
+        </button>
+      </div>
+      {saving && <p className="font-mono text-[11px] mt-2 text-muted">{t("settings.saving")}</p>}
+      {saved && !saving && <p className="font-mono text-[11px] mt-2 text-win">{t("settings.saved")}</p>}
+      {error && <p className="font-mono text-[11px] mt-2 text-loss">{error}</p>}
+    </Card>
   );
 }
 
@@ -92,6 +158,76 @@ function LanguageSettings() {
           ))}
         </div>
       </div>
+    </Card>
+  );
+}
+
+/** Full IANA timezone list from the runtime, with the reference default guaranteed present. */
+function useTimezoneOptions(current: string): string[] {
+  return useMemo(() => {
+    const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+    const zones = intl.supportedValuesOf?.("timeZone") ?? [
+      "UTC",
+      "Europe/Brussels",
+      "Europe/London",
+      "Africa/Johannesburg",
+      "America/New_York",
+    ];
+    // The stored value (and the reference default) must always be selectable.
+    const extras = ["Europe/Brussels", current].filter((z) => !zones.includes(z));
+    return extras.length ? [...extras, ...zones] : zones;
+  }, [current]);
+}
+
+/**
+ * IANA timezone the user reads candle-close (cc) times in. Drives the tz-aware
+ * `trades.sessie` mapping (compute_sessie in the DB) — changing it re-buckets all
+ * of the user's trades server-side via a trigger, so historical sessions follow.
+ */
+function TimezoneSettings() {
+  const { t } = useTranslation();
+  const { profile, updateProfile } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const current = profile?.timezone ?? "Europe/Brussels";
+  const zones = useTimezoneOptions(current);
+
+  async function handleChange(tz: string) {
+    if (tz === current) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await updateProfile({ timezone: tz });
+    } catch (err) {
+      setError(toErrorMessage(err, t("settings.saveFailed")));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("settings.timezone")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{t("settings.timezoneDescription")}</p>
+        </div>
+        <select
+          value={current}
+          onChange={(e) => void handleChange(e.target.value)}
+          disabled={saving}
+          className="shrink-0 max-w-[55%] rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold disabled:opacity-50"
+        >
+          {zones.map((z) => (
+            <option key={z} value={z}>
+              {z}
+            </option>
+          ))}
+        </select>
+      </div>
+      {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
+      {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
     </Card>
   );
 }

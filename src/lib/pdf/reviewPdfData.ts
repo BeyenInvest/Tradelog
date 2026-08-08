@@ -31,6 +31,8 @@ export interface ReviewPdfActie {
 export interface ReviewPdfTradeRow {
   datum: string;
   pair: string;
+  concept: string | null;
+  entry: string | null;
   outcome: Outcome;
   resultaat: number;
   evaluation: string | null;
@@ -55,20 +57,26 @@ export interface ReviewPdfLabels {
   kpiAvgRR: string;
   winRate: string;
   cumulative: string;
+  chartXTrades: string;
   actiesLabel: string;
   takenHeading: string;
   missedHeading: string;
   noTrades: string;
   colDate: string;
   colPair: string;
+  colConcept: string;
+  colEntry: string;
   colOutcome: string;
   colResult: string;
   colEval: string;
+  preparedFor: string;
 }
 
 export interface ReviewPdfData {
   heading: string;
   subtitle: string | null;
+  /** The signed-in trader's display name, for the personalised header. Null if unset. */
+  traderName: string | null;
   generatedOn: string;
   kpis: ReviewPdfKpis;
   /** Cumulative resultaat after each taken trade, chronological. Empty if no taken trades. */
@@ -81,9 +89,13 @@ export interface ReviewPdfData {
   labels: ReviewPdfLabels;
 }
 
-export type ReviewPdfInput =
+export type ReviewPdfInput = (
   | { kind: "weekly"; review: WeeklyReview; taken: Trade[]; missed: Trade[] }
-  | { kind: "periodic"; review: PeriodicReview; taken: Trade[]; missed: Trade[] };
+  | { kind: "periodic"; review: PeriodicReview; taken: Trade[]; missed: Trade[] }
+) & {
+  /** The signed-in trader's display name (profile.display_name), for the header. */
+  traderName?: string | null;
+};
 
 function signedPct(n: number): string {
   return `${n > 0 ? "+" : ""}${n}%`;
@@ -108,6 +120,8 @@ function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
   return {
     datum: t.datum_open,
     pair: t.pair,
+    concept: t.trade_concept,
+    entry: t.entry,
     outcome: t.outcome,
     resultaat: round2(t.resultaat_pct),
     evaluation: t.trade_evaluation,
@@ -176,15 +190,19 @@ function labels(t: TFunction): ReviewPdfLabels {
     kpiAvgRR: t("reviews.avgRR"),
     winRate: t("journal.winRate"),
     cumulative: t("journal.cumulativeResult"),
+    chartXTrades: t("reviewPdf.chartXTrades"),
     actiesLabel: "", // set by the caller (weekly = acties, periodic = werkpunten)
     takenHeading: t("reviews.tradesTaken"),
     missedHeading: t("reviews.missedTradesLabel"),
     noTrades: t("reviews.noTakenTrades"),
     colDate: t("reviewPdf.colDate"),
     colPair: t("reviewPdf.colPair"),
+    colConcept: t("reviewPdf.colConcept"),
+    colEntry: t("reviewPdf.colEntry"),
     colOutcome: t("reviewPdf.colOutcome"),
     colResult: t("reviewPdf.colResult"),
     colEval: t("reviewPdf.colEval"),
+    preparedFor: t("reviewPdf.preparedFor"),
   };
 }
 
@@ -215,6 +233,7 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
   return {
     heading,
     subtitle: input.review.titel,
+    traderName: input.traderName?.trim() || null,
     generatedOn: formatDate(now),
     kpis: {
       trades: kpis.totalTrades,

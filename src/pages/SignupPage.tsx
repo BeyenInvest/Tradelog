@@ -26,7 +26,7 @@ export default function SignupPage() {
   async function handleSignup(values: SignupFormValues) {
     setError(null);
     try {
-      const { needsEmailConfirmation } = await signUp(values.email, values.password, captchaToken);
+      const { needsEmailConfirmation } = await signUp(values.email, values.password, values.displayName, captchaToken);
       if (needsEmailConfirmation) {
         setCheckEmail(true);
       }
@@ -56,6 +56,20 @@ export default function SignupPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit(handleSignup)} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-wider text-muted" htmlFor="displayName">
+                {t("auth.name")}
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                {...register("displayName")}
+                className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
+                autoComplete="name"
+              />
+              {errors.displayName && <p className="text-xs text-loss">{t(errors.displayName.message!)}</p>}
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <label className="text-xs uppercase tracking-wider text-muted" htmlFor="email">
                 {t("auth.email")}
