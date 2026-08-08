@@ -388,9 +388,12 @@ $$;
 revoke all on function get_project_trade_summaries() from public;
 grant execute on function get_project_trade_summaries() to authenticated;
 
--- ---------- auto-link trade -> weekly_review on INSERT only ----------
--- (created after its trades already exist? use the manual relink action in-app,
---  see linkTradesToReview in src/hooks/useWeeklyReviews.ts)
+-- ---------- auto-link trade <-> weekly_review ----------
+-- Two BEFORE/AFTER INSERT triggers keep the link in sync in both directions:
+--   * new trade  -> find existing review for its ISO week (below)
+--   * new review -> backfill existing live trades of that week (further down)
+-- (edited a trade's date into another week? the link is only refreshed by the
+--  manual relink action in-app — see linkTradesToReview in useWeeklyReviews.ts)
 create or replace function link_trade_to_weekly_review() returns trigger as $$
 declare
   iso_year int;
@@ -413,6 +416,25 @@ $$ language plpgsql;
 create trigger trg_link_trade_weekly_review
   before insert on trades
   for each row execute function link_trade_to_weekly_review();
+
+-- reverse direction: a review created after its week's trades already exist
+-- backfills those live trades, so it isn't limited to the insert-time link above.
+create or replace function link_weekly_review_to_trades() returns trigger as $$
+begin
+  update trades
+    set weekly_review_id = new.id
+    where user_id = new.user_id
+      and backtest_project_id is null
+      and weekly_review_id is null
+      and extract(isoyear from datum_open) = new.jaar
+      and extract(week from datum_open) = new.week_nummer;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_link_weekly_review_trades
+  after insert on weekly_reviews
+  for each row execute function link_weekly_review_to_trades();
 
 -- ---------- RLS ----------
 alter table trades enable row level security;
