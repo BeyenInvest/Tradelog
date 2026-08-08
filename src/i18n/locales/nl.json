@@ -491,7 +491,11 @@
     "newEntryPlaceholder": "Nieuwe entry...",
     "newConceptPlaceholder": "Nieuw trade concept...",
     "add": "Toevoegen",
-    "removeOption": "{{value}} verwijderen"
+    "removeOption": "{{value}} verwijderen",
+    "sectionDisplay": "Weergave & interface",
+    "sectionDisplayDescription": "Hoe de app eruitziet en welke naam bovenaan je review-PDF komt.",
+    "sectionTrading": "Trading & velden",
+    "sectionTradingDescription": "Instellingen die je trades en de keuzevelden in je trade-formulier beïnvloeden."
   },
   "economicCalendar": {
     "title": "Economic Calendar",
