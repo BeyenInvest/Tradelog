@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
+import i18n from "@/i18n";
 import { reportError } from "@/lib/monitoring";
 
 interface ErrorBoundaryProps {
@@ -30,17 +31,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="w-full max-w-md rounded-xl p-8 bg-surface border border-border flex flex-col items-center gap-4 text-center">
             <AlertTriangle size={28} className="text-loss" />
             <div>
-              <h1 className="font-display text-2xl italic text-ink mb-1">Er ging iets mis</h1>
-              <p className="text-sm text-muted">
-                Er trad een onverwachte fout op. Je gegevens zijn veilig — herlaad de pagina om verder te gaan.
-              </p>
+              <h1 className="font-display text-2xl italic text-ink mb-1">{i18n.t("errors.generic")}</h1>
+              <p className="text-sm text-muted">{i18n.t("errors.boundaryBody")}</p>
             </div>
             <p className="font-mono text-xs text-faint break-all">{this.state.error.message}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
             >
-              Pagina herladen
+              {i18n.t("errors.reload")}
             </button>
           </div>
         </div>

@@ -93,7 +93,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
       });
       onClose();
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan van de review is mislukt"));
+      setError(toErrorMessage(err, t("reviewForm.saveFailed")));
     } finally {
       setSubmitting(false);
     }

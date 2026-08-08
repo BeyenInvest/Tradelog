@@ -2,7 +2,9 @@
   "chart": {
     "equityEmpty": "Nog geen trades voor een cumulatieve curve.",
     "equityTooltip": "Cumulatief",
-    "equityTradeLabel": "Trade #{{n}}"
+    "equityTradeLabel": "Trade #{{n}}",
+    "resultaat": "Resultaat",
+    "faseEmpty": "Nog geen trades per fase."
   },
   "common": {
     "tagline": "Eyes on every trade.",
@@ -14,7 +16,8 @@
     "yes": "Ja",
     "no": "Nee",
     "close": "Sluiten",
-    "noData": "Geen data"
+    "noData": "Geen data",
+    "selectPlaceholder": "Selecteer..."
   },
   "nav": {
     "journal": "Journal",
@@ -29,6 +32,7 @@
     "logoutFailed": "Uitloggen is mislukt"
   },
   "auth": {
+    "name": "Naam",
     "email": "E-mail",
     "password": "Wachtwoord",
     "login": "Inloggen",
@@ -67,6 +71,8 @@
     "emailRequired": "Verplicht",
     "emailInvalid": "Ongeldig e-mailadres",
     "passwordMin": "Minimaal 8 tekens",
+    "nameRequired": "Vul je naam in",
+    "nameTooLong": "Maximaal 60 tekens",
     "acceptTermsRequired": "Verplicht om verder te gaan",
     "passwordMismatch": "Wachtwoorden komen niet overeen"
   },
@@ -83,8 +89,12 @@
     "failed": "Export mislukt",
     "tagline": "EYES ON EVERY TRADE",
     "generatedOn": "Gegenereerd op",
+    "preparedFor": "Reviewrapport voor",
+    "chartXTrades": "Aantal trades",
     "colDate": "Datum",
     "colPair": "Pair",
+    "colConcept": "Concept",
+    "colEntry": "Entry",
     "colOutcome": "Outcome",
     "colResult": "Resultaat",
     "colEval": "Evaluatie"
@@ -331,7 +341,8 @@
     "maand": "Maand",
     "kwartaal": "Kwartaal",
     "tradesInWeek": "Trades in week ({{count}})",
-    "tradesInPeriod": "Trades in periode ({{count}})"
+    "tradesInPeriod": "Trades in periode ({{count}})",
+    "saveFailed": "Opslaan van de review is mislukt"
   },
   "reviewContent": {
     "technisch": "Technisch",
@@ -461,9 +472,15 @@
     "showFasesDescription": "Schakelt het \"4 fasen\"-systeem uit in het trade-formulier, filters, journal en backtesting-analyse. Je eigen historiek blijft ongewijzigd.",
     "language": "Taal",
     "languageDescription": "Taal voor de interface, op dit toestel.",
+    "timezone": "Tijdzone",
+    "timezoneDescription": "De tijdzone waarin je de candle-close (cc) afleest. Bepaalt naar welke sessie elke trade valt. Wijzigen herberekent je bestaande trades.",
     "on": "Aan",
     "off": "Uit",
+    "displayName": "Weergavenaam",
+    "displayNameDescription": "Je naam zoals die o.a. bovenaan je review-PDF verschijnt. Leeg laten mag.",
+    "displayNamePlaceholder": "Bv. Jan Peeters",
     "saving": "Bezig met opslaan...",
+    "saved": "Opgeslagen",
     "saveFailed": "Opslaan is mislukt",
     "customEntryOptions": "Eigen Entry-opties",
     "customEntryOptionsDescription": "Extra waarden voor het \"Entry\"-veld, naast de vaste lijst — enkel zichtbaar in jouw eigen trade-formulier.",
@@ -562,6 +579,8 @@
     "userExists": "Er bestaat al een account met dit e-mailadres.",
     "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
     "rateLimit": "Te veel pogingen. Probeer het straks opnieuw.",
-    "network": "Kan geen verbinding maken met de server. Controleer je internetverbinding."
+    "network": "Kan geen verbinding maken met de server. Controleer je internetverbinding.",
+    "boundaryBody": "Er trad een onverwachte fout op. Je gegevens zijn veilig — herlaad de pagina om verder te gaan.",
+    "reload": "Pagina herladen"
   }
 }

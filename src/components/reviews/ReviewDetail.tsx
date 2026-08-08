@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
+import { useAuth } from "@/hooks/useAuth";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
@@ -23,6 +24,7 @@ interface ReviewDetailProps {
 
 export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
   const { t } = useTranslation();
+  const { profile } = useAuth();
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
@@ -38,7 +40,9 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-1">
-          <DownloadReviewPdfButton getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken, missed })} />
+          <DownloadReviewPdfButton
+            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken, missed, traderName: profile?.display_name })}
+          />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>

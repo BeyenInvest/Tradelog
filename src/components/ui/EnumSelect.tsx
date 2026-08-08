@@ -1,4 +1,5 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 
 interface EnumSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: readonly string[];
@@ -9,9 +10,11 @@ interface EnumSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 /** Generic <select> bound to a fixed enum list — used with react-hook-form's register() via ref forwarding. */
 export const EnumSelect = forwardRef<HTMLSelectElement, EnumSelectProps>(function EnumSelect(
-  { options, placeholder = "Selecteer...", getLabel, className, ...props },
+  { options, placeholder, getLabel, className, ...props },
   ref
 ) {
+  const { t } = useTranslation();
+  const placeholderText = placeholder ?? t("common.selectPlaceholder");
   return (
     <select
       ref={ref}
@@ -21,7 +24,7 @@ export const EnumSelect = forwardRef<HTMLSelectElement, EnumSelectProps>(functio
       }
       {...props}
     >
-      <option value="">{placeholder}</option>
+      <option value="">{placeholderText}</option>
       {options.map((opt) => (
         <option key={opt} value={opt}>
           {getLabel ? getLabel(opt) : opt}

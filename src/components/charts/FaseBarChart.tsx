@@ -1,11 +1,13 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { useTranslation } from "react-i18next";
 import type { BreakdownRow } from "@/lib/stats";
 
 export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
+  const { t } = useTranslation();
   if (data.every((d) => d.n === 0)) {
     return (
       <div className="h-[220px] flex items-center justify-center">
-        <p className="font-body text-sm text-muted">Nog geen trades per fase.</p>
+        <p className="font-body text-sm text-muted">{t("chart.faseEmpty")}</p>
       </div>
     );
   }
@@ -34,7 +36,7 @@ export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
             fontFamily: "IBM Plex Mono",
             fontSize: 12,
           }}
-          formatter={(v: number) => [`${v}%`, "Resultaat"]}
+          formatter={(v: number) => [`${v}%`, t("chart.resultaat")]}
           labelStyle={{ color: "rgb(var(--color-muted))" }}
         />
         <Bar dataKey="resultaatTotal" radius={[6, 6, 0, 0]}>

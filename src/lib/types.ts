@@ -28,7 +28,7 @@ export interface Trade {
   entry: string | null;
 
   cc: CC;
-  sessie: Sessie; // DB-generated, read-only
+  sessie: Sessie; // DB-maintained (tz-aware trigger, see compute_sessie/0019), read-only
 
   nieuws: boolean;
   w_confirm: boolean | null;
@@ -159,6 +159,8 @@ export interface Profile {
   plan: string;
   role: "user" | "admin";
   hide_fase: boolean;
+  /** IANA timezone the user reads candle-close (cc) times in — drives the tz-aware `trades.sessie` mapping (compute_sessie in the DB). Defaults to 'Europe/Brussels'. */
+  timezone: string;
   created_at: string;
   updated_at: string;
 }

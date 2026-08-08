@@ -23,10 +23,10 @@ interface AuthContextValue {
   isInvite: boolean;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
+  signUp: (email: string, password: string, displayName: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name">>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -73,13 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }
 
-  async function signUp(email: string, password: string, captchaToken?: string) {
+  async function signUp(email: string, password: string, displayName: string, captchaToken?: string) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         captchaToken,
         emailRedirectTo: `${window.location.origin}/login`,
+        // handle_new_user() (schema.sql) copies this into profiles.display_name at signup.
+        data: { display_name: displayName.trim() },
       },
     });
     if (error) throw error;
@@ -108,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }
 
-  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name">>) {
+  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone">>) {
     if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;

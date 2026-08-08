@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { lazy, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
@@ -26,11 +27,12 @@ const AdminUserDetailPage = lazy(() => import("@/pages/AdminUserDetailPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, passwordRecovery } = useAuth();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-bg">
-        <p className="font-mono text-sm text-muted">Laden...</p>
+        <p className="font-mono text-sm text-muted">{t("common.loading")}</p>
       </div>
     );
   }

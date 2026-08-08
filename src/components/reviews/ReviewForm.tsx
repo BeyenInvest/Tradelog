@@ -83,7 +83,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
       });
       onClose();
     } catch (err) {
-      setError(toErrorMessage(err, "Opslaan van de review is mislukt"));
+      setError(toErrorMessage(err, t("reviewForm.saveFailed")));
     } finally {
       setSubmitting(false);
     }

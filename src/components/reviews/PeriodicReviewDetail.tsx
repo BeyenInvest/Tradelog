@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
+import { useAuth } from "@/hooks/useAuth";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
@@ -27,6 +28,7 @@ interface PeriodicReviewDetailProps {
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
 export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
   const { t } = useTranslation();
+  const { profile } = useAuth();
   const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -44,7 +46,9 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-1">
-          <DownloadReviewPdfButton getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed })} />
+          <DownloadReviewPdfButton
+            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name })}
+          />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
           </button>
