@@ -210,10 +210,89 @@ create table custom_options (
   unique (user_id, field, value)
 );
 
+-- ---------- CONFIGURABLE METHODOLOGY (Scope C — see 0020) ----------
+-- Per-user methodology definitions that replace the hard-coded FASES /
+-- FASE_KENMERKEN (constants.ts). The built-in Archer template (user_id NULL,
+-- is_system) is seeded below, world-readable and editable by no one; users own
+-- and edit their own copies. Fase-kenmerken move off the fixed trades.fase*_
+-- columns into the flexible trades.kenmerken jsonb bag, shaped by the field
+-- definitions here.
+create table methodologies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade, -- NULL = built-in system template
+  naam text not null,
+  is_system boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table methodology_fases (
+  id uuid primary key default gen_random_uuid(),
+  methodology_id uuid not null references methodologies(id) on delete cascade,
+  naam text not null,
+  sort_order integer not null default 0,
+  unique (methodology_id, naam)
+);
+
+create table methodology_fields (
+  id uuid primary key default gen_random_uuid(),
+  methodology_id uuid not null references methodologies(id) on delete cascade,
+  fase_id uuid not null references methodology_fases(id) on delete cascade,
+  field_key text not null,             -- stable key inside the trades.kenmerken jsonb bag
+  label text not null,
+  field_type text not null check (field_type in ('boolean', 'enum')),
+  options jsonb,                       -- enum: ordered allowed values, e.g. '["Inner","Outer"]'
+  is_computed boolean not null default false, -- e.g. Fase 3 "Beide?" — derived, never stored in the bag
+  sort_order integer not null default 0,
+  unique (methodology_id, fase_id, field_key)
+);
+
+create index idx_methodology_fases_methodology on methodology_fases(methodology_id);
+create index idx_methodology_fields_methodology on methodology_fields(methodology_id);
+
+-- Seed the built-in Archer template (the methodology currently hard-coded in
+-- constants.ts) BEFORE the profiles alter below — that alter's column default
+-- points at this row, so it must exist first. Fixed id keeps references stable.
+insert into methodologies (id, user_id, naam, is_system)
+values ('00000000-0000-4000-8000-000000000001', null, 'Archer', true);
+
+insert into methodology_fases (methodology_id, naam, sort_order) values
+  ('00000000-0000-4000-8000-000000000001', 'Fase 1', 1),
+  ('00000000-0000-4000-8000-000000000001', 'Fase 2', 2),
+  ('00000000-0000-4000-8000-000000000001', 'Fase 3', 3),
+  ('00000000-0000-4000-8000-000000000001', 'Fase 4', 4);
+
+insert into methodology_fields
+  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, sort_order)
+select
+  '00000000-0000-4000-8000-000000000001', f.id,
+  v.field_key, v.label, v.field_type, v.options, v.is_computed, v.sort_order
+from (values
+  ('Fase 1', 'daily_respecteert_zone',    'Daily respecteert zone?',            'boolean', null::jsonb,                false, 1),
+  ('Fase 1', 'spelers_verleden',          'Al spelers in verleden (W)?',        'boolean', null::jsonb,                false, 2),
+  ('Fase 2', 'daily_respecteert_zone',    'Daily respecteert zone?',            'boolean', null::jsonb,                false, 1),
+  ('Fase 2', 'structuur',                 'Structuur',                          'enum',    '["Inner","Outer"]'::jsonb, false, 2),
+  ('Fase 3', 'zone_min_2_touches',        'Zone met min. 2 vorige touches?',    'boolean', null::jsonb,                false, 1),
+  ('Fase 3', 'engulfing_candle',          'Engulfing candle?',                  'boolean', null::jsonb,                false, 2),
+  ('Fase 3', 'beide',                     'Beide?',                             'boolean', null::jsonb,                true,  3),
+  ('Fase 3', 'structuur',                 'Structuur',                          'enum',    '["Inner","Outer"]'::jsonb, false, 4),
+  ('Fase 4', 'weekly_bevestigingscandle', 'Weekly bevestigingscandle?',         'boolean', null::jsonb,                false, 1)
+) as v(fase_naam, field_key, label, field_type, options, is_computed, sort_order)
+join methodology_fases f
+  on f.methodology_id = '00000000-0000-4000-8000-000000000001' and f.naam = v.fase_naam;
+
+-- New methodology columns on trades/profiles (see 0020). Added via alter so the
+-- methodologies table (created here, after trades/profiles above) is referenceable.
+alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
+alter table trades add column kenmerken jsonb not null default '{}'::jsonb;
+alter table profiles add column methodology_id uuid references methodologies(id) on delete set null
+  default '00000000-0000-4000-8000-000000000001';
+
 -- ---------- INDEXES ----------
 create index idx_trades_user on trades(user_id);
 create index idx_trades_datum_open on trades(datum_open);
 create index idx_trades_fase on trades(fase);
+create index idx_trades_methodology on trades(methodology_id);
 create index idx_trades_pair on trades(pair);
 create index idx_trades_weekly_review on trades(weekly_review_id);
 create index idx_trades_backtest_project on trades(backtest_project_id);
@@ -240,6 +319,8 @@ create trigger trg_backtest_projects_updated_at before update on backtest_projec
 create trigger trg_periodic_reviews_updated_at before update on periodic_reviews
   for each row execute function set_updated_at();
 create trigger trg_profiles_updated_at before update on profiles
+  for each row execute function set_updated_at();
+create trigger trg_methodologies_updated_at before update on methodologies
   for each row execute function set_updated_at();
 
 -- ---------- timezone-aware trading session mapping (see 0019) ----------
@@ -446,6 +527,9 @@ alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
 alter table profiles enable row level security;
 alter table custom_options enable row level security;
+alter table methodologies enable row level security;
+alter table methodology_fases enable row level security;
+alter table methodology_fields enable row level security;
 
 -- No insert/delete policy for profiles: rows are created only by the
 -- handle_new_user() trigger above and removed via the auth.users FK cascade.
@@ -456,6 +540,33 @@ create policy "profiles_owner_update" on profiles
 
 create policy "custom_options_owner_all" on custom_options
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Methodologies: built-in system templates are world-readable; users fully
+-- manage their own. Child rows follow the visibility of their parent methodology.
+create policy "methodologies_system_select" on methodologies
+  for select using (is_system and user_id is null);
+create policy "methodologies_owner_all" on methodologies
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "methodology_fases_select" on methodology_fases
+  for select using (exists (
+    select 1 from methodologies m where m.id = methodology_fases.methodology_id
+      and (m.user_id = auth.uid() or (m.is_system and m.user_id is null))));
+create policy "methodology_fases_write" on methodology_fases
+  for all using (exists (
+    select 1 from methodologies m where m.id = methodology_fases.methodology_id and m.user_id = auth.uid()))
+  with check (exists (
+    select 1 from methodologies m where m.id = methodology_fases.methodology_id and m.user_id = auth.uid()));
+
+create policy "methodology_fields_select" on methodology_fields
+  for select using (exists (
+    select 1 from methodologies m where m.id = methodology_fields.methodology_id
+      and (m.user_id = auth.uid() or (m.is_system and m.user_id is null))));
+create policy "methodology_fields_write" on methodology_fields
+  for all using (exists (
+    select 1 from methodologies m where m.id = methodology_fields.methodology_id and m.user_id = auth.uid()))
+  with check (exists (
+    select 1 from methodologies m where m.id = methodology_fields.methodology_id and m.user_id = auth.uid()));
 
 create policy "trades_owner_all" on trades
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
