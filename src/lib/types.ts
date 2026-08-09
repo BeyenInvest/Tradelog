@@ -210,7 +210,8 @@ export interface MethodologyFase {
 export interface MethodologyField {
   id: string;
   methodology_id: string;
-  fase_id: string;
+  /** Legacy/transitional FK to methodology_fases; null on the new flat model where fase is itself a field (see 0023). */
+  fase_id: string | null;
   /** Stable key used inside the trades.custom jsonb bag. */
   field_key: string;
   label: string;

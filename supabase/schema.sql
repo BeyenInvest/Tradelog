@@ -240,7 +240,7 @@ create table methodology_fases (
 create table methodology_fields (
   id uuid primary key default gen_random_uuid(),
   methodology_id uuid not null references methodologies(id) on delete cascade,
-  fase_id uuid not null references methodology_fases(id) on delete cascade,
+  fase_id uuid references methodology_fases(id) on delete cascade, -- legacy/transitional; fase is now a field (see 0023), null on the new flat model
   field_key text not null,             -- stable key inside the trades.custom jsonb bag
   label text not null,
   field_type text not null check (field_type in ('boolean', 'enum', 'text', 'number', 'date')),
@@ -251,7 +251,7 @@ create table methodology_fields (
   show_when_field_id uuid references methodology_fields(id) on delete set null, -- conditional visibility (see 0022)
   show_when_values jsonb,              -- values of show_when_field_id that reveal this field
   sort_order integer not null default 0,
-  unique (methodology_id, fase_id, field_key)
+  unique (methodology_id, field_key) -- fase is now a field; field_key is unique per methodology (see 0023)
 );
 
 create index idx_methodology_fases_methodology on methodology_fases(methodology_id);
@@ -269,24 +269,32 @@ insert into methodology_fases (methodology_id, naam, sort_order) values
   ('00000000-0000-4000-8000-000000000001', 'Fase 3', 3),
   ('00000000-0000-4000-8000-000000000001', 'Fase 4', 4);
 
+-- Fase is a field now (see 0023): a 'fase' enum field carries the fase list, and
+-- the kenmerken are unified per field_key and shown conditionally via show_when.
+-- (methodology_fases above is kept transitionally until the client stops reading it.)
+with fase_field as (
+  insert into methodology_fields
+    (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, sort_order)
+  values
+    ('00000000-0000-4000-8000-000000000001', null, 'fase', 'Fase', 'enum',
+     '["Fase 1","Fase 2","Fase 3","Fase 4"]'::jsonb, false, null, true, 1)
+  returning id
+)
 insert into methodology_fields
-  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, sort_order)
+  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, show_when_field_id, show_when_values, sort_order)
 select
-  '00000000-0000-4000-8000-000000000001', f.id,
-  v.field_key, v.label, v.field_type, v.options, v.is_computed, v.sort_order
-from (values
-  ('Fase 1', 'daily_respecteert_zone',    'Daily respecteert zone?',            'boolean', null::jsonb,                false, 1),
-  ('Fase 1', 'spelers_verleden',          'Al spelers in verleden (W)?',        'boolean', null::jsonb,                false, 2),
-  ('Fase 2', 'daily_respecteert_zone',    'Daily respecteert zone?',            'boolean', null::jsonb,                false, 1),
-  ('Fase 2', 'structuur',                 'Structuur',                          'enum',    '["Inner","Outer"]'::jsonb, false, 2),
-  ('Fase 3', 'zone_min_2_touches',        'Zone met min. 2 vorige touches?',    'boolean', null::jsonb,                false, 1),
-  ('Fase 3', 'engulfing_candle',          'Engulfing candle?',                  'boolean', null::jsonb,                false, 2),
-  ('Fase 3', 'beide',                     'Beide?',                             'boolean', null::jsonb,                true,  3),
-  ('Fase 3', 'structuur',                 'Structuur',                          'enum',    '["Inner","Outer"]'::jsonb, false, 4),
-  ('Fase 4', 'weekly_bevestigingscandle', 'Weekly bevestigingscandle?',         'boolean', null::jsonb,                false, 1)
-) as v(fase_naam, field_key, label, field_type, options, is_computed, sort_order)
-join methodology_fases f
-  on f.methodology_id = '00000000-0000-4000-8000-000000000001' and f.naam = v.fase_naam;
+  '00000000-0000-4000-8000-000000000001', null,
+  v.field_key, v.label, v.field_type, v.options, v.is_computed, 'Kenmerken', false,
+  ff.id, v.show_when, v.sort_order
+from fase_field ff, (values
+  ('daily_respecteert_zone',    'Daily respecteert zone?',         'boolean', null::jsonb,                false, '["Fase 1","Fase 2"]'::jsonb, 2),
+  ('spelers_verleden',          'Al spelers in verleden (W)?',     'boolean', null::jsonb,                false, '["Fase 1"]'::jsonb,          3),
+  ('structuur',                 'Structuur',                       'enum',    '["Inner","Outer"]'::jsonb, false, '["Fase 2","Fase 3"]'::jsonb, 4),
+  ('zone_min_2_touches',        'Zone met min. 2 vorige touches?', 'boolean', null::jsonb,                false, '["Fase 3"]'::jsonb,          5),
+  ('engulfing_candle',          'Engulfing candle?',               'boolean', null::jsonb,                false, '["Fase 3"]'::jsonb,          6),
+  ('beide',                     'Beide?',                          'boolean', null::jsonb,                true,  '["Fase 3"]'::jsonb,          7),
+  ('weekly_bevestigingscandle', 'Weekly bevestigingscandle?',      'boolean', null::jsonb,                false, '["Fase 4"]'::jsonb,          8)
+) as v(field_key, label, field_type, options, is_computed, show_when, sort_order);
 
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
