@@ -68,10 +68,10 @@ export interface Trade {
   /** Broker-import dedup reference "{broker}:{ticket}", null for hand-entered trades. Set only by the CSV importer — never editable in the form. See src/lib/import. */
   import_ref: string | null;
 
-  /** Methodology this trade was logged under (Scope C). null on legacy/unassigned trades. Not yet written by the form (cyclus 2+). */
+  /** Methodology (journal) this trade was logged under (Scope C). null on legacy/unassigned trades. Not yet written by the form (cyclus 2+). */
   methodology_id: string | null;
-  /** Flexible per-fase kenmerk bag (Scope C) that replaces the fixed fase*_ columns — keyed by MethodologyField.field_key. Not yet written by the form (cyclus 2). */
-  kenmerken: Record<string, boolean | string>;
+  /** Flexible per-trade custom-field bag (Scope C, was `kenmerken` — renamed in 0022) that replaces the fixed fase*_ columns — keyed by MethodologyField.field_key. Not yet written by the form (cyclus 2/3). */
+  custom: Record<string, boolean | string | number>;
 
   created_at: string;
   updated_at: string;
@@ -81,7 +81,7 @@ export interface Trade {
 export type TradeInput = Omit<
   Trade,
   | "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at"
-  | "weekly_review_id" | "import_ref" | "methodology_id" | "kenmerken"
+  | "weekly_review_id" | "import_ref" | "methodology_id" | "custom"
 >;
 
 export interface WeeklyReview {
@@ -180,15 +180,20 @@ export interface Profile {
 }
 
 /**
- * A trading methodology (Scope C) — a user-owned definition of fases + kenmerken,
- * or the built-in system template (user_id null, is_system). Replaces the fixed
- * FASES / FASE_KENMERKEN constants as the source of truth for the UI. See migration 0020.
+ * A trading methodology / journal (Scope C) — a user-owned definition of fields
+ * (+ its asset class and instrument config), or the built-in system template
+ * (user_id null, is_system). Replaces the fixed FASES / FASE_KENMERKEN constants
+ * as the source of truth for the UI. See migrations 0020 + 0022.
  */
 export interface Methodology {
   id: string;
   user_id: string | null; // null = built-in system template (read-only for everyone)
   naam: string;
   is_system: boolean;
+  /** forex | futures | stock | crypto | custom — the journal's asset class (free text). null on legacy rows. See 0022. */
+  asset_class: string | null;
+  /** Instrument universe + sizing tools per asset. Populated in cyclus 7; null until then. */
+  instrument_config: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -201,19 +206,26 @@ export interface MethodologyFase {
   sort_order: number;
 }
 
-/** One kenmerk-field of a fase (replaces the fixed FASE_KENMERKEN config). */
+/** One custom field of a methodology/journal (replaces the fixed FASE_KENMERKEN config). See 0022. */
 export interface MethodologyField {
   id: string;
   methodology_id: string;
   fase_id: string;
-  /** Stable key used inside the trades.kenmerken jsonb bag. */
+  /** Stable key used inside the trades.custom jsonb bag. */
   field_key: string;
   label: string;
-  field_type: "boolean" | "enum";
-  /** Ordered allowed values for an enum field; null for boolean fields. */
+  field_type: "boolean" | "enum" | "text" | "number" | "date";
+  /** Ordered allowed values for an enum field; null for the other types. */
   options: string[] | null;
   /** Derived field (e.g. Fase 3 "Beide?") — shown read-only, never stored in the bag. */
   is_computed: boolean;
+  /** Form section header this field groups under; null = ungrouped. See 0022. */
+  group_label: string | null;
+  /** Mandatory on input. See 0022. */
+  required: boolean;
+  /** Conditional visibility: show this field only when the referenced field's value is in show_when_values. null = always shown. See 0022. */
+  show_when_field_id: string | null;
+  show_when_values: string[] | null;
   sort_order: number;
 }
 

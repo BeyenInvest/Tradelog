@@ -210,18 +210,21 @@ create table custom_options (
   unique (user_id, field, value)
 );
 
--- ---------- CONFIGURABLE METHODOLOGY (Scope C — see 0020) ----------
+-- ---------- CONFIGURABLE METHODOLOGY / JOURNAL (Scope C — see 0020, 0022) ----------
 -- Per-user methodology definitions that replace the hard-coded FASES /
 -- FASE_KENMERKEN (constants.ts). The built-in Archer template (user_id NULL,
 -- is_system) is seeded below, world-readable and editable by no one; users own
 -- and edit their own copies. Fase-kenmerken move off the fixed trades.fase*_
--- columns into the flexible trades.kenmerken jsonb bag, shaped by the field
--- definitions here.
+-- columns into the flexible trades.custom jsonb bag, shaped by the field
+-- definitions here. Since 0022 a methodology also carries an asset_class +
+-- instrument_config, i.e. it doubles as the user's "journal" (see design doc §3).
 create table methodologies (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade, -- NULL = built-in system template
   naam text not null,
   is_system boolean not null default false,
+  asset_class text,                    -- forex | futures | stock | crypto | custom (free text, no CHECK — new presets need no migration); see 0022
+  instrument_config jsonb,             -- instrument universe + sizing tools per asset — populated in cyclus 7
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -238,11 +241,15 @@ create table methodology_fields (
   id uuid primary key default gen_random_uuid(),
   methodology_id uuid not null references methodologies(id) on delete cascade,
   fase_id uuid not null references methodology_fases(id) on delete cascade,
-  field_key text not null,             -- stable key inside the trades.kenmerken jsonb bag
+  field_key text not null,             -- stable key inside the trades.custom jsonb bag
   label text not null,
-  field_type text not null check (field_type in ('boolean', 'enum')),
+  field_type text not null check (field_type in ('boolean', 'enum', 'text', 'number', 'date')),
   options jsonb,                       -- enum: ordered allowed values, e.g. '["Inner","Outer"]'
   is_computed boolean not null default false, -- e.g. Fase 3 "Beide?" — derived, never stored in the bag
+  group_label text,                    -- form section header (see 0022)
+  required boolean not null default false,    -- mandatory on input (see 0022)
+  show_when_field_id uuid references methodology_fields(id) on delete set null, -- conditional visibility (see 0022)
+  show_when_values jsonb,              -- values of show_when_field_id that reveal this field
   sort_order integer not null default 0,
   unique (methodology_id, fase_id, field_key)
 );
@@ -253,8 +260,8 @@ create index idx_methodology_fields_methodology on methodology_fields(methodolog
 -- Seed the built-in Archer template (the methodology currently hard-coded in
 -- constants.ts) BEFORE the profiles alter below — that alter's column default
 -- points at this row, so it must exist first. Fixed id keeps references stable.
-insert into methodologies (id, user_id, naam, is_system)
-values ('00000000-0000-4000-8000-000000000001', null, 'Archer', true);
+insert into methodologies (id, user_id, naam, is_system, asset_class)
+values ('00000000-0000-4000-8000-000000000001', null, 'Archer', true, 'forex');
 
 insert into methodology_fases (methodology_id, naam, sort_order) values
   ('00000000-0000-4000-8000-000000000001', 'Fase 1', 1),
@@ -284,7 +291,7 @@ join methodology_fases f
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
 alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
-alter table trades add column kenmerken jsonb not null default '{}'::jsonb;
+alter table trades add column custom jsonb not null default '{}'::jsonb; -- flexible per-trade custom-field bag (was `kenmerken`, renamed in 0022)
 alter table profiles add column methodology_id uuid references methodologies(id) on delete set null
   default '00000000-0000-4000-8000-000000000001';
 
