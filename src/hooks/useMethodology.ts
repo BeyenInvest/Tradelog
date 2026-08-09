@@ -2,17 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { FASES } from "@/lib/constants";
-import type { Methodology, MethodologyFase, MethodologyField } from "@/lib/types";
+import type { Methodology, MethodologyField } from "@/lib/types";
 
 export interface MethodologyData {
   methodology: Methodology | null;
-  /** Fases of the active methodology, ordered by sort_order. */
-  fases: MethodologyFase[];
-  /** All kenmerk-fields of the active methodology (used from cyclus 2 on). */
+  /** All fields of the active methodology, ordered by sort_order (fase is one of them). */
   fields: MethodologyField[];
   /**
-   * Ordered fase names for the UI. Falls back to the fixed FASES constant while
-   * loading or if the methodology has no fases, so the form/filter never shows an
+   * Ordered fase names for the UI, read from the methodology's `fase` enum field
+   * (since 0023 fase is just a field). Falls back to the fixed FASES constant
+   * while loading or if there is no fase field, so the form/filter never shows an
    * empty select and Archer users see no change.
    */
   faseNames: string[];
@@ -23,16 +22,16 @@ export interface MethodologyData {
 
 /**
  * Loads the signed-in user's active methodology (profiles.methodology_id, or the
- * built-in system template as a fallback) with its fases and kenmerk-fields.
- * Read-only source of truth for the fase list — replaces the hard-coded FASES
- * constant in the trade form and filters (Scope C, cyclus 1).
+ * built-in system template as a fallback) with its fields. Read-only source of
+ * truth for the fase list — replaces the hard-coded FASES constant in the trade
+ * form and filters (Scope C, cyclus 1). Since plak 2b the fase list comes from
+ * the `fase` field, not the (now-transitional) methodology_fases table.
  */
 export function useMethodology(): MethodologyData {
   const { profile } = useAuth();
   const methodologyId = profile?.methodology_id ?? null;
 
   const [methodology, setMethodology] = useState<Methodology | null>(null);
-  const [fases, setFases] = useState<MethodologyFase[]>([]);
   const [fields, setFields] = useState<MethodologyField[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,23 +55,20 @@ export function useMethodology(): MethodologyData {
 
     if (!id) {
       setMethodology(null);
-      setFases([]);
       setFields([]);
       setLoading(false);
       return;
     }
 
-    const [m, fs, fl] = await Promise.all([
+    const [m, fl] = await Promise.all([
       supabase.from("methodologies").select("*").eq("id", id).maybeSingle(),
-      supabase.from("methodology_fases").select("*").eq("methodology_id", id).order("sort_order"),
       supabase.from("methodology_fields").select("*").eq("methodology_id", id).order("sort_order"),
     ]);
 
-    const err = m.error ?? fs.error ?? fl.error;
+    const err = m.error ?? fl.error;
     if (err) setError(err.message);
 
     setMethodology((m.data as Methodology | null) ?? null);
-    setFases((fs.data as MethodologyFase[] | null) ?? []);
     setFields((fl.data as MethodologyField[] | null) ?? []);
     setLoading(false);
   }, [methodologyId]);
@@ -81,10 +77,11 @@ export function useMethodology(): MethodologyData {
     void refresh();
   }, [refresh]);
 
-  const faseNames = useMemo(
-    () => (fases.length > 0 ? fases.map((f) => f.naam) : [...FASES]),
-    [fases]
-  );
+  const faseNames = useMemo(() => {
+    const faseField = fields.find((f) => f.field_key === "fase" && f.field_type === "enum");
+    const opts = faseField?.options ?? [];
+    return opts.length > 0 ? opts : [...FASES];
+  }, [fields]);
 
-  return { methodology, fases, fields, faseNames, loading, error, refresh };
+  return { methodology, fields, faseNames, loading, error, refresh };
 }
