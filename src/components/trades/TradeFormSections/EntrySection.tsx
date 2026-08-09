@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
-import { CCS, ENTRIES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
+import { CCS, DIRECTIONS, ENTRIES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +66,10 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
         </Field>
         <Field label={t("tradeForm.pair")} error={errors.pair?.message}>
           <EnumSelect options={PAIRS} {...register("pair")} />
+        </Field>
+        {/* Direction is universal core (Long/Short) — shown for every journal, legacy or not. */}
+        <Field label={t("tradeForm.direction")} error={errors.direction?.message}>
+          <EnumSelect options={DIRECTIONS} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
         </Field>
         {/* The rest of this section is the Weekly Phase Method's hardcoded legacy block
             (cc, concept, entry, weekly criteria/kenmerk, news). An own or empty journal only

@@ -4,6 +4,10 @@ export type Fase = (typeof FASES)[number];
 export const OUTCOMES = ["Win", "Loss", "BE"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
+/** Trade direction — universal core field (Scope C, cyclus 5). null on legacy trades logged before it existed. */
+export const DIRECTIONS = ["Long", "Short"] as const;
+export type Direction = (typeof DIRECTIONS)[number];
+
 /**
  * Self-assessment of how the trade was executed — separate from outcome
  * (Win/Loss/BE, the P&L result). "Missed trade" is special: a setup you saw

@@ -1,5 +1,5 @@
 import type { Trade } from "./types";
-import { currenciesOfPair, CCS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 
 export interface DimensionConfig {
@@ -29,6 +29,7 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS },
   { id: "pair", keyFn: (t) => t.pair },
   { id: "currency", keyFn: (t) => currenciesOfPair(t.pair) },
-  // Last: only 2 rows (Ja/Nee), so it leaves a large empty gap if placed mid-grid next to wider tables.
+  // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
+  { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
 ];

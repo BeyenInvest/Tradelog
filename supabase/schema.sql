@@ -7,6 +7,7 @@ create extension if not exists pgcrypto;
 -- ---------- ENUM TYPES ----------
 create type fase_enum as enum ('Fase 1','Fase 2','Fase 3','Fase 4');
 create type outcome_enum as enum ('Win','Loss','BE');
+create type direction_enum as enum ('Long','Short'); -- universal core field (Scope C, cyclus 5 — see 0029)
 create type trade_evaluation_enum as enum ('Good trade','Emotional error','Technical error','Missed trade');
 create type period_type_enum as enum ('month','quarter','year');
 create type pair_enum as enum (
@@ -114,6 +115,7 @@ create table trades (
   duur_dagen integer generated always as (datum_sluiting - datum_open) stored,
 
   pair pair_enum not null,
+  direction direction_enum, -- Long/Short; nullable (unknown on trades logged before cyclus 5 / imports without a side)
   outcome outcome_enum not null,
   resultaat_pct numeric(7,2) not null,
   -- Planned risk % the trade was taken with. NULL = the default 1% (DEFAULT_RISK_PCT),

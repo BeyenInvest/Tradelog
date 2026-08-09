@@ -1,5 +1,5 @@
 import type {
-  CC, Currency, Outcome, Pair, PeriodType, PropFase, Sessie,
+  CC, Currency, Direction, Outcome, Pair, PeriodType, PropFase, Sessie,
   Structuur, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
 } from "./constants";
 
@@ -19,6 +19,8 @@ export interface Trade {
   duur_dagen: number | null; // DB-generated, read-only
 
   pair: Pair;
+  /** Long/Short — universal core field (Scope C, cyclus 5). null on trades logged before it existed. */
+  direction: Direction | null;
   outcome: Outcome;
   resultaat_pct: number;
   /** Planned risk % this trade was taken with. null = the default 1% (DEFAULT_RISK_PCT). Denominator for R-multiples — read it via riskPct() in stats/core.ts, never divide directly. */

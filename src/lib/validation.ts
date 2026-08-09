@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  CCS, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
+  CCS, DIRECTIONS, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
 } from "./constants";
 
 const boolField = z.boolean().nullable().optional().default(null);
@@ -47,6 +47,7 @@ export const tradeSchema = z
     datum_open: z.string().min(1, "tradeForm.required"),
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),
+    direction: nullableEnum(DIRECTIONS).optional().default(null),
     outcome: z.enum(OUTCOMES),
     resultaat_pct: requiredNumber,
     // Optional planned risk %; null = the default 1% (DEFAULT_RISK_PCT). Positivity is

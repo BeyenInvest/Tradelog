@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { EnumSelect } from "@/components/ui/EnumSelect";
-import { PAIRS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
+import { PAIRS, DIRECTIONS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
@@ -71,6 +71,15 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 value={value.pair ?? ""}
                 onChange={(e) => onChange({ ...value, pair: e.target.value === "" ? undefined : (e.target.value as (typeof PAIRS)[number]) })}
                 placeholder={t("filters.allPairs")}
+                className="w-full text-xs py-1.5"
+              />
+            </Field>
+            <Field label={t("filters.direction")}>
+              <EnumSelect
+                options={DIRECTIONS}
+                value={value.direction ?? ""}
+                onChange={(e) => onChange({ ...value, direction: e.target.value === "" ? undefined : (e.target.value as (typeof DIRECTIONS)[number]) })}
+                placeholder={t("filters.allDirections")}
                 className="w-full text-xs py-1.5"
               />
             </Field>
