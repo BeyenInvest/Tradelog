@@ -31,16 +31,36 @@ const C = {
 
 const SANS = "Helvetica";
 const SANS_BOLD = "Helvetica-Bold";
-const SANS_ITALIC = "Helvetica-Oblique";
 // The app's display serif, embedded via registerPdfFonts (call ensurePdfFonts()
-// before rendering). Matches the on-screen font-display face used for review
-// headings and the takeaway pull-quote.
+// before rendering). Used ONLY in the masthead (heading + trader name) as the
+// brand accent — the whole body deliberately stays in one sans face so the
+// sections read as a single, uniform system rather than a mix of typefaces.
 const DISPLAY = "InstrumentSerif";
+
+// One type scale for the whole document — seven fixed steps, no fractional or
+// one-off sizes. Every fontSize in this file must come from here so the PDF
+// reads as a single, coherent system rather than a dozen slightly-different sizes.
+//   hero  → main heading + wordmark
+//   title → big numbers / pull-quote / trader name
+//   lead  → donut centre %
+//   body  → all running text
+//   small → table cells, legend, footer brand
+//   micro → every uppercase eyebrow label + footer meta
+//   chart → SVG axis labels
+const T = {
+  hero: 22,
+  title: 16,
+  lead: 13,
+  body: 9,
+  small: 8,
+  micro: 7,
+  chart: 6,
+} as const;
 
 const styles = StyleSheet.create({
   // paddingTop gives every *continuation* page a clean top margin; the header band
   // cancels it with a negative marginTop so it still bleeds to the very top of page 1.
-  page: { backgroundColor: C.paper, color: C.ink, fontFamily: SANS, fontSize: 9, paddingTop: 34, paddingBottom: 48 },
+  page: { backgroundColor: C.paper, color: C.ink, fontFamily: SANS, fontSize: T.body, paddingTop: 34, paddingBottom: 48 },
 
   band: {
     marginTop: -34,
@@ -53,21 +73,21 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   bandRule: { height: 3, backgroundColor: C.gold },
-  wordmark: { fontFamily: SANS_BOLD, fontSize: 22, color: C.onDark, letterSpacing: 0.5 },
+  wordmark: { fontFamily: SANS_BOLD, fontSize: T.hero, color: C.onDark, letterSpacing: 0.5 },
   eye: { color: C.goldOnDark },
-  tagline: { fontFamily: SANS, fontSize: 7.5, color: C.goldOnDark, letterSpacing: 2.2, marginTop: 6 },
+  tagline: { fontFamily: SANS, fontSize: T.micro, color: C.goldOnDark, letterSpacing: 2.2, marginTop: 6 },
   headingWrap: { alignItems: "flex-end", maxWidth: 300 },
-  preparedFor: { fontFamily: SANS_BOLD, fontSize: 7, color: C.goldOnDark, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 3 },
-  traderName: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: 15, color: C.onDark, marginBottom: 6, textAlign: "right" },
-  heading: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: 24, color: C.goldOnDark },
-  subtitle: { fontFamily: SANS, fontSize: 9, color: C.faint, marginTop: 3, maxWidth: 260, textAlign: "right" },
-  generatedOn: { fontFamily: SANS, fontSize: 7, color: C.faint, marginTop: 5 },
+  preparedFor: { fontFamily: SANS_BOLD, fontSize: T.micro, color: C.goldOnDark, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 3 },
+  traderName: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.title, color: C.onDark, marginBottom: 6, textAlign: "right" },
+  heading: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.hero, color: C.goldOnDark },
+  subtitle: { fontFamily: SANS, fontSize: T.body, color: C.faint, marginTop: 3, maxWidth: 260, textAlign: "right" },
+  generatedOn: { fontFamily: SANS, fontSize: T.micro, color: C.faint, marginTop: 5 },
 
   body: { paddingHorizontal: 40, paddingTop: 22 },
 
   sectionLabel: {
     fontFamily: SANS_BOLD,
-    fontSize: 8,
+    fontSize: T.micro,
     color: C.gold,
     letterSpacing: 1.4,
     textTransform: "uppercase",
@@ -82,33 +102,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  kpiLabel: { fontSize: 7.5, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 },
-  kpiValue: { fontFamily: SANS_BOLD, fontSize: 17 },
+  kpiLabel: { fontSize: T.micro, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 },
+  kpiValue: { fontFamily: SANS_BOLD, fontSize: T.title },
 
   chartsRow: { flexDirection: "row", gap: 10, marginBottom: 18 },
   chartBox: { borderWidth: 0.5, borderColor: C.border, borderRadius: 6, padding: 12 },
-  chartLabel: { fontSize: 7.5, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 },
+  chartLabel: { fontSize: T.micro, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 },
 
   donutWrap: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
   donutCenter: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
-  donutPct: { fontFamily: SANS_BOLD, fontSize: 14, color: C.ink, lineHeight: 1, textAlign: "center" },
+  donutPct: { fontFamily: SANS_BOLD, fontSize: T.lead, color: C.ink, lineHeight: 1, textAlign: "center" },
   chartBody: { flexGrow: 1, justifyContent: "center" },
   wlLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginTop: 10 },
   wlLegendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   wlDot: { width: 7, height: 7, borderRadius: 2 },
-  wlLegendText: { fontSize: 8, color: C.ink },
+  wlLegendText: { fontSize: T.small, color: C.ink },
 
-  errorLine: { fontSize: 8, color: C.muted, marginBottom: 18 },
+  errorLine: { fontSize: T.small, color: C.muted, marginBottom: 18 },
 
   section: { marginBottom: 14 },
-  sectionBody: { fontSize: 9.5, lineHeight: 1.55, color: C.ink },
+  sectionBody: { fontSize: T.body, lineHeight: 1.55, color: C.ink },
   voiceBox: {
     backgroundColor: C.surface2,
     borderRadius: 6,
     padding: 12,
     marginBottom: 14,
   },
-  voiceBody: { fontFamily: SANS_ITALIC, fontSize: 9.5, lineHeight: 1.55, color: C.ink },
+  voiceBody: { fontFamily: SANS, fontSize: T.body, lineHeight: 1.55, color: C.ink },
   takeawayBox: {
     borderWidth: 0.5,
     borderColor: C.gold,
@@ -117,7 +137,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 14,
   },
-  takeawayBody: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: 17, lineHeight: 1.3, color: C.ink },
+  takeawayBody: { fontFamily: SANS, fontSize: T.lead, lineHeight: 1.35, color: C.ink },
   overallBox: {
     borderWidth: 0.5,
     borderColor: C.gold,
@@ -128,14 +148,14 @@ const styles = StyleSheet.create({
   },
 
   actie: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 4 },
-  actieText: { fontSize: 9.5, color: C.ink },
-  actieValue: { fontSize: 9.5, color: C.muted },
+  actieText: { fontSize: T.body, color: C.ink },
+  actieValue: { fontSize: T.body, color: C.muted },
 
   table: { marginTop: 4 },
   th: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: C.border, paddingBottom: 4, marginBottom: 2 },
-  thText: { fontSize: 7, color: C.muted, letterSpacing: 0.5, textTransform: "uppercase" },
+  thText: { fontSize: T.micro, color: C.muted, letterSpacing: 0.5, textTransform: "uppercase" },
   tr: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: C.borderSoft },
-  td: { fontSize: 8, color: C.ink },
+  td: { fontSize: T.small, color: C.ink },
   cDate: { width: "13%", paddingRight: 4 },
   cPair: { width: "13%", paddingRight: 4 },
   cConcept: { width: "19%", paddingRight: 4 },
@@ -152,9 +172,9 @@ const styles = StyleSheet.create({
   },
   footerRule: { height: 1.5, backgroundColor: C.gold, marginBottom: 6 },
   footerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  footerBrand: { fontFamily: SANS_BOLD, fontSize: 8.5, color: C.ink, letterSpacing: 0.3 },
+  footerBrand: { fontFamily: SANS_BOLD, fontSize: T.small, color: C.ink, letterSpacing: 0.3 },
   footerEye: { color: C.gold },
-  footerText: { fontSize: 7.5, color: C.faint, letterSpacing: 0.4 },
+  footerText: { fontSize: T.micro, color: C.faint, letterSpacing: 0.4 },
 });
 
 function signed(n: number): string {
@@ -297,7 +317,7 @@ function EquitySparkline({ equity, xLabel }: { equity: number[]; xLabel: string 
       <Line x1={plotL} y1={zeroY} x2={plotR} y2={zeroY} strokeWidth={0.5} stroke={C.border} strokeDasharray="2 2" />
       {/* y-axis (%) labels */}
       {yTicks.map((v, i) => (
-        <Text key={`y${i}`} x={plotL - 3} y={yOf(v) + 2} textAnchor="end" fill={C.muted} style={{ fontSize: 6, fontFamily: SANS }}>
+        <Text key={`y${i}`} x={plotL - 3} y={yOf(v) + 2} textAnchor="end" fill={C.muted} style={{ fontSize: T.chart, fontFamily: SANS }}>
           {fmtPct(v)}
         </Text>
       ))}
@@ -312,12 +332,12 @@ function EquitySparkline({ equity, xLabel }: { equity: number[]; xLabel: string 
       })}
       {/* x-axis (trade count) labels */}
       {xTicks.map((i) => (
-        <Text key={`x${i}`} x={xOf(i)} y={plotB + 8} textAnchor="middle" fill={C.muted} style={{ fontSize: 6, fontFamily: SANS }}>
+        <Text key={`x${i}`} x={xOf(i)} y={plotB + 8} textAnchor="middle" fill={C.muted} style={{ fontSize: T.chart, fontFamily: SANS }}>
           {i}
         </Text>
       ))}
       {/* x-axis title */}
-      <Text x={(plotL + plotR) / 2} y={h - 2} textAnchor="middle" fill={C.faint} style={{ fontSize: 5.5, fontFamily: SANS }}>
+      <Text x={(plotL + plotR) / 2} y={h - 2} textAnchor="middle" fill={C.faint} style={{ fontSize: T.chart, fontFamily: SANS }}>
         {xLabel}
       </Text>
     </Svg>

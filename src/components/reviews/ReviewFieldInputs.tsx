@@ -13,12 +13,15 @@ interface LabeledTextareaProps {
   value: string;
   onChange: (value: string) => void;
   rows?: number;
+  /** Optional guiding question shown under the label, to prompt what to write. */
+  hint?: string;
 }
 
-export function LabeledTextarea({ label, value, onChange, rows = 3 }: LabeledTextareaProps) {
+export function LabeledTextarea({ label, value, onChange, rows = 3, hint }: LabeledTextareaProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs uppercase tracking-wider text-gold">{label}</label>
+      {hint ? <p className="text-xs text-muted -mt-0.5">{hint}</p> : null}
       <textarea rows={rows} className="input" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );

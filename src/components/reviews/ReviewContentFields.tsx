@@ -24,7 +24,7 @@ export function ReviewContentFields({ value, onChange }: ReviewContentFieldsProp
 
   return (
     <>
-      <LabeledTextarea label={t("reviewContent.technisch")} rows={3} value={value.technisch} onChange={(v) => set("technisch", v)} />
+      <LabeledTextarea label={t("reviewContent.technisch")} hint={t("reviewContent.technischHint")} rows={3} value={value.technisch} onChange={(v) => set("technisch", v)} />
 
       <div className="grid grid-cols-2 gap-4">
         <LabeledTextarea label={t("reviewContent.mentaalOwner")} rows={4} value={value.mentaal_owner} onChange={(v) => set("mentaal_owner", v)} />

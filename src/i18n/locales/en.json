@@ -346,6 +346,7 @@
   },
   "reviewContent": {
     "technisch": "Technical",
+    "technischHint": "Which narratives were at play this week?",
     "mentaalOwner": "Mental — Owner",
     "mentaalTrader": "Mental — Trader",
     "acties": "Actions",
