@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
@@ -107,6 +107,10 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
     formState: { isSubmitting, isDirty },
   } = methods;
   const [error, setError] = useState<string | null>(null);
+  // QoL: the close date auto-follows the open date until the user edits it themselves.
+  // Seeded `true` when a close date already exists on load (editing a real trade), so an
+  // open-date correction never clobbers a deliberately recorded close date.
+  const closeDateTouchedRef = useRef(Boolean(trade?.datum_sluiting));
   const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   async function handleFormSubmit(values: TradeFormValues) {
@@ -138,9 +142,9 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
 
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-8">
-            <EntrySection />
+            <EntrySection closeDateTouchedRef={closeDateTouchedRef} />
             <hr className="border-border" />
-            <ResultSection allowMissedTrade={allowMissedTrade} />
+            <ResultSection allowMissedTrade={allowMissedTrade} closeDateTouchedRef={closeDateTouchedRef} />
             <hr className="border-border" />
             <TechnicalSection />
 

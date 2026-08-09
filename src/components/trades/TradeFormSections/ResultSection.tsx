@@ -14,9 +14,11 @@ function durationDays(open: string, close: string | null | undefined): number | 
 interface ResultSectionProps {
   /** false when the form is opened from within a backtest project — "Missed trade" isn't a meaningful concept there. */
   allowMissedTrade: boolean;
+  /** Shared with EntrySection: set to true once the user edits the close date, so it stops auto-following the open date. */
+  closeDateTouchedRef: React.MutableRefObject<boolean>;
 }
 
-export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
+export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultSectionProps) {
   const { t } = useTranslation();
   const {
     register,
@@ -52,7 +54,16 @@ export function ResultSection({ allowMissedTrade }: ResultSectionProps) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
-          <input type="date" className="input" {...register("datum_sluiting")} />
+          <input
+            type="date"
+            className="input"
+            {...register("datum_sluiting", {
+              onChange: () => {
+                // From now on the close date is user-owned; stop auto-following the open date.
+                closeDateTouchedRef.current = true;
+              },
+            })}
+          />
         </Field>
         <Field label={t("tradeForm.durationDerived")}>
           <input type="text" disabled value={duur ?? ""} className="input opacity-60" />

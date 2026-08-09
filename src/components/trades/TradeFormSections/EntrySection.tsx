@@ -9,10 +9,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { Field } from "./Field";
 
-export function EntrySection() {
+interface EntrySectionProps {
+  /** Shared with ResultSection: false while the close date still auto-follows the open date. */
+  closeDateTouchedRef: React.MutableRefObject<boolean>;
+}
+
+export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   const {
     register,
     control,
+    setValue,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
   const { hideFase } = useAuth();
@@ -38,7 +44,21 @@ export function EntrySection() {
           </Field>
         )}
         <Field label={t("tradeForm.datumOpen")} error={errors.datum_open?.message}>
-          <input type="date" className="input" {...register("datum_open")} />
+          <input
+            type="date"
+            className="input"
+            {...register("datum_open", {
+              onChange: (e) => {
+                // QoL: keep the close date in sync with the open date, so the close-date
+                // calendar opens in the right week and only the day still needs changing.
+                // Stops as soon as the user edits the close date themselves (see ResultSection).
+                const open = e.target.value;
+                if (open && !closeDateTouchedRef.current) {
+                  setValue("datum_sluiting", open, { shouldDirty: true, shouldValidate: true });
+                }
+              },
+            })}
+          />
         </Field>
         <Field label={t("tradeForm.pair")} error={errors.pair?.message}>
           <EnumSelect options={PAIRS} {...register("pair")} />

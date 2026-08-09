@@ -492,7 +492,11 @@
     "newEntryPlaceholder": "New entry...",
     "newConceptPlaceholder": "New trade concept...",
     "add": "Add",
-    "removeOption": "Remove {{value}}"
+    "removeOption": "Remove {{value}}",
+    "sectionDisplay": "Display & interface",
+    "sectionDisplayDescription": "How the app looks and which name appears at the top of your review PDF.",
+    "sectionTrading": "Trading & fields",
+    "sectionTradingDescription": "Settings that affect your trades and the choice fields in your trade form."
   },
   "economicCalendar": {
     "title": "Economic Calendar",

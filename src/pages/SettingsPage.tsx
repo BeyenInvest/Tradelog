@@ -31,42 +31,66 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
-      <div className="flex flex-col gap-5 max-w-xl">
-        <DisplayNameSettings />
+      <div className="flex flex-col gap-10 max-w-xl">
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("settings.sectionDisplay")}
+            description={t("settings.sectionDisplayDescription")}
+          />
 
-        <Card>
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="font-body text-sm text-ink">{t("settings.showFases")}</p>
-              <p className="font-mono text-xs mt-1 text-muted">{t("settings.showFasesDescription")}</p>
+          <DisplayNameSettings />
+
+          <TimezoneSettings />
+
+          <LanguageSettings />
+        </section>
+
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("settings.sectionTrading")}
+            description={t("settings.sectionTradingDescription")}
+          />
+
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-body text-sm text-ink">{t("settings.showFases")}</p>
+                <p className="font-mono text-xs mt-1 text-muted">{t("settings.showFasesDescription")}</p>
+              </div>
+              <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={[t("settings.on"), t("settings.off")]} />
             </div>
-            <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={[t("settings.on"), t("settings.off")]} />
-          </div>
-          {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
-          {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
-        </Card>
+            {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
+            {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
+          </Card>
 
-        <LanguageSettings />
+          <CustomFieldOptions
+            field="entry"
+            baseList={ENTRIES}
+            titleKey="settings.customEntryOptions"
+            descriptionKey="settings.customEntryOptionsDescription"
+            placeholderKey="settings.newEntryPlaceholder"
+          />
 
-        <TimezoneSettings />
-
-        <CustomFieldOptions
-          field="entry"
-          baseList={ENTRIES}
-          titleKey="settings.customEntryOptions"
-          descriptionKey="settings.customEntryOptionsDescription"
-          placeholderKey="settings.newEntryPlaceholder"
-        />
-
-        <CustomFieldOptions
-          field="trade_concept"
-          baseList={TRADE_CONCEPTS}
-          titleKey="settings.customConceptOptions"
-          descriptionKey="settings.customConceptOptionsDescription"
-          placeholderKey="settings.newConceptPlaceholder"
-        />
+          <CustomFieldOptions
+            field="trade_concept"
+            baseList={TRADE_CONCEPTS}
+            titleKey="settings.customConceptOptions"
+            descriptionKey="settings.customConceptOptionsDescription"
+            placeholderKey="settings.newConceptPlaceholder"
+          />
+        </section>
       </div>
     </>
+  );
+}
+
+/** Klein rubriek-kopje dat de instellingskaarten in logische groepen verdeelt. */
+function SettingsSectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="border-b border-border-soft pb-2">
+      <h2 className="font-display text-lg text-ink">{title}</h2>
+      <p className="font-mono text-xs mt-1 text-muted">{description}</p>
+    </div>
   );
 }
 
