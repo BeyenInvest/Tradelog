@@ -30,6 +30,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
   const [weekNummer, setWeekNummer] = useState(startWeek.week_nummer);
   const [titel, setTitel] = useState(review?.titel ?? "");
   const [content, setContent] = useState<ReviewContentValue>({
+    verhalen: review?.verhalen ?? "",
     technisch: review?.technisch ?? "",
     mentaal_owner: review?.mentaal_owner ?? "",
     mentaal_trader: review?.mentaal_trader ?? "",
@@ -74,6 +75,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
         jaar,
         week_nummer: weekNummer,
         titel: titel || null,
+        verhalen: content.verhalen || null,
         technisch: content.technisch || null,
         mentaal_owner: content.mentaal_owner || null,
         mentaal_trader: content.mentaal_trader || null,

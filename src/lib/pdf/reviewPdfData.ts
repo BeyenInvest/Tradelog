@@ -160,6 +160,7 @@ const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
 
 function weeklySections(t: TFunction, r: WeeklyReview): ReviewPdfSection[] {
   return [
+    section(t("reviewContent.verhalen"), r.verhalen, "text"),
     section(t("reviewContent.technisch"), r.technisch, "text"),
     section(t("reviewContent.mentaalOwner"), r.mentaal_owner, "voice"),
     section(t("reviewContent.mentaalTrader"), r.mentaal_trader, "voice"),

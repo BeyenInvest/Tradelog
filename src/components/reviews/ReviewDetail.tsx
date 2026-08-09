@@ -58,6 +58,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">
           <ReviewContentDisplay
+            verhalen={review.verhalen}
             technisch={review.technisch}
             mentaal_owner={review.mentaal_owner}
             mentaal_trader={review.mentaal_trader}

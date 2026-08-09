@@ -66,6 +66,7 @@ create table weekly_reviews (
   week_nummer integer not null check (week_nummer between 1 and 53),
   jaar integer not null check (jaar between 2000 and 2100),
   titel text,
+  verhalen text,
   technisch text,
   mentaal_owner text,
   mentaal_trader text,

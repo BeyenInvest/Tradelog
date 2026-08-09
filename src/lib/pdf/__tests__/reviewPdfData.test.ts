@@ -13,6 +13,7 @@ const baseWeekly: WeeklyReview = {
   week_nummer: 32,
   jaar: 2026,
   titel: "Geduldige week",
+  verhalen: "CPI-cijfers dreven de dollar.",
   technisch: "  Nette setups afgewacht.  ",
   mentaal_owner: "Rustig gebleven.",
   mentaal_trader: "",
@@ -56,6 +57,9 @@ describe("buildReviewPdfData", () => {
     const labels = data.sections.map((s) => s.label);
     expect(labels).toContain("reviewContent.technisch");
     expect(labels).not.toContain("reviewContent.mentaalTrader");
+    // verhalen is its own section, rendered above technisch
+    expect(labels.indexOf("reviewContent.verhalen")).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf("reviewContent.verhalen")).toBeLessThan(labels.indexOf("reviewContent.technisch"));
     expect(data.sections.find((s) => s.label === "reviewContent.technisch")?.body).toBe("Nette setups afgewacht.");
 
     expect(data.acties).toEqual([

@@ -79,6 +79,7 @@ export interface WeeklyReview {
   week_nummer: number;
   jaar: number;
   titel: string | null;
+  verhalen: string | null;
   technisch: string | null;
   mentaal_owner: string | null;
   mentaal_trader: string | null;

@@ -345,8 +345,9 @@
     "saveFailed": "Saving the review failed"
   },
   "reviewContent": {
+    "verhalen": "Narratives",
+    "verhalenHint": "Which narratives were at play this week?",
     "technisch": "Technical",
-    "technischHint": "Which narratives were at play this week?",
     "mentaalOwner": "Mental — Owner",
     "mentaalTrader": "Mental — Trader",
     "acties": "Actions",

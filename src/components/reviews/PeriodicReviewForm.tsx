@@ -34,6 +34,8 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
   const [periodeNummer, setPeriodeNummer] = useState(review?.periode_nummer ?? defaultPeriodeNummer(periodType, now));
   const [titel, setTitel] = useState(review?.titel ?? "");
   const [content, setContent] = useState<PeriodicReviewContentValue>({
+    // Weekly-only field; carried to satisfy the shared content shape but never rendered or saved for periodic reviews.
+    verhalen: "",
     technisch: review?.technisch ?? "",
     mentaal_owner: review?.mentaal_owner ?? "",
     mentaal_trader: review?.mentaal_trader ?? "",

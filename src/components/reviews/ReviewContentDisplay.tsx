@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { ContentBlock, VoiceBlock, ActiesList, TakeawayQuote, OverallCommentBlock } from "./ReviewContentBlocks";
 
 interface ReviewContentDisplayProps {
+  verhalen?: string | null;
   technisch: string | null;
   mentaal_owner: string | null;
   mentaal_trader: string | null;
@@ -11,10 +12,11 @@ interface ReviewContentDisplayProps {
 }
 
 /** Read-only rendering of the technisch/mentaal/acties/takeaway/overall-comment fields, shared by weekly and periodic review detail views. */
-export function ReviewContentDisplay({ technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
+export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
   const { t } = useTranslation();
   return (
     <>
+      {verhalen && <ContentBlock label={t("reviewContent.verhalen")}>{verhalen}</ContentBlock>}
       {technisch && <ContentBlock label={t("reviewContent.technisch")}>{technisch}</ContentBlock>}
       {(mentaal_owner || mentaal_trader) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
