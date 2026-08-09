@@ -1,11 +1,12 @@
 import type { Trade } from "./types";
 import type { DateRange } from "./periodRanges";
-import type { Fase, Pair, Outcome, TradeEvaluation, Sessie } from "./constants";
+import type { Pair, Outcome, TradeEvaluation, Sessie } from "./constants";
 
 export type { DateRange };
 
 export interface JournalFilters {
-  fase?: Fase;
+  /** A fase name from the user's methodology (Scope C) — free text, not the fixed Fase enum. */
+  fase?: string;
   pair?: Pair;
   outcome?: Outcome;
   tradeEvaluation?: TradeEvaluation;

@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { EnumSelect } from "@/components/ui/EnumSelect";
-import { FASES, PAIRS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
+import { PAIRS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 
 interface FilterPanelProps {
   value: JournalFilters;
@@ -22,6 +23,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
   const { hideFase } = useAuth();
+  const { faseNames } = useMethodology();
 
   return (
     <div className="relative" ref={ref}>
@@ -55,9 +57,9 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
             {!hideFase && (
               <Field label={t("filters.fase")}>
                 <EnumSelect
-                  options={FASES}
+                  options={faseNames}
                   value={value.fase ?? ""}
-                  onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : (e.target.value as (typeof FASES)[number]) })}
+                  onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : e.target.value })}
                   placeholder={t("filters.allFases")}
                   className="w-full text-xs py-1.5"
                 />

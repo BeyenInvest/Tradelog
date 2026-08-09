@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  CCS, FASES, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
+  CCS, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
 } from "./constants";
 
 const boolField = z.boolean().nullable().optional().default(null);
@@ -40,7 +40,10 @@ const nullableString = z.preprocess((val) => (val === "" || val == null ? null :
  */
 export const tradeSchema = z
   .object({
-    fase: z.enum(FASES),
+    // Free text (a fase name from the user's methodology, Scope C) rather than a
+    // fixed z.enum — the valid set is now per-user. The <select> in EntrySection,
+    // fed by useMethodology, is still the only way to set it from the UI.
+    fase: z.string().min(1, "tradeForm.required"),
     datum_open: z.string().min(1, "tradeForm.required"),
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),

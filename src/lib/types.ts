@@ -1,5 +1,5 @@
 import type {
-  CC, Currency, Fase, Outcome, Pair, PeriodType, PropFase, Sessie,
+  CC, Currency, Outcome, Pair, PeriodType, PropFase, Sessie,
   Structuur, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
 } from "./constants";
 
@@ -8,7 +8,12 @@ export interface Trade {
   id: string;
   user_id: string;
 
-  fase: Fase;
+  /**
+   * Fase name. Since Scope C (migration 0020+) this is the name of a fase in the
+   * trade's methodology, not the fixed FASES enum — free text, like `entry`.
+   * For Archer users the values are still "Fase 1".."Fase 4".
+   */
+  fase: string;
   datum_open: string; // ISO date (yyyy-mm-dd)
   datum_sluiting: string | null;
   duur_dagen: number | null; // DB-generated, read-only
@@ -63,6 +68,11 @@ export interface Trade {
   /** Broker-import dedup reference "{broker}:{ticket}", null for hand-entered trades. Set only by the CSV importer — never editable in the form. See src/lib/import. */
   import_ref: string | null;
 
+  /** Methodology this trade was logged under (Scope C). null on legacy/unassigned trades. Not yet written by the form (cyclus 2+). */
+  methodology_id: string | null;
+  /** Flexible per-fase kenmerk bag (Scope C) that replaces the fixed fase*_ columns — keyed by MethodologyField.field_key. Not yet written by the form (cyclus 2). */
+  kenmerken: Record<string, boolean | string>;
+
   created_at: string;
   updated_at: string;
 }
@@ -70,7 +80,8 @@ export interface Trade {
 /** Payload for insert/update — excludes server-managed/generated fields and import-only columns. */
 export type TradeInput = Omit<
   Trade,
-  "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at" | "weekly_review_id" | "import_ref"
+  | "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at"
+  | "weekly_review_id" | "import_ref" | "methodology_id" | "kenmerken"
 >;
 
 export interface WeeklyReview {
@@ -162,8 +173,48 @@ export interface Profile {
   hide_fase: boolean;
   /** IANA timezone the user reads candle-close (cc) times in — drives the tz-aware `trades.sessie` mapping (compute_sessie in the DB). Defaults to 'Europe/Brussels'. */
   timezone: string;
+  /** Active methodology (Scope C). Defaults to the built-in Archer template; drives which fases/kenmerken the UI shows. See useMethodology. */
+  methodology_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * A trading methodology (Scope C) — a user-owned definition of fases + kenmerken,
+ * or the built-in system template (user_id null, is_system). Replaces the fixed
+ * FASES / FASE_KENMERKEN constants as the source of truth for the UI. See migration 0020.
+ */
+export interface Methodology {
+  id: string;
+  user_id: string | null; // null = built-in system template (read-only for everyone)
+  naam: string;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** One fase within a methodology (replaces the fixed FASES enum). */
+export interface MethodologyFase {
+  id: string;
+  methodology_id: string;
+  naam: string;
+  sort_order: number;
+}
+
+/** One kenmerk-field of a fase (replaces the fixed FASE_KENMERKEN config). */
+export interface MethodologyField {
+  id: string;
+  methodology_id: string;
+  fase_id: string;
+  /** Stable key used inside the trades.kenmerken jsonb bag. */
+  field_key: string;
+  label: string;
+  field_type: "boolean" | "enum";
+  /** Ordered allowed values for an enum field; null for boolean fields. */
+  options: string[] | null;
+  /** Derived field (e.g. Fase 3 "Beide?") — shown read-only, never stored in the bag. */
+  is_computed: boolean;
+  sort_order: number;
 }
 
 export interface CustomOption {

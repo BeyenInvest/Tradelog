@@ -46,6 +46,8 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
     weekly_review_id: null,
     backtest_project_id: null,
     import_ref: null,
+    methodology_id: null,
+    kenmerken: {},
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,

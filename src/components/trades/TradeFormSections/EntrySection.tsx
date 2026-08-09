@@ -2,11 +2,12 @@ import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
-import { CCS, ENTRIES, FASES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
+import { CCS, ENTRIES, PAIRS, TRADE_CONCEPTS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
+import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 
 interface EntrySectionProps {
@@ -23,6 +24,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   } = useFormContext<TradeFormValues>();
   const { hideFase } = useAuth();
   const { t } = useTranslation();
+  const { faseNames } = useMethodology();
   const { options: customEntries } = useCustomOptions("entry");
   const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
   const { options: customConcepts } = useCustomOptions("trade_concept");
@@ -40,7 +42,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
           <input type="hidden" {...register("fase")} />
         ) : (
           <Field label={t("tradeForm.fase")} error={errors.fase?.message}>
-            <EnumSelect options={FASES} {...register("fase")} />
+            <EnumSelect options={faseNames} {...register("fase")} />
           </Field>
         )}
         <Field label={t("tradeForm.datumOpen")} error={errors.datum_open?.message}>
