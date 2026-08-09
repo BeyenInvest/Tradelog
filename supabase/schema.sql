@@ -485,6 +485,53 @@ $$;
 revoke all on function get_project_trade_summaries() from public;
 grant execute on function get_project_trade_summaries() to authenticated;
 
+-- ---------- fork_methodology (Scope C, cyclus 2 — see 0024) ----------
+-- Fork-on-edit: copy a (system) methodology + its fields into the caller's own,
+-- editable copy, remapping the self-referential show_when_field_id by field_key.
+create or replace function fork_methodology(source_id uuid)
+returns uuid
+language plpgsql
+security invoker
+as $$
+declare
+  new_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  insert into methodologies (user_id, naam, is_system, asset_class, instrument_config)
+  select auth.uid(), naam, false, asset_class, instrument_config
+  from methodologies where id = source_id
+  returning id into new_id;
+
+  if new_id is null then
+    raise exception 'source methodology % not found or not visible', source_id;
+  end if;
+
+  insert into methodology_fields
+    (methodology_id, fase_id, field_key, label, field_type, options, is_computed,
+     group_label, required, show_when_values, sort_order)
+  select new_id, null, field_key, label, field_type, options, is_computed,
+         group_label, required, show_when_values, sort_order
+  from methodology_fields where methodology_id = source_id;
+
+  update methodology_fields nf
+  set show_when_field_id = np.id
+  from methodology_fields sf
+  join methodology_fields sp on sp.id = sf.show_when_field_id
+  join methodology_fields np on np.methodology_id = new_id and np.field_key = sp.field_key
+  where sf.methodology_id = source_id
+    and nf.methodology_id = new_id
+    and nf.field_key = sf.field_key;
+
+  return new_id;
+end;
+$$;
+
+revoke all on function fork_methodology(uuid) from public;
+grant execute on function fork_methodology(uuid) to authenticated;
+
 -- ---------- auto-link trade <-> weekly_review ----------
 -- Two BEFORE/AFTER INSERT triggers keep the link in sync in both directions:
 --   * new trade  -> find existing review for its ISO week (below)

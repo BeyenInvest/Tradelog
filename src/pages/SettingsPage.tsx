@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
+import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { ENTRIES, TRADE_CONCEPTS } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
@@ -78,6 +79,14 @@ export default function SettingsPage() {
             descriptionKey="settings.customConceptOptionsDescription"
             placeholderKey="settings.newConceptPlaceholder"
           />
+        </section>
+
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("methodology.title")}
+            description={t("methodology.description")}
+          />
+          <MethodologyEditor />
         </section>
       </div>
     </>
