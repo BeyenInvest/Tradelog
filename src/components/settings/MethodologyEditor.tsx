@@ -111,6 +111,7 @@ export function MethodologyEditor() {
           <FieldRow
             key={f.id}
             field={f}
+            allFields={fields}
             editable={isOwn && !busy}
             isFirst={i === 0}
             isLast={i === fields.length - 1}
@@ -121,7 +122,13 @@ export function MethodologyEditor() {
         ))}
       </div>
 
-      {isOwn && <AddFieldForm busy={busy} onAdd={(input) => run(() => addField(input), "methodology.saveFailed")} />}
+      {isOwn && (
+        <AddFieldForm
+          busy={busy}
+          allFields={fields}
+          onAdd={(input) => run(() => addField(input), "methodology.saveFailed")}
+        />
+      )}
     </Card>
   );
 }
@@ -130,13 +137,16 @@ function typeLabel(t: (k: string) => string, type: MethodologyField["field_type"
   return t(`methodology.type_${type}`);
 }
 
-function conditionSummary(t: (k: string) => string, f: MethodologyField): string {
+function conditionSummary(t: (k: string) => string, f: MethodologyField, allFields: MethodologyField[]): string {
   if (!f.show_when_field_id || !f.show_when_values || f.show_when_values.length === 0) return t("methodology.always");
-  return f.show_when_values.join(", ");
+  const parent = allFields.find((p) => p.id === f.show_when_field_id);
+  const parentLabel = parent?.label ?? "?";
+  return `${parentLabel} = ${f.show_when_values.join(", ")}`;
 }
 
 function FieldRow({
   field,
+  allFields,
   editable,
   isFirst,
   isLast,
@@ -145,6 +155,7 @@ function FieldRow({
   onSave,
 }: {
   field: MethodologyField;
+  allFields: MethodologyField[];
   editable: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -159,6 +170,7 @@ function FieldRow({
     return (
       <FieldForm
         initial={field}
+        allFields={allFields}
         submitLabel={t("methodology.save")}
         onCancel={() => setEditing(false)}
         onSubmit={async (input) => {
@@ -169,6 +181,8 @@ function FieldRow({
             options: input.options,
             required: input.required,
             group_label: input.group_label,
+            show_when_field_id: input.show_when_field_id,
+            show_when_values: input.show_when_values,
           });
           setEditing(false);
         }}
@@ -192,7 +206,7 @@ function FieldRow({
           {field.field_key} · {typeLabel(t, field.field_type)}
           {field.field_type === "enum" && field.options?.length ? ` (${field.options.join(", ")})` : ""}
           {" · "}
-          {t("methodology.condition")}: {conditionSummary(t, field)}
+          {t("methodology.condition")}: {conditionSummary(t, field, allFields)}
         </p>
       </div>
       {editable && (
@@ -244,7 +258,15 @@ function IconBtn({
   );
 }
 
-function AddFieldForm({ busy, onAdd }: { busy: boolean; onAdd: (input: FieldInput) => Promise<void> }) {
+function AddFieldForm({
+  busy,
+  allFields,
+  onAdd,
+}: {
+  busy: boolean;
+  allFields: MethodologyField[];
+  onAdd: (input: FieldInput) => Promise<void>;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -264,6 +286,7 @@ function AddFieldForm({ busy, onAdd }: { busy: boolean; onAdd: (input: FieldInpu
   return (
     <div className="mt-4 pt-4 border-t border-border-soft">
       <FieldForm
+        allFields={allFields}
         submitLabel={t("methodology.add")}
         onCancel={() => setOpen(false)}
         onSubmit={async (input) => {
@@ -278,11 +301,13 @@ function AddFieldForm({ busy, onAdd }: { busy: boolean; onAdd: (input: FieldInpu
 /** Shared add/edit form for a field. field_key is derived from the label for new fields, read-only for existing. */
 function FieldForm({
   initial,
+  allFields,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial?: MethodologyField;
+  allFields: MethodologyField[];
   submitLabel: string;
   onSubmit: (input: FieldInput) => Promise<void>;
   onCancel: () => void;
@@ -294,9 +319,26 @@ function FieldForm({
   const [optionsRaw, setOptionsRaw] = useState((initial?.options ?? []).join(", "));
   const [required, setRequired] = useState(initial?.required ?? false);
   const [group, setGroup] = useState(initial?.group_label ?? "");
+  const [showWhenFieldId, setShowWhenFieldId] = useState<string | null>(initial?.show_when_field_id ?? null);
+  const [showWhenValues, setShowWhenValues] = useState<string[]>(initial?.show_when_values ?? []);
   const [saving, setSaving] = useState(false);
 
-  const canSave = label.trim().length > 0 && (fieldType !== "enum" || parseOptions(optionsRaw).length > 0);
+  // A condition can only key off another enum field's values — exclude self (a
+  // field can't depend on itself). Matches the model in the design doc §2.4.
+  const parentCandidates = allFields.filter(
+    (f) => f.field_type === "enum" && (f.options?.length ?? 0) > 0 && f.id !== initial?.id
+  );
+  const parent = parentCandidates.find((f) => f.id === showWhenFieldId) ?? null;
+
+  function toggleValue(v: string) {
+    setShowWhenValues((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  }
+
+  // If a parent is chosen, at least one value must be ticked, else the condition
+  // would never match and the field would be permanently hidden.
+  const conditionValid = !showWhenFieldId || showWhenValues.length > 0;
+  const canSave =
+    label.trim().length > 0 && (fieldType !== "enum" || parseOptions(optionsRaw).length > 0) && conditionValid;
 
   async function submit() {
     if (!canSave) return;
@@ -309,6 +351,8 @@ function FieldForm({
         options: fieldType === "enum" ? parseOptions(optionsRaw) : null,
         required,
         group_label: group.trim() || null,
+        show_when_field_id: showWhenFieldId,
+        show_when_values: showWhenFieldId ? showWhenValues : null,
       });
     } finally {
       setSaving(false);
@@ -378,6 +422,59 @@ function FieldForm({
           <p className="font-mono text-[10px] text-muted">{t("methodology.fieldOptionsHint")}</p>
         </div>
       )}
+
+      <div className="flex flex-col gap-1.5 pt-1 border-t border-border-soft">
+        <label className="font-mono text-[11px] text-muted">{t("methodology.visibility")}</label>
+        {parentCandidates.length === 0 ? (
+          <p className="font-mono text-[10px] text-muted">{t("methodology.conditionNoEnum")}</p>
+        ) : (
+          <>
+            <select
+              value={showWhenFieldId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setShowWhenFieldId(id);
+                setShowWhenValues([]); // reset ticks — a new parent has different options
+              }}
+              className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold self-start"
+            >
+              <option value="">{t("methodology.conditionAlways")}</option>
+              {parentCandidates.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {t("methodology.conditionWhen", { field: f.label })}
+                </option>
+              ))}
+            </select>
+            {parent && (
+              <div className="flex flex-col gap-1.5 mt-1">
+                <span className="font-mono text-[10px] text-muted">
+                  {t("methodology.conditionValues", { field: parent.label })}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(parent.options ?? []).map((opt) => {
+                    const on = showWhenValues.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleValue(opt)}
+                        className={`px-2.5 py-1 rounded-full font-mono text-[11px] border transition-colors ${
+                          on ? "bg-gold text-on-gold border-gold" : "border-border text-muted hover:border-gold"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!conditionValid && (
+                  <span className="font-mono text-[10px] text-loss">{t("methodology.conditionPickValue")}</span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div className="flex gap-2">
         <button

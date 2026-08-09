@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
-/** Editable attributes of a custom field (conditions/show_when are managed separately, later). */
+/** Editable attributes of a custom field, including its conditional visibility (show_when, cyclus 2b). */
 export interface FieldInput {
   field_key: string;
   label: string;
@@ -11,6 +11,9 @@ export interface FieldInput {
   options: string[] | null;
   required: boolean;
   group_label: string | null;
+  /** Show this field only when show_when_field_id's value is in show_when_values; null = always. */
+  show_when_field_id: string | null;
+  show_when_values: string[] | null;
 }
 
 /**
