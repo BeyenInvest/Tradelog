@@ -212,7 +212,7 @@ create table custom_options (
 
 -- ---------- CONFIGURABLE METHODOLOGY / JOURNAL (Scope C — see 0020, 0022) ----------
 -- Per-user methodology definitions that replace the hard-coded FASES /
--- FASE_KENMERKEN (constants.ts). The built-in Archer template (user_id NULL,
+-- FASE_KENMERKEN (constants.ts). The built-in Weekly Phase Method template (user_id NULL,
 -- is_system) is seeded below, world-readable and editable by no one; users own
 -- and edit their own copies. Fase-kenmerken move off the fixed trades.fase*_
 -- columns into the flexible trades.custom jsonb bag, shaped by the field
@@ -257,11 +257,11 @@ create table methodology_fields (
 create index idx_methodology_fases_methodology on methodology_fases(methodology_id);
 create index idx_methodology_fields_methodology on methodology_fields(methodology_id);
 
--- Seed the built-in Archer template (the methodology currently hard-coded in
+-- Seed the built-in Weekly Phase Method template (the methodology currently hard-coded in
 -- constants.ts) BEFORE the profiles alter below — that alter's column default
 -- points at this row, so it must exist first. Fixed id keeps references stable.
 insert into methodologies (id, user_id, naam, is_system, asset_class)
-values ('00000000-0000-4000-8000-000000000001', null, 'Archer', true, 'forex');
+values ('00000000-0000-4000-8000-000000000001', null, 'Weekly Phase Method', true, 'forex');
 
 insert into methodology_fases (methodology_id, naam, sort_order) values
   ('00000000-0000-4000-8000-000000000001', 'Fase 1', 1),
@@ -296,12 +296,156 @@ from fase_field ff, (values
   ('weekly_bevestigingscandle', 'Weekly bevestigingscandle?',      'boolean', null::jsonb,                false, '["Fase 4"]'::jsonb,          8)
 ) as v(field_key, label, field_type, options, is_computed, show_when, sort_order);
 
+-- Journal-presets catalogue (Scope C, cyclus 6 — see 0027 + docs/journal-presets.md).
+-- 8 is_system recipes = asset preset (instrument/sizing/asset fields) ∪ trader-style
+-- preset (setup/quality/mindset/beheer fields). Picked in /settings and forked into
+-- an editable own copy via fork_methodology(). Weekly Phase Method (above) is one more
+-- recipe; "Blanco" is the empty own methodology handle_new_user() provisions (0025).
+insert into methodologies (id, user_id, naam, is_system, asset_class, instrument_config) values
+  ('00000000-0000-4000-8000-000000000010', null, 'Forex — Day trader',   true, 'forex',
+     '{"unit":"lots","sizing_tools":["lot_calculator","currency_split"]}'::jsonb),
+  ('00000000-0000-4000-8000-000000000011', null, 'Forex — Swing',        true, 'forex',
+     '{"unit":"lots","sizing_tools":["lot_calculator","currency_split"]}'::jsonb),
+  ('00000000-0000-4000-8000-000000000020', null, 'Futures — Scalper',    true, 'futures',
+     '{"unit":"contracts","sizing_tools":["tick_value"],"tick_values":{"ES":12.5,"NQ":5,"YM":5,"RTY":5,"CL":10,"GC":10,"MES":1.25,"MNQ":0.5}}'::jsonb),
+  ('00000000-0000-4000-8000-000000000021', null, 'Futures — Day trader', true, 'futures',
+     '{"unit":"contracts","sizing_tools":["tick_value"],"tick_values":{"ES":12.5,"NQ":5,"YM":5,"RTY":5,"CL":10,"GC":10,"MES":1.25,"MNQ":0.5}}'::jsonb),
+  ('00000000-0000-4000-8000-000000000030', null, 'Stocks — Day trader',  true, 'stock',
+     '{"unit":"shares"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000031', null, 'Stocks — Swing',       true, 'stock',
+     '{"unit":"shares"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000040', null, 'Crypto — Day trader',  true, 'crypto',
+     '{"unit":"coins","note":"24/7"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000041', null, 'Crypto — Swing',       true, 'crypto',
+     '{"unit":"coins","note":"24/7"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000012', null, 'Forex — Scalper',      true, 'forex',
+     '{"unit":"lots","sizing_tools":["lot_calculator","currency_split"]}'::jsonb),
+  ('00000000-0000-4000-8000-000000000042', null, 'Crypto — Scalper',     true, 'crypto',
+     '{"unit":"coins","note":"24/7"}'::jsonb);
+
+insert into methodology_fields
+  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, show_when_values, sort_order)
+select
+  v.methodology_id::uuid, null, v.field_key, v.label, v.field_type, v.options, false, v.group_label, false, v.show_when_values, v.sort_order
+from (values
+  ('00000000-0000-4000-8000-000000000010','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000010','timeframe','Timeframe','enum','["1m","5m","15m","1H"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000010','market_condition','Marktconditie','enum','["Trending","Ranging","Volatiel/nieuws"]'::jsonb,'Setup',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000010','quality','Setup-kwaliteit','enum','["A+","B","C","Off-plan"]'::jsonb,'Setup',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000010','session','Sessie','enum','["Asia","London","New York","Overlap"]'::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000010','news','High-impact nieuws?','boolean',null::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000010','mistake','Fout','enum','["Geen","FOMO","Revenge","Oversized","Chased","Te vroeg","Te laat"]'::jsonb,'Mindset',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000010','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,8),
+
+  ('00000000-0000-4000-8000-000000000011','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000011','timeframe','Timeframe','enum','["1H","4H","Daily"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000011','session','Sessie','enum','["Asia","London","New York","Overlap"]'::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000011','news','High-impact nieuws?','boolean',null::jsonb,'Markt',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000011','market_regime','Marktregime','enum','["Bull","Bear","Sideways"]'::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000011','targets','Targets (R)','text',null::jsonb,'Beheer',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000011','catalyst','Katalysator','text',null::jsonb,'Beheer',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000011','management_notes','Beheer-notities','text',null::jsonb,'Beheer',null::jsonb,8),
+
+  ('00000000-0000-4000-8000-000000000020','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000020','timeframe','Timeframe','enum','["1m","3m","5m"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000020','contracts','Aantal contracten','number',null::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000020','contract_type','Contracttype','enum','["Standard","Micro"]'::jsonb,'Markt',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000020','contract_month','Contractmaand','text',null::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000020','hours','Handelsuren','enum','["RTH","ETH"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000020','session','Sessie','enum','["Pre-market","Regular","Overnight"]'::jsonb,'Markt',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000020','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,8),
+
+  ('00000000-0000-4000-8000-000000000021','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000021','timeframe','Timeframe','enum','["1m","5m","15m","1H"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000021','market_condition','Marktconditie','enum','["Trending","Ranging","Volatiel/nieuws"]'::jsonb,'Setup',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000021','quality','Setup-kwaliteit','enum','["A+","B","C","Off-plan"]'::jsonb,'Setup',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000021','contracts','Aantal contracten','number',null::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000021','contract_type','Contracttype','enum','["Standard","Micro"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000021','contract_month','Contractmaand','text',null::jsonb,'Markt',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000021','hours','Handelsuren','enum','["RTH","ETH"]'::jsonb,'Markt',null::jsonb,8),
+  ('00000000-0000-4000-8000-000000000021','session','Sessie','enum','["Pre-market","Regular","Overnight"]'::jsonb,'Markt',null::jsonb,9),
+  ('00000000-0000-4000-8000-000000000021','mistake','Fout','enum','["Geen","FOMO","Revenge","Oversized","Chased","Te vroeg","Te laat"]'::jsonb,'Mindset',null::jsonb,10),
+  ('00000000-0000-4000-8000-000000000021','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,11),
+
+  ('00000000-0000-4000-8000-000000000030','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000030','timeframe','Timeframe','enum','["1m","5m","15m","1H"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000030','market_condition','Marktconditie','enum','["Trending","Ranging","Volatiel/nieuws"]'::jsonb,'Setup',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000030','quality','Setup-kwaliteit','enum','["A+","B","C","Off-plan"]'::jsonb,'Setup',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000030','sector','Sector','enum','["Tech","Healthcare","Financials","Energy","Consumer","Industrials","Materials","Utilities","Real Estate","Communications"]'::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000030','market_cap','Market cap','enum','["Large","Mid","Small","Micro"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000030','float','Float','enum','["Laag","Middel","Hoog"]'::jsonb,'Markt',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000030','catalyst','Katalysator','enum','["Earnings","FDA","Up/downgrade","Sectornieuws","Gap","Breakout","M&A","Geen"]'::jsonb,'Markt',null::jsonb,8),
+  ('00000000-0000-4000-8000-000000000030','session','Sessie','enum','["Pre-market","Regular","After-hours"]'::jsonb,'Markt',null::jsonb,9),
+  ('00000000-0000-4000-8000-000000000030','mistake','Fout','enum','["Geen","FOMO","Revenge","Oversized","Chased","Te vroeg","Te laat"]'::jsonb,'Mindset',null::jsonb,10),
+  ('00000000-0000-4000-8000-000000000030','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,11),
+
+  ('00000000-0000-4000-8000-000000000031','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000031','timeframe','Timeframe','enum','["1H","4H","Daily"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000031','sector','Sector','enum','["Tech","Healthcare","Financials","Energy","Consumer","Industrials","Materials","Utilities","Real Estate","Communications"]'::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000031','market_cap','Market cap','enum','["Large","Mid","Small","Micro"]'::jsonb,'Markt',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000031','float','Float','enum','["Laag","Middel","Hoog"]'::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000031','catalyst','Katalysator','enum','["Earnings","FDA","Up/downgrade","Sectornieuws","Gap","Breakout","M&A","Geen"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000031','session','Sessie','enum','["Pre-market","Regular","After-hours"]'::jsonb,'Markt',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000031','market_regime','Marktregime','enum','["Bull","Bear","Sideways"]'::jsonb,'Markt',null::jsonb,8),
+  ('00000000-0000-4000-8000-000000000031','targets','Targets (R)','text',null::jsonb,'Beheer',null::jsonb,9),
+  ('00000000-0000-4000-8000-000000000031','management_notes','Beheer-notities','text',null::jsonb,'Beheer',null::jsonb,10),
+
+  ('00000000-0000-4000-8000-000000000040','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000040','timeframe','Timeframe','enum','["1m","5m","15m","1H"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000040','market_condition','Marktconditie','enum','["Trending","Ranging","Volatiel/nieuws"]'::jsonb,'Setup',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000040','quality','Setup-kwaliteit','enum','["A+","B","C","Off-plan"]'::jsonb,'Setup',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000040','market_type','Markttype','enum','["Spot","Perpetual","Futures"]'::jsonb,'Markt',null::jsonb,5),
+  ('00000000-0000-4000-8000-000000000040','leverage','Hefboom (x)','number',null::jsonb,'Markt','["Perpetual","Futures"]'::jsonb,6),
+  ('00000000-0000-4000-8000-000000000040','funding_rate','Funding rate %','number',null::jsonb,'Markt','["Perpetual"]'::jsonb,7),
+  ('00000000-0000-4000-8000-000000000040','session_utc','Sessie (UTC)','enum','["Asia","Europe","US"]'::jsonb,'Markt',null::jsonb,8),
+  ('00000000-0000-4000-8000-000000000040','mistake','Fout','enum','["Geen","FOMO","Revenge","Oversized","Chased","Te vroeg","Te laat"]'::jsonb,'Mindset',null::jsonb,9),
+  ('00000000-0000-4000-8000-000000000040','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,10),
+
+  ('00000000-0000-4000-8000-000000000041','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000041','timeframe','Timeframe','enum','["1H","4H","Daily"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000041','market_type','Markttype','enum','["Spot","Perpetual","Futures"]'::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000041','leverage','Hefboom (x)','number',null::jsonb,'Markt','["Perpetual","Futures"]'::jsonb,4),
+  ('00000000-0000-4000-8000-000000000041','funding_rate','Funding rate %','number',null::jsonb,'Markt','["Perpetual"]'::jsonb,5),
+  ('00000000-0000-4000-8000-000000000041','session_utc','Sessie (UTC)','enum','["Asia","Europe","US"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000041','market_regime','Marktregime','enum','["Bull","Bear","Sideways"]'::jsonb,'Markt',null::jsonb,7),
+  ('00000000-0000-4000-8000-000000000041','targets','Targets (R)','text',null::jsonb,'Beheer',null::jsonb,8),
+  ('00000000-0000-4000-8000-000000000041','catalyst','Katalysator','text',null::jsonb,'Beheer',null::jsonb,9),
+  ('00000000-0000-4000-8000-000000000041','management_notes','Beheer-notities','text',null::jsonb,'Beheer',null::jsonb,10),
+
+  ('00000000-0000-4000-8000-000000000012','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000012','timeframe','Timeframe','enum','["1m","3m","5m"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000012','session','Sessie','enum','["Asia","London","New York","Overlap"]'::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000012','news','High-impact nieuws?','boolean',null::jsonb,'Markt',null::jsonb,4),
+  ('00000000-0000-4000-8000-000000000012','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,5),
+
+  ('00000000-0000-4000-8000-000000000042','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
+  ('00000000-0000-4000-8000-000000000042','timeframe','Timeframe','enum','["1m","3m","5m"]'::jsonb,'Setup',null::jsonb,2),
+  ('00000000-0000-4000-8000-000000000042','market_type','Markttype','enum','["Spot","Perpetual","Futures"]'::jsonb,'Markt',null::jsonb,3),
+  ('00000000-0000-4000-8000-000000000042','leverage','Hefboom (x)','number',null::jsonb,'Markt','["Perpetual","Futures"]'::jsonb,4),
+  ('00000000-0000-4000-8000-000000000042','funding_rate','Funding rate %','number',null::jsonb,'Markt','["Perpetual"]'::jsonb,5),
+  ('00000000-0000-4000-8000-000000000042','session_utc','Sessie (UTC)','enum','["Asia","Europe","US"]'::jsonb,'Markt',null::jsonb,6),
+  ('00000000-0000-4000-8000-000000000042','emotion','Emotie','enum','["Kalm/gedisciplineerd","FOMO","Angst","Hebzucht","Revenge"]'::jsonb,'Mindset',null::jsonb,7)
+) as v(methodology_id, field_key, label, field_type, options, group_label, show_when_values, sort_order);
+
+-- Crypto conditional visibility: leverage/funding_rate shown by market_type (see 0027).
+update methodology_fields child
+set show_when_field_id = parent.id
+from methodology_fields parent
+where parent.methodology_id = child.methodology_id
+  and parent.field_key = 'market_type'
+  and child.field_key in ('leverage', 'funding_rate')
+  and child.methodology_id in (
+    '00000000-0000-4000-8000-000000000040',
+    '00000000-0000-4000-8000-000000000041',
+    '00000000-0000-4000-8000-000000000042'
+  );
+
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
 alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
 alter table trades add column custom jsonb not null default '{}'::jsonb; -- flexible per-trade custom-field bag (was `kenmerken`, renamed in 0022)
 -- No column default: new users are provisioned an own empty journal by
--- handle_new_user() (see 0025), not silently handed the Archer template.
+-- handle_new_user() (see 0025), not silently handed the Weekly Phase Method template.
 alter table profiles add column methodology_id uuid references methodologies(id) on delete set null;
 
 -- ---------- INDEXES ----------
@@ -406,7 +550,7 @@ create trigger trg_profiles_recompute_sessie
 -- SECURITY DEFINER: the client's JWT has no insert rights on auth.users or a
 -- brand-new profiles row at signup time, so this runs with elevated
 -- privileges, scoped tightly to just these inserts.
--- Each new user also gets their own EMPTY journal (methodology) — the Archer
+-- Each new user also gets their own EMPTY journal (methodology) — the Weekly Phase Method
 -- template is a preset, never imposed on new signups (see 0025, Scope C plak 3).
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$

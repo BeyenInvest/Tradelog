@@ -223,6 +223,7 @@
     "sectionEntry": "Entry",
     "sectionResult": "Result",
     "sectionTechnical": "Technical analysis",
+    "customSectionHeading": "Extra velden",
     "fase": "Fase",
     "datumOpen": "Datum open",
     "pair": "Pair",
@@ -501,7 +502,7 @@
   },
   "methodology": {
     "title": "Journal & velden",
-    "description": "De methodiek van je journal — welke velden je per trade invult. Het Archer-sjabloon is alleen-lezen; maak een eigen kopie om aan te passen.",
+    "description": "De methodiek van je journal — welke velden je per trade invult. Het Weekly Phase Method-sjabloon is alleen-lezen; maak een eigen kopie om aan te passen.",
     "none": "Geen actieve methodiek gevonden.",
     "ownDescription": "Je eigen journal — pas velden vrij aan.",
     "templateDescription": "Ingebouwd sjabloon (alleen-lezen). Maak een bewerkbare kopie om aan te passen.",
@@ -541,6 +542,19 @@
     "type_text": "Tekst",
     "type_number": "Getal",
     "type_date": "Datum"
+  },
+  "presets": {
+    "title": "Start vanaf een sjabloon",
+    "subtitle": "Kies een kant-en-klaar journal (asset × stijl) en pas het daarna vrij aan.",
+    "blankName": "Blanco",
+    "blankDesc": "Enkel de universele kern — bouw je velden zelf op.",
+    "noFields": "Geen extra velden",
+    "use": "Gebruik dit sjabloon",
+    "apply": "Toepassen",
+    "cancel": "Annuleren",
+    "confirmTitle": "Actief journal vervangen?",
+    "confirmBody": "Dit maakt een eigen, bewerkbare kopie van \"{{name}}\" en maakt die je actieve journal. Je vorige journal en de trades erin blijven bestaan.",
+    "applyFailed": "Sjabloon toepassen is mislukt"
   },
   "economicCalendar": {
     "title": "Economic Calendar",

@@ -1,7 +1,7 @@
 -- =========================================================
 -- Beyen Invest — migration 0023: fase becomes a field (Scope C, cyclus 1b — plak 2a)
 --
--- Reseeds the Archer template's methodology_fields into the unified flat model
+-- Reseeds the Weekly Phase Method template's methodology_fields into the unified flat model
 -- from the design (docs/ontwerp-configureerbaar-journal.md §2.4/§3):
 --   * a 'fase' enum field (options = the 4 fase names) becomes the source of the
 --     fase list — "fase is just a field". methodology_fases is KEPT for now

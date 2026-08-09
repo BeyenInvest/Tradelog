@@ -6,7 +6,7 @@
 --   * methodologies gets asset_class + instrument_config -> it becomes the "journal"
 --   * methodology_fields gains the generic custom-field attributes (field_type
 --     widened to text/number/date; group_label; required; show_when_* for
---     conditional visibility, the generalisation of Archer's fase-conditional kenmerken)
+--     conditional visibility, the generalisation of Weekly Phase Method's fase-conditional kenmerken)
 --   * trades.kenmerken -> trades.custom (the flexible per-trade custom-value bag)
 --
 -- NO existing behaviour changes: useMethodology still reads methodology_fases and
@@ -24,7 +24,7 @@
 alter table methodologies add column asset_class text;
 alter table methodologies add column instrument_config jsonb;
 
--- The built-in Archer template is a forex methodology.
+-- The built-in Weekly Phase Method template is a forex methodology.
 update methodologies set asset_class = 'forex'
   where id = '00000000-0000-4000-8000-000000000001';
 

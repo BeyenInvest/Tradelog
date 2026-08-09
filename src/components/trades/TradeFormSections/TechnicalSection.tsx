@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
 import { FaseKenmerkenSection } from "./FaseKenmerkenSection";
@@ -11,26 +12,31 @@ export function TechnicalSection() {
   const { t } = useTranslation();
   const { register, control } = useFormContext<TradeFormValues>();
   const { hideFase } = useAuth();
+  const { isLegacyMethodology } = useMethodology();
 
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionTechnical")}</h3>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label={t("tradeForm.weeklyDirection")}>
-          <Controller name="w_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
-        </Field>
-        <Field label={t("tradeForm.dailyDirection")}>
-          <Controller name="d_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
-        </Field>
-        <Field label={t("tradeForm.h4Direction")}>
-          <Controller name="h4_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
-        </Field>
-        <Field label={t("tradeForm.extraDailyConfirm")}>
-          <Controller name="extra_d_conf" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
-        </Field>
-      </div>
+      {/* The multi-timeframe confirms + fase-kenmerken are the Weekly Phase Method's hardcoded
+          legacy block. Screenshots + notes below are universal core and always shown. */}
+      {isLegacyMethodology && (
+        <div className="grid grid-cols-2 gap-4">
+          <Field label={t("tradeForm.weeklyDirection")}>
+            <Controller name="w_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
+          </Field>
+          <Field label={t("tradeForm.dailyDirection")}>
+            <Controller name="d_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
+          </Field>
+          <Field label={t("tradeForm.h4Direction")}>
+            <Controller name="h4_confirm" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
+          </Field>
+          <Field label={t("tradeForm.extraDailyConfirm")}>
+            <Controller name="extra_d_conf" control={control} render={({ field }) => <BooleanToggle value={field.value} onChange={field.onChange} />} />
+          </Field>
+        </div>
+      )}
 
-      {!hideFase && <FaseKenmerkenSection />}
+      {isLegacyMethodology && !hideFase && <FaseKenmerkenSection />}
 
       <div className="grid grid-cols-2 gap-4">
         <UrlPreviewField name="w_screenshot" label={t("tradeForm.weeklyScreenshot")} />

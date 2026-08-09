@@ -88,6 +88,16 @@ export const tradeSchema = z
     fase3_structuur: nullableEnum(STRUCTUREN).optional().default(null),
 
     fase4_weekly_bevestigingscandle: boolField,
+
+    // Scope C, cyclus 3. `custom` is the flexible per-trade bag keyed by
+    // MethodologyField.field_key; its shape is per-user so it can't be a fixed
+    // object schema. Values are `unknown` here because the RAW form state carries
+    // in-progress junk (empty enum "" , empty number NaN, null toggles) that a
+    // strict union would reject; CustomFieldsSection renders it and TradeForm
+    // prunes it to string|number|boolean before saving. `methodology_id` records
+    // which journal the trade was logged under.
+    custom: z.record(z.string(), z.unknown()).default({}),
+    methodology_id: z.string().nullable().optional().default(null),
   })
   .superRefine((data, ctx) => {
     if (data.datum_sluiting && data.datum_sluiting < data.datum_open) {

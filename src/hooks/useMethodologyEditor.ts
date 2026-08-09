@@ -18,7 +18,7 @@ export interface FieldInput {
 
 /**
  * CRUD over the active methodology's fields (Scope C, cyclus 2). System templates
- * (Archer) are read-only; `fork()` makes an editable personal copy and repoints
+ * (Weekly Phase Method) are read-only; `fork()` makes an editable personal copy and repoints
  * the profile at it (fork-on-edit). All mutations operate on the user's own
  * methodology — the UI gates editing behind `isOwn`/`fork()`.
  */

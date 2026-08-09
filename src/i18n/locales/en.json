@@ -223,6 +223,7 @@
     "sectionEntry": "Entry",
     "sectionResult": "Result",
     "sectionTechnical": "Technical analysis",
+    "customSectionHeading": "Additional fields",
     "fase": "Phase",
     "datumOpen": "Open date",
     "pair": "Pair",
@@ -501,7 +502,7 @@
   },
   "methodology": {
     "title": "Journal & fields",
-    "description": "Your journal's methodology — which fields you fill in per trade. The Archer template is read-only; make your own copy to customise it.",
+    "description": "Your journal's methodology — which fields you fill in per trade. The Weekly Phase Method template is read-only; make your own copy to customise it.",
     "none": "No active methodology found.",
     "ownDescription": "Your own journal — customise fields freely.",
     "templateDescription": "Built-in template (read-only). Make an editable copy to customise it.",
@@ -541,6 +542,19 @@
     "type_text": "Text",
     "type_number": "Number",
     "type_date": "Date"
+  },
+  "presets": {
+    "title": "Start from a template",
+    "subtitle": "Pick a ready-made journal (asset × style), then tailor it freely.",
+    "blankName": "Blank",
+    "blankDesc": "Just the universal core — build your own fields.",
+    "noFields": "No extra fields",
+    "use": "Use this template",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "confirmTitle": "Replace active journal?",
+    "confirmBody": "This makes an editable personal copy of \"{{name}}\" and sets it as your active journal. Your previous journal and its trades are kept.",
+    "applyFailed": "Applying the template failed"
   },
   "economicCalendar": {
     "title": "Economic Calendar",

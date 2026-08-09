@@ -1,7 +1,7 @@
 # Beyen — Ontwerp: configureerbaar journal (universele kern + custom velden)
 
 > Status: **ontwerp** (nog niet gebouwd). Branch `fase-3-config-methodiek`.
-> Voortbouwend op cyclus 0 (datamodel + Archer-seed + backfill) en 1a (form/filter lezen fases uit de methodiek).
+> Voortbouwend op cyclus 0 (datamodel + Weekly Phase Method-seed + backfill) en 1a (form/filter lezen fases uit de methodiek).
 > Dit document is de blauwdruk die de bouw-cycli stuurt. Beslissingen staan expliciet gemarkeerd; open keuzes onderaan.
 
 ---
@@ -13,9 +13,9 @@
 **Kernprincipes (leidend voor elke ontwerpkeuze):**
 
 1. **Universele kern is vast, de rest is van de gebruiker.** Een kleine set velden geldt voor iedereen (datum, instrument, richting, uitkomst, resultaat, risico, notities, screenshots). Alles daarbuiten is per-user gedefinieerd.
-2. **Archer is één preset, niet de norm.** De 4-fasen-ruggengraat wordt één van vele startsjablonen. De app is nu "verkeerd-om" rond die ~0,5% gebouwd; dit ontwerp draait dat om.
+2. **Weekly Phase Method is één preset, niet de norm.** De 4-fasen-ruggengraat wordt één van vele startsjablonen. De app is nu "verkeerd-om" rond die ~0,5% gebouwd; dit ontwerp draait dat om.
 3. **Fase = gewoon een veld.** Er is geen speciaal "fase"-concept meer in de kern. "Fase" is een custom keuzelijst-veld zoals elk ander. Dat collapse't cyclus-0's `methodology_fases` + `methodology_fields` naar één generieke veldtabel.
-4. **Non-intrusief, altijd.** Zoals elke eerdere fase: de owner (Archer-data) blijft de hele rit door exact werken. Geen enkele cyclus mag bestaand gedrag breken; kolommen worden pas gedropt als alles gemigreerd én geverifieerd is.
+4. **Non-intrusief, altijd.** Zoals elke eerdere fase: de owner (Weekly Phase Method-data) blijft de hele rit door exact werken. Geen enkele cyclus mag bestaand gedrag breken; kolommen worden pas gedropt als alles gemigreerd én geverifieerd is.
 5. **De analyse-motor moet op elk user-veld kunnen uitsplitsen.** Dit is de crux — en het goede nieuws: `breakdownBy()` is al generiek (§4).
 6. **Freemium is de businesslaag, niet een bouwlaag.** Het model is volledig configureerbaar; `profiles.plan` bepaalt alleen *hoeveel* een user mag configureren (§7). Zo ligt de premium-waarde in de configuratie zelf.
 
@@ -36,9 +36,9 @@ Voor iedereen identiek, nooit configureerbaar, blijven echte kolommen (snel filt
 | Resultaat | ✅ `resultaat_pct` (%) | R afgeleid; geld-unit = latere cyclus (§6) |
 | Risico | ✅ `risk_pct` | ongewijzigd |
 | Notities | ✅ `notes` | ongewijzigd |
-| Screenshots | ✅ `*_screenshot` (W/D/H4/H2) | tijdframe-gebonden namen zijn Archer-specifiek → generaliseren naar een vrije screenshot-lijst (latere cyclus) |
+| Screenshots | ✅ `*_screenshot` (W/D/H4/H2) | tijdframe-gebonden namen zijn Weekly Phase Method-specifiek → generaliseren naar een vrije screenshot-lijst (latere cyclus) |
 
-> **Beslissing:** alle huidige "half-universele" kolommen die eigenlijk Archer-methodiek zijn — `entry`, `trade_concept`, `cc`, `sessie`, `weekly_criteria`, `weekly_kenmerk`, `fase`, alle `fase*_`-kolommen — zijn **géén kern**. Ze worden custom velden (§2.2) en verhuizen naar de `custom`-bag. Voor Archer-users worden ze exact gereproduceerd als velden van de Archer-preset.
+> **Beslissing:** alle huidige "half-universele" kolommen die eigenlijk Weekly Phase Method-methodiek zijn — `entry`, `trade_concept`, `cc`, `sessie`, `weekly_criteria`, `weekly_kenmerk`, `fase`, alle `fase*_`-kolommen — zijn **géén kern**. Ze worden custom velden (§2.2) en verhuizen naar de `custom`-bag. Voor Weekly Phase Method-users worden ze exact gereproduceerd als velden van de Weekly Phase Method-preset.
 
 ### 2.2 Custom velden (per-user gedefinieerd)
 
@@ -65,23 +65,23 @@ Een user bouwt zijn journal uit **custom velden**. Elk veld heeft:
 
 ### 2.4 Conditionele velden (generalisatie van "fase-kenmerken")
 
-Archer's kenmerken zijn conditioneel: "Structuur" verschijnt alleen bij Fase 2/3, "Engulfing candle?" alleen bij Fase 3. Dat is geen fase-specifiek mechanisme maar een **algemeen** patroon: *toon veld X wanneer veld Y ∈ {…}*.
+Weekly Phase Method's kenmerken zijn conditioneel: "Structuur" verschijnt alleen bij Fase 2/3, "Engulfing candle?" alleen bij Fase 3. Dat is geen fase-specifiek mechanisme maar een **algemeen** patroon: *toon veld X wanneer veld Y ∈ {…}*.
 
 - `show_when_field_id` → verwijst naar een ander veld (bv. het `fase`-veld)
 - `show_when_values` → de waarden die dit veld onthullen (bv. `["Fase 2","Fase 3"]`)
 
-Zo wordt de hele Archer-methodiek exact uitgedrukt zónder speciaal fase-concept:
+Zo wordt de hele Weekly Phase Method-methodiek exact uitgedrukt zónder speciaal fase-concept:
 - `fase` = enum-veld met opties Fase 1..4
 - `structuur` = enum-veld, `show_when fase ∈ {Fase 2, Fase 3}`
 - `engulfing_candle` = boolean-veld, `show_when fase ∈ {Fase 3}`
 
-> **Beslissing:** het *datamodel* ondersteunt condities vanaf het begin (nodig voor getrouwe Archer-migratie). De *editor-UI* mag condities pas in een latere cyclus blootleggen — tot dan zijn zelf-gemaakte velden altijd zichtbaar en enkel de geseede Archer-preset gebruikt condities.
+> **Beslissing:** het *datamodel* ondersteunt condities vanaf het begin (nodig voor getrouwe Weekly Phase Method-migratie). De *editor-UI* mag condities pas in een latere cyclus blootleggen — tot dan zijn zelf-gemaakte velden altijd zichtbaar en enkel de geseede Weekly Phase Method-preset gebruikt condities.
 
 ### 2.5 Presets / templates
 
 Een **preset** is een kant-en-klare set velden. `is_system`-presets zijn world-readable en onbewerkbaar; bij "kiezen" wordt een **eigen kopie geforkt** (fork-on-choose), zodat de user 'm daarna vrij aanpast.
 
-**De concrete preset-inhoud (asset-velden × stijl-velden + recepten-catalogus) is uitgewerkt in [journal-presets.md](journal-presets.md)** — de seed-bron voor cyclus 6, onderbouwd met research. Kort: een user kiest bij onboarding één **recept** (bv. "Futures — Day trader", "Stocks — Swing", "Archer (Forex)", "Blanco"); dat combineert een asset-preset (instrument + sizing + asset-velden) met een stijl-preset (setup/kwaliteit/emotie/beheer). Blanco = enkel de kern.
+**De concrete preset-inhoud (asset-velden × stijl-velden + recepten-catalogus) is uitgewerkt in [journal-presets.md](journal-presets.md)** — de seed-bron voor cyclus 6, onderbouwd met research. Kort: een user kiest bij onboarding één **recept** (bv. "Futures — Day trader", "Stocks — Swing", "Weekly Phase Method (Forex)", "Blanco"); dat combineert een asset-preset (instrument + sizing + asset-velden) met een stijl-preset (setup/kwaliteit/emotie/beheer). Blanco = enkel de kern.
 
 ### 2.6 Meerdere journals — de container voor scheiding per asset class
 
@@ -103,7 +103,7 @@ Een **preset** is een kant-en-klare set velden. `is_system`-presets zijn world-r
 | Stocks | tickers (AAPL) | aandelen | — |
 | Crypto | coins (BTC) | coins / USD-notional | 24/7-sessies |
 
-**Twee orthogonale assen.** Asset class (instrument + sizing) staat los van methodiek (velden). Een Forex-journal kan de Archer-velden gebruiken; een Futures-journal een eigen setje. Bij "nieuw journal" kies je dus (1) asset class en (2) een methodiek-template (of blanco). Archer is een methodiek-template die toevallig forex-georiënteerd is. Omdat Beyens kern in **%** rekent, raakt het sizing-verschil vooral de instrument-lijst + welke tools verschijnen — de stats-motor blijft gedeeld.
+**Twee orthogonale assen.** Asset class (instrument + sizing) staat los van methodiek (velden). Een Forex-journal kan de Weekly Phase Method-velden gebruiken; een Futures-journal een eigen setje. Bij "nieuw journal" kies je dus (1) asset class en (2) een methodiek-template (of blanco). Weekly Phase Method is een methodiek-template die toevallig forex-georiënteerd is. Omdat Beyens kern in **%** rekent, raakt het sizing-verschil vooral de instrument-lijst + welke tools verschijnen — de stats-motor blijft gedeeld.
 
 **Bestaand primitief hergebruiken:** de app isoleert al trades met eigen stats via `backtest_project_id` (`null` = live Journal; gezet = geïsoleerd project). Multi-journal veralgemeent dat patroon naar een `journal_id` op `trades`. `profiles.methodology_id` (één actieve methodiek) → wordt "actief journal".
 
@@ -240,11 +240,11 @@ Kern-resultaat is nu `resultaat_pct` (%). Veel traders denken in **geld** of **R
 
 ## 7. Gefaseerd bouwplan
 
-Elke cyclus is **zelfstandig deploybaar en non-intrusief** (Archer-owner blijft werken). "Klaar" = `npm run lint` + `test` + `build` groen, plus migratie geverifieerd op prod-Supabase.
+Elke cyclus is **zelfstandig deploybaar en non-intrusief** (Weekly Phase Method-owner blijft werken). "Klaar" = `npm run lint` + `test` + `build` groen, plus migratie geverifieerd op prod-Supabase.
 
 | Cyclus | Inhoud | DB-migratie? | Risico |
 |---|---|---|---|
-| **1b** ✳️ | **Model verbreden + journal-fundament (samen).** `methodology_fields` absorbeert fases (type/group/condities); `methodologies` promoveert tot journal (`asset_class` + instrument-config); `trades.kenmerken`→`trades.custom`; `methodology_id` gaat als `journal_id` fungeren + analyse/filters scopen erop. Nieuwe users krijgen een **eigen leeg** journal (geen Archer-default). Owner krijgt één Forex-journal met Archer-velden. | ja (additief) | midden |
+| **1b** ✳️ | **Model verbreden + journal-fundament (samen).** `methodology_fields` absorbeert fases (type/group/condities); `methodologies` promoveert tot journal (`asset_class` + instrument-config); `trades.kenmerken`→`trades.custom`; `methodology_id` gaat als `journal_id` fungeren + analyse/filters scopen erop. Nieuwe users krijgen een **eigen leeg** journal (geen Weekly Phase Method-default). Owner krijgt één Forex-journal met Weekly Phase Method-velden. | ja (additief) | midden |
 | **2** | **Custom-velden-editor** (platte velden) op `/settings`: velden toevoegen/hernoemen/herordenen/verwijderen, type kiezen, opties cureren. Fork-on-edit voor system-presets. | nee | laag |
 | **2b** | **Conditie-bouwer** in de editor: "toon veld X als Y ∈ {…}" (`show_when_*`). Fast-follow op 2. | nee | midden |
 | **3** | **Trade-formulier dynamisch**: kern-sectie vast + custom-sectie gegenereerd uit de velden (incl. conditionele zichtbaarheid). Schrijft naar `trades.custom`. | nee | midden |
@@ -259,7 +259,7 @@ Elke cyclus is **zelfstandig deploybaar en non-intrusief** (Archer-owner blijft 
 
 ✳️ = deels al gepland in het geheugen; hier verbreed van fase-editor naar generieke veld-editor.
 
-**Migratie van Archer-data (loopt mee in 1b→3):** de cyclus-0-backfill zette kenmerken al in de bag. Aanvullend moeten `entry`/`trade_concept`/`cc`/`sessie`/`weekly_*` als custom velden van de Archer-preset geseed worden en hun kolomwaarden naar `trades.custom` gekopieerd (zelfde `jsonb_strip_nulls`-patroon als 0020). Kolommen pas droppen in cyclus 10.
+**Migratie van Weekly Phase Method-data (loopt mee in 1b→3):** de cyclus-0-backfill zette kenmerken al in de bag. Aanvullend moeten `entry`/`trade_concept`/`cc`/`sessie`/`weekly_*` als custom velden van de Weekly Phase Method-preset geseed worden en hun kolomwaarden naar `trades.custom` gekopieerd (zelfde `jsonb_strip_nulls`-patroon als 0020). Kolommen pas droppen in cyclus 10.
 
 ---
 
@@ -293,12 +293,12 @@ Het configureerbare model is de premium-waarde. De grens ligt op **hoeveelheid +
 - ✅ **Journal-scheiding vroeg** — samen met methodiek-per-journal invoeren (cyclus 1b), zodat de analyse-motor maar 1× verbouwd wordt.
 - ✅ **Journal = `methodologies` promoveren (optie B).** Geen aparte `journals`-tabel: `asset_class` + instrument-config komen op de bestaande `methodologies`-tabel; `trades.methodology_id` wordt de facto `journal_id`. Elk boek bezit zijn eigen velden (geen co-editen over boeken). Minder migratie, bouwt direct op cyclus 0. (Rename van tabel/type naar "journal" voor duidelijkheid is optioneel/cosmetisch.)
 - ✅ **`kenmerken` → `custom` hernoemen.**
-- ✅ **Condities zo vroeg mogelijk.** Model kan het vanaf dag 1 (Archer-preset toont ze al); platte velden-editor eerst (cyclus 2) zodat die sneller live gaat, conditie-bouwer meteen als fast-follow (cyclus 2b).
+- ✅ **Condities zo vroeg mogelijk.** Model kan het vanaf dag 1 (Weekly Phase Method-preset toont ze al); platte velden-editor eerst (cyclus 2) zodat die sneller live gaat, conditie-bouwer meteen als fast-follow (cyclus 2b).
 
 **Nog open:**
 1. **Cross-journal overzicht?** (§2.6) — (A) volledige isolatie [aanbevolen]; of (B) isolatie + optioneel top-level "alle journals"-rollup. Speelt pas bij premium/multi-journal. Ik raad A eerst aan, B later.
 2. **Asset-class-presets bij launch** — Forex/Futures/Stocks/Crypto — met welke starter-velden per stuk?
-3. **Methodiek-presets** — welke starters naast Blanco/Archer (Scalper/Daytrader/Swing), met welke velden?
+3. **Methodiek-presets** — welke starters naast Blanco/Weekly Phase Method (Scalper/Daytrader/Swing), met welke velden?
 
 ---
 

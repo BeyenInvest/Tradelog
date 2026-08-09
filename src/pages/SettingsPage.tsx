@@ -7,6 +7,7 @@ import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
+import { PresetPicker } from "@/components/settings/PresetPicker";
 import { ENTRIES, TRADE_CONCEPTS } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
@@ -86,6 +87,7 @@ export default function SettingsPage() {
             title={t("methodology.title")}
             description={t("methodology.description")}
           />
+          <PresetPicker />
           <MethodologyEditor />
         </section>
       </div>

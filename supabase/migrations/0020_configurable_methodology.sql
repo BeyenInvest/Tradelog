@@ -2,10 +2,10 @@
 -- Beyen Invest — migration: configurable methodology (Scope C, cyclus 0)
 --
 -- Turns the hard-coded "4 fasen" methodology (constants.ts FASES +
--- FASE_KENMERKEN) into per-user data. The fixed Archer system it currently
--- encodes is only meaningful to the owner and a few ex-Archer traders (see
+-- FASE_KENMERKEN) into per-user data. The fixed Weekly Phase Method system it currently
+-- encodes is only meaningful to the owner and a few ex-Weekly Phase Method traders (see
 -- CLAUDE.md domain rules / hide_fase) — every other user needs to define their
--- own. This migration ONLY lays down the data model + seeds the Archer template
+-- own. This migration ONLY lays down the data model + seeds the Weekly Phase Method template
 -- + migrates existing trades. No app code reads any of it yet, and NO existing
 -- column is dropped, so behaviour is unchanged for everyone (the whole app keeps
 -- reading the old fase_enum + fase*_ columns until a later cyclus flips it over).
@@ -66,13 +66,13 @@ create index idx_methodology_fields_methodology on methodology_fields(methodolog
 create trigger trg_methodologies_updated_at before update on methodologies
   for each row execute function set_updated_at();
 
--- ---------- SEED: the built-in Archer template ----------
+-- ---------- SEED: the built-in Weekly Phase Method template ----------
 -- Seeded BEFORE the profiles alter below, because that alter's column default
 -- points at this row (adding the column populates existing rows with it, so the
 -- row must already exist or the FK fails). Fixed id keeps every reference
 -- deterministic across this migration, schema.sql and later cycli.
 insert into methodologies (id, user_id, naam, is_system)
-values ('00000000-0000-4000-8000-000000000001', null, 'Archer', true);
+values ('00000000-0000-4000-8000-000000000001', null, 'Weekly Phase Method', true);
 
 insert into methodology_fases (methodology_id, naam, sort_order) values
   ('00000000-0000-4000-8000-000000000001', 'Fase 1', 1),
@@ -108,7 +108,7 @@ alter table trades add column methodology_id uuid references methodologies(id) o
 alter table trades add column kenmerken jsonb not null default '{}'::jsonb;
 create index idx_trades_methodology on trades(methodology_id);
 
--- profiles.methodology_id: the user's active methodology. Defaults to the Archer
+-- profiles.methodology_id: the user's active methodology. Defaults to the Weekly Phase Method
 -- template so free users are on the reference methodology out of the box (adding
 -- the column with this default also sets it on every existing profile).
 alter table profiles add column methodology_id uuid references methodologies(id) on delete set null
@@ -147,8 +147,8 @@ create policy "methodology_fields_write" on methodology_fields
   with check (exists (
     select 1 from methodologies m where m.id = methodology_fields.methodology_id and m.user_id = auth.uid()));
 
--- ---------- BACKFILL: existing trades onto the Archer template ----------
--- Every trade in the DB today was logged under the Archer system (fase_enum was
+-- ---------- BACKFILL: existing trades onto the Weekly Phase Method template ----------
+-- Every trade in the DB today was logged under the Weekly Phase Method system (fase_enum was
 -- the only option), so point them all at the template and copy each trade's
 -- fase-specific columns into its kenmerken bag. jsonb_strip_nulls drops keys the
 -- trader left blank (kenmerken are optional) so an untracked trade gets '{}'.
@@ -169,7 +169,7 @@ update trades set
       'weekly_bevestigingscandle', fase4_weekly_bevestigingscandle))
   end, '{}'::jsonb);
 
--- profiles already got the Archer default from the alter above; this is just a
+-- profiles already got the Weekly Phase Method default from the alter above; this is just a
 -- belt-and-braces no-op for any row a default somehow missed.
 update profiles set methodology_id = '00000000-0000-4000-8000-000000000001'
   where methodology_id is null;

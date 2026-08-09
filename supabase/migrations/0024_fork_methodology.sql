@@ -1,7 +1,7 @@
 -- =========================================================
 -- Beyen Invest — migration 0024: fork_methodology RPC (Scope C, cyclus 2)
 --
--- Fork-on-edit: system templates (Archer, is_system, user_id null) are read-only.
+-- Fork-on-edit: system templates (Weekly Phase Method, is_system, user_id null) are read-only.
 -- When a user first edits their journal, the client calls fork_methodology(source)
 -- to make a personal, editable copy (methodology + all its fields) and then
 -- repoints profiles.methodology_id at the copy. This RPC does that copy atomically,

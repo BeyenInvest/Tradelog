@@ -3,25 +3,25 @@
 --                                (Scope C, cyclus 1b — plak 3)
 --
 -- The last slice of 1b: it takes "fase" definitively out of the universal core
--- for new users. Until now every new signup silently inherited the Archer system
--- template (via the profiles.methodology_id column default). Archer's 4-fasen
--- backbone is a preset, not the norm — so a fresh, non-Archer user must start
+-- for new users. Until now every new signup silently inherited the Weekly Phase Method system
+-- template (via the profiles.methodology_id column default). Weekly Phase Method's 4-fasen
+-- backbone is a preset, not the norm — so a fresh, non-Weekly Phase Method user must start
 -- from an EMPTY journal and build their own fields on /settings, rather than be
--- handed Archer's fases.
+-- handed Weekly Phase Method's fases.
 --
 -- Non-intrusive:
---   * The owner + all existing users keep pointing at Archer (their rows are
+--   * The owner + all existing users keep pointing at Weekly Phase Method (their rows are
 --     untouched — dropping a column default never rewrites existing rows).
---   * The Archer template stays a world-readable system preset anyone can pick.
+--   * The Weekly Phase Method template stays a world-readable system preset anyone can pick.
 --   * Public signup is still gated off (README §5), so this is forward-looking:
 --     it changes what the FIRST real signup will get, nothing that exists today.
 --
 -- Run: node --env-file=.env.local scripts/run-migration.mjs supabase/migrations/0025_empty_journal_for_new_users.sql
 -- =========================================================
 
--- 1. Stop silently defaulting new profiles to the Archer template. From now on
+-- 1. Stop silently defaulting new profiles to the Weekly Phase Method template. From now on
 --    handle_new_user() sets methodology_id explicitly (below); no hidden default
---    can ever re-impose Archer on a fresh account.
+--    can ever re-impose Weekly Phase Method on a fresh account.
 alter table profiles alter column methodology_id drop default;
 
 -- 2. Provision a fresh, empty, user-owned methodology (journal) per signup and

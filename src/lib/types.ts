@@ -11,7 +11,7 @@ export interface Trade {
   /**
    * Fase name. Since Scope C (migration 0020+) this is the name of a fase in the
    * trade's methodology, not the fixed FASES enum — free text, like `entry`.
-   * For Archer users the values are still "Fase 1".."Fase 4".
+   * For Weekly Phase Method users the values are still "Fase 1".."Fase 4".
    */
   fase: string;
   datum_open: string; // ISO date (yyyy-mm-dd)
@@ -68,20 +68,24 @@ export interface Trade {
   /** Broker-import dedup reference "{broker}:{ticket}", null for hand-entered trades. Set only by the CSV importer — never editable in the form. See src/lib/import. */
   import_ref: string | null;
 
-  /** Methodology (journal) this trade was logged under (Scope C). null on legacy/unassigned trades. Not yet written by the form (cyclus 2+). */
+  /** Methodology (journal) this trade was logged under (Scope C). null on legacy/unassigned trades. Set by the form to the active methodology on new trades (cyclus 3). */
   methodology_id: string | null;
-  /** Flexible per-trade custom-field bag (Scope C, was `kenmerken` — renamed in 0022) that replaces the fixed fase*_ columns — keyed by MethodologyField.field_key. Not yet written by the form (cyclus 2/3). */
+  /** Flexible per-trade custom-field bag (Scope C, was `kenmerken` — renamed in 0022) that replaces the fixed fase*_ columns — keyed by MethodologyField.field_key. Written by the dynamic form section (cyclus 3). */
   custom: Record<string, boolean | string | number>;
 
   created_at: string;
   updated_at: string;
 }
 
-/** Payload for insert/update — excludes server-managed/generated fields and import-only columns. */
+/**
+ * Payload for insert/update — excludes server-managed/generated fields and
+ * import-only columns. `methodology_id` + `custom` ARE included: the form writes
+ * them (Scope C, cyclus 3) — the active journal and its per-trade custom-field bag.
+ */
 export type TradeInput = Omit<
   Trade,
   | "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at"
-  | "weekly_review_id" | "import_ref" | "methodology_id" | "custom"
+  | "weekly_review_id" | "import_ref"
 >;
 
 export interface WeeklyReview {
@@ -173,7 +177,7 @@ export interface Profile {
   hide_fase: boolean;
   /** IANA timezone the user reads candle-close (cc) times in — drives the tz-aware `trades.sessie` mapping (compute_sessie in the DB). Defaults to 'Europe/Brussels'. */
   timezone: string;
-  /** Active methodology (Scope C). Defaults to the built-in Archer template; drives which fases/kenmerken the UI shows. See useMethodology. */
+  /** Active methodology (Scope C). Defaults to the built-in Weekly Phase Method template; drives which fases/kenmerken the UI shows. See useMethodology. */
   methodology_id: string | null;
   created_at: string;
   updated_at: string;

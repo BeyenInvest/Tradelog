@@ -90,7 +90,7 @@ Wat een user bij "nieuw journal" kiest. Elk recept = asset-preset ∪ stijl-pres
 
 | Recept | Asset | Stijl | Kernidee |
 |---|---|---|---|
-| **Archer (Forex)** | Forex | *Archer 4-fasen* (bestaand) | de owner-methodiek, al geseed |
+| **Weekly Phase Method (Forex)** | Forex | *Weekly Phase Method 4-fasen* (bestaand) | de owner-methodiek, al geseed |
 | **Forex — Day trader** | Forex | Day trader | sessies + setups + kwaliteit |
 | **Forex — Swing** | Forex | Swing | these + beheer + regime |
 | **Futures — Scalper** | Futures | Scalper | ES/NQ, contracten, RTH, snel |
@@ -101,7 +101,7 @@ Wat een user bij "nieuw journal" kiest. Elk recept = asset-preset ∪ stijl-pres
 | **Crypto — Swing** | Crypto | Swing | perp-basis + regime + beheer |
 | **Blanco** | Custom | — | enkel de kern, bouw vanaf 0 |
 
-> Vrij uitbreidbaar: elke nieuwe asset (opties, indices) of stijl = een extra preset, geen migratie. Archer is één recept tussen vele.
+> Vrij uitbreidbaar: elke nieuwe asset (opties, indices) of stijl = een extra preset, geen migratie. Weekly Phase Method is één recept tussen vele.
 
 ---
 

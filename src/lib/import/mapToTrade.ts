@@ -85,6 +85,10 @@ export function dealToImportRow(
     fase3_engulfing_candle: null,
     fase3_structuur: null,
     fase4_weekly_bevestigingscandle: null,
+    // No methodology/custom fields for imported trades — the DB defaults custom to
+    // {} and methodology_id to null; set explicitly here to satisfy TradeInput (Scope C).
+    methodology_id: null,
+    custom: {},
     import_ref: `${broker}:${deal.ticket}`,
   };
 }

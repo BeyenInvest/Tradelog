@@ -8,9 +8,11 @@ import type { Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { useMethodology } from "@/hooks/useMethodology";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
+import { CustomFieldsSection } from "./TradeFormSections/CustomFieldsSection";
 
 interface TradeFormProps {
   trade?: Trade;
@@ -54,6 +56,8 @@ const EMPTY_DEFAULTS: TradeFormValues = {
   fase3_engulfing_candle: null,
   fase3_structuur: null,
   fase4_weekly_bevestigingscandle: null,
+  custom: {},
+  methodology_id: null,
 };
 
 function tradeToDefaults(trade: Trade): TradeFormValues {
@@ -89,11 +93,25 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     fase3_engulfing_candle: trade.fase3_engulfing_candle,
     fase3_structuur: trade.fase3_structuur,
     fase4_weekly_bevestigingscandle: trade.fase4_weekly_bevestigingscandle,
+    custom: trade.custom ?? {},
+    methodology_id: trade.methodology_id,
   };
+}
+
+/** Drop empty/in-progress values so trades.custom only stores answered fields (string|number|boolean). */
+function pruneCustom(raw: Record<string, unknown>): Record<string, string | number | boolean> {
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (v === null || v === undefined || v === "") continue;
+    if (typeof v === "number" && Number.isNaN(v)) continue;
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") out[k] = v;
+  }
+  return out;
 }
 
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const { t } = useTranslation();
+  const { methodology } = useMethodology();
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: trade
@@ -116,7 +134,14 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
   async function handleFormSubmit(values: TradeFormValues) {
     setError(null);
     try {
-      await onSubmit(values as TradeSubmitInput);
+      const payload: TradeSubmitInput = {
+        ...values,
+        // Record which journal this trade belongs to. Editing keeps the trade's
+        // own methodology; a new trade takes the active one.
+        methodology_id: values.methodology_id ?? methodology?.id ?? null,
+        custom: pruneCustom(values.custom ?? {}),
+      };
+      await onSubmit(payload);
       onClose();
     } catch (err) {
       setError(toErrorMessage(err, t("tradeForm.saveFailed")));
@@ -147,6 +172,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
             <ResultSection allowMissedTrade={allowMissedTrade} closeDateTouchedRef={closeDateTouchedRef} />
             <hr className="border-border" />
             <TechnicalSection />
+            <CustomFieldsSection />
 
             {error && <p className="text-sm text-loss">{error}</p>}
 
