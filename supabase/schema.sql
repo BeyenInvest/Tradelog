@@ -300,8 +300,9 @@ from fase_field ff, (values
 -- methodologies table (created here, after trades/profiles above) is referenceable.
 alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
 alter table trades add column custom jsonb not null default '{}'::jsonb; -- flexible per-trade custom-field bag (was `kenmerken`, renamed in 0022)
-alter table profiles add column methodology_id uuid references methodologies(id) on delete set null
-  default '00000000-0000-4000-8000-000000000001';
+-- No column default: new users are provisioned an own empty journal by
+-- handle_new_user() (see 0025), not silently handed the Archer template.
+alter table profiles add column methodology_id uuid references methodologies(id) on delete set null;
 
 -- ---------- INDEXES ----------
 create index idx_trades_user on trades(user_id);
@@ -404,12 +405,20 @@ create trigger trg_profiles_recompute_sessie
 -- ---------- auto-provision profiles row on new auth.users signup ----------
 -- SECURITY DEFINER: the client's JWT has no insert rights on auth.users or a
 -- brand-new profiles row at signup time, so this runs with elevated
--- privileges, scoped tightly to just this insert.
+-- privileges, scoped tightly to just these inserts.
+-- Each new user also gets their own EMPTY journal (methodology) — the Archer
+-- template is a preset, never imposed on new signups (see 0025, Scope C plak 3).
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  new_meth uuid;
 begin
-  insert into public.profiles (id, email, display_name)
-  values (new.id, new.email, new.raw_user_meta_data ->> 'display_name');
+  insert into public.methodologies (user_id, naam, is_system, asset_class)
+  values (new.id, 'Mijn journal', false, null)
+  returning id into new_meth;
+
+  insert into public.profiles (id, email, display_name, methodology_id)
+  values (new.id, new.email, new.raw_user_meta_data ->> 'display_name', new_meth);
   return new;
 end;
 $$;

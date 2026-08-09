@@ -80,8 +80,14 @@ export function useMethodology(): MethodologyData {
   const faseNames = useMemo(() => {
     const faseField = fields.find((f) => f.field_key === "fase" && f.field_type === "enum");
     const opts = faseField?.options ?? [];
-    return opts.length > 0 ? opts : [...FASES];
-  }, [fields]);
+    if (opts.length > 0) return opts;
+    // No fase field. Only fall back to the built-in Archer fases while the
+    // methodology is still loading, so the form/filter never flashes an empty
+    // select. Once loaded, an own methodology with no fase field must NOT get
+    // Archer's fases imposed — new users start from an empty journal
+    // (Scope C, cyclus 1b plak 3).
+    return loading ? [...FASES] : [];
+  }, [fields, loading]);
 
   return { methodology, fields, faseNames, loading, error, refresh };
 }
