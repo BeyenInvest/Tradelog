@@ -1,13 +1,15 @@
-import type { Trade } from "./types";
-import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import type { MethodologyField, Trade } from "./types";
+import { currenciesOfPair, CCS, DIRECTIONS, LEGACY_METHODOLOGY_FIELD_KEYS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 
 export interface DimensionConfig {
   id: string;
-  /** Also the i18n key under the "breakdown" namespace — see BacktestingAnalysisView. */
+  /** For fixed dimensions, also the i18n key under the "breakdown" namespace. */
   keyFn: (t: Trade) => string | string[] | null;
   /** Fixed display order (e.g. FASES) — omit for dimensions with no natural order (alphabetical/first-seen is fine). */
   sortOrder?: readonly string[];
+  /** Ready-made title for config-driven (custom-field) dimensions, which have no i18n key — the field's own label. See BacktestingAnalysisView. */
+  label?: string;
 }
 
 /**
@@ -33,3 +35,33 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
 ];
+
+/**
+ * Config-driven breakdown dimensions for a methodology's own custom fields
+ * (Scope C, cyclus 4). Turns each analysable custom field into a "Per X" split
+ * that reads its value from the trades.custom bag — the same generic breakdownBy
+ * every fixed dimension uses. Only enum + boolean are bucketable out of the box;
+ * number (needs range buckets), text (too free) and date are skipped for now.
+ * Legacy WPM fields are excluded — those keep their hardcoded columns + the
+ * per-fase / fase-kenmerken analysis until cyclus 10.
+ */
+export function customFieldDimensions(fields: MethodologyField[]): DimensionConfig[] {
+  return fields
+    .filter(
+      (f) =>
+        !LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) &&
+        !f.is_computed &&
+        (f.field_type === "enum" || f.field_type === "boolean")
+    )
+    .map((f) => ({
+      id: `custom:${f.field_key}`,
+      label: f.label,
+      sortOrder: f.field_type === "enum" ? f.options ?? undefined : undefined,
+      keyFn: (t: Trade) => {
+        const raw = t.custom?.[f.field_key];
+        if (raw == null || raw === "") return null;
+        if (f.field_type === "boolean") return raw ? "Ja" : "Nee";
+        return String(raw);
+      },
+    }));
+}

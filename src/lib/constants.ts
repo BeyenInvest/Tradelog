@@ -9,6 +9,26 @@ export const DIRECTIONS = ["Long", "Short"] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
 /**
+ * Field keys still owned by the hardcoded legacy Weekly Phase Method form + analysis
+ * (the fase <select>, FaseKenmerkenSection and the per-fase breakdowns), backed by
+ * real trades.* columns rather than the trades.custom bag. The dynamic form section
+ * (CustomFieldsSection) and the config-driven breakdowns (breakdownDimensions) skip
+ * these so WPM users never see them twice and their data path stays unchanged. This
+ * bridge disappears in cyclus 10, when those columns are dropped and every field
+ * becomes fully dynamic.
+ */
+export const LEGACY_METHODOLOGY_FIELD_KEYS = new Set([
+  "fase",
+  "daily_respecteert_zone",
+  "spelers_verleden",
+  "structuur",
+  "zone_min_2_touches",
+  "engulfing_candle",
+  "beide",
+  "weekly_bevestigingscandle",
+]);
+
+/**
  * Self-assessment of how the trade was executed — separate from outcome
  * (Win/Loss/BE, the P&L result). "Missed trade" is special: a setup you saw
  * but didn't take, still logged with a hypothetical outcome/resultaat_pct,

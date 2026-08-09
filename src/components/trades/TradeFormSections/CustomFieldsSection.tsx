@@ -4,27 +4,10 @@ import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import type { MethodologyField } from "@/lib/types";
 import { useMethodology } from "@/hooks/useMethodology";
+import { LEGACY_METHODOLOGY_FIELD_KEYS } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
-
-/**
- * Field keys still owned by the legacy hardcoded form (the fase <select> in
- * EntrySection + FaseKenmerkenSection, backed by real trades.* columns). The
- * dynamic section skips them so Weekly Phase Method users never see them twice and their data
- * path stays unchanged. This bridge disappears in cyclus 10, when those columns
- * are dropped and every field becomes fully dynamic.
- */
-const LEGACY_FIELD_KEYS = new Set([
-  "fase",
-  "daily_respecteert_zone",
-  "spelers_verleden",
-  "structuur",
-  "zone_min_2_touches",
-  "engulfing_candle",
-  "beide",
-  "weekly_bevestigingscandle",
-]);
 
 /** Consecutive fields sharing a group_label render under one subheading (fields come sort-ordered). */
 function groupFields(fields: MethodologyField[]): { label: string | null; fields: MethodologyField[] }[] {
@@ -57,7 +40,7 @@ export function CustomFieldsSection() {
   const fase = watch("fase");
   const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
 
-  const dynamicFields = fields.filter((f) => !LEGACY_FIELD_KEYS.has(f.field_key) && !f.is_computed);
+  const dynamicFields = fields.filter((f) => !LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) && !f.is_computed);
 
   function valueOfParent(parent: MethodologyField): unknown {
     // The only legacy field that can be an enum parent is `fase` (a core column);

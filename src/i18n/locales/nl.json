@@ -412,6 +412,7 @@
     "setupWeeklyHeading": "Setup & Weekly-data",
     "faseKenmerkenHeading": "Fase-kenmerken",
     "timingInstrumentHeading": "Timing & Instrument",
+    "customBreakdownHeading": "Eigen velden",
     "durationHeading": "Gemiddelde duur per outcome",
     "durationFor": "Duur {{outcome}}"
   },

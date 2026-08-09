@@ -12,12 +12,13 @@ import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
   computeDurationByOutcome, groupIntoSeries, takenTrades,
 } from "@/lib/stats";
-import { BREAKDOWN_DIMENSIONS } from "@/lib/breakdownDimensions";
+import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 
 /**
  * Overview KPIs, per-Fase cards, duration, series-of-5, and every
@@ -39,6 +40,7 @@ export function BacktestingAnalysisView({
 }) {
   const { t } = useTranslation();
   const { hideFase: ownHideFase } = useAuth();
+  const { fields } = useMethodology();
   const hideFase = hideFaseOverride ?? ownHideFase;
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
   const [period, setPeriod] = useState<DateRange | null>(null);
@@ -79,6 +81,16 @@ export function BacktestingAnalysisView({
         rows: breakdownByFaseKenmerk(scopedTrades, k, { minSample: 1 }),
       })),
     [scopedTrades]
+  );
+
+  // Config-driven breakdowns for the active journal's own custom fields (cyclus 4),
+  // read from the trades.custom bag. Empty for a plain Weekly Phase Method journal
+  // (its fields are legacy columns, handled by the per-fase sections above), so this
+  // adds nothing for the owner and everything for a preset/custom journal.
+  const customDims = useMemo(() => customFieldDimensions(fields), [fields]);
+  const customDimRows = useMemo(
+    () => customDims.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
+    [scopedTrades, customDims]
   );
 
   return (
@@ -243,6 +255,19 @@ export function BacktestingAnalysisView({
               : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
           </div>
         </div>
+
+        {/* Config-driven: the active journal's own custom fields (cyclus 4). Only the
+            "total" split — a per-fase split is inherently Weekly-Phase-Method-specific. */}
+        {customDimRows.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.customBreakdownHeading")}</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {customDimRows.map(({ dim, rows }) => (
+                <BreakdownTable key={dim.id} title={dim.label ?? dim.id} rows={rows} />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Duration per outcome — supplementary numbers, so compact and last, not competing with the real KPIs at top */}

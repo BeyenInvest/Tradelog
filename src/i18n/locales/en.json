@@ -412,6 +412,7 @@
     "setupWeeklyHeading": "Setup & Weekly data",
     "faseKenmerkenHeading": "Phase characteristics",
     "timingInstrumentHeading": "Timing & Instrument",
+    "customBreakdownHeading": "Custom fields",
     "durationHeading": "Average duration per outcome",
     "durationFor": "Duration {{outcome}}"
   },
