@@ -27,6 +27,14 @@ export interface MethodologyData {
    * signup is still off).
    */
   isLegacyMethodology: boolean;
+  /**
+   * True when the active journal trades forex (asset_class 'forex' — the Weekly
+   * Phase Method template/forks and the Forex presets). Drives the instrument
+   * field (pair enum vs free text) and the forex-only breakdowns (pair/currency)
+   * / lot calculator (cyclus 7). Stays true while loading so a forex owner never
+   * sees the field flip. A blank/own or non-forex journal is false.
+   */
+  isForexJournal: boolean;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -106,5 +114,11 @@ export function useMethodology(): MethodologyData {
     [fields, loading]
   );
 
-  return { methodology, fields, faseNames, isLegacyMethodology, loading, error, refresh };
+  // Forex while loading so a forex owner's pair select never flips to a free field on open.
+  const isForexJournal = useMemo(
+    () => loading || methodology?.asset_class === "forex",
+    [loading, methodology]
+  );
+
+  return { methodology, fields, faseNames, isLegacyMethodology, isForexJournal, loading, error, refresh };
 }

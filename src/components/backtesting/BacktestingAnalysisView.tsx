@@ -40,7 +40,7 @@ export function BacktestingAnalysisView({
 }) {
   const { t } = useTranslation();
   const { hideFase: ownHideFase } = useAuth();
-  const { fields, isLegacyMethodology } = useMethodology();
+  const { fields, isLegacyMethodology, isForexJournal } = useMethodology();
   const hideFase = hideFaseOverride ?? ownHideFase;
   // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
   // per-fase cards + fase-kenmerken + WPM-only breakdowns would be all-empty. Gate that whole
@@ -83,11 +83,11 @@ export function BacktestingAnalysisView({
   // hidden so a stale toggle state can't leave the breakdowns rendering an empty per-fase grid.
   const effectiveViewMode = showFase ? viewMode : "totaal";
   // The first group (setup/weekly) is entirely legacy WPM columns; the second (timing/instrument)
-  // mixes legacy (cc/sessie/nieuws) with universal dims. A non-legacy journal shows only the
-  // universal ones there and drops the setup/weekly group altogether (cyclus 4).
-  const timingDimRows = isLegacyMethodology
-    ? dimensionRows.slice(kenmerkenSplit)
-    : dimensionRows.slice(kenmerkenSplit).filter(({ dim }) => dim.universal);
+  // mixes universal dims (weekday/quarter/instrument/direction), forex-only dims (pair/currency,
+  // cyclus 7) and legacy WPM dims (cc/sessie/nieuws). Show each per the active journal's type.
+  const showTimingDim = (dim: { universal?: boolean; forex?: boolean }) =>
+    dim.universal || (dim.forex && isForexJournal) || (!dim.universal && !dim.forex && isLegacyMethodology);
+  const timingDimRows = dimensionRows.slice(kenmerkenSplit).filter(({ dim }) => showTimingDim(dim));
   const timingDimGridRows = dimensionGridRows.slice(kenmerkenSplit);
 
   const kenmerkRows = useMemo(

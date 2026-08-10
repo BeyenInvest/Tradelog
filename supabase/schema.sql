@@ -126,6 +126,10 @@ create table trades (
   duur_dagen integer generated always as (datum_sluiting - datum_open) stored,
 
   pair pair_enum not null,
+  -- Free instrument symbol — the universal "what did you trade" for any asset class
+  -- (cyclus 7). Forex journals mirror instrument = pair; other journals write their
+  -- own ticker/coin and leave pair on a default. See 0032.
+  instrument text,
   direction direction_enum, -- Long/Short; nullable (unknown on trades logged before cyclus 5 / imports without a side)
   outcome outcome_enum not null,
   resultaat_pct numeric(7,2) not null,

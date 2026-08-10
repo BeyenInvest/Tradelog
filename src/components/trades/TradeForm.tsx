@@ -29,6 +29,7 @@ const EMPTY_DEFAULTS: TradeFormValues = {
   datum_open: new Date().toISOString().slice(0, 10),
   datum_sluiting: null,
   pair: "EURUSD",
+  instrument: null,
   direction: null,
   outcome: "Win",
   resultaat_pct: 0,
@@ -67,6 +68,7 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     datum_open: trade.datum_open,
     datum_sluiting: trade.datum_sluiting,
     pair: trade.pair,
+    instrument: trade.instrument,
     direction: trade.direction,
     outcome: trade.outcome,
     resultaat_pct: trade.resultaat_pct,
@@ -113,7 +115,7 @@ function pruneCustom(raw: Record<string, unknown>): Record<string, string | numb
 
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const { t } = useTranslation();
-  const { methodology } = useMethodology();
+  const { methodology, isForexJournal } = useMethodology();
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: trade
@@ -141,6 +143,9 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         // Record which journal this trade belongs to. Editing keeps the trade's
         // own methodology; a new trade takes the active one.
         methodology_id: values.methodology_id ?? methodology?.id ?? null,
+        // A forex journal's instrument IS its pair (the form shows the pair enum);
+        // a non-forex journal types its own instrument and leaves pair on the default (cyclus 7).
+        instrument: isForexJournal ? values.pair : values.instrument?.trim() || null,
         custom: pruneCustom(values.custom ?? {}),
       };
       await onSubmit(payload);

@@ -47,6 +47,9 @@ export const tradeSchema = z
     datum_open: z.string().min(1, "tradeForm.required"),
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),
+    // Free instrument symbol (cyclus 7). Forex journals mirror pair into this on
+    // submit; non-forex journals type their own. Free text like `entry`, not an enum.
+    instrument: nullableString.optional().default(null),
     direction: nullableEnum(DIRECTIONS).optional().default(null),
     outcome: z.enum(OUTCOMES),
     resultaat_pct: requiredNumber,

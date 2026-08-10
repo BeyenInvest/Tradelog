@@ -17,6 +17,8 @@ export interface DimensionConfig {
    * legacy WPM columns that such a journal never fills, so they'd be all-empty (cyclus 4).
    */
   universal?: boolean;
+  /** Forex-only dimension (pair/currency split) — shown only for a forex journal (cyclus 7). */
+  forex?: boolean;
 }
 
 /**
@@ -36,8 +38,11 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
   { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true },
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true },
-  { id: "pair", keyFn: (t) => t.pair, universal: true },
-  { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), universal: true },
+  // Instrument is the universal "what did you trade" (cyclus 7); pair/currency are
+  // the forex-specific split, shown only for a forex journal.
+  { id: "instrument", keyFn: (t) => t.instrument ?? t.pair, universal: true },
+  { id: "pair", keyFn: (t) => t.pair, forex: true },
+  { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), forex: true },
   // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },

@@ -19,6 +19,13 @@ export interface Trade {
   duur_dagen: number | null; // DB-generated, read-only
 
   pair: Pair;
+  /**
+   * Free instrument symbol — the universal instrument field for any asset class
+   * (Scope C, cyclus 7). Forex journals mirror this to `pair`; non-forex journals
+   * write their own ticker/coin here and leave `pair` on a default. null on trades
+   * logged before it existed (read it as `instrument ?? pair` for display).
+   */
+  instrument: string | null;
   /** Long/Short — universal core field (Scope C, cyclus 5). null on trades logged before it existed. */
   direction: Direction | null;
   outcome: Outcome;

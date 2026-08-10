@@ -58,6 +58,7 @@ export function dealToImportRow(
     datum_open: datumOpen,
     datum_sluiting: deal.closeTime ?? null,
     pair,
+    instrument: pair, // imports are forex — instrument mirrors pair (cyclus 7)
     direction: deal.direction === "buy" ? "Long" : deal.direction === "sell" ? "Short" : null,
     outcome: deriveOutcome(resultaatPct),
     resultaat_pct: resultaatPct,

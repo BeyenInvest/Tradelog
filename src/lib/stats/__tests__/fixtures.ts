@@ -14,6 +14,7 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
     datum_sluiting: null,
     duur_dagen: null,
     pair: "EURUSD",
+    instrument: "EURUSD",
     direction: null,
     outcome: "Win",
     resultaat_pct: 1,

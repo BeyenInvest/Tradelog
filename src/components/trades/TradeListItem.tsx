@@ -34,7 +34,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       <span className="text-muted">
         {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
       </span>
-      <span className="text-ink">{trade.pair}</span>
+      <span className="text-ink">{trade.instrument ?? trade.pair}</span>
       {!hideFase && (
         <span>
           <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>

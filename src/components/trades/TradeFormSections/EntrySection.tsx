@@ -24,7 +24,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   } = useFormContext<TradeFormValues>();
   const { hideFase } = useAuth();
   const { t } = useTranslation();
-  const { faseNames, isLegacyMethodology } = useMethodology();
+  const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
   const { options: customEntries } = useCustomOptions("entry");
   const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
   const { options: customConcepts } = useCustomOptions("trade_concept");
@@ -64,9 +64,21 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
             })}
           />
         </Field>
-        <Field label={t("tradeForm.pair")} error={errors.pair?.message}>
-          <EnumSelect options={PAIRS} {...register("pair")} />
-        </Field>
+        {/* Instrument: a forex journal picks from the fixed pair enum (and mirrors it
+            into `instrument` on submit); any other journal types its own symbol
+            (ticker/coin/contract) and pair stays on its hidden default (cyclus 7). */}
+        {isForexJournal ? (
+          <Field label={t("tradeForm.pair")} error={errors.pair?.message}>
+            <EnumSelect options={PAIRS} {...register("pair")} />
+          </Field>
+        ) : (
+          <>
+            <Field label={t("tradeForm.instrument")} error={errors.instrument?.message}>
+              <input className="input" placeholder={t("tradeForm.instrumentPlaceholder")} {...register("instrument")} />
+            </Field>
+            <input type="hidden" {...register("pair")} />
+          </>
+        )}
         {/* Direction is universal core (Long/Short) — shown for every journal, legacy or not. */}
         <Field label={t("tradeForm.direction")} error={errors.direction?.message}>
           <EnumSelect options={DIRECTIONS} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
