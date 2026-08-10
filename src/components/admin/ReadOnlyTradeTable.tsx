@@ -36,7 +36,7 @@ export function ReadOnlyTradeTable({ trades, onRowClick }: { trades: Trade[]; on
                 {new Date(tr.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
               </td>
               <td className="py-2 pr-4 text-muted">{tr.fase}</td>
-              <td className="py-2 pr-4 text-ink">{tr.pair}</td>
+              <td className="py-2 pr-4 text-ink">{tr.instrument ?? tr.pair}</td>
               <td className="py-2 pr-4 text-muted">{tr.outcome}</td>
               <td className={`py-2 pr-4 ${tr.resultaat_pct >= 0 ? "text-win" : "text-loss"}`}>
                 {tr.resultaat_pct > 0 ? "+" : ""}

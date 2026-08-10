@@ -41,7 +41,7 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
           <>
             <div className="flex items-center justify-between mb-4">
               <h2 id="trade-detail-title" className="font-display text-xl italic text-ink">
-                {trade.pair} —{" "}
+                {trade.instrument ?? trade.pair} —{" "}
                 {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "numeric" })}
               </h2>
               <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">

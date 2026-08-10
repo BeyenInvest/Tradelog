@@ -119,7 +119,7 @@ function parseActie(a: string): ReviewPdfActie {
 function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
   return {
     datum: t.datum_open,
-    pair: t.pair,
+    pair: t.instrument ?? t.pair, // instrument (falls back to pair) so non-forex journals read right (cyclus 7)
     concept: t.trade_concept,
     entry: t.entry,
     outcome: t.outcome,

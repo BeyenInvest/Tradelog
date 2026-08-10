@@ -52,10 +52,13 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
       const seen = new Set<string>();
       const chips: PairChip[] = [];
       for (const t of dayTrades) {
-        const key = `${t.pair}|${t.outcome}`;
+        // Chip label is the instrument (falls back to pair for legacy/forex) — so a
+        // non-forex journal shows its tickers, not the hidden default pair (cyclus 7).
+        const sym = t.instrument ?? t.pair;
+        const key = `${sym}|${t.outcome}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        chips.push({ pair: t.pair, outcome: t.outcome });
+        chips.push({ pair: sym, outcome: t.outcome });
       }
       m.set(day, chips);
     }
@@ -69,8 +72,9 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         const chips = m.get(day) ?? [];
-        const key = `${t.pair}|${t.outcome}`;
-        if (!chips.some((c) => `${c.pair}|${c.outcome}` === key)) chips.push({ pair: t.pair, outcome: t.outcome });
+        const sym = t.instrument ?? t.pair;
+        const key = `${sym}|${t.outcome}`;
+        if (!chips.some((c) => `${c.pair}|${c.outcome}` === key)) chips.push({ pair: sym, outcome: t.outcome });
         m.set(day, chips);
       }
     }
