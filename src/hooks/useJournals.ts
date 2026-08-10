@@ -46,7 +46,10 @@ export function useJournals() {
     }
     setJournals((data as JournalSummary[] | null) ?? []);
     setLoading(false);
-  }, [userId]);
+    // activeId in deps: creating a journal (PresetPicker) repoints the active journal
+    // but not this list — refetch on that change so a freshly made journal shows up
+    // immediately instead of the switcher falling back to "unknown" until a reload.
+  }, [userId, activeId]);
 
   useEffect(() => {
     void load();
