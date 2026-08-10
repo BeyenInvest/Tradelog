@@ -10,6 +10,7 @@ const t = ((key: string) => key) as unknown as TFunction;
 const baseWeekly: WeeklyReview = {
   id: "wr-1",
   user_id: "user-1",
+  methodology_id: null,
   week_nummer: 32,
   jaar: 2026,
   titel: "Geduldige week",
@@ -73,6 +74,7 @@ describe("buildReviewPdfData", () => {
     const periodic: PeriodicReview = {
       id: "pr-1",
       user_id: "user-1",
+      methodology_id: null,
       period_type: "month",
       jaar: 2026,
       periode_nummer: 7,

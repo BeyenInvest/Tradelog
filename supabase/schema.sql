@@ -64,6 +64,9 @@ create table backtest_projects (
 create table weekly_reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Which journal this review belongs to (per-journal isolation, cyclus 3b). Nullable
+  -- + on delete set null, mirroring trades.methodology_id.
+  methodology_id uuid references methodologies(id) on delete set null,
   week_nummer integer not null check (week_nummer between 1 and 53),
   jaar integer not null check (jaar between 2000 and 2100),
   titel text,
@@ -75,14 +78,20 @@ create table weekly_reviews (
   takeaway text,
   overall_comment text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (user_id, jaar, week_nummer)
+  updated_at timestamptz not null default now()
 );
+-- Unique per journal, not per whole account, so two journals can each hold a week-1
+-- review. Partial: an unassigned (null-journal) row is never blocked (cyclus 3b).
+create unique index weekly_reviews_journal_week_unique
+  on weekly_reviews(user_id, methodology_id, jaar, week_nummer)
+  where methodology_id is not null;
 
 -- ---------- PERIODIC REVIEWS (month/quarter/year — no FK from trades, period found by date range) ----------
 create table periodic_reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Which journal this review belongs to (per-journal isolation, cyclus 3b).
+  methodology_id uuid references methodologies(id) on delete set null,
   period_type period_type_enum not null,
   jaar integer not null check (jaar between 2000 and 2100),
   periode_nummer integer, -- 1-12 for month, 1-4 for quarter, null for year
@@ -97,12 +106,14 @@ create table periodic_reviews (
   updated_at timestamptz not null default now()
 );
 
+-- Unique per journal (cyclus 3b): the same month/quarter/year review can exist
+-- once per journal. Partial on methodology_id is not null so unassigned rows pass.
 create unique index periodic_reviews_month_quarter_unique
-  on periodic_reviews(user_id, period_type, jaar, periode_nummer)
-  where periode_nummer is not null;
+  on periodic_reviews(user_id, methodology_id, period_type, jaar, periode_nummer)
+  where periode_nummer is not null and methodology_id is not null;
 create unique index periodic_reviews_year_unique
-  on periodic_reviews(user_id, jaar)
-  where period_type = 'year';
+  on periodic_reviews(user_id, methodology_id, jaar)
+  where period_type = 'year' and methodology_id is not null;
 
 -- ---------- TRADES ----------
 create table trades (
@@ -177,6 +188,8 @@ create table trades (
 create table prop_accounts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Which journal this account belongs to (per-journal isolation, cyclus 3b).
+  methodology_id uuid references methodologies(id) on delete set null,
   naam text not null,
   account_size numeric(12,2) not null,
   fase prop_fase_enum not null default 'Phase 1',
@@ -461,6 +474,10 @@ create index idx_trades_backtest_project on trades(backtest_project_id);
 create unique index trades_user_import_ref_unique on trades(user_id, import_ref) where import_ref is not null;
 create index idx_payouts_account on payouts(account_id);
 create index idx_periodic_reviews_user on periodic_reviews(user_id);
+-- Per-journal isolation (cyclus 3b).
+create index idx_weekly_reviews_methodology on weekly_reviews(methodology_id);
+create index idx_periodic_reviews_methodology on periodic_reviews(methodology_id);
+create index idx_prop_accounts_methodology on prop_accounts(methodology_id);
 
 -- ---------- updated_at TRIGGERS ----------
 create or replace function set_updated_at() returns trigger as $$
@@ -704,7 +721,9 @@ begin
     iso_year := extract(isoyear from new.datum_open);
     iso_week := extract(week from new.datum_open);
     select id into found_id from weekly_reviews
-      where user_id = new.user_id and jaar = iso_year and week_nummer = iso_week
+      where user_id = new.user_id
+        and methodology_id is not distinct from new.methodology_id
+        and jaar = iso_year and week_nummer = iso_week
       limit 1;
     new.weekly_review_id := found_id;
   end if;
@@ -724,6 +743,7 @@ begin
     set weekly_review_id = new.id
     where user_id = new.user_id
       and backtest_project_id is null
+      and methodology_id is not distinct from new.methodology_id
       and weekly_review_id is null
       and extract(isoyear from datum_open) = new.jaar
       and extract(week from datum_open) = new.week_nummer;

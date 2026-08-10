@@ -18,13 +18,18 @@ export type TradeSubmitInput = Omit<TradeInput, "backtest_project_id">;
 export type TradesApi = ReturnType<typeof useTrades>;
 
 export function useTrades(scope: TradeScope) {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const userId = session!.user.id;
+  // Active journal (cyclus 3b). The live Journal shows only the active journal's
+  // trades; a backtest project is orthogonal to journals, so its trades are never
+  // journal-filtered. New/imported live trades are stamped with this id below.
+  const activeJournalId = profile?.methodology_id ?? null;
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const scopeKey = scope.type === "live" ? "live" : scope.projectId;
+  // The live scope's key includes the active journal so switching journals refetches.
+  const scopeKey = scope.type === "live" ? `live:${activeJournalId ?? "none"}` : scope.projectId;
   const loadedScopeRef = useRef<string | null>(null);
   // Guards against a slow response from a previous scope (e.g. quickly switching
   // between backtest projects) landing after a newer request and overwriting its
@@ -43,7 +48,14 @@ export function useTrades(scope: TradeScope) {
     // also has a blanket read-all RLS policy (supabase/migrations/0008_admin_role.sql),
     // so an unfiltered query here would return every user's trades on this page.
     let query = supabase.from("trades").select("*").eq("user_id", userId).order("datum_open", { ascending: true });
-    query = scope.type === "live" ? query.is("backtest_project_id", null) : query.eq("backtest_project_id", scope.projectId);
+    if (scope.type === "live") {
+      query = query.is("backtest_project_id", null);
+      // Scope the live Journal to the active journal (cyclus 3b). null = an
+      // unassigned journal; match its rows rather than every journal's.
+      query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+    } else {
+      query = query.eq("backtest_project_id", scope.projectId);
+    }
     const { data, error: fetchError } = await query;
     if (requestId !== requestIdRef.current) return; // a newer request has since superseded this one
     if (fetchError) {
@@ -62,9 +74,12 @@ export function useTrades(scope: TradeScope) {
 
   async function createTrade(input: TradeSubmitInput): Promise<Trade> {
     const backtest_project_id = scope.type === "live" ? null : scope.projectId;
+    // A live trade belongs to the active journal (cyclus 3b). The form already sets
+    // methodology_id, but default it here too so it's never left unscoped.
+    const methodology_id = scope.type === "live" ? input.methodology_id ?? activeJournalId : input.methodology_id;
     const { data, error: insertError } = await supabase
       .from("trades")
-      .insert({ ...input, backtest_project_id })
+      .insert({ ...input, backtest_project_id, methodology_id })
       .select()
       .single();
     if (insertError) throw insertError;
@@ -96,7 +111,10 @@ export function useTrades(scope: TradeScope) {
   async function createTradesBulk(rows: ImportTradeRow[]): Promise<number> {
     if (rows.length === 0) return 0;
     const backtest_project_id = scope.type === "live" ? null : scope.projectId;
-    const payload = rows.map((r) => ({ ...r, backtest_project_id }));
+    // Imported rows carry methodology_id: null — stamp the active journal so live
+    // imports land in (and stay visible in) the active journal (cyclus 3b).
+    const methodology_id = scope.type === "live" ? activeJournalId : null;
+    const payload = rows.map((r) => ({ ...r, backtest_project_id, methodology_id }));
     const { data, error: insertError } = await supabase.from("trades").insert(payload).select("id");
     if (insertError) throw insertError;
     await refresh();

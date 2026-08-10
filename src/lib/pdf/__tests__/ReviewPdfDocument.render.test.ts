@@ -24,7 +24,7 @@ Font.register({
 describe("ReviewPdfDocument render smoke", () => {
   it("renders a valid PDF without throwing", async () => {
     const review: WeeklyReview = {
-      id: "wr", user_id: "u", week_nummer: 32, jaar: 2026, titel: "Test",
+      id: "wr", user_id: "u", methodology_id: null, week_nummer: 32, jaar: 2026, titel: "Test",
       verhalen: "Narratief", technisch: "Tekst", mentaal_owner: "Owner voice", mentaal_trader: "Trader voice",
       acties: ["Backtesting: ok", "Journaling: niet ok", "Doel: sneller"],
       takeaway: "Geduld loont", overall_comment: "Slot",

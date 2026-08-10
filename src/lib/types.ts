@@ -93,6 +93,8 @@ export type TradeInput = Omit<
 export interface WeeklyReview {
   id: string;
   user_id: string;
+  /** Which journal this review belongs to (per-journal isolation, cyclus 3b). Injected by the hook on create. */
+  methodology_id: string | null;
   week_nummer: number;
   jaar: number;
   titel: string | null;
@@ -107,12 +109,14 @@ export interface WeeklyReview {
   updated_at: string;
 }
 
-export type WeeklyReviewInput = Omit<WeeklyReview, "id" | "user_id" | "created_at" | "updated_at">;
+export type WeeklyReviewInput = Omit<WeeklyReview, "id" | "user_id" | "methodology_id" | "created_at" | "updated_at">;
 
 /** Monthly/quarterly/yearly review — mirrors the `periodic_reviews` table. PnL/win-rate are computed live from trades in the period's date range, not stored. */
 export interface PeriodicReview {
   id: string;
   user_id: string;
+  /** Which journal this review belongs to (per-journal isolation, cyclus 3b). Injected by the hook on create. */
+  methodology_id: string | null;
   period_type: PeriodType;
   jaar: number;
   periode_nummer: number | null; // 1-12 for month, 1-4 for quarter, null for year
@@ -128,11 +132,13 @@ export interface PeriodicReview {
   updated_at: string;
 }
 
-export type PeriodicReviewInput = Omit<PeriodicReview, "id" | "user_id" | "created_at" | "updated_at">;
+export type PeriodicReviewInput = Omit<PeriodicReview, "id" | "user_id" | "methodology_id" | "created_at" | "updated_at">;
 
 export interface PropAccount {
   id: string;
   user_id: string;
+  /** Which journal this account belongs to (per-journal isolation, cyclus 3b). Injected by the hook on create. */
+  methodology_id: string | null;
   naam: string;
   account_size: number;
   fase: PropFase;
@@ -146,7 +152,7 @@ export interface PropAccount {
   updated_at: string;
 }
 
-export type PropAccountInput = Omit<PropAccount, "id" | "user_id" | "created_at" | "updated_at">;
+export type PropAccountInput = Omit<PropAccount, "id" | "user_id" | "methodology_id" | "created_at" | "updated_at">;
 
 export interface Payout {
   id: string;

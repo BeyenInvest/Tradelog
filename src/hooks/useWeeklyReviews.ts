@@ -5,8 +5,10 @@ import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import { isoWeekRange } from "@/lib/isoWeek";
 
 export function useWeeklyReviews() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const userId = session!.user.id;
+  // Reviews follow the active journal (per-journal isolation, cyclus 3b).
+  const activeJournalId = profile?.methodology_id ?? null;
   const [reviews, setReviews] = useState<WeeklyReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,10 +17,10 @@ export function useWeeklyReviews() {
     setLoading(true);
     setError(null);
     // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
-    const { data, error: fetchError } = await supabase
-      .from("weekly_reviews")
-      .select("*")
-      .eq("user_id", userId)
+    let query = supabase.from("weekly_reviews").select("*").eq("user_id", userId);
+    // Scope to the active journal (cyclus 3b); null = unassigned journal.
+    query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+    const { data, error: fetchError } = await query
       .order("jaar", { ascending: false })
       .order("week_nummer", { ascending: false });
     if (fetchError) {
@@ -27,14 +29,19 @@ export function useWeeklyReviews() {
       setReviews(data as WeeklyReview[]);
     }
     setLoading(false);
-  }, [userId]);
+  }, [userId, activeJournalId]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   async function createReview(input: WeeklyReviewInput): Promise<WeeklyReview> {
-    const { data, error: insertError } = await supabase.from("weekly_reviews").insert(input).select().single();
+    // Stamp the active journal so the review lands in (and stays visible in) it (cyclus 3b).
+    const { data, error: insertError } = await supabase
+      .from("weekly_reviews")
+      .insert({ ...input, methodology_id: activeJournalId })
+      .select()
+      .single();
     if (insertError) throw insertError;
     await refresh();
     return data as WeeklyReview;
@@ -75,13 +82,18 @@ export function useWeeklyReviews() {
       .or(`datum_open.lt.${start},datum_open.gt.${end}`);
     if (unlinkError) throw unlinkError;
 
-    const { data, error: linkError } = await supabase
+    let linkQuery = supabase
       .from("trades")
       .update({ weekly_review_id: reviewId })
       .is("backtest_project_id", null)
+      // Only this journal's trades — never blend another journal's week into this
+      // review (cyclus 3b). Mirrors the journal-aware DB auto-link triggers.
       .gte("datum_open", start)
-      .lte("datum_open", end)
-      .select("id");
+      .lte("datum_open", end);
+    linkQuery = activeJournalId
+      ? linkQuery.eq("methodology_id", activeJournalId)
+      : linkQuery.is("methodology_id", null);
+    const { data, error: linkError } = await linkQuery.select("id");
     if (linkError) throw linkError;
     return (data ?? []).length;
   }

@@ -31,6 +31,12 @@
     "logout": "Uitloggen",
     "logoutFailed": "Uitloggen is mislukt"
   },
+  "journalSwitcher": {
+    "label": "Actief journal",
+    "newJournal": "Nieuw journal",
+    "unknown": "Journal",
+    "switchFailed": "Journal wisselen is mislukt"
+  },
   "auth": {
     "name": "Naam",
     "email": "E-mail",

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { JournalSwitcher } from "@/components/layout/JournalSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
 // Account deletion (DeleteAccountModal + useAuth.deleteAccount) is built but
@@ -45,6 +46,12 @@ export function Sidebar() {
       <div className="flex items-center gap-2 md:px-2 md:mb-8 shrink-0">
         <LogoMark size={20} className="text-gold" />
         <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink"><Wordmark /></span>
+      </div>
+
+      {/* Active-journal switcher (cyclus 3b). Desktop-only for now — the mobile top
+          bar is too tight; a compact mobile entry point can follow. */}
+      <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
+        <JournalSwitcher />
       </div>
 
       {/* flex-1 + min-w-0 lets this item both absorb the row's remaining width AND shrink below its

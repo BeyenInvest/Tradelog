@@ -4,8 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 
 export function usePropAccounts() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const userId = session!.user.id;
+  // Accounts follow the active journal (per-journal isolation, cyclus 3b).
+  const activeJournalId = profile?.methodology_id ?? null;
   const [accounts, setAccounts] = useState<PropAccount[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,10 @@ export function usePropAccounts() {
     // Explicit user_id filter on accounts — see useTrades for why this can't be left to RLS
     // alone. Payouts has no user_id of its own, so it's scoped indirectly via account_id once
     // we know which accounts are ours (same pattern as adminQueries.getPropAccountsForUser).
-    const accountsRes = await supabase.from("prop_accounts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    let accountsQuery = supabase.from("prop_accounts").select("*").eq("user_id", userId);
+    // Scope to the active journal (cyclus 3b); null = unassigned journal.
+    accountsQuery = activeJournalId ? accountsQuery.eq("methodology_id", activeJournalId) : accountsQuery.is("methodology_id", null);
+    const accountsRes = await accountsQuery.order("created_at", { ascending: false });
     if (accountsRes.error) {
       setError(accountsRes.error.message);
       setLoading(false);
@@ -36,7 +41,7 @@ export function usePropAccounts() {
     if (payoutsRes.error) setError(payoutsRes.error.message);
     else setPayouts(payoutsRes.data as Payout[]);
     setLoading(false);
-  }, [userId]);
+  }, [userId, activeJournalId]);
 
   useEffect(() => {
     void refresh();
@@ -47,7 +52,12 @@ export function usePropAccounts() {
   // page on every single create/delete — losing in-progress form input and scroll position).
 
   async function createAccount(input: PropAccountInput): Promise<PropAccount> {
-    const { data, error: err } = await supabase.from("prop_accounts").insert(input).select().single();
+    // Stamp the active journal so the account lands in (and stays visible in) it (cyclus 3b).
+    const { data, error: err } = await supabase
+      .from("prop_accounts")
+      .insert({ ...input, methodology_id: activeJournalId })
+      .select()
+      .single();
     if (err) throw err;
     const created = data as PropAccount;
     setAccounts((prev) => [created, ...prev]);

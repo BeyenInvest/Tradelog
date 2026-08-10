@@ -31,6 +31,12 @@
     "logout": "Log out",
     "logoutFailed": "Sign-out failed"
   },
+  "journalSwitcher": {
+    "label": "Active journal",
+    "newJournal": "New journal",
+    "unknown": "Journal",
+    "switchFailed": "Switching journal failed"
+  },
   "auth": {
     "name": "Name",
     "email": "Email",
