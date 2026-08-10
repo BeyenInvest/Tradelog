@@ -8,6 +8,8 @@ export interface JournalFilters {
   /** A fase name from the user's methodology (Scope C) — free text, not the fixed Fase enum. */
   fase?: string;
   pair?: Pair;
+  /** Free instrument match (cyclus 7) — case-insensitive substring on `instrument ?? pair`, for non-forex journals. */
+  instrument?: string;
   direction?: Direction;
   outcome?: Outcome;
   tradeEvaluation?: TradeEvaluation;
@@ -32,6 +34,7 @@ export function applyJournalFilters(trades: Trade[], range: DateRange | null, fi
     if (!inRange(t.datum_open, range)) return false;
     if (filters.fase && t.fase !== filters.fase) return false;
     if (filters.pair && t.pair !== filters.pair) return false;
+    if (filters.instrument && !(t.instrument ?? t.pair).toLowerCase().includes(filters.instrument.toLowerCase())) return false;
     if (filters.direction && t.direction !== filters.direction) return false;
     if (filters.outcome && t.outcome !== filters.outcome) return false;
     if (filters.tradeEvaluation && t.trade_evaluation !== filters.tradeEvaluation) return false;

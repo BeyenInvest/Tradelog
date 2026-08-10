@@ -23,7 +23,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
   const { hideFase } = useAuth();
-  const { faseNames } = useMethodology();
+  const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
 
   return (
     <div className="relative" ref={ref}>
@@ -54,7 +54,8 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {!hideFase && (
+            {/* fase filter: legacy WPM only + still per-user hideable (matches the form/analysis). */}
+            {isLegacyMethodology && !hideFase && (
               <Field label={t("filters.fase")}>
                 <EnumSelect
                   options={faseNames}
@@ -65,15 +66,29 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 />
               </Field>
             )}
-            <Field label={t("filters.pair")}>
-              <EnumSelect
-                options={PAIRS}
-                value={value.pair ?? ""}
-                onChange={(e) => onChange({ ...value, pair: e.target.value === "" ? undefined : (e.target.value as (typeof PAIRS)[number]) })}
-                placeholder={t("filters.allPairs")}
-                className="w-full text-xs py-1.5"
-              />
-            </Field>
+            {/* Instrument: forex journal filters by the pair enum; any other journal by a free
+                instrument substring (cyclus 7). */}
+            {isForexJournal ? (
+              <Field label={t("filters.pair")}>
+                <EnumSelect
+                  options={PAIRS}
+                  value={value.pair ?? ""}
+                  onChange={(e) => onChange({ ...value, pair: e.target.value === "" ? undefined : (e.target.value as (typeof PAIRS)[number]) })}
+                  placeholder={t("filters.allPairs")}
+                  className="w-full text-xs py-1.5"
+                />
+              </Field>
+            ) : (
+              <Field label={t("tradeForm.instrument")}>
+                <input
+                  type="text"
+                  value={value.instrument ?? ""}
+                  onChange={(e) => onChange({ ...value, instrument: e.target.value === "" ? undefined : e.target.value })}
+                  placeholder={t("filters.allInstruments")}
+                  className="input w-full text-xs py-1.5"
+                />
+              </Field>
+            )}
             <Field label={t("filters.direction")}>
               <EnumSelect
                 options={DIRECTIONS}
@@ -92,15 +107,18 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label={t("filters.sessie")}>
-              <EnumSelect
-                options={SESSIES}
-                value={value.sessie ?? ""}
-                onChange={(e) => onChange({ ...value, sessie: e.target.value === "" ? undefined : (e.target.value as (typeof SESSIES)[number]) })}
-                placeholder={t("filters.allSessions")}
-                className="w-full text-xs py-1.5"
-              />
-            </Field>
+            {/* sessie is derived from cc, a legacy WPM field — only meaningful on a legacy journal. */}
+            {isLegacyMethodology && (
+              <Field label={t("filters.sessie")}>
+                <EnumSelect
+                  options={SESSIES}
+                  value={value.sessie ?? ""}
+                  onChange={(e) => onChange({ ...value, sessie: e.target.value === "" ? undefined : (e.target.value as (typeof SESSIES)[number]) })}
+                  placeholder={t("filters.allSessions")}
+                  className="w-full text-xs py-1.5"
+                />
+              </Field>
+            )}
             <Field label={t("filters.evaluation")}>
               <EnumSelect
                 options={TRADE_EVALUATIONS}
@@ -112,15 +130,18 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            <Field label={t("filters.news")}>
-              <EnumSelect
-                options={NIEUWS_OPTIONS}
-                value={value.nieuws === undefined ? "" : value.nieuws ? "Ja" : "Nee"}
-                onChange={(e) => onChange({ ...value, nieuws: e.target.value === "" ? undefined : e.target.value === "Ja" })}
-                placeholder={t("filters.all")}
-                className="w-full text-xs py-1.5"
-              />
-            </Field>
+            {/* news (nieuws) is a legacy WPM field — gated out of the form for non-legacy journals too. */}
+            {isLegacyMethodology && (
+              <Field label={t("filters.news")}>
+                <EnumSelect
+                  options={NIEUWS_OPTIONS}
+                  value={value.nieuws === undefined ? "" : value.nieuws ? "Ja" : "Nee"}
+                  onChange={(e) => onChange({ ...value, nieuws: e.target.value === "" ? undefined : e.target.value === "Ja" })}
+                  placeholder={t("filters.all")}
+                  className="w-full text-xs py-1.5"
+                />
+              </Field>
+            )}
           </div>
         </div>
       )}
