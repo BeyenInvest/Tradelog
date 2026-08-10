@@ -48,10 +48,13 @@ export function Sidebar() {
         <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink"><Wordmark /></span>
       </div>
 
-      {/* Active-journal switcher (cyclus 3b). Desktop-only for now — the mobile top
-          bar is too tight; a compact mobile entry point can follow. */}
+      {/* Active-journal switcher (cyclus 3b). Full-width in the desktop column; a
+          compact variant in the mobile top bar so mobile can switch/create too. */}
       <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
         <JournalSwitcher />
+      </div>
+      <div className="md:hidden shrink-0 min-w-0 max-w-[8.5rem]">
+        <JournalSwitcher compact />
       </div>
 
       {/* flex-1 + min-w-0 lets this item both absorb the row's remaining width AND shrink below its

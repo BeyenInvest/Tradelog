@@ -12,8 +12,9 @@ import { toErrorMessage } from "@/lib/errorMessage";
  * /settings where the PresetPicker forks/creates one). Everything journal-scoped
  * — trades, analysis, reviews, accounts — re-scopes the moment the active journal
  * changes. Hidden until at least one journal loads so it never flashes empty.
+ * `compact` is the mobile top-bar variant: a narrow trigger with a wider dropdown.
  */
-export function JournalSwitcher() {
+export function JournalSwitcher({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { journals, activeId, loading, switchJournal } = useJournals();
@@ -66,7 +67,9 @@ export function JournalSwitcher() {
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg"
+          className={`absolute left-0 top-full z-30 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg ${
+            compact ? "min-w-[15rem]" : "right-0"
+          }`}
         >
           {journals.map((j) => (
             <button
