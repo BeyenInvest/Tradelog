@@ -10,6 +10,13 @@ export interface DimensionConfig {
   sortOrder?: readonly string[];
   /** Ready-made title for config-driven (custom-field) dimensions, which have no i18n key — the field's own label. See BacktestingAnalysisView. */
   label?: string;
+  /**
+   * True for a dimension every journal captures regardless of methodology — date-derived
+   * splits + the universal core fields (pair/currency/direction). A non-Weekly-Phase-Method
+   * journal shows only these fixed dimensions (plus its own custom fields); the rest read
+   * legacy WPM columns that such a journal never fills, so they'd be all-empty (cyclus 4).
+   */
+  universal?: boolean;
 }
 
 /**
@@ -27,12 +34,12 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "weekly_kenmerk", keyFn: (t) => t.weekly_kenmerk },
   { id: "cc", keyFn: (t) => t.cc, sortOrder: CCS },
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
-  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS },
-  { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS },
-  { id: "pair", keyFn: (t) => t.pair },
-  { id: "currency", keyFn: (t) => currenciesOfPair(t.pair) },
+  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true },
+  { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true },
+  { id: "pair", keyFn: (t) => t.pair, universal: true },
+  { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), universal: true },
   // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
-  { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS },
+  { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
 ];
 

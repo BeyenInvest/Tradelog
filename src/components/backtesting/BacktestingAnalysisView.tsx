@@ -40,8 +40,13 @@ export function BacktestingAnalysisView({
 }) {
   const { t } = useTranslation();
   const { hideFase: ownHideFase } = useAuth();
-  const { fields } = useMethodology();
+  const { fields, isLegacyMethodology } = useMethodology();
   const hideFase = hideFaseOverride ?? ownHideFase;
+  // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
+  // per-fase cards + fase-kenmerken + WPM-only breakdowns would be all-empty. Gate that whole
+  // block on the active journal actually being the legacy one (cyclus 4); such a journal sees
+  // only the universal KPIs/curve + universal dimensions + its own custom-field breakdowns.
+  const showFase = isLegacyMethodology && !hideFase;
   const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
@@ -73,6 +78,17 @@ export function BacktestingAnalysisView({
   // than silently collapsing this whole section to 0 rows (findIndex returning -1 would do that).
   const weeklyKenmerkIdx = BREAKDOWN_DIMENSIONS.findIndex((d) => d.id === "weekly_kenmerk");
   const kenmerkenSplit = weeklyKenmerkIdx === -1 ? 1 : weeklyKenmerkIdx + 1;
+
+  // The per-fase split is Weekly-Phase-Method-specific; force "totaal" when the fase block is
+  // hidden so a stale toggle state can't leave the breakdowns rendering an empty per-fase grid.
+  const effectiveViewMode = showFase ? viewMode : "totaal";
+  // The first group (setup/weekly) is entirely legacy WPM columns; the second (timing/instrument)
+  // mixes legacy (cc/sessie/nieuws) with universal dims. A non-legacy journal shows only the
+  // universal ones there and drops the setup/weekly group altogether (cyclus 4).
+  const timingDimRows = isLegacyMethodology
+    ? dimensionRows.slice(kenmerkenSplit)
+    : dimensionRows.slice(kenmerkenSplit).filter(({ dim }) => dim.universal);
+  const timingDimGridRows = dimensionGridRows.slice(kenmerkenSplit);
 
   const kenmerkRows = useMemo(
     () =>
@@ -129,7 +145,7 @@ export function BacktestingAnalysisView({
 
       {/* Per Fase KPI cards + bar chart */}
       <section className="flex flex-col gap-4">
-        {!hideFase && (
+        {showFase && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {byFase.map((f) => (
               <Card key={f.key}>
@@ -157,12 +173,12 @@ export function BacktestingAnalysisView({
             ))}
           </div>
         )}
-        <div className={`grid grid-cols-1 gap-5 ${hideFase ? "" : "lg:grid-cols-2"}`}>
+        <div className={`grid grid-cols-1 gap-5 ${showFase ? "lg:grid-cols-2" : ""}`}>
           <Card>
             <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
             <EquityCurveChart trades={scopedTrades} />
           </Card>
-          {!hideFase && (
+          {showFase && (
             <Card>
               <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
               <FaseBarChart data={byFase} />
@@ -199,7 +215,7 @@ export function BacktestingAnalysisView({
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl italic text-ink">{t("backtestingAnalysis.breakdownsHeading")}</h2>
-          {!hideFase && (
+          {showFase && (
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => setViewMode("totaal")}
@@ -217,17 +233,20 @@ export function BacktestingAnalysisView({
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
-          <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {viewMode === "totaal"
-              ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
-              : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+        {/* Setup & weekly — entirely legacy WPM columns, so only for the legacy journal. */}
+        {isLegacyMethodology && (
+          <div className="flex flex-col gap-3">
+            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {effectiveViewMode === "totaal"
+                ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
+                : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Fase-kenmerken */}
-        {!hideFase && (
+        {showFase && (
           <div className="flex flex-col gap-4">
             <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
             {FASES.map((fase) => {
@@ -250,9 +269,9 @@ export function BacktestingAnalysisView({
         <div className="flex flex-col gap-3">
           <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {viewMode === "totaal"
-              ? dimensionRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
-              : dimensionGridRows.slice(kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+            {effectiveViewMode === "totaal"
+              ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
+              : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
           </div>
         </div>
 
