@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { JournalSwitcher } from "@/components/layout/JournalSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -23,9 +24,13 @@ const NAV = [
 
 export function Sidebar() {
   const { signOut, isAdmin } = useAuth();
+  const { isForexJournal } = useMethodology();
   const { t } = useTranslation();
   const [signOutError, setSignOutError] = useState<string | null>(null);
-  const nav = isAdmin ? [...NAV, { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck }] : NAV;
+  // The lot-size calculator is a forex-only tool (pips/lots) — show it only when the
+  // active journal trades forex, not in a stocks/crypto/futures journal (cyclus 7).
+  const base = isForexJournal ? NAV : NAV.filter((n) => n.to !== "/lot-size");
+  const nav = isAdmin ? [...base, { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck }] : base;
 
   async function handleSignOut() {
     setSignOutError(null);
