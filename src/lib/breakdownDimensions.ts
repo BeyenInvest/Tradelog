@@ -1,6 +1,7 @@
 import type { MethodologyField, Trade } from "./types";
 import { currenciesOfPair, CCS, DIRECTIONS, LEGACY_METHODOLOGY_FIELD_KEYS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
+import { numberBucketer } from "./numberBuckets";
 
 export interface DimensionConfig {
   id: string;
@@ -52,28 +53,45 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
  * Config-driven breakdown dimensions for a methodology's own custom fields
  * (Scope C, cyclus 4). Turns each analysable custom field into a "Per X" split
  * that reads its value from the trades.custom bag — the same generic breakdownBy
- * every fixed dimension uses. Only enum + boolean are bucketable out of the box;
- * number (needs range buckets), text (too free) and date are skipped for now.
- * Legacy WPM fields are excluded — those keep their hardcoded columns + the
- * per-fase / fase-kenmerken analysis until cyclus 10.
+ * every fixed dimension uses. Enum + boolean bucket directly; a `number` field is
+ * split into quartile ranges derived from the trades passed in (cyclus 7) — so it
+ * needs the data, unlike the value-agnostic enum/boolean dims. `text` (too free)
+ * and `date` are still skipped. Legacy WPM fields are excluded — those keep their
+ * hardcoded columns + the per-fase / fase-kenmerken analysis until cyclus 10.
  */
-export function customFieldDimensions(fields: MethodologyField[]): DimensionConfig[] {
-  return fields
-    .filter(
-      (f) =>
-        !LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) &&
-        !f.is_computed &&
-        (f.field_type === "enum" || f.field_type === "boolean")
-    )
-    .map((f) => ({
-      id: `custom:${f.field_key}`,
-      label: f.label,
-      sortOrder: f.field_type === "enum" ? f.options ?? undefined : undefined,
-      keyFn: (t: Trade) => {
-        const raw = t.custom?.[f.field_key];
-        if (raw == null || raw === "") return null;
-        if (f.field_type === "boolean") return raw ? "Ja" : "Nee";
-        return String(raw);
-      },
-    }));
+export function customFieldDimensions(fields: MethodologyField[], trades: Trade[] = []): DimensionConfig[] {
+  const dims: DimensionConfig[] = [];
+  for (const f of fields) {
+    if (LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) || f.is_computed) continue;
+
+    if (f.field_type === "enum" || f.field_type === "boolean") {
+      dims.push({
+        id: `custom:${f.field_key}`,
+        label: f.label,
+        sortOrder: f.field_type === "enum" ? f.options ?? undefined : undefined,
+        keyFn: (t: Trade) => {
+          const raw = t.custom?.[f.field_key];
+          if (raw == null || raw === "") return null;
+          if (f.field_type === "boolean") return raw ? "Ja" : "Nee";
+          return String(raw);
+        },
+      });
+    } else if (f.field_type === "number") {
+      const values = trades
+        .map((t) => t.custom?.[f.field_key])
+        .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+      const bucketer = numberBucketer(values);
+      if (!bucketer) continue; // no numeric data yet → no dimension to show
+      dims.push({
+        id: `custom:${f.field_key}`,
+        label: f.label,
+        sortOrder: bucketer.order,
+        keyFn: (t: Trade) => {
+          const raw = t.custom?.[f.field_key];
+          return typeof raw === "number" && Number.isFinite(raw) ? bucketer.keyForValue(raw) : null;
+        },
+      });
+    }
+  }
+  return dims;
 }

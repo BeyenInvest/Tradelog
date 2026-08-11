@@ -103,7 +103,7 @@ export function BacktestingAnalysisView({
   // read from the trades.custom bag. Empty for a plain Weekly Phase Method journal
   // (its fields are legacy columns, handled by the per-fase sections above), so this
   // adds nothing for the owner and everything for a preset/custom journal.
-  const customDims = useMemo(() => customFieldDimensions(fields), [fields]);
+  const customDims = useMemo(() => customFieldDimensions(fields, scopedTrades), [fields, scopedTrades]);
   const customDimRows = useMemo(
     () => customDims.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
     [scopedTrades, customDims]

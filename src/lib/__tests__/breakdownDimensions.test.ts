@@ -23,7 +23,7 @@ function field(overrides: Partial<MethodologyField>): MethodologyField {
 }
 
 describe("customFieldDimensions", () => {
-  it("keeps only analysable custom fields (enum/boolean), dropping legacy, computed, text/number/date", () => {
+  it("keeps only analysable custom fields, dropping legacy, computed, text, date, and number-without-data", () => {
     const fields = [
       field({ field_key: "setup", field_type: "enum", options: ["A", "B"] }),
       field({ field_key: "news", field_type: "boolean" }),
@@ -31,12 +31,25 @@ describe("customFieldDimensions", () => {
       field({ field_key: "structuur", field_type: "enum", options: ["Inner"] }), // legacy
       field({ field_key: "beide", field_type: "boolean", is_computed: true }), // computed
       field({ field_key: "targets", field_type: "text" }), // not bucketable
-      field({ field_key: "leverage", field_type: "number" }), // not bucketable (yet)
+      field({ field_key: "leverage", field_type: "number" }), // number, but no trades → no data → dropped
     ];
     const dims = customFieldDimensions(fields);
     expect(dims.map((d) => d.id)).toEqual(["custom:setup", "custom:news"]);
     expect(dims[0].label).toBe("Setup");
     expect(dims[0].sortOrder).toEqual(["A", "B"]);
+  });
+
+  it("adds a quartile-bucketed dimension for a number field once trades carry values", () => {
+    const fields = [field({ field_key: "rr", label: "R:R", field_type: "number" })];
+    // Few distinct values → one bucket per exact value, in ascending order.
+    const trades = [1, 2, 2, 3, 1].map((rr) => makeTrade({ custom: { rr } }));
+    const [dim] = customFieldDimensions(fields, trades);
+    expect(dim.id).toBe("custom:rr");
+    expect(dim.label).toBe("R:R");
+    expect(dim.sortOrder).toEqual(["1", "2", "3"]);
+    expect(dim.keyFn(makeTrade({ custom: { rr: 2 } }))).toBe("2");
+    expect(dim.keyFn(makeTrade({ custom: {} }))).toBeNull();
+    expect(dim.keyFn(makeTrade({ custom: { rr: "n/a" } }))).toBeNull();
   });
 
   it("reads the value out of the trades.custom bag, mapping booleans to Ja/Nee and blanks to null", () => {
