@@ -132,7 +132,7 @@ describe("deriveOutcome", () => {
 
 describe("dealToImportRow", () => {
   it("builds a neutral, taken (never missed) trade with an import_ref", () => {
-    const row = dealToImportRow(deal({ ticket: "42", symbol: "EURUSD.r" }), "EURUSD", 3.2, "ctrader");
+    const row = dealToImportRow(deal({ ticket: "42", symbol: "EURUSD.r" }), "EURUSD", "EURUSD", 3.2, "ctrader");
     expect(row.import_ref).toBe("ctrader:42");
     expect(row.trade_evaluation).toBeNull(); // imports are never "Missed trade"
     expect(row.outcome).toBe("Win");
@@ -141,9 +141,17 @@ describe("dealToImportRow", () => {
     expect(row.datum_open).toBe("2024-03-15");
   });
   it("falls back to close date when open date is missing", () => {
-    const row = dealToImportRow(deal({ openTime: null, closeTime: "2024-05-01" }), "EURUSD", -1, "mt");
+    const row = dealToImportRow(deal({ openTime: null, closeTime: "2024-05-01" }), "EURUSD", "EURUSD", -1, "mt");
     expect(row.datum_open).toBe("2024-05-01");
     expect(row.outcome).toBe("Loss");
+  });
+  it("keeps pair and instrument as given (forex mirrors, non-forex carries the raw symbol)", () => {
+    const forex = dealToImportRow(deal({ symbol: "GBPUSD.r" }), "GBPUSD", "GBPUSD", 1, "ctrader");
+    expect(forex.pair).toBe("GBPUSD");
+    expect(forex.instrument).toBe("GBPUSD");
+    const stock = dealToImportRow(deal({ symbol: "AAPL" }), "EURUSD", "AAPL", 1, "ctrader");
+    expect(stock.pair).toBe("EURUSD"); // placeholder, ignored by non-forex views
+    expect(stock.instrument).toBe("AAPL");
   });
 });
 
@@ -187,6 +195,18 @@ describe("prepareImport", () => {
     const res = prepareImport(deals, "ctrader", opts);
     expect(res.undatedCount).toBe(1);
     expect(res.rows).toHaveLength(0);
+  });
+
+  it("non-forex journal keeps raw symbols as instrument, never flagging unknowns", () => {
+    const deals = [
+      deal({ ticket: "1", symbol: "AAPL", pnlAmount: 100 }),
+      deal({ ticket: "2", symbol: "US30", pnlAmount: 100 }), // would be "unknown" for a forex journal
+    ];
+    const res = prepareImport(deals, "ctrader", { ...opts, forexJournal: false });
+    expect(res.unknownSymbols).toEqual([]);
+    expect(res.rows).toHaveLength(2);
+    expect(res.rows.map((r) => r.instrument)).toEqual(["AAPL", "US30"]);
+    expect(res.rows.every((r) => r.pair === "EURUSD")).toBe(true); // placeholder
   });
 });
 

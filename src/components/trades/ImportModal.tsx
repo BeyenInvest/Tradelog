@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { PAIRS, type Pair } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { detectBroker, parseFile, prepareImport, type ImportBroker, type ParsedDeal } from "@/lib/import";
@@ -44,6 +45,7 @@ interface ImportModalProps {
 export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const { isForexJournal } = useMethodology();
   const userId = session!.user.id;
 
   const [rawText, setRawText] = useState<string | null>(null);
@@ -83,8 +85,9 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
         pairMap,
         accountBalance: accountBalance != null && Number.isFinite(accountBalance) ? accountBalance : null,
         existingImportRefs: existingRefs,
+        forexJournal: isForexJournal,
       }),
-    [deals, broker, pairMap, accountBalance, existingRefs]
+    [deals, broker, pairMap, accountBalance, existingRefs, isForexJournal]
   );
 
   function parseText(text: string, b: ImportBroker) {
@@ -282,14 +285,14 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
                         <div className="min-w-[420px] flex flex-col gap-1">
                           <div className="grid grid-cols-4 gap-3 font-body text-[11px] uppercase tracking-wider text-faint pb-1 border-b border-border-soft">
                             <span>{t("import.colDate")}</span>
-                            <span>{t("import.colPair")}</span>
+                            <span>{t(isForexJournal ? "import.colPair" : "import.colInstrument")}</span>
                             <span>{t("import.colOutcome")}</span>
                             <span className="text-right">{t("import.colResult")}</span>
                           </div>
                           {prepared.rows.slice(0, PREVIEW_LIMIT).map((r) => (
                             <div key={r.import_ref} className="grid grid-cols-4 gap-3 font-mono text-xs items-center py-1">
                               <span className="text-muted">{r.datum_open}</span>
-                              <span className="text-ink">{r.pair}</span>
+                              <span className="text-ink">{r.instrument ?? r.pair}</span>
                               <span>
                                 <OutcomePill outcome={r.outcome} />
                               </span>

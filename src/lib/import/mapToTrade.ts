@@ -45,10 +45,15 @@ export function deriveOutcome(resultaatPct: number): Outcome {
  * an imported trade is always a *taken* trade, never "Missed" — so it can never
  * pollute the missed-trade contract. The original broker symbol is preserved in
  * notes for traceability.
+ *
+ * `instrument` is the universal symbol (cyclus 7): for a forex import it mirrors
+ * the resolved `pair`; for a non-forex journal it carries the raw broker symbol
+ * while `pair` stays on a placeholder the non-forex views ignore.
  */
 export function dealToImportRow(
   deal: ParsedDeal,
   pair: Pair,
+  instrument: string,
   resultaatPct: number,
   broker: ImportBroker
 ): ImportTradeRow {
@@ -58,7 +63,7 @@ export function dealToImportRow(
     datum_open: datumOpen,
     datum_sluiting: deal.closeTime ?? null,
     pair,
-    instrument: pair, // imports are forex — instrument mirrors pair (cyclus 7)
+    instrument,
     direction: deal.direction === "buy" ? "Long" : deal.direction === "sell" ? "Short" : null,
     outcome: deriveOutcome(resultaatPct),
     resultaat_pct: resultaatPct,

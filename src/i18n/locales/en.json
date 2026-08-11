@@ -180,6 +180,7 @@
     "previewTitle": "Preview",
     "colDate": "Date",
     "colPair": "Pair",
+    "colInstrument": "Instrument",
     "colOutcome": "Outcome",
     "colResult": "Result",
     "morePreview": "…and {{count}} more",

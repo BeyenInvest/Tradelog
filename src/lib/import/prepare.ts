@@ -3,6 +3,9 @@ import { normalizeSymbol } from "./symbols";
 import { resolveResultaatPct, dealToImportRow } from "./mapToTrade";
 import type { ImportBroker, ImportTradeRow, ParsedDeal } from "./types";
 
+/** Placeholder pair for a non-forex import — the real symbol lives in `instrument`; the not-null forex `pair` column keeps this default, which non-forex views ignore (cyclus 7). Mirrors the trade form's hidden pair default. */
+const NON_FOREX_PAIR_PLACEHOLDER: Pair = "EURUSD";
+
 export interface PrepareOptions {
   /** User-supplied raw-symbol → Pair overrides for symbols normalizeSymbol can't resolve. */
   pairMap: Record<string, Pair>;
@@ -10,6 +13,14 @@ export interface PrepareOptions {
   accountBalance: number | null;
   /** import_refs already in the DB for this user — matches are skipped as duplicates. */
   existingImportRefs: Set<string>;
+  /**
+   * Whether the active journal trades forex (cyclus 7). Forex: every symbol must
+   * resolve to a Pair (normalizeSymbol/pairMap), unresolved ones go to the manual
+   * mapping step. Non-forex: the raw symbol is kept verbatim as the instrument, no
+   * Pair mapping needed, so `unknownSymbols` is always empty. Defaults to true —
+   * broker import has always been forex-only until now.
+   */
+  forexJournal?: boolean;
 }
 
 export interface PreparedImport {
@@ -33,6 +44,7 @@ export interface PreparedImport {
  * has a date → has a derivable %.
  */
 export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: PrepareOptions): PreparedImport {
+  const forexJournal = opts.forexJournal ?? true;
   const rows: ImportTradeRow[] = [];
   const unknownSet = new Set<string>();
   const unknownSymbols: string[] = [];
@@ -47,13 +59,25 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       continue;
     }
 
-    const pair = normalizeSymbol(deal.symbol) ?? opts.pairMap[deal.symbol] ?? null;
-    if (!pair) {
-      if (!unknownSet.has(deal.symbol)) {
-        unknownSet.add(deal.symbol);
-        unknownSymbols.push(deal.symbol);
+    // Resolve pair + instrument per journal type. Forex: symbol must map to a Pair
+    // (unresolved → manual mapping). Non-forex: keep the raw symbol as instrument.
+    let pair: Pair;
+    let instrument: string;
+    if (forexJournal) {
+      const resolved = normalizeSymbol(deal.symbol) ?? opts.pairMap[deal.symbol] ?? null;
+      if (!resolved) {
+        if (!unknownSet.has(deal.symbol)) {
+          unknownSet.add(deal.symbol);
+          unknownSymbols.push(deal.symbol);
+        }
+        continue;
       }
-      continue;
+      pair = resolved;
+      instrument = resolved;
+    } else {
+      instrument = deal.symbol.trim();
+      if (!instrument) continue; // a nameless symbol can't be a meaningful instrument
+      pair = NON_FOREX_PAIR_PLACEHOLDER;
     }
 
     if (!deal.openTime && !deal.closeTime) {
@@ -67,7 +91,7 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       continue;
     }
 
-    rows.push(dealToImportRow(deal, pair, pct, broker));
+    rows.push(dealToImportRow(deal, pair, instrument, pct, broker));
   }
 
   return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount };

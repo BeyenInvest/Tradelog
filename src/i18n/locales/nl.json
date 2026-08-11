@@ -180,6 +180,7 @@
     "previewTitle": "Voorbeeld",
     "colDate": "Datum",
     "colPair": "Paar",
+    "colInstrument": "Instrument",
     "colOutcome": "Outcome",
     "colResult": "Resultaat",
     "morePreview": "…en nog {{count}} meer",
