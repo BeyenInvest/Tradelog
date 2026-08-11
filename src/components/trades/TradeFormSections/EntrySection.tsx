@@ -7,6 +7,7 @@ import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
+import { useInstrumentSuggestions } from "@/hooks/useInstrumentSuggestions";
 import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 
@@ -25,6 +26,9 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   const { hideFase } = useAuth();
   const { t } = useTranslation();
   const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
+  // Self-curating autocomplete for the free instrument field — symbols already
+  // logged in this journal. Only a non-forex journal shows that field (cyclus 7).
+  const instrumentSuggestions = useInstrumentSuggestions(!isForexJournal);
   const { options: customEntries } = useCustomOptions("entry");
   const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
   const { options: customConcepts } = useCustomOptions("trade_concept");
@@ -74,7 +78,20 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
         ) : (
           <>
             <Field label={t("tradeForm.instrument")} error={errors.instrument?.message}>
-              <input className="input" placeholder={t("tradeForm.instrumentPlaceholder")} {...register("instrument")} />
+              <input
+                className="input"
+                placeholder={t("tradeForm.instrumentPlaceholder")}
+                list="instrument-suggestions"
+                autoComplete="off"
+                {...register("instrument")}
+              />
+              {instrumentSuggestions.length > 0 && (
+                <datalist id="instrument-suggestions">
+                  {instrumentSuggestions.map((symbol) => (
+                    <option key={symbol} value={symbol} />
+                  ))}
+                </datalist>
+              )}
             </Field>
             <input type="hidden" {...register("pair")} />
           </>
