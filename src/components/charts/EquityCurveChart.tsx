@@ -25,6 +25,15 @@ export function EquityCurveChart({ trades }: { trades: Trade[] }) {
   // Prepend a synthetic zero-baseline point so it reads as a line from start to result.
   const chartData = data.length === 1 ? [{ ...data[0], idx: 0, cum: 0 }, data[0]] : data;
 
+  // Pin the Y-axis to the actual curve (always including the 0 breakeven line),
+  // instead of letting Recharts' auto nice-ticks tack on an empty band below it.
+  // A small early dip (e.g. -2%) was otherwise dragging a step-7 axis down to -7,
+  // wasting the bottom quarter of the chart and exaggerating the drawdown.
+  const cums = chartData.map((d) => d.cum);
+  const lo = Math.min(0, ...cums);
+  const hi = Math.max(0, ...cums);
+  const yDomain: [number, number] = [Math.floor(lo), Math.ceil(hi + Math.max((hi - lo) * 0.08, 1))];
+
   return (
     <div>
       <ResponsiveContainer width="100%" height={220}>
@@ -43,6 +52,8 @@ export function EquityCurveChart({ trades }: { trades: Trade[] }) {
             tickLine={false}
           />
           <YAxis
+            domain={yDomain}
+            allowDecimals={false}
             tick={{ fill: "rgb(var(--color-muted))", fontSize: 11, fontFamily: "IBM Plex Mono" }}
             axisLine={false}
             tickLine={false}
