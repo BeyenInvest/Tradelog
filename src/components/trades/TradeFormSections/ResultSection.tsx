@@ -32,31 +32,25 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionResult")}</h3>
-      {/* Outcome pairs with "Trade evaluation" in the live Journal. In a backtest that
-          field is hidden (not meaningful there), so Outcome spans the full width instead
-          of leaving a dangling empty cell top-right — the Result/Risk and date pairs below
-          stay aligned. */}
+      {/* One grid so the fields reflow cleanly when "Trade evaluation" is hidden
+          (backtest scope): the live Journal shows 6 fields as three tidy pairs, a
+          backtest shows 5 and the single empty cell trails at the bottom (after the
+          derived Duration) instead of leaving a hole beside Outcome up top. */}
       <div className="grid grid-cols-2 gap-4">
-        <div className={allowMissedTrade ? undefined : "col-span-2"}>
-          <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
-            <EnumSelect options={OUTCOMES} {...register("outcome")} />
-          </Field>
-        </div>
+        <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
+          <EnumSelect options={OUTCOMES} {...register("outcome")} />
+        </Field>
         {allowMissedTrade && (
           <Field label={t("tradeForm.tradeEvaluation")} error={errors.trade_evaluation?.message}>
             <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
           </Field>
         )}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
         <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message} hint={t("tradeForm.resultSignHint")}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
         <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
           <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
         </Field>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
           <input
             type="date"
