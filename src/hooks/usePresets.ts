@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +21,7 @@ export interface PresetSummary {
  * which reloads useMethodology / useMethodologyEditor downstream.
  */
 export function usePresets() {
+  const { t } = useTranslation();
   const { profile, updateProfile } = useAuth();
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,14 +93,16 @@ export function usePresets() {
   /** Create a fresh empty own journal (the "Blanco" choice) and make it active. */
   const createBlank = useCallback(async () => {
     if (!profile) throw new Error("no profile");
+    // Localized: the stored name is what the switcher shows for the life of the
+    // journal (there's no rename UI yet), so it must match the UI language.
     const { data, error: err } = await supabase
       .from("methodologies")
-      .insert({ user_id: profile.id, naam: "Mijn journal", is_system: false, asset_class: null })
+      .insert({ user_id: profile.id, naam: t("presets.blankJournalName"), is_system: false, asset_class: null })
       .select("id")
       .single();
     if (err) throw err;
     await updateProfile({ methodology_id: (data as { id: string }).id });
-  }, [profile, updateProfile]);
+  }, [profile, updateProfile, t]);
 
   return { presets, loading, error, applyPreset, createBlank, activeId: profile?.methodology_id ?? null };
 }

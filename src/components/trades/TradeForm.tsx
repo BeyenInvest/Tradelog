@@ -9,6 +9,7 @@ import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useMethodology } from "@/hooks/useMethodology";
+import { missingRequiredCustomFields } from "@/lib/methodologyFields";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
@@ -115,7 +116,7 @@ function pruneCustom(raw: Record<string, unknown>): Record<string, string | numb
 
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const { t } = useTranslation();
-  const { methodology, isForexJournal } = useMethodology();
+  const { methodology, fields, isForexJournal } = useMethodology();
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: trade
@@ -137,15 +138,42 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
 
   async function handleFormSubmit(values: TradeFormValues) {
     setError(null);
+
+    // Per-journal requirements the static tradeSchema can't know: the journal's
+    // own required custom fields, and the instrument on a non-forex journal
+    // (blank would fall back to the hidden placeholder pair — "EURUSD" — in
+    // every list/PDF/breakdown). Enforced here, surfaced as normal field errors.
+    // Only for trades of the active journal — a backtest trade logged under a
+    // different journal (projects are journal-orthogonal) can't be held to this
+    // journal's rules.
+    const ownJournalTrade = !trade || (trade.methodology_id ?? null) === (methodology?.id ?? null);
+    let blocked = false;
+    if (ownJournalTrade && !isForexJournal && !values.instrument?.trim()) {
+      methods.setError("instrument", { type: "required", message: "tradeForm.required" });
+      blocked = true;
+    }
+    if (ownJournalTrade) {
+      for (const f of missingRequiredCustomFields(fields, values.fase, values.custom ?? {})) {
+        methods.setError(`custom.${f.field_key}`, { type: "required", message: "tradeForm.required" });
+        blocked = true;
+      }
+    }
+    if (blocked) return;
+
+    // A forex journal's instrument IS its pair (the form shows the pair enum) —
+    // but only mirror when the trade itself is forex-shaped (new, or instrument
+    // already mirroring pair). A backtest trade from a non-forex journal is
+    // editable here too (projects are journal-orthogonal); its real instrument
+    // must never be overwritten by the hidden placeholder pair.
+    const mirrorPair = isForexJournal && (!trade || trade.instrument == null || trade.instrument === trade.pair);
+
     try {
       const payload: TradeSubmitInput = {
         ...values,
         // Record which journal this trade belongs to. Editing keeps the trade's
         // own methodology; a new trade takes the active one.
         methodology_id: values.methodology_id ?? methodology?.id ?? null,
-        // A forex journal's instrument IS its pair (the form shows the pair enum);
-        // a non-forex journal types its own instrument and leaves pair on the default (cyclus 7).
-        instrument: isForexJournal ? values.pair : values.instrument?.trim() || null,
+        instrument: mirrorPair ? values.pair : values.instrument?.trim() || null,
         custom: pruneCustom(values.custom ?? {}),
       };
       await onSubmit(payload);

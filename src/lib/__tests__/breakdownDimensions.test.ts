@@ -39,6 +39,16 @@ describe("customFieldDimensions", () => {
     expect(dims[0].sortOrder).toEqual(["A", "B"]);
   });
 
+  it("keeps user fields with legacy-looking keys on a non-WPM journal (no fase field present)", () => {
+    // Without a seeded `fase` field this is not a legacy journal, so "structuur" /
+    // "engulfing_candle" are ordinary user fields that must get a breakdown.
+    const dims = customFieldDimensions([
+      field({ field_key: "structuur", field_type: "enum", options: ["Inner", "Outer"] }),
+      field({ field_key: "engulfing_candle", field_type: "boolean" }),
+    ]);
+    expect(dims.map((d) => d.id)).toEqual(["custom:structuur", "custom:engulfing_candle"]);
+  });
+
   it("adds a quartile-bucketed dimension for a number field once trades carry values", () => {
     const fields = [field({ field_key: "rr", label: "R:R", field_type: "number" })];
     // Few distinct values → one bucket per exact value, in ascending order.

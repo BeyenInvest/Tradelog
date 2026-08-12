@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check } from "lucide-react";
+import { ChevronUp, ChevronDown, Lock, Pencil, Trash2, X, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
+import { isLockedLegacyField } from "@/lib/methodologyFields";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
@@ -113,6 +114,10 @@ export function MethodologyEditor() {
             field={f}
             allFields={fields}
             editable={isOwn && !busy}
+            // Seeded WPM fields stay column-backed (`fase` even enum-backed in the
+            // DB — editing its options would break every trade save) → locked
+            // until the cyclus-10 migration. useMethodologyEditor backstops this.
+            locked={isLockedLegacyField(f, fields)}
             isFirst={i === 0}
             isLast={i === fields.length - 1}
             onMove={(dir) => void run(() => moveField(f.id, dir), "methodology.saveFailed")}
@@ -148,6 +153,7 @@ function FieldRow({
   field,
   allFields,
   editable,
+  locked,
   isFirst,
   isLast,
   onMove,
@@ -157,6 +163,7 @@ function FieldRow({
   field: MethodologyField;
   allFields: MethodologyField[];
   editable: boolean;
+  locked: boolean;
   isFirst: boolean;
   isLast: boolean;
   onMove: (dir: "up" | "down") => void;
@@ -209,7 +216,12 @@ function FieldRow({
           {t("methodology.condition")}: {conditionSummary(t, field, allFields)}
         </p>
       </div>
-      {editable && (
+      {editable && locked && (
+        <span className="shrink-0 p-1.5 text-muted" title={t("methodology.legacyLocked")} aria-label={t("methodology.legacyLocked")}>
+          <Lock size={14} />
+        </span>
+      )}
+      {editable && !locked && (
         <div className="flex items-center gap-0.5 shrink-0 text-muted">
           <IconBtn label={t("methodology.moveUp")} disabled={isFirst} onClick={() => onMove("up")}>
             <ChevronUp size={15} />
@@ -337,8 +349,14 @@ function FieldForm({
   // If a parent is chosen, at least one value must be ticked, else the condition
   // would never match and the field would be permanently hidden.
   const conditionValid = !showWhenFieldId || showWhenValues.length > 0;
+  // Two labels can slugify to the same key — catch it here with a readable message
+  // instead of letting the DB unique constraint surface a raw error.
+  const duplicateKey = isNew && label.trim().length > 0 && allFields.some((f) => f.field_key === slugify(label));
   const canSave =
-    label.trim().length > 0 && (fieldType !== "enum" || parseOptions(optionsRaw).length > 0) && conditionValid;
+    label.trim().length > 0 &&
+    !duplicateKey &&
+    (fieldType !== "enum" || parseOptions(optionsRaw).length > 0) &&
+    conditionValid;
 
   async function submit() {
     if (!canSave) return;
@@ -376,6 +394,7 @@ function FieldForm({
             {t("methodology.keyPreview")}: {slugify(label)}
           </p>
         )}
+        {duplicateKey && <p className="font-mono text-[10px] text-loss">{t("methodology.duplicateKey")}</p>}
       </div>
 
       <div className="flex gap-3 flex-wrap">

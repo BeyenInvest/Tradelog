@@ -328,7 +328,7 @@
     "resultHeading": "Result",
     "trades": "Trades",
     "totalResult": "Total result",
-    "avgRR": "Avg RR",
+    "avgRR": "Avg result/trade",
     "noTradesInView": "No trades in this view.",
     "linkedTrades": "Linked trades ({{count}})",
     "relink": "Relink",
@@ -558,12 +558,15 @@
     "type_enum": "Choice list",
     "type_text": "Text",
     "type_number": "Number",
-    "type_date": "Date"
+    "type_date": "Date",
+    "legacyLocked": "Fixed Weekly Phase Method field — not editable yet (awaits the field migration)",
+    "duplicateKey": "A field with this key already exists — pick a different label."
   },
   "presets": {
     "title": "Start from a template",
     "subtitle": "Pick a ready-made journal (asset × style), then tailor it freely.",
     "blankName": "Blank",
+    "blankJournalName": "My journal",
     "blankDesc": "Just the universal core — build your own fields.",
     "noFields": "No extra fields",
     "use": "Use this template",

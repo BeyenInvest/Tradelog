@@ -5,15 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Beyen — Eyes on every trade.</title>
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem("theme");
-          var light = stored === "light" || (stored !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches);
-          if (light) document.documentElement.classList.add("light");
-        } catch (e) {}
-      })();
-    </script>
+    <!-- External (not inline): the CSP only allows script-src 'self', which blocked the inline version in production. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body class="bg-bg">
     <div id="root"></div>

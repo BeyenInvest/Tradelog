@@ -48,10 +48,14 @@ export function numberBucketer(values: number[]): NumberBucketer | null {
   const q1 = quantileSorted(sorted, 0.25);
   const q2 = quantileSorted(sorted, 0.5);
   const q3 = quantileSorted(sorted, 0.75);
-  const order = [`≤ ${fmt(q1)}`, `${fmt(q1)}–${fmt(q2)}`, `${fmt(q2)}–${fmt(q3)}`, `> ${fmt(q3)}`];
+  const labels = [`≤ ${fmt(q1)}`, `${fmt(q1)}–${fmt(q2)}`, `${fmt(q2)}–${fmt(q3)}`, `> ${fmt(q3)}`];
+  // Heavily skewed data can make quartiles coincide, duplicating a range label —
+  // dedupe `order` (it feeds sortOrder/React keys); keyForValue still uses the
+  // positional labels, and a deduped-away label's bucket is unreachable anyway.
+  const order = Array.from(new Set(labels));
   // Boundaries are inclusive on the upper edge, so every value lands in exactly one
   // bucket. Skewed data can make two quartiles equal → an empty middle bucket, which
   // breakdownBy simply omits (only buckets with trades render), so no double counting.
-  const keyForValue = (v: number) => (v <= q1 ? order[0] : v <= q2 ? order[1] : v <= q3 ? order[2] : order[3]);
+  const keyForValue = (v: number) => (v <= q1 ? labels[0] : v <= q2 ? labels[1] : v <= q3 ? labels[2] : labels[3]);
   return { order, keyForValue };
 }

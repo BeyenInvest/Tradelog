@@ -1,6 +1,7 @@
 import type { MethodologyField, Trade } from "./types";
-import { currenciesOfPair, CCS, DIRECTIONS, LEGACY_METHODOLOGY_FIELD_KEYS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
+import { dynamicMethodologyFields } from "./methodologyFields";
 import { numberBucketer } from "./numberBuckets";
 
 export interface DimensionConfig {
@@ -39,10 +40,11 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
   { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true },
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true },
-  // Instrument is the universal "what did you trade" (cyclus 7); pair/currency are
-  // the forex-specific split, shown only for a forex journal.
+  // Instrument is the universal "what did you trade" (cyclus 7) — on a forex
+  // journal instrument mirrors pair on every write path, so a separate "Per Pair"
+  // dimension would render the identical table twice. Currency stays: that split
+  // (per currency, both legs) is genuinely different and forex-only.
   { id: "instrument", keyFn: (t) => t.instrument ?? t.pair, universal: true },
-  { id: "pair", keyFn: (t) => t.pair, forex: true },
   { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), forex: true },
   // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
@@ -56,14 +58,14 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
  * every fixed dimension uses. Enum + boolean bucket directly; a `number` field is
  * split into quartile ranges derived from the trades passed in (cyclus 7) — so it
  * needs the data, unlike the value-agnostic enum/boolean dims. `text` (too free)
- * and `date` are still skipped. Legacy WPM fields are excluded — those keep their
- * hardcoded columns + the per-fase / fase-kenmerken analysis until cyclus 10.
+ * and `date` are still skipped. On a legacy (WPM) journal the seeded legacy fields
+ * are excluded — those keep their hardcoded columns + the per-fase analysis until
+ * cyclus 10; on any other journal the same keys are ordinary user fields (see
+ * dynamicMethodologyFields) and do get a breakdown.
  */
 export function customFieldDimensions(fields: MethodologyField[], trades: Trade[] = []): DimensionConfig[] {
   const dims: DimensionConfig[] = [];
-  for (const f of fields) {
-    if (LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) || f.is_computed) continue;
-
+  for (const f of dynamicMethodologyFields(fields)) {
     if (f.field_type === "enum" || f.field_type === "boolean") {
       dims.push({
         id: `custom:${f.field_key}`,

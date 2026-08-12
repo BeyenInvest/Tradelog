@@ -328,7 +328,7 @@
     "resultHeading": "Resultaat",
     "trades": "Trades",
     "totalResult": "Totaal resultaat",
-    "avgRR": "Gem. RR",
+    "avgRR": "Gem. resultaat/trade",
     "noTradesInView": "Geen trades in deze weergave.",
     "linkedTrades": "Gekoppelde trades ({{count}})",
     "relink": "Herkoppelen",
@@ -558,12 +558,15 @@
     "type_enum": "Keuzelijst",
     "type_text": "Tekst",
     "type_number": "Getal",
-    "type_date": "Datum"
+    "type_date": "Datum",
+    "legacyLocked": "Vast Weekly Phase Method-veld — nog niet aanpasbaar (wacht op de veldenmigratie)",
+    "duplicateKey": "Er bestaat al een veld met deze sleutel — kies een ander label."
   },
   "presets": {
     "title": "Start vanaf een sjabloon",
     "subtitle": "Kies een kant-en-klaar journal (asset × stijl) en pas het daarna vrij aan.",
     "blankName": "Blanco",
+    "blankJournalName": "Mijn journal",
     "blankDesc": "Enkel de universele kern — bouw je velden zelf op.",
     "noFields": "Geen extra velden",
     "use": "Gebruik dit sjabloon",

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { FASES } from "@/lib/constants";
+import { FASES, WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 export interface MethodologyData {
@@ -60,15 +60,15 @@ export function useMethodology(): MethodologyData {
     setLoading(true);
     setError(null);
 
-    // Resolve which methodology to load: the profile's, else the built-in template.
+    // Resolve which methodology to load: the profile's, else the built-in Weekly
+    // Phase Method template — pinned by id, since the preset catalogue (0027/0028)
+    // added many is_system rows and an unordered limit(1) would pick arbitrarily.
     let id = methodologyId;
     if (!id) {
       const { data: sys } = await supabase
         .from("methodologies")
         .select("id")
-        .eq("is_system", true)
-        .is("user_id", null)
-        .limit(1)
+        .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
         .maybeSingle();
       id = (sys as { id: string } | null)?.id ?? null;
     }

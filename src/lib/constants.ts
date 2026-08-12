@@ -17,6 +17,14 @@ export type Direction = (typeof DIRECTIONS)[number];
  * bridge disappears in cyclus 10, when those columns are dropped and every field
  * becomes fully dynamic.
  */
+/**
+ * Fixed id of the seeded Weekly Phase Method system template (0020). Used to pin
+ * the no-active-journal fallback in useMethodology/useMethodologyEditor — since
+ * the preset catalogue (0027/0028) there are ~11 is_system rows, so "any system
+ * methodology" would be a non-deterministic pick.
+ */
+export const WPM_TEMPLATE_METHODOLOGY_ID = "00000000-0000-4000-8000-000000000001";
+
 export const LEGACY_METHODOLOGY_FIELD_KEYS = new Set([
   "fase",
   "daily_respecteert_zone",

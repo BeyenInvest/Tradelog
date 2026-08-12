@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import type { MethodologyField } from "@/lib/types";
 import { useMethodology } from "@/hooks/useMethodology";
-import { LEGACY_METHODOLOGY_FIELD_KEYS } from "@/lib/constants";
+import { dynamicMethodologyFields, isFieldVisible } from "@/lib/methodologyFields";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
@@ -35,25 +35,21 @@ function groupFields(fields: MethodologyField[]): { label: string | null; fields
 export function CustomFieldsSection() {
   const { t } = useTranslation();
   const { fields } = useMethodology();
-  const { control, register, watch, setValue } = useFormContext<TradeFormValues>();
+  const {
+    control,
+    register,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useFormContext<TradeFormValues>();
 
   const fase = watch("fase");
   const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
 
-  const dynamicFields = fields.filter((f) => !LEGACY_METHODOLOGY_FIELD_KEYS.has(f.field_key) && !f.is_computed);
-
-  function valueOfParent(parent: MethodologyField): unknown {
-    // The only legacy field that can be an enum parent is `fase` (a core column);
-    // every other parent is itself a custom field living in the bag.
-    return parent.field_key === "fase" ? fase : customVals[parent.field_key];
-  }
-
-  function isVisible(f: MethodologyField): boolean {
-    if (!f.show_when_field_id || !f.show_when_values || f.show_when_values.length === 0) return true;
-    const parent = fields.find((p) => p.id === f.show_when_field_id);
-    if (!parent) return true; // dangling reference (parent deleted) → always show
-    return f.show_when_values.includes(String(valueOfParent(parent) ?? ""));
-  }
+  // Shared with TradeForm's submit-time required-check and customFieldDimensions,
+  // so what renders, what's enforced and what's analysed can never drift apart.
+  const dynamicFields = dynamicMethodologyFields(fields);
+  const isVisible = (f: MethodologyField) => isFieldVisible(f, fields, fase, customVals);
 
   // Clear the stored value of any field its condition currently hides, so a stale
   // answer from a now-hidden field is never saved to trades.custom.
@@ -82,7 +78,12 @@ export function CustomFieldsSection() {
           )}
           <div className="grid grid-cols-2 gap-4">
             {group.fields.map((f) => (
-              <Field key={f.id} label={f.label} required={f.required}>
+              <Field
+                key={f.id}
+                label={f.label}
+                required={f.required}
+                error={(errors.custom as Record<string, { message?: string }> | undefined)?.[f.field_key]?.message}
+              >
                 <FieldInput field={f} control={control} register={register} />
               </Field>
             ))}
