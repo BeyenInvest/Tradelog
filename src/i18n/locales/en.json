@@ -41,7 +41,20 @@
     "label": "Active journal",
     "newJournal": "New journal",
     "unknown": "Journal",
-    "switchFailed": "Switching journal failed"
+    "switchFailed": "Switching journal failed",
+    "rename": "Rename journal",
+    "delete": "Delete journal",
+    "renameFailed": "Renaming the journal failed",
+    "deleteFailed": "Deleting the journal failed",
+    "cannotDeleteActive": "Switch to another journal before deleting this one",
+    "cannotDeleteLast": "You can't delete your only journal",
+    "deleteTitle": "Delete journal?",
+    "deleteConfirm": "Permanently delete \"{{name}}\"? This can't be undone.",
+    "deleteBlocked": "\"{{name}}\" still holds data. Move or delete it first — an emptied journal can be removed.",
+    "checkingContents": "Checking contents…",
+    "countTrades": "{{count}} trades",
+    "countReviews": "{{count}} reviews",
+    "countAccounts": "{{count}} accounts"
   },
   "auth": {
     "name": "Name",

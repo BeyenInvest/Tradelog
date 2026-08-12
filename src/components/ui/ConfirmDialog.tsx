@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "./Modal";
 
@@ -9,6 +10,10 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   /** "danger" paints the confirm button in the loss color for destructive actions (delete). */
   tone?: "default" | "danger";
+  /** When true the confirm button is greyed out and inert — for a dialog that explains why an action is blocked (e.g. a non-empty journal), leaving only Cancel. */
+  confirmDisabled?: boolean;
+  /** Optional richer body below the message (e.g. a counts list). */
+  children?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -18,7 +23,17 @@ interface ConfirmDialogProps {
  * replacement for window.confirm(), so destructive prompts (trade delete) match
  * the rest of the UI instead of a raw browser alert.
  */
-export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, tone = "default", onConfirm, onClose }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  tone = "default",
+  confirmDisabled = false,
+  children,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps) {
   const { t } = useTranslation();
   return (
     <Modal labelledBy="confirm-dialog-title" maxWidthClass="max-w-md" onClose={onClose}>
@@ -28,6 +43,7 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, tone 
             {title}
           </h3>
           <p className="font-body text-sm text-muted">{message}</p>
+          {children}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -39,7 +55,8 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, tone 
             <button
               type="button"
               onClick={onConfirm}
-              className={`px-4 py-2 rounded-lg font-body text-sm font-medium ${
+              disabled={confirmDisabled}
+              className={`px-4 py-2 rounded-lg font-body text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed ${
                 tone === "danger" ? "bg-loss text-white hover:opacity-90" : "bg-gold text-on-gold hover:opacity-90"
               }`}
             >

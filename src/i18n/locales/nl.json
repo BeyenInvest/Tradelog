@@ -41,7 +41,20 @@
     "label": "Actief journal",
     "newJournal": "Nieuw journal",
     "unknown": "Journal",
-    "switchFailed": "Journal wisselen is mislukt"
+    "switchFailed": "Journal wisselen is mislukt",
+    "rename": "Journal hernoemen",
+    "delete": "Journal verwijderen",
+    "renameFailed": "Hernoemen van het journal is mislukt",
+    "deleteFailed": "Verwijderen van het journal is mislukt",
+    "cannotDeleteActive": "Wissel eerst naar een ander journal voor je dit verwijdert",
+    "cannotDeleteLast": "Je kunt je enige journal niet verwijderen",
+    "deleteTitle": "Journal verwijderen?",
+    "deleteConfirm": "\"{{name}}\" definitief verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "deleteBlocked": "\"{{name}}\" bevat nog data. Verplaats of verwijder die eerst — een leeg journal kan weg.",
+    "checkingContents": "Inhoud controleren…",
+    "countTrades": "{{count}} trades",
+    "countReviews": "{{count}} reviews",
+    "countAccounts": "{{count}} accounts"
   },
   "auth": {
     "name": "Naam",
