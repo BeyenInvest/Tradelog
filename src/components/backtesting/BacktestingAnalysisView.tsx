@@ -87,8 +87,19 @@ export function BacktestingAnalysisView({
   // cyclus 7) and legacy WPM dims (cc/sessie/nieuws). Show each per the active journal's type.
   const showTimingDim = (dim: { universal?: boolean; forex?: boolean }) =>
     dim.universal || (dim.forex && isForexJournal) || (!dim.universal && !dim.forex && isLegacyMethodology);
-  const timingDimRows = dimensionRows.slice(kenmerkenSplit).filter(({ dim }) => showTimingDim(dim));
-  const timingDimGridRows = dimensionGridRows.slice(kenmerkenSplit);
+  // Also skip dimensions with no data at all (rows.length 0) — e.g. "Per Richting"
+  // before any trade carries a direction: an empty card is noise, and it appears by
+  // itself as soon as the data exists.
+  const timingDimRows = dimensionRows
+    .slice(kenmerkenSplit)
+    .filter(({ dim, rows }) => showTimingDim(dim) && rows.length > 0);
+  const timingDimGridRows = dimensionGridRows.slice(kenmerkenSplit).filter(({ rows }) => rows.length > 0);
+
+  // On a forex journal instrument mirrors pair, so the instrument split IS the pair
+  // split — title it "Per Pair" there (the term forex traders think in); other
+  // journals see the universal "Per Instrument".
+  const timingDimTitle = (dimId: string) =>
+    dimId === "instrument" && isForexJournal ? t("breakdown.pair") : t(`breakdown.${dimId}`);
 
   const kenmerkRows = useMemo(
     () =>
@@ -270,8 +281,8 @@ export function BacktestingAnalysisView({
           <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {effectiveViewMode === "totaal"
-              ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
-              : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+              ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)
+              : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)}
           </div>
         </div>
 

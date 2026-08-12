@@ -194,6 +194,13 @@ export interface Profile {
   timezone: string;
   /** Active methodology (Scope C). Defaults to the built-in Weekly Phase Method template; drives which fases/kenmerken the UI shows. See useMethodology. */
   methodology_id: string | null;
+  /**
+   * Soft-launch gate (0033): shows the multi-journal UI (journal-switcher, preset-
+   * picker, veld-editor, Richting-veld/filter) only to flagged users. Everyone else
+   * sees just the bug fixes until the public launch flips this on for all. Set via
+   * SQL only — no UI toggle, deliberately.
+   */
+  beta_features: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -36,7 +36,7 @@ Terms/Privacy pages are placeholder copy only, not legally reviewed — flag thi
 
 ## Deliberately out of scope for now (don't build unprompted)
 
-- Per-user configurable trading methodology (e.g. custom fase/entry/concept lists) — every user still gets the same fixed "4 fasen" system and constant lists (`constants.ts`). Only the display of fasen is now user-toggleable (`hide_fase`, see Domain rules), not the methodology itself.
+- ~~Per-user configurable trading methodology~~ — **built** (Scope C, "configureerbare methodiek"): journals = user-owned `methodologies` rows with `methodology_fields`, per-journal isolation of trades/reviews/accounts, presets, custom fields in `trades.custom`. **Soft-launched behind `profiles.beta_features`** (0033, SQL-only flag): non-flagged users see none of the new UI (journal-switcher, preset-picker, veld-editor, Richting-veld/-filter) until public launch. The legacy WPM fields stay hardcoded columns until cyclus 10; their editor rows are locked (`isLockedLegacyField`) because `trades.fase` is still a Postgres enum.
 - Stripe/billing — `profiles.plan` defaults to `'free'` as the only hook for this later.
 - Migration from the old Google Sheets workflow, MAE/MFE tracking, discipline/execution tracking, live broker integration. See spec §7-8.
 

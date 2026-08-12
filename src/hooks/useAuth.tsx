@@ -11,6 +11,8 @@ interface AuthContextValue {
   isAdmin: boolean;
   /** profile?.hide_fase — user opted out of the fixed 4-fasen system, so every fase-related field/breakdown hides in their own UI. */
   hideFase: boolean;
+  /** profile?.beta_features — soft-launch gate for the multi-journal UI (switcher, preset-picker, editor, direction). False (hidden) until the 0033 column exists and is flipped. */
+  betaFeatures: boolean;
   loading: boolean;
   /**
    * True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the
@@ -124,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isAdmin: profile?.role === "admin",
         hideFase: profile?.hide_fase ?? false,
+        betaFeatures: profile?.beta_features ?? false,
         loading,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",

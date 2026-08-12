@@ -40,6 +40,9 @@ create table profiles (
   plan text not null default 'free',
   role text not null default 'user' check (role in ('user', 'admin')),
   hide_fase boolean not null default false,
+  -- Soft-launch gate (0033): shows the multi-journal UI (switcher, preset-picker,
+  -- veld-editor, direction) only to flagged users. SQL-only, no UI toggle.
+  beta_features boolean not null default false,
   -- IANA timezone the user reads candle-close (cc) times in. Drives the
   -- timezone-aware `trades.sessie` mapping (see compute_sessie / 0019). Default
   -- is the reference zone the methodology was authored in.

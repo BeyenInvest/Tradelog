@@ -22,7 +22,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
-  const { hideFase } = useAuth();
+  const { hideFase, betaFeatures } = useAuth();
   const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
 
   return (
@@ -89,15 +89,18 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 />
               </Field>
             )}
-            <Field label={t("filters.direction")}>
-              <EnumSelect
-                options={DIRECTIONS}
-                value={value.direction ?? ""}
-                onChange={(e) => onChange({ ...value, direction: e.target.value === "" ? undefined : (e.target.value as (typeof DIRECTIONS)[number]) })}
-                placeholder={t("filters.allDirections")}
-                className="w-full text-xs py-1.5"
-              />
-            </Field>
+            {/* Soft-launch: direction ships with the beta multi-journal UI (0033). */}
+            {betaFeatures && (
+              <Field label={t("filters.direction")}>
+                <EnumSelect
+                  options={DIRECTIONS}
+                  value={value.direction ?? ""}
+                  onChange={(e) => onChange({ ...value, direction: e.target.value === "" ? undefined : (e.target.value as (typeof DIRECTIONS)[number]) })}
+                  placeholder={t("filters.allDirections")}
+                  className="w-full text-xs py-1.5"
+                />
+              </Field>
+            )}
             <Field label={t("filters.outcome")}>
               <EnumSelect
                 options={OUTCOMES}
