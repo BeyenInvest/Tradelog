@@ -21,6 +21,10 @@
     "noData": "No data",
     "selectPlaceholder": "Select..."
   },
+  "theme": {
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode"
+  },
   "nav": {
     "journal": "Journal",
     "backtesting": "Backtesting",

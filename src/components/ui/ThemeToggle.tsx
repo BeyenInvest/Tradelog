@@ -1,4 +1,5 @@
 import { Moon, Sun } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 
 interface ThemeToggleProps {
@@ -7,9 +8,10 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ iconOnly = false }: ThemeToggleProps) {
+  const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
-  const label = isLight ? "Donkere modus" : "Lichte modus";
+  const label = isLight ? t("theme.darkMode") : t("theme.lightMode");
   const Icon = isLight ? Moon : Sun;
 
   if (iconOnly) {

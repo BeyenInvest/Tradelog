@@ -21,6 +21,10 @@
     "noData": "Geen data",
     "selectPlaceholder": "Selecteer..."
   },
+  "theme": {
+    "darkMode": "Donkere modus",
+    "lightMode": "Lichte modus"
+  },
   "nav": {
     "journal": "Journal",
     "backtesting": "Backtesting",
