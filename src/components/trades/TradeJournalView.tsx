@@ -12,6 +12,7 @@ import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ImportModal } from "@/components/trades/ImportModal";
+import { JournalEmptyState } from "@/components/trades/JournalEmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
@@ -35,6 +36,12 @@ interface TradeJournalViewProps {
   tradesApi: TradesApi;
   title: string;
   subtitle?: string;
+  /**
+   * First-run onboarding config — passed only for the live Journal (JournalPage).
+   * When present and the journal has zero trades, the KPI row/charts/toolbar are
+   * replaced by a JournalEmptyState wayfinder. A backtest project never gets this.
+   */
+  onboarding?: { hasFields: boolean; showPresetPicker: boolean };
 }
 
 /**
@@ -53,7 +60,7 @@ interface TradeJournalViewProps {
  * "toon missed trades" toggle only affects the trade list, where each one is
  * clearly badged, never the numbers.
  */
-export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJournalViewProps) {
+export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding }: TradeJournalViewProps) {
   const { t } = useTranslation();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
@@ -74,6 +81,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [chartPanel, setChartPanel] = useState<"equity" | "discipline">("equity");
 
   const isLive = scope.type === "live";
+  // First-run empty state: an untouched live journal (zero trades in the whole
+  // book, before any filter). Replaces the all-zero KPI row/charts with a wayfinder.
+  const showOnboarding = onboarding != null && trades.length === 0;
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
   function resetFilters() {
     setPeriod(null);
@@ -141,6 +151,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
         title={title}
         subtitle={subtitle ?? t("journal.tradesCount", { count: realTrades.length })}
         action={
+          // During the first-run empty state the wayfinder card owns the CTAs — a
+          // duplicate New trade / Import in the header would just be noise.
+          showOnboarding ? undefined : (
           <div className="flex items-center gap-2">
             {isLive && (
               <button
@@ -160,6 +173,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               <Plus size={15} /> {t("journal.newTrade")}
             </button>
           </div>
+          )
         }
       />
 
@@ -171,6 +185,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
       {loading ? (
         <p className="text-muted text-sm">{t("common.loading")}</p>
+      ) : showOnboarding ? (
+        <JournalEmptyState
+          hasFields={onboarding.hasFields}
+          showPresetPicker={onboarding.showPresetPicker}
+          onNewTrade={() => openCreate()}
+          onImport={() => setImportOpen(true)}
+        />
       ) : (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-2">

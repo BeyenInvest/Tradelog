@@ -18,30 +18,7 @@ const PREVIEW_FIELDS = 6;
  */
 export function PresetPicker() {
   const { t } = useTranslation();
-  const { presets, loading, error, applyPreset, createBlank } = usePresets();
   const [open, setOpen] = useState(false);
-  // Which choice is awaiting confirmation: a preset id, "blank", or null.
-  const [confirming, setConfirming] = useState<PresetSummary | "blank" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  async function apply() {
-    if (!confirming) return;
-    setActionError(null);
-    setBusy(true);
-    try {
-      if (confirming === "blank") await createBlank();
-      else await applyPreset(confirming.id);
-      setConfirming(null);
-      setOpen(false);
-    } catch (err) {
-      setActionError(toErrorMessage(err, t("presets.applyFailed")));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const confirmName = confirming === "blank" ? t("presets.blankName") : confirming?.naam;
 
   return (
     <Card>
@@ -67,63 +44,104 @@ export function PresetPicker() {
 
       {open && (
         <div className="mt-4 border-t border-border-soft pt-4">
-          {loading && <p className="font-mono text-xs text-muted">{t("common.loading")}</p>}
-          {error && <p className="font-mono text-[11px] text-loss">{error}</p>}
-
-          {/* Confirmation step — applying switches the active journal, so make it explicit. */}
-          {confirming ? (
-            <div className="flex flex-col gap-3">
-              <p className="font-body text-sm text-ink">{t("presets.confirmTitle")}</p>
-              <p className="font-mono text-xs text-muted">
-                {t("presets.confirmBody", { name: confirmName })}
-              </p>
-              {actionError && <p className="font-mono text-[11px] text-loss">{actionError}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void apply()}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
-                >
-                  {busy ? t("common.submitting") : t("presets.apply")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirming(null);
-                    setActionError(null);
-                  }}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-lg font-body text-sm font-medium border border-border text-muted hover:text-ink"
-                >
-                  {t("presets.cancel")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            !loading && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {presets.map((p) => (
-                  <PresetCard key={p.id} preset={p} onChoose={() => setConfirming(p)} />
-                ))}
-                {/* Blanco — start from the universal core only. */}
-                <button
-                  type="button"
-                  onClick={() => setConfirming("blank")}
-                  className="flex flex-col gap-1.5 rounded-xl border border-dashed border-border p-3 text-left hover:border-gold"
-                >
-                  <div className="flex items-center gap-2">
-                    <FilePlus2 size={15} className="text-muted" />
-                    <span className="font-body text-sm text-ink">{t("presets.blankName")}</span>
-                  </div>
-                  <p className="font-mono text-[11px] text-muted">{t("presets.blankDesc")}</p>
-                </button>
-              </div>
-            )
-          )}
+          <PresetChooser onApplied={() => setOpen(false)} />
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * The template grid + blank option + confirm step, without the collapsible Card
+ * wrapper. Extracted so the first-run empty-state (Scope C, fase C onboarding)
+ * can drop the picker inline, expanded, without the settings-page chrome.
+ * Applying a choice switches the active journal (usePresets → updateProfile),
+ * which remounts the journal view downstream; `onApplied` is an optional hook
+ * for the settings card to also collapse itself.
+ */
+export function PresetChooser({ onApplied }: { onApplied?: () => void }) {
+  const { t } = useTranslation();
+  const { presets, loading, error, applyPreset, createBlank } = usePresets();
+  // Which choice is awaiting confirmation: a preset, "blank", or null.
+  const [confirming, setConfirming] = useState<PresetSummary | "blank" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function apply() {
+    if (!confirming) return;
+    setActionError(null);
+    setBusy(true);
+    try {
+      if (confirming === "blank") await createBlank();
+      else await applyPreset(confirming.id);
+      setConfirming(null);
+      onApplied?.();
+    } catch (err) {
+      setActionError(toErrorMessage(err, t("presets.applyFailed")));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const confirmName = confirming === "blank" ? t("presets.blankName") : confirming?.naam;
+
+  return (
+    <>
+      {loading && <p className="font-mono text-xs text-muted">{t("common.loading")}</p>}
+      {error && <p className="font-mono text-[11px] text-loss">{error}</p>}
+
+      {/* Confirmation step — applying switches the active journal, so make it explicit. */}
+      {confirming ? (
+        <div className="flex flex-col gap-3">
+          <p className="font-body text-sm text-ink">{t("presets.confirmTitle")}</p>
+          <p className="font-mono text-xs text-muted">
+            {t("presets.confirmBody", { name: confirmName })}
+          </p>
+          {actionError && <p className="font-mono text-[11px] text-loss">{actionError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void apply()}
+              disabled={busy}
+              className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
+            >
+              {busy ? t("common.submitting") : t("presets.apply")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirming(null);
+                setActionError(null);
+              }}
+              disabled={busy}
+              className="px-4 py-2 rounded-lg font-body text-sm font-medium border border-border text-muted hover:text-ink"
+            >
+              {t("presets.cancel")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        !loading && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {presets.map((p) => (
+              <PresetCard key={p.id} preset={p} onChoose={() => setConfirming(p)} />
+            ))}
+            {/* Blanco — start from the universal core only. */}
+            <button
+              type="button"
+              onClick={() => setConfirming("blank")}
+              className="flex flex-col gap-1.5 rounded-xl border border-dashed border-border p-3 text-left hover:border-gold"
+            >
+              <div className="flex items-center gap-2">
+                <FilePlus2 size={15} className="text-muted" />
+                <span className="font-body text-sm text-ink">{t("presets.blankName")}</span>
+              </div>
+              <p className="font-mono text-[11px] text-muted">{t("presets.blankDesc")}</p>
+            </button>
+          </div>
+        )
+      )}
+    </>
   );
 }
 

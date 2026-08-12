@@ -174,6 +174,13 @@
     "disciplineTooltip": "Good trades",
     "disciplineTradeLabel": "Trade #{{n}}"
   },
+  "journalEmpty": {
+    "title": "Your journal is empty",
+    "bodyTemplate": "Pick a ready-made template to shape your journal, or start blank. Then log your first trade — your stats, charts and calendar build themselves from there.",
+    "bodyConfigured": "Log your first trade and your stats, charts and calendar start building themselves from there.",
+    "logFirstTrade": "Log your first trade",
+    "importHint": "Import from broker"
+  },
   "import": {
     "title": "Import trades",
     "intro": "Choose a broker export file. Trades go into your live Journal; duplicate imports are skipped automatically.",
