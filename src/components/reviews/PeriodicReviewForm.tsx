@@ -2,7 +2,8 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
-import { MONTH_NAMES, PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
+import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
+import { dateLocale, monthName } from "@/lib/format";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -28,8 +29,9 @@ function defaultPeriodeNummer(periodType: PeriodType, now: Date): number {
 }
 
 export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAddTrade, onClose }: PeriodicReviewFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const now = new Date();
+  const monthOptions = Array.from({ length: 12 }, (_, i) => monthName(i, dateLocale(i18n.language)));
   const [jaar, setJaar] = useState(review?.jaar ?? now.getFullYear());
   const [periodeNummer, setPeriodeNummer] = useState(review?.periode_nummer ?? defaultPeriodeNummer(periodType, now));
   const [titel, setTitel] = useState(review?.titel ?? "");
@@ -116,8 +118,8 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
           <div className="flex flex-col gap-1.5">
             <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.maand")}</label>
             <select className="input" value={periodeNummer} onChange={(e) => handlePeriodeNummerChange(Number(e.target.value))}>
-              {MONTH_NAMES.map((m, i) => (
-                <option key={m} value={i + 1}>
+              {monthOptions.map((m, i) => (
+                <option key={m} value={i + 1} className="capitalize">
                   {m}
                 </option>
               ))}

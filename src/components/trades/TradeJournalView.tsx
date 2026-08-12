@@ -12,6 +12,7 @@ import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ImportModal } from "@/components/trades/ImportModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
@@ -60,6 +61,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
   const [showMissed, setShowMissed] = useState(false);
+  const [deletingTrade, setDeletingTrade] = useState<Trade | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
@@ -121,14 +123,15 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
     }
   }
 
-  async function handleDelete(trade: Trade) {
-    if (confirm(t("journal.deleteConfirm", { pair: trade.pair, date: trade.datum_open }))) {
-      setDeleteError(null);
-      try {
-        await deleteTrade(trade.id);
-      } catch (err) {
-        setDeleteError(toErrorMessage(err, t("journal.deleteFailed")));
-      }
+  async function confirmDelete() {
+    const trade = deletingTrade;
+    if (!trade) return;
+    setDeletingTrade(null);
+    setDeleteError(null);
+    try {
+      await deleteTrade(trade.id);
+    } catch (err) {
+      setDeleteError(toErrorMessage(err, t("journal.deleteFailed")));
     }
   }
 
@@ -377,7 +380,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             <TradeList
               trades={listTrades}
               onEdit={openEdit}
-              onDelete={handleDelete}
+              onDelete={setDeletingTrade}
               title={t("journal.trades")}
               filtersActive={filtersActive}
               onResetFilters={resetFilters}
@@ -386,7 +389,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             <TradeList
               trades={realTrades}
               onEdit={openEdit}
-              onDelete={handleDelete}
+              onDelete={setDeletingTrade}
               title={t("journal.backtestSessions")}
               filtersActive={filtersActive}
               onResetFilters={resetFilters}
@@ -402,7 +405,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
           trades={selectedDayTrades}
           onClose={() => setSelectedDay(null)}
           onEdit={openEdit}
-          onDelete={handleDelete}
+          onDelete={setDeletingTrade}
           onAddTrade={openCreate}
         />
       )}
@@ -418,6 +421,20 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
       )}
 
       {importOpen && <ImportModal tradesApi={tradesApi} onClose={() => setImportOpen(false)} />}
+
+      {deletingTrade && (
+        <ConfirmDialog
+          title={t("journal.deleteTitle")}
+          message={t("journal.deleteConfirm", {
+            pair: deletingTrade.instrument ?? deletingTrade.pair,
+            date: deletingTrade.datum_open,
+          })}
+          confirmLabel={t("common.delete")}
+          tone="danger"
+          onConfirm={confirmDelete}
+          onClose={() => setDeletingTrade(null)}
+        />
+      )}
     </>
   );
 }

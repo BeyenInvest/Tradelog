@@ -3,12 +3,18 @@ import { groupTrades, matchesSearch } from "../tradeGrouping";
 import { makeTrade } from "../stats/__tests__/fixtures";
 
 describe("groupTrades", () => {
-  it("month: groups by calendar month with a Dutch label", () => {
+  it("month: groups by calendar month with a localized label", () => {
     const trades = [makeTrade({ datum_open: "2026-07-15" }), makeTrade({ datum_open: "2026-07-02" })];
     const groups = groupTrades(trades, "month");
     expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({ key: "2026-07", label: "Juli 2026" });
+    expect(groups[0].key).toBe("2026-07");
+    expect(groups[0].label).toBe("July 2026"); // default locale en-GB
     expect(groups[0].trades).toHaveLength(2);
+  });
+
+  it("month: honors the passed locale for the label", () => {
+    const groups = groupTrades([makeTrade({ datum_open: "2026-07-15" })], "month", "nl-BE");
+    expect(groups[0].label).toBe("juli 2026");
   });
 
   it("week: two dates in the same Mon-Sun week share a bucket, a third in the next week doesn't", () => {

@@ -63,14 +63,20 @@ export function BacktestingAnalysisView({
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(scopedTrades, 5), [scopedTrades]);
 
+  // Per-dimension row-label translator: the breakdown key stays a stable id, the
+  // label follows the UI language (weekday abbreviations, Yes/No). Omitted → key shown as-is.
+  const labelFnFor = (d: (typeof BREAKDOWN_DIMENSIONS)[number]) =>
+    d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined;
   const dimensionRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
-    [scopedTrades]
+    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scopedTrades, t]
   );
   const dimensionGridRows = useMemo(
     () =>
-      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
-    [scopedTrades]
+      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scopedTrades, t]
   );
   // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
   // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
@@ -116,8 +122,15 @@ export function BacktestingAnalysisView({
   // adds nothing for the owner and everything for a preset/custom journal.
   const customDims = useMemo(() => customFieldDimensions(fields, scopedTrades), [fields, scopedTrades]);
   const customDimRows = useMemo(
-    () => customDims.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder }) })),
-    [scopedTrades, customDims]
+    () =>
+      customDims
+        .map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined }) }))
+        // Skip custom-field dimensions with no data yet (rows.length 0) — same as
+        // timingDimRows above. A fresh preset journal defines many fields before any
+        // trade fills them, which otherwise rendered a wall of empty "No data." cards.
+        .filter(({ rows }) => rows.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scopedTrades, customDims, t]
   );
 
   return (

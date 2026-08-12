@@ -92,7 +92,10 @@ describe("buildReviewPdfData", () => {
 
     const data = buildReviewPdfData(t, { kind: "periodic", review: periodic, taken: [], missed: [] });
 
-    expect(data.heading).toBe("Juli 2026");
+    expect(data.heading).toBe("July 2026"); // default locale en-GB
+    // Locale param localizes the period heading (NL).
+    const dataNl = buildReviewPdfData(t, { kind: "periodic", review: periodic, taken: [], missed: [] }, new Date(), "nl-BE");
+    expect(dataNl.heading).toBe("juli 2026");
     expect(data.labels.actiesLabel).toBe("reviewContent.werkpunten");
     const labels = data.sections.map((s) => s.label);
     expect(labels).toEqual([

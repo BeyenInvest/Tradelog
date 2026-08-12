@@ -1,5 +1,6 @@
 import type { Trade } from "./types";
-import { MONTH_NAMES, type Outcome } from "./constants";
+import { type Outcome } from "./constants";
+import { monthName } from "./format";
 import { isMissed, round2 } from "./stats/core";
 
 export type GroupBy = "month" | "week" | "quarter" | "backtestDag";
@@ -16,9 +17,9 @@ function realResultaatTotal(trades: Trade[]): number {
   return round2(trades.reduce((s, t) => (isMissed(t) ? s : s + t.resultaat_pct), 0));
 }
 
-function monthKey(dateIso: string): { key: string; label: string } {
+function monthKey(dateIso: string, locale: string): { key: string; label: string } {
   const [y, m] = dateIso.split("-");
-  return { key: `${y}-${m}`, label: `${MONTH_NAMES[Number(m) - 1]} ${y}` };
+  return { key: `${y}-${m}`, label: `${monthName(Number(m) - 1, locale)} ${y}` };
 }
 
 function quarterKey(dateIso: string): { key: string; label: string } {
@@ -38,21 +39,21 @@ function weekKey(dateIso: string): { key: string; label: string } {
 }
 
 /** Calendar day (local time) a trade was actually entered — i.e. the real-life backtesting session it was logged in, as opposed to `datum_open` which is the historical date the trade happened on the chart. */
-function backtestDagKey(createdAtIso: string): { key: string; label: string } {
+function backtestDagKey(createdAtIso: string, locale: string): { key: string; label: string } {
   const date = new Date(createdAtIso);
   return {
     key: date.toLocaleDateString("sv-SE"), // yyyy-mm-dd in local time
-    label: date.toLocaleDateString("nl-BE", { day: "2-digit", month: "long", year: "numeric" }),
+    label: date.toLocaleDateString(locale, { day: "2-digit", month: "long", year: "numeric" }),
   };
 }
 
-/** Groups trades by month, quarter, or ISO week (all keyed on `datum_open`, the historical trade date), or by backtest session day (keyed on `created_at`, the day the trade was actually logged) — input order is preserved per bucket (pass already-sorted trades in). */
-export function groupTrades(trades: Trade[], groupBy: GroupBy): TradeGroup[] {
+/** Groups trades by month, quarter, or ISO week (all keyed on `datum_open`, the historical trade date), or by backtest session day (keyed on `created_at`, the day the trade was actually logged) — input order is preserved per bucket (pass already-sorted trades in). `locale` (BCP47, from dateLocale(i18n.language)) drives the localized month/day labels. */
+export function groupTrades(trades: Trade[], groupBy: GroupBy, locale = "en-GB"): TradeGroup[] {
   const keyFn =
     groupBy === "backtestDag"
-      ? (t: Trade) => backtestDagKey(t.created_at)
+      ? (t: Trade) => backtestDagKey(t.created_at, locale)
       : groupBy === "month"
-        ? (t: Trade) => monthKey(t.datum_open)
+        ? (t: Trade) => monthKey(t.datum_open, locale)
         : groupBy === "quarter"
           ? (t: Trade) => quarterKey(t.datum_open)
           : (t: Trade) => weekKey(t.datum_open);

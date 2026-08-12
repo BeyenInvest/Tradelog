@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
+import { dateLocale } from "@/lib/format";
 import type { Trade } from "@/lib/types";
 import { TradeListItem } from "./TradeListItem";
 import { TradeListHeader } from "./TradeListHeader";
@@ -29,7 +30,7 @@ export function TradeList({
   onResetFilters,
   fixedGroupBy,
 }: TradeListProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>(fixedGroupBy ?? "week");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -39,7 +40,7 @@ export function TradeList({
     return [...trades].sort((a, b) => b[field].localeCompare(a[field]));
   }, [trades, groupBy]);
   const filtered = useMemo(() => sorted.filter((t) => matchesSearch(t, search)), [sorted, search]);
-  const groups = useMemo(() => groupTrades(filtered, groupBy), [filtered, groupBy]);
+  const groups = useMemo(() => groupTrades(filtered, groupBy, dateLocale(i18n.language)), [filtered, groupBy, i18n.language]);
 
   // Only the most recent group starts open — with the full history now on one page, collapsing the rest keeps it scannable. Re-applied whenever the grouping granularity changes; individual toggles otherwise persist while searching.
   useLayoutEffect(() => {

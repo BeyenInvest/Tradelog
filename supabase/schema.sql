@@ -578,13 +578,16 @@ create trigger trg_profiles_recompute_sessie
 -- privileges, scoped tightly to just these inserts.
 -- Each new user also gets their own EMPTY journal (methodology) — the Weekly Phase Method
 -- template is a preset, never imposed on new signups (see 0025, Scope C plak 3).
+-- The default name is the language-neutral 'Journal' (0035) — the trigger runs in the DB
+-- and can't know the UI language, so a Dutch 'Mijn journal' would leak into the EN UI;
+-- onboarding (fase C) may rename it client-side later.
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   new_meth uuid;
 begin
   insert into public.methodologies (user_id, naam, is_system, asset_class)
-  values (new.id, 'Mijn journal', false, null)
+  values (new.id, 'Journal', false, null)
   returning id into new_meth;
 
   insert into public.profiles (id, email, display_name, methodology_id)

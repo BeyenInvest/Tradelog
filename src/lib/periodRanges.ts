@@ -1,4 +1,5 @@
-import { MONTH_NAMES, type PeriodType } from "./constants";
+import { type PeriodType } from "./constants";
+import { monthName } from "./format";
 
 function toIsoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -35,9 +36,9 @@ export function rangeOfPeriod(periodType: PeriodType, jaar: number, periodeNumme
   return yearRange(jaar);
 }
 
-/** Human label for a period, e.g. "Juli 2026", "Q3 2026", "2026". */
-export function periodLabel(periodType: PeriodType, jaar: number, periodeNummer: number | null): string {
-  if (periodType === "month") return `${MONTH_NAMES[(periodeNummer ?? 1) - 1]} ${jaar}`;
+/** Human label for a period, e.g. "July 2026", "Q3 2026", "2026". `locale` (BCP47, from dateLocale(i18n.language)) drives the localized month name. */
+export function periodLabel(periodType: PeriodType, jaar: number, periodeNummer: number | null, locale = "en-GB"): string {
+  if (periodType === "month") return `${monthName((periodeNummer ?? 1) - 1, locale)} ${jaar}`;
   if (periodType === "quarter") return `Q${periodeNummer} ${jaar}`;
   return `${jaar}`;
 }

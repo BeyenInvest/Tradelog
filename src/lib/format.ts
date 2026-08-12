@@ -7,3 +7,8 @@ export function formatEUR(n: number): string {
 export function dateLocale(lang: string): string {
   return lang.startsWith("nl") ? "nl-BE" : "en-GB";
 }
+
+/** Localized full month name for a 0-based month index (0 = January), in the given BCP47 locale. */
+export function monthName(month0: number, locale: string): string {
+  return new Date(2000, month0, 1).toLocaleDateString(locale, { month: "long" });
+}

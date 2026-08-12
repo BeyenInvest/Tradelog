@@ -213,8 +213,8 @@ function formatDate(now: Date): string {
   return `${dd}-${mm}-${now.getFullYear()}`;
 }
 
-/** Builds the full presentation-ready payload for one review's branded PDF. */
-export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Date = new Date()): ReviewPdfData {
+/** Builds the full presentation-ready payload for one review's branded PDF. `locale` (BCP47, from dateLocale(i18n.language)) localizes the period heading. */
+export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Date = new Date(), locale = "en-GB"): ReviewPdfData {
   const { taken, missed } = input;
   const kpis = computeOverviewKpis(taken);
   const decisive = kpis.wins + kpis.losses;
@@ -223,7 +223,7 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
   const heading =
     input.kind === "weekly"
       ? `W${input.review.week_nummer} · ${input.review.jaar}`
-      : periodLabel(input.review.period_type, input.review.jaar, input.review.periode_nummer);
+      : periodLabel(input.review.period_type, input.review.jaar, input.review.periode_nummer, locale);
 
   const sections = input.kind === "weekly" ? weeklySections(t, input.review) : periodicSections(t, input.review);
   const actiesLabel = input.kind === "weekly" ? t("reviewContent.acties") : t("reviewContent.werkpunten");

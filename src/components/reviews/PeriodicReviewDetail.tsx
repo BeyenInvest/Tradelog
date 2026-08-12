@@ -7,6 +7,7 @@ import type { PeriodicReview, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import { dateLocale } from "@/lib/format";
 import { computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { TradeForm } from "@/components/trades/TradeForm";
@@ -27,7 +28,7 @@ interface PeriodicReviewDetailProps {
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
 export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
   const [addOpen, setAddOpen] = useState(false);
@@ -42,12 +43,12 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
     <Card className="lg:col-span-2 p-6">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h3 className="font-display text-2xl italic text-ink">{periodLabel(review.period_type, review.jaar, review.periode_nummer)}</h3>
+          <h3 className="font-display text-2xl italic text-ink">{periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language))}</h3>
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-1">
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name })}
+            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name }, new Date(), dateLocale(i18n.language))}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />

@@ -14,6 +14,7 @@ import { PeriodicReviewDetail } from "@/components/reviews/PeriodicReviewDetail"
 import { PeriodicReviewForm } from "@/components/reviews/PeriodicReviewForm";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import { dateLocale } from "@/lib/format";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades, round2 } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
@@ -222,7 +223,7 @@ function PeriodicReviewsTab({
   trades: Trade[];
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { reviews, loading, createReview, updateReview, deleteReview } = usePeriodicReviews(periodType);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -289,7 +290,7 @@ function PeriodicReviewsTab({
       confirm(
         t("reviews.deletePeriodicConfirm", {
           type: PERIOD_TYPE_LABELS[periodType],
-          label: periodLabel(review.period_type, review.jaar, review.periode_nummer),
+          label: periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language)),
         })
       )
     ) {

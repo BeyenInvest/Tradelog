@@ -22,6 +22,12 @@ export default defineConfig({
     },
   },
   server: {
+    // Pin the dev port so it matches .claude/launch.json (5173). Without
+    // strictPort, Vite silently drifts to 5174 when 5173 is busy while the
+    // launch config's proxy still points at 5173 → a dead-port mismatch.
+    // strictPort makes that collision fail loudly instead of drifting.
+    port: 5173,
+    strictPort: true,
     proxy: {
       // The unofficial ForexFactory calendar feed has no CORS headers, so the
       // browser can't fetch it directly — the Vite dev server fetches it

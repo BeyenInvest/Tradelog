@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import type { MethodologyField, Trade } from "./types";
 import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
@@ -21,7 +22,19 @@ export interface DimensionConfig {
   universal?: boolean;
   /** Forex-only dimension (pair/currency split) — shown only for a forex journal (cyclus 7). */
   forex?: boolean;
+  /**
+   * Translates a row's key into its display label. Kept separate from `keyFn` so
+   * the grouping key stays a stable, language-independent identifier (e.g. "Ma",
+   * "Ja") while the visible label follows the UI language. Omit → the key is shown
+   * as-is (already-neutral values like tickers, CC slots, directions).
+   */
+  labelFn?: (key: string, t: TFunction) => string;
 }
+
+/** Localized weekday label — keys are the fixed WEEKDAYS abbreviations (Ma..Zo). */
+const weekdayLabel = (k: string, t: TFunction) => t(`weekdays.${k}`);
+/** Localized Yes/No for boolean dimensions — keys stay the stable "Ja"/"Nee". */
+const boolLabel = (k: string, t: TFunction) => t(k === "Ja" ? "common.yes" : "common.no");
 
 /**
  * One entry per "Per X" split from spec 5.2. BacktestingPage renders every
@@ -38,7 +51,7 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "weekly_kenmerk", keyFn: (t) => t.weekly_kenmerk },
   { id: "cc", keyFn: (t) => t.cc, sortOrder: CCS },
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
-  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true },
+  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true, labelFn: weekdayLabel },
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true },
   // Instrument is the universal "what did you trade" (cyclus 7) — on a forex
   // journal instrument mirrors pair on every write path, so a separate "Per Pair"
@@ -48,7 +61,7 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), forex: true },
   // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
-  { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee") },
+  { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee"), labelFn: boolLabel },
 ];
 
 /**
@@ -71,6 +84,7 @@ export function customFieldDimensions(fields: MethodologyField[], trades: Trade[
         id: `custom:${f.field_key}`,
         label: f.label,
         sortOrder: f.field_type === "enum" ? f.options ?? undefined : undefined,
+        labelFn: f.field_type === "boolean" ? boolLabel : undefined,
         keyFn: (t: Trade) => {
           const raw = t.custom?.[f.field_key];
           if (raw == null || raw === "") return null;

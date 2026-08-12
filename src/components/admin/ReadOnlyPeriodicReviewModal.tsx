@@ -8,6 +8,7 @@ import { PeriodicReviewContentDisplay } from "@/components/reviews/PeriodicRevie
 import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import { dateLocale } from "@/lib/format";
 import type { PeriodicReview, Trade } from "@/lib/types";
 
 /** Read-only equivalent of PeriodicReviewDetail — no edit/delete, for the admin debug view. */
@@ -19,7 +20,7 @@ export function ReadOnlyPeriodicReviewModal({
   trades: Trade[];
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const inPeriod = useMemo(() => {
     const { start, end } = rangeOfPeriod(review.period_type, review.jaar, review.periode_nummer);
     return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
@@ -35,7 +36,7 @@ export function ReadOnlyPeriodicReviewModal({
           <div className="flex items-start justify-between mb-5">
             <div>
               <h2 id="admin-periodic-review-title" className="font-display text-xl italic text-ink">
-                {periodLabel(review.period_type, review.jaar, review.periode_nummer)}
+                {periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language))}
               </h2>
               {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
             </div>

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import type { PeriodicReview } from "@/lib/types";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel } from "@/lib/periodRanges";
+import { dateLocale } from "@/lib/format";
 
 interface PeriodicReviewListProps {
   periodType: PeriodType;
@@ -15,7 +16,7 @@ interface PeriodicReviewListProps {
 }
 
 export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, resultaatOf, tradeCountOf }: PeriodicReviewListProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <Card className="flex flex-col gap-2">
       <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{PERIOD_TYPE_LABELS[periodType]} reviews</h3>
@@ -33,7 +34,7 @@ export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, 
             )}
           >
             <p className="text-ink">
-              {periodLabel(rv.period_type, rv.jaar, rv.periode_nummer)}
+              {periodLabel(rv.period_type, rv.jaar, rv.periode_nummer, dateLocale(i18n.language))}
               {rv.titel ? ` — ${rv.titel}` : ""}
             </p>
             <p className={clsx("font-mono text-xs mt-1", resultaat >= 0 ? "text-win" : "text-loss")}>
