@@ -48,9 +48,6 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
         <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message} hint={t("tradeForm.resultSignHint")}>
           <input type="number" step="0.01" className="input" {...register("resultaat_pct")} />
         </Field>
-        <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
-          <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
-        </Field>
         <Field label={t("tradeForm.datumSluiting")} error={errors.datum_sluiting?.message}>
           <input
             type="date"
@@ -62,6 +59,9 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
               },
             })}
           />
+        </Field>
+        <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
+          <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
         </Field>
         <Field label={t("tradeForm.durationDerived")}>
           <input type="text" disabled value={duur ?? ""} className="input opacity-60" />
