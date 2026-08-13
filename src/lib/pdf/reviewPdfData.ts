@@ -159,11 +159,15 @@ const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
 };
 
 function weeklySections(t: TFunction, r: WeeklyReview): ReviewPdfSection[] {
+  // One mental section (Fase F): mentaal_owner plus any legacy mentaal_trader text.
+  const mentaal = [r.mentaal_owner, r.mentaal_trader]
+    .map((v) => v?.trim())
+    .filter(Boolean)
+    .join("\n\n");
   return [
     section(t("reviewContent.verhalen"), r.verhalen, "text"),
     section(t("reviewContent.technisch"), r.technisch, "text"),
-    section(t("reviewContent.mentaalOwner"), r.mentaal_owner, "voice"),
-    section(t("reviewContent.mentaalTrader"), r.mentaal_trader, "voice"),
+    section(t("reviewContent.mentaal"), mentaal || null, "voice"),
     section(t("reviewContent.takeaway"), r.takeaway, "takeaway"),
     section(t("reviewContent.overallComment"), r.overall_comment, "overall"),
   ].filter((s): s is ReviewPdfSection => s !== null);

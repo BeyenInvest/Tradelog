@@ -54,9 +54,11 @@ describe("buildReviewPdfData", () => {
     expect(data.heading).toBe("W32 · 2026");
     expect(data.subtitle).toBe("Geduldige week");
     expect(data.labels.actiesLabel).toBe("reviewContent.acties");
-    // empty mentaal_trader is dropped; technisch is trimmed
+    // mentaal_owner/mentaal_trader merge into one "mentaal" section (Fase F); technisch is trimmed
     const labels = data.sections.map((s) => s.label);
     expect(labels).toContain("reviewContent.technisch");
+    expect(labels).toContain("reviewContent.mentaal");
+    expect(labels).not.toContain("reviewContent.mentaalOwner");
     expect(labels).not.toContain("reviewContent.mentaalTrader");
     // verhalen is its own section, rendered above technisch
     expect(labels.indexOf("reviewContent.verhalen")).toBeGreaterThanOrEqual(0);
@@ -68,6 +70,14 @@ describe("buildReviewPdfData", () => {
       { label: "Journaling", status: "niet-ok", value: null },
       { label: "Focus op A-setups", status: null, value: null },
     ]);
+  });
+
+  it("merges legacy mentaal_owner + mentaal_trader into one mentaal section", () => {
+    const twoVoice: WeeklyReview = { ...baseWeekly, mentaal_owner: "Owner voice.", mentaal_trader: "Trader voice." };
+    const data = buildReviewPdfData(t, { kind: "weekly", review: twoVoice, taken: [], missed: [] });
+    const mentaal = data.sections.find((s) => s.label === "reviewContent.mentaal");
+    expect(mentaal?.body).toBe("Owner voice.\n\nTrader voice.");
+    expect(mentaal?.kind).toBe("voice");
   });
 
   it("relabels sections for a periodic (monthly) review", () => {

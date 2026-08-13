@@ -18,11 +18,12 @@ export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, menta
     <>
       {verhalen && <ContentBlock label={t("reviewContent.verhalen")}>{verhalen}</ContentBlock>}
       {technisch && <ContentBlock label={t("reviewContent.technisch")}>{technisch}</ContentBlock>}
+      {/* One mental block (Fase F): mentaal_owner is the live field; any legacy mentaal_trader
+          text is appended so older two-voice reviews still render in full. */}
       {(mentaal_owner || mentaal_trader) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {mentaal_owner && <VoiceBlock label={t("reviewContent.mentaalOwner")}>{mentaal_owner}</VoiceBlock>}
-          {mentaal_trader && <VoiceBlock label={t("reviewContent.mentaalTrader")}>{mentaal_trader}</VoiceBlock>}
-        </div>
+        <VoiceBlock label={t("reviewContent.mentaal")}>
+          {[mentaal_owner, mentaal_trader].filter(Boolean).join("\n\n")}
+        </VoiceBlock>
       )}
       <ActiesList label={t("reviewContent.acties")} items={acties} />
       {takeaway && <TakeawayQuote label={t("reviewContent.takeaway")}>{takeaway}</TakeawayQuote>}
