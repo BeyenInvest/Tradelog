@@ -7,8 +7,8 @@ import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
-import { useInstrumentSuggestions } from "@/hooks/useInstrumentSuggestions";
 import { useMethodology } from "@/hooks/useMethodology";
+import { InstrumentSelect } from "../InstrumentSelect";
 import { Field } from "./Field";
 
 interface EntrySectionProps {
@@ -25,10 +25,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   } = useFormContext<TradeFormValues>();
   const { hideFase, betaFeatures } = useAuth();
   const { t } = useTranslation();
-  const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
-  // Self-curating autocomplete for the free instrument field — symbols already
-  // logged in this journal. Only a non-forex journal shows that field (cyclus 7).
-  const instrumentSuggestions = useInstrumentSuggestions(!isForexJournal);
+  const { faseNames, isLegacyMethodology, isForexJournal, instruments, addInstrument } = useMethodology();
   const { options: customEntries } = useCustomOptions("entry");
   const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
   const { options: customConcepts } = useCustomOptions("trade_concept");
@@ -78,20 +75,18 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
         ) : (
           <>
             <Field label={t("tradeForm.instrument")} error={errors.instrument?.message}>
-              <input
-                className="input"
-                placeholder={t("tradeForm.instrumentPlaceholder")}
-                list="instrument-suggestions"
-                autoComplete="off"
-                {...register("instrument")}
+              <Controller
+                name="instrument"
+                control={control}
+                render={({ field }) => (
+                  <InstrumentSelect
+                    options={instruments}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onAddInstrument={addInstrument}
+                  />
+                )}
               />
-              {instrumentSuggestions.length > 0 && (
-                <datalist id="instrument-suggestions">
-                  {instrumentSuggestions.map((symbol) => (
-                    <option key={symbol} value={symbol} />
-                  ))}
-                </datalist>
-              )}
             </Field>
             <input type="hidden" {...register("pair")} />
           </>

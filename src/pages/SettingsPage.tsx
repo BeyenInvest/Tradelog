@@ -7,6 +7,7 @@ import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
+import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { PresetPicker } from "@/components/settings/PresetPicker";
 import { ENTRIES, TRADE_CONCEPTS } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -91,6 +92,7 @@ export default function SettingsPage() {
             />
             <PresetPicker />
             <MethodologyEditor />
+            <JournalInstruments />
           </section>
         )}
       </div>
