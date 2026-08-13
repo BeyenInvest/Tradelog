@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { FASES, WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
+import { instrumentsOfConfig, normalizeInstrument } from "@/lib/instruments";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 export interface MethodologyData {
@@ -35,6 +36,29 @@ export interface MethodologyData {
    * sees the field flip. A blank/own or non-forex journal is false.
    */
   isForexJournal: boolean;
+  /**
+   * True when the active journal is the user's own editable methodology (not a
+   * read-only system template). Curating the instrument list writes to it, so the
+   * Settings card and the trade form's inline "add instrument" gate on this.
+   */
+  isOwnMethodology: boolean;
+  /**
+   * The journal's curated instrument universe (cyclus D), read from
+   * `instrument_config`. Normalized/sorted. Drives the trade-form instrument select
+   * and the Settings instrument editor. Empty for a forex journal (it uses the pair
+   * enum) and for a fresh non-forex journal until the user curates one.
+   */
+  instruments: string[];
+  /**
+   * Adds a symbol to the active journal's instrument list, normalized (trim +
+   * uppercase). Idempotent — a value already present is a no-op. Persists to
+   * `methodologies.instrument_config` when the journal is the user's own; on a
+   * read-only template it only returns the normalized value (the caller still uses
+   * it for the trade). Returns the normalized symbol, or null for blank input.
+   */
+  addInstrument: (raw: string) => Promise<string | null>;
+  /** Removes a symbol from the active own journal's instrument list. */
+  removeInstrument: (value: string) => Promise<void>;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -120,5 +144,72 @@ export function useMethodology(): MethodologyData {
     [loading, methodology]
   );
 
-  return { methodology, fields, faseNames, isLegacyMethodology, isForexJournal, loading, error, refresh };
+  const isOwnMethodology = useMemo(
+    () => methodology != null && !methodology.is_system && methodology.user_id != null,
+    [methodology]
+  );
+
+  const instruments = useMemo(
+    () => instrumentsOfConfig(methodology?.instrument_config),
+    [methodology]
+  );
+
+  const addInstrument = useCallback(
+    async (raw: string): Promise<string | null> => {
+      const norm = normalizeInstrument(raw);
+      if (!norm) return null;
+      if (!methodology || methodology.is_system || methodology.user_id == null) return norm;
+      if (instruments.includes(norm)) return norm;
+
+      const nextConfig = {
+        ...(methodology.instrument_config ?? {}),
+        instruments: [...instruments, norm],
+      };
+      const { error: err } = await supabase
+        .from("methodologies")
+        .update({ instrument_config: nextConfig })
+        .eq("id", methodology.id);
+      if (err) throw err;
+      // Optimistic local update so the new symbol is immediately selectable without
+      // a full refetch (the trade form adds-then-selects in one interaction).
+      setMethodology((m) => (m ? { ...m, instrument_config: nextConfig } : m));
+      return norm;
+    },
+    [methodology, instruments]
+  );
+
+  const removeInstrument = useCallback(
+    async (value: string): Promise<void> => {
+      const norm = normalizeInstrument(value);
+      if (!methodology || methodology.is_system || methodology.user_id == null) return;
+      if (!instruments.includes(norm)) return;
+
+      const nextConfig = {
+        ...(methodology.instrument_config ?? {}),
+        instruments: instruments.filter((i) => i !== norm),
+      };
+      const { error: err } = await supabase
+        .from("methodologies")
+        .update({ instrument_config: nextConfig })
+        .eq("id", methodology.id);
+      if (err) throw err;
+      setMethodology((m) => (m ? { ...m, instrument_config: nextConfig } : m));
+    },
+    [methodology, instruments]
+  );
+
+  return {
+    methodology,
+    fields,
+    faseNames,
+    isLegacyMethodology,
+    isForexJournal,
+    isOwnMethodology,
+    instruments,
+    addInstrument,
+    removeInstrument,
+    loading,
+    error,
+    refresh,
+  };
 }

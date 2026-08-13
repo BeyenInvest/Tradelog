@@ -9,6 +9,7 @@ import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useMethodology } from "@/hooks/useMethodology";
+import { normalizeInstrument } from "@/lib/instruments";
 import { missingRequiredCustomFields } from "@/lib/methodologyFields";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
@@ -148,7 +149,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
     // journal's rules.
     const ownJournalTrade = !trade || (trade.methodology_id ?? null) === (methodology?.id ?? null);
     let blocked = false;
-    if (ownJournalTrade && !isForexJournal && !values.instrument?.trim()) {
+    if (ownJournalTrade && !isForexJournal && !normalizeInstrument(values.instrument ?? "")) {
       methods.setError("instrument", { type: "required", message: "tradeForm.required" });
       blocked = true;
     }
@@ -173,7 +174,9 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         // Record which journal this trade belongs to. Editing keeps the trade's
         // own methodology; a new trade takes the active one.
         methodology_id: values.methodology_id ?? methodology?.id ?? null,
-        instrument: mirrorPair ? values.pair : values.instrument?.trim() || null,
+        // Normalize the free (non-forex) instrument so "es"/"ES"/" es " fold to one
+        // Per-Instrument row (cyclus D). The pair enum is already canonical.
+        instrument: mirrorPair ? values.pair : normalizeInstrument(values.instrument ?? "") || null,
         custom: pruneCustom(values.custom ?? {}),
       };
       await onSubmit(payload);

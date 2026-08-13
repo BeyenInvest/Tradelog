@@ -5,6 +5,7 @@ import { useClickOutside } from "@/hooks/useClickOutside";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { PAIRS, DIRECTIONS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import { dynamicMethodologyFields } from "@/lib/methodologyFields";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 
@@ -23,7 +24,22 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
   const { hideFase, betaFeatures } = useAuth();
-  const { faseNames, isLegacyMethodology, isForexJournal } = useMethodology();
+  const { faseNames, fields, isLegacyMethodology, isForexJournal } = useMethodology();
+  // The active journal's own enum/boolean custom fields become filters (Scope C,
+  // cyclus E) — the breakdown side already splits on these, this closes the loop.
+  // On a legacy WPM journal dynamicMethodologyFields excludes the seeded columns,
+  // so it keeps its hardcoded fase/sessie/news filters and shows no custom ones.
+  const customFilterFields = dynamicMethodologyFields(fields).filter(
+    (f) => f.field_type === "enum" || f.field_type === "boolean"
+  );
+
+  /** Set (or clear, when val is undefined) one custom-field filter immutably. */
+  function setCustom(key: string, val: string | boolean | undefined) {
+    const next = { ...(value.custom ?? {}) };
+    if (val === undefined) delete next[key];
+    else next[key] = val;
+    onChange({ ...value, custom: Object.keys(next).length ? next : undefined });
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -145,6 +161,35 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 />
               </Field>
             )}
+            {/* The active journal's own enum/boolean custom fields. */}
+            {customFilterFields.map((f) => {
+              const current = value.custom?.[f.field_key];
+              if (f.field_type === "boolean") {
+                return (
+                  <Field key={f.id} label={f.label}>
+                    <EnumSelect
+                      options={NIEUWS_OPTIONS}
+                      value={current === undefined ? "" : current ? "Ja" : "Nee"}
+                      onChange={(e) => setCustom(f.field_key, e.target.value === "" ? undefined : e.target.value === "Ja")}
+                      placeholder={t("filters.all")}
+                      getLabel={(o) => t(o === "Ja" ? "common.yes" : "common.no")}
+                      className="w-full text-xs py-1.5"
+                    />
+                  </Field>
+                );
+              }
+              return (
+                <Field key={f.id} label={f.label}>
+                  <EnumSelect
+                    options={f.options ?? []}
+                    value={typeof current === "string" ? current : ""}
+                    onChange={(e) => setCustom(f.field_key, e.target.value === "" ? undefined : e.target.value)}
+                    placeholder={t("filters.all")}
+                    className="w-full text-xs py-1.5"
+                  />
+                </Field>
+              );
+            })}
           </div>
         </div>
       )}

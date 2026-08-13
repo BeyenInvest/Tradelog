@@ -169,6 +169,41 @@ export function computeExpectancy(trades: Trade[]): ExpectancyResult {
   return { avgWin, avgLoss, winLossRatio };
 }
 
+export interface ProfitFactorResult {
+  /** Sum of every positive resultaat_pct. */
+  grossProfit: number;
+  /** Absolute sum of every negative resultaat_pct (a positive number). */
+  grossLoss: number;
+  /**
+   * Gross profit ÷ gross loss — how many units won per unit lost. `Infinity` when
+   * there are winners but no losers (an unbounded edge, shown as "∞"); `null` when
+   * neither winners nor losers exist yet (nothing decisive to divide — shown as
+   * "—"). A BE trade (resultaat 0) contributes to neither side.
+   */
+  profitFactor: number | null;
+}
+
+/**
+ * Profit factor: gross winning % over gross losing %. Sign of resultaat_pct
+ * decides the side (matching computeExpectancy), so a "Win" logged at exactly 0%
+ * lands on neither side. Callers pass an already-scoped, missed-excluded list.
+ */
+export function computeProfitFactor(trades: Pick<Trade, "resultaat_pct">[]): ProfitFactorResult {
+  let grossProfit = 0;
+  let grossLoss = 0;
+  for (const t of trades) {
+    if (t.resultaat_pct > 0) grossProfit += t.resultaat_pct;
+    else if (t.resultaat_pct < 0) grossLoss += -t.resultaat_pct;
+  }
+  const gp = round2(grossProfit);
+  const gl = round2(grossLoss);
+  let profitFactor: number | null;
+  if (gl > 0) profitFactor = round2(gp / gl);
+  else if (gp > 0) profitFactor = Infinity; // winners, no losers → unbounded
+  else profitFactor = null; // nothing decisive yet
+  return { grossProfit: gp, grossLoss: gl, profitFactor };
+}
+
 /**
  * Planned risk % for a trade — falls back to DEFAULT_RISK_PCT when risk_pct is
  * unset (null) or non-positive. This single guard is what makes R-multiples
@@ -235,6 +270,8 @@ export interface OverviewKpis {
   totalTrades: number;
   totalResultaat: number;
   winRate: number;
+  /** Win rate ignoring break-even trades: wins / (wins + losses). null when there are no decisive trades. */
+  winRateExclBe: number | null;
   beRate: number;
   lossRate: number;
   wins: number;
@@ -246,6 +283,8 @@ export interface OverviewKpis {
   avgWin: number | null;
   avgLoss: number | null;
   winLossRatio: number | null;
+  /** Gross profit ÷ gross loss; Infinity = no losers yet, null = nothing decisive. See computeProfitFactor. */
+  profitFactor: number | null;
   maxDrawdownPct: number;
   totalR: number;
   avgR: number | null;
@@ -260,12 +299,14 @@ export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
   const streaks = computeStreaks(trades);
   const drawdown = computeMaxDrawdown(trades);
   const expectancy = computeExpectancy(trades);
+  const profitFactor = computeProfitFactor(trades);
   const rStats = computeRStats(trades);
 
   return {
     totalTrades: counts.n,
     totalResultaat: counts.resultaatTotal,
     winRate: counts.winRate,
+    winRateExclBe: counts.wins + counts.losses > 0 ? counts.wins / (counts.wins + counts.losses) : null,
     beRate: counts.beRate,
     lossRate: counts.lossRate,
     wins: counts.wins,
@@ -277,6 +318,7 @@ export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
     avgWin: expectancy.avgWin,
     avgLoss: expectancy.avgLoss,
     winLossRatio: expectancy.winLossRatio,
+    profitFactor: profitFactor.profitFactor,
     maxDrawdownPct: drawdown.maxDrawdownPct,
     totalR: rStats.totalR,
     avgR: rStats.avgR,

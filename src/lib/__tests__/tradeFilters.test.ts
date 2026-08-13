@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyJournalFilters } from "../tradeFilters";
+import { applyJournalFilters, activeFilterCount } from "../tradeFilters";
 import { makeTrade } from "../stats/__tests__/fixtures";
 
 describe("applyJournalFilters", () => {
@@ -34,5 +34,43 @@ describe("applyJournalFilters", () => {
     const trades = [makeTrade({ id: "yes", nieuws: true }), makeTrade({ id: "no", nieuws: false })];
     expect(applyJournalFilters(trades, null, { nieuws: false }).map((t) => t.id)).toEqual(["no"]);
     expect(applyJournalFilters(trades, null, {})).toHaveLength(2);
+  });
+
+  it("filters on a custom enum field by exact value, dropping missing values", () => {
+    const trades = [
+      makeTrade({ id: "rev", custom: { setup: "Reversal" } }),
+      makeTrade({ id: "cont", custom: { setup: "Continuation" } }),
+      makeTrade({ id: "none", custom: {} }),
+    ];
+    const result = applyJournalFilters(trades, null, { custom: { setup: "Reversal" } });
+    expect(result.map((t) => t.id)).toEqual(["rev"]);
+  });
+
+  it("filters on a custom boolean field, treating missing as neither true nor false", () => {
+    const trades = [
+      makeTrade({ id: "t", custom: { at_key_level: true } }),
+      makeTrade({ id: "f", custom: { at_key_level: false } }),
+      makeTrade({ id: "unset", custom: {} }),
+    ];
+    expect(applyJournalFilters(trades, null, { custom: { at_key_level: true } }).map((t) => t.id)).toEqual(["t"]);
+    expect(applyJournalFilters(trades, null, { custom: { at_key_level: false } }).map((t) => t.id)).toEqual(["f"]);
+  });
+
+  it("ANDs multiple custom filters together", () => {
+    const trades = [
+      makeTrade({ id: "both", custom: { setup: "Reversal", at_key_level: true } }),
+      makeTrade({ id: "one", custom: { setup: "Reversal", at_key_level: false } }),
+    ];
+    const result = applyJournalFilters(trades, null, { custom: { setup: "Reversal", at_key_level: true } });
+    expect(result.map((t) => t.id)).toEqual(["both"]);
+  });
+});
+
+describe("activeFilterCount", () => {
+  it("counts fixed filters and each custom-field key", () => {
+    expect(activeFilterCount({})).toBe(0);
+    expect(activeFilterCount({ outcome: "Win" })).toBe(1);
+    expect(activeFilterCount({ outcome: "Win", custom: { setup: "Reversal", at_key_level: true } })).toBe(3);
+    expect(activeFilterCount({ custom: {} })).toBe(0);
   });
 });

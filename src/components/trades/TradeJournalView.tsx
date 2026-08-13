@@ -12,6 +12,7 @@ import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ImportModal } from "@/components/trades/ImportModal";
+import { JournalEmptyState } from "@/components/trades/JournalEmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
@@ -25,6 +26,7 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
+import { formatProfitFactor } from "@/lib/format";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
@@ -35,6 +37,12 @@ interface TradeJournalViewProps {
   tradesApi: TradesApi;
   title: string;
   subtitle?: string;
+  /**
+   * First-run onboarding config — passed only for the live Journal (JournalPage).
+   * When present and the journal has zero trades, the KPI row/charts/toolbar are
+   * replaced by a JournalEmptyState wayfinder. A backtest project never gets this.
+   */
+  onboarding?: { hasFields: boolean; showPresetPicker: boolean };
 }
 
 /**
@@ -53,7 +61,7 @@ interface TradeJournalViewProps {
  * "toon missed trades" toggle only affects the trade list, where each one is
  * clearly badged, never the numbers.
  */
-export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJournalViewProps) {
+export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding }: TradeJournalViewProps) {
   const { t } = useTranslation();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
@@ -74,6 +82,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
   const [chartPanel, setChartPanel] = useState<"equity" | "discipline">("equity");
 
   const isLive = scope.type === "live";
+  // First-run empty state: an untouched live journal (zero trades in the whole
+  // book, before any filter). Replaces the all-zero KPI row/charts with a wayfinder.
+  const showOnboarding = onboarding != null && trades.length === 0;
   const filtersActive = period !== null || activeFilterCount(filters) > 0;
   function resetFilters() {
     setPeriod(null);
@@ -141,6 +152,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
         title={title}
         subtitle={subtitle ?? t("journal.tradesCount", { count: realTrades.length })}
         action={
+          // During the first-run empty state the wayfinder card owns the CTAs — a
+          // duplicate New trade / Import in the header would just be noise.
+          showOnboarding ? undefined : (
           <div className="flex items-center gap-2">
             {isLive && (
               <button
@@ -160,6 +174,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
               <Plus size={15} /> {t("journal.newTrade")}
             </button>
           </div>
+          )
         }
       />
 
@@ -171,6 +186,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
 
       {loading ? (
         <p className="text-muted text-sm">{t("common.loading")}</p>
+      ) : showOnboarding ? (
+        <JournalEmptyState
+          hasFields={onboarding.hasFields}
+          showPresetPicker={onboarding.showPresetPicker}
+          onNewTrade={() => openCreate()}
+          onImport={() => setImportOpen(true)}
+        />
       ) : (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -248,12 +270,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                 </label>
               </div>
             )}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
               label={t("journal.statResult")}
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              label={t("journal.statProfitFactor")}
+              value={formatProfitFactor(kpis.profitFactor)}
+              tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
             />
             <StatCard
               label={t("journal.statAvgR")}
@@ -268,11 +295,30 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
             />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
-              <div>
+              <div className="min-w-0">
                 <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.statStreaks")}</p>
                 <p className="font-mono text-sm mt-1 text-ink">
                   {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
                   <span className="text-win">{kpis.maxWinningStreak}</span>
+                </p>
+                <p className="font-mono text-xs mt-1 text-muted">
+                  {t("journal.currentStreak")}:{" "}
+                  {kpis.currentStreak.type === "none" ? (
+                    <span className="text-faint">—</span>
+                  ) : (
+                    <span
+                      className={
+                        kpis.currentStreak.type === "Win"
+                          ? "text-win"
+                          : kpis.currentStreak.type === "Loss"
+                            ? "text-loss"
+                            : "text-be"
+                      }
+                    >
+                      {kpis.currentStreak.count}{" "}
+                      {t(`journal.streakType_${kpis.currentStreak.type}`)}
+                    </span>
+                  )}
                 </p>
               </div>
             </Card>
@@ -288,6 +334,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle }: TradeJou
                 <span className="text-be">{kpis.be}BE</span>
                 <span className="text-loss">{kpis.losses}L</span>
               </div>
+              {kpis.winRateExclBe != null && (
+                <p className="mt-2 font-mono text-[11px] text-muted">
+                  {t("journal.winRateExclBe", { pct: (kpis.winRateExclBe * 100).toFixed(0) })}
+                </p>
+              )}
             </Card>
 
             <Card className="lg:col-span-2">
