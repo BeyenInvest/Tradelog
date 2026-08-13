@@ -54,10 +54,13 @@ describe("buildReviewPdfData", () => {
     expect(data.heading).toBe("W32 · 2026");
     expect(data.subtitle).toBe("Geduldige week");
     expect(data.labels.actiesLabel).toBe("reviewContent.acties");
-    // empty mentaal_trader is dropped; technisch is trimmed
+    // Default (non-beta) keeps the WPM layout: separate mentaal voices, empty mentaal_trader dropped
     const labels = data.sections.map((s) => s.label);
     expect(labels).toContain("reviewContent.technisch");
+    expect(labels).toContain("reviewContent.mentaalOwner");
     expect(labels).not.toContain("reviewContent.mentaalTrader");
+    expect(labels).not.toContain("reviewContent.mentaal"); // neutral layout is beta-only
+    expect(labels).toContain("reviewContent.verhalen");
     // verhalen is its own section, rendered above technisch
     expect(labels.indexOf("reviewContent.verhalen")).toBeGreaterThanOrEqual(0);
     expect(labels.indexOf("reviewContent.verhalen")).toBeLessThan(labels.indexOf("reviewContent.technisch"));
@@ -68,6 +71,19 @@ describe("buildReviewPdfData", () => {
       { label: "Journaling", status: "niet-ok", value: null },
       { label: "Focus op A-setups", status: null, value: null },
     ]);
+  });
+
+  it("beta merges legacy mentaal_owner + mentaal_trader into one neutrally-labelled section", () => {
+    const twoVoice: WeeklyReview = { ...baseWeekly, mentaal_owner: "Owner voice.", mentaal_trader: "Trader voice." };
+    const data = buildReviewPdfData(t, { kind: "weekly", review: twoVoice, taken: [], missed: [], betaFeatures: true });
+    const labels = data.sections.map((s) => s.label);
+    // neutral narrative label + single merged mental block, no WPM voices
+    expect(labels).toContain("reviewContent.verhalenNeutral");
+    expect(labels).not.toContain("reviewContent.mentaalOwner");
+    expect(labels).not.toContain("reviewContent.mentaalTrader");
+    const mentaal = data.sections.find((s) => s.label === "reviewContent.mentaal");
+    expect(mentaal?.body).toBe("Owner voice.\n\nTrader voice.");
+    expect(mentaal?.kind).toBe("voice");
   });
 
   it("relabels sections for a periodic (monthly) review", () => {
