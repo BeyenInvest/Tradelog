@@ -398,9 +398,13 @@
     "saveFailed": "Saving the review failed"
   },
   "reviewContent": {
-    "verhalen": "What happened this week?",
-    "verhalenHint": "Market context, news or sentiment that shaped your week.",
+    "verhalen": "Narratives",
+    "verhalenHint": "Which narratives were at play this week?",
+    "verhalenNeutral": "What happened this week?",
+    "verhalenNeutralHint": "Market context, news or sentiment that shaped your week.",
     "technisch": "Technical",
+    "mentaalOwner": "Mental — Owner",
+    "mentaalTrader": "Mental — Trader",
     "mentaal": "Mindset & discipline",
     "acties": "Actions",
     "actiesAdd": "Add action",

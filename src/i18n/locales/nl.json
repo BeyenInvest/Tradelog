@@ -398,9 +398,13 @@
     "saveFailed": "Opslaan van de review is mislukt"
   },
   "reviewContent": {
-    "verhalen": "Wat speelde er deze week?",
-    "verhalenHint": "Marktcontext, nieuws of sentiment dat je week bepaalde.",
+    "verhalen": "Verhalen",
+    "verhalenHint": "Welke verhalen speelden er deze week?",
+    "verhalenNeutral": "Wat speelde er deze week?",
+    "verhalenNeutralHint": "Marktcontext, nieuws of sentiment dat je week bepaalde.",
     "technisch": "Technisch",
+    "mentaalOwner": "Mentaal — Owner",
+    "mentaalTrader": "Mentaal — Trader",
     "mentaal": "Mentaal",
     "acties": "Acties",
     "actiesAdd": "Actie toevoegen",

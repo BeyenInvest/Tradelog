@@ -90,7 +90,14 @@ export interface ReviewPdfData {
 }
 
 export type ReviewPdfInput = (
-  | { kind: "weekly"; review: WeeklyReview; taken: Trade[]; missed: Trade[] }
+  | {
+      kind: "weekly";
+      review: WeeklyReview;
+      taken: Trade[];
+      missed: Trade[];
+      /** Fase F soft-launch: beta users get the neutral one-Mentaal layout; others the WPM layout. */
+      betaFeatures?: boolean;
+    }
   | { kind: "periodic"; review: PeriodicReview; taken: Trade[]; missed: Trade[] }
 ) & {
   /** The signed-in trader's display name (profile.display_name), for the header. */
@@ -158,14 +165,25 @@ const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
   year: "reviewContent.kwartaaloverzicht",
 };
 
-function weeklySections(t: TFunction, r: WeeklyReview): ReviewPdfSection[] {
-  // One mental section (Fase F): mentaal_owner plus any legacy mentaal_trader text.
+function weeklySections(t: TFunction, r: WeeklyReview, beta: boolean): ReviewPdfSection[] {
+  if (!beta) {
+    // WPM layout (non-beta): separate narrative + two mental voices.
+    return [
+      section(t("reviewContent.verhalen"), r.verhalen, "text"),
+      section(t("reviewContent.technisch"), r.technisch, "text"),
+      section(t("reviewContent.mentaalOwner"), r.mentaal_owner, "voice"),
+      section(t("reviewContent.mentaalTrader"), r.mentaal_trader, "voice"),
+      section(t("reviewContent.takeaway"), r.takeaway, "takeaway"),
+      section(t("reviewContent.overallComment"), r.overall_comment, "overall"),
+    ].filter((s): s is ReviewPdfSection => s !== null);
+  }
+  // Neutral layout (Fase F, beta): one mental section = mentaal_owner plus any legacy mentaal_trader.
   const mentaal = [r.mentaal_owner, r.mentaal_trader]
     .map((v) => v?.trim())
     .filter(Boolean)
     .join("\n\n");
   return [
-    section(t("reviewContent.verhalen"), r.verhalen, "text"),
+    section(t("reviewContent.verhalenNeutral"), r.verhalen, "text"),
     section(t("reviewContent.technisch"), r.technisch, "text"),
     section(t("reviewContent.mentaal"), mentaal || null, "voice"),
     section(t("reviewContent.takeaway"), r.takeaway, "takeaway"),
@@ -229,7 +247,8 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
       ? `W${input.review.week_nummer} · ${input.review.jaar}`
       : periodLabel(input.review.period_type, input.review.jaar, input.review.periode_nummer, locale);
 
-  const sections = input.kind === "weekly" ? weeklySections(t, input.review) : periodicSections(t, input.review);
+  const sections =
+    input.kind === "weekly" ? weeklySections(t, input.review, input.betaFeatures ?? false) : periodicSections(t, input.review);
   const actiesLabel = input.kind === "weekly" ? t("reviewContent.acties") : t("reviewContent.werkpunten");
 
   const l = labels(t);
