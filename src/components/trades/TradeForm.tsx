@@ -135,7 +135,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
   // Seeded `true` when a close date already exists on load (editing a real trade), so an
   // open-date correction never clobbers a deliberately recorded close date.
   const closeDateTouchedRef = useRef(Boolean(trade?.datum_sluiting));
-  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
+  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   async function handleFormSubmit(values: TradeFormValues) {
     setError(null);
@@ -229,6 +229,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
           </form>
         </FormProvider>
       </div>
+      {discardDialog}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,6 +17,10 @@ import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { hideFase, betaFeatures, updateProfile } = useAuth();
+  const location = useLocation();
+  // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
+  // scroll to the preset picker, so that click completes its intent here.
+  const openPresets = Boolean((location.state as { openPresets?: boolean } | null)?.openPresets);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +52,21 @@ export default function SettingsPage() {
 
           <LanguageSettings />
         </section>
+
+        {/* Multi-journal configuration — soft-launch: beta-flagged users only (0033)
+            until the public launch. Above the legacy trading prefs: for a new trader
+            this is the section that matters, the WPM-era cards below are secondary. */}
+        {betaFeatures && (
+          <section className="flex flex-col gap-5">
+            <SettingsSectionHeader
+              title={t("methodology.title")}
+              description={t("methodology.description")}
+            />
+            <PresetPicker defaultOpen={openPresets} />
+            <MethodologyEditor />
+            <JournalInstruments />
+          </section>
+        )}
 
         <section className="flex flex-col gap-5">
           <SettingsSectionHeader
@@ -82,19 +102,6 @@ export default function SettingsPage() {
             placeholderKey="settings.newConceptPlaceholder"
           />
         </section>
-
-        {/* Multi-journal configuration — soft-launch: beta-flagged users only (0033) until the public launch. */}
-        {betaFeatures && (
-          <section className="flex flex-col gap-5">
-            <SettingsSectionHeader
-              title={t("methodology.title")}
-              description={t("methodology.description")}
-            />
-            <PresetPicker />
-            <MethodologyEditor />
-            <JournalInstruments />
-          </section>
-        )}
       </div>
     </>
   );

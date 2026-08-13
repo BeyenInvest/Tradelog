@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { isLockedLegacyField } from "@/lib/methodologyFields";
 import type { Methodology, MethodologyField } from "@/lib/types";
@@ -26,6 +27,10 @@ export interface FieldInput {
  */
 export function useMethodologyEditor() {
   const { profile, updateProfile } = useAuth();
+  // The app-wide shared methodology state (MethodologyProvider) lives for the
+  // whole session now — every editor mutation must push a refresh into it, or
+  // the trade form/filters would keep rendering the pre-edit fields until reload.
+  const { refresh: refreshShared } = useMethodology();
   const methodologyId = profile?.methodology_id ?? null;
 
   const [methodology, setMethodology] = useState<Methodology | null>(null);
@@ -103,7 +108,8 @@ export function useMethodologyEditor() {
       .insert({ methodology_id: mid, ...input, sort_order: nextSort });
     if (err) throw err;
     await load(mid);
-  }, [fields, load, methodology, isOwn]);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
 
   const updateField = useCallback(async (id: string, patch: Partial<FieldInput>) => {
     const mid = requireOwn();
@@ -111,7 +117,8 @@ export function useMethodologyEditor() {
     const { error: err } = await supabase.from("methodology_fields").update(patch).eq("id", id);
     if (err) throw err;
     await load(mid);
-  }, [fields, load, methodology, isOwn]);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
 
   const deleteField = useCallback(async (id: string) => {
     const mid = requireOwn();
@@ -119,7 +126,8 @@ export function useMethodologyEditor() {
     const { error: err } = await supabase.from("methodology_fields").delete().eq("id", id);
     if (err) throw err;
     await load(mid);
-  }, [fields, load, methodology, isOwn]);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
 
   /** Move a field up/down by swapping sort_order with its neighbour. */
   const moveField = useCallback(async (id: string, direction: "up" | "down") => {
@@ -133,7 +141,8 @@ export function useMethodologyEditor() {
     const { error: e2 } = await supabase.from("methodology_fields").update({ sort_order: a.sort_order }).eq("id", b.id);
     if (e1 || e2) throw (e1 ?? e2);
     await load(mid);
-  }, [fields, load, methodology, isOwn]);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
 
   return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, refresh: () => load(methodologyId) };
 }

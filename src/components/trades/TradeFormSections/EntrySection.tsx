@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
@@ -9,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { useMethodology } from "@/hooks/useMethodology";
 import { InstrumentSelect } from "../InstrumentSelect";
+import { AddableSelect } from "../AddableSelect";
 import { Field } from "./Field";
 
 interface EntrySectionProps {
@@ -26,13 +26,14 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   const { hideFase, betaFeatures } = useAuth();
   const { t } = useTranslation();
   const { faseNames, isLegacyMethodology, isForexJournal, instruments, addInstrument } = useMethodology();
-  const { options: customEntries } = useCustomOptions("entry");
-  const entryOptions = useMemo(() => [...ENTRIES, ...customEntries.map((o) => o.value)], [customEntries]);
-  const { options: customConcepts } = useCustomOptions("trade_concept");
-  const conceptOptions = useMemo(
-    () => [...TRADE_CONCEPTS, ...customConcepts.map((o) => o.value)],
-    [customConcepts]
-  );
+  // Entry & Trade concept are the two custom_options-backed fields (plain text
+  // columns) — add/remove own values straight from the form via AddableSelect.
+  const { options: customEntries, addOption: addEntry, deleteOption: deleteEntry } = useCustomOptions("entry");
+  const {
+    options: customConcepts,
+    addOption: addConcept,
+    deleteOption: deleteConcept,
+  } = useCustomOptions("trade_concept");
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,10 +110,36 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
               <EnumSelect options={CCS} {...register("cc")} />
             </Field>
             <Field label={t("tradeForm.tradeConcept")} error={errors.trade_concept?.message}>
-              <EnumSelect options={conceptOptions} {...register("trade_concept")} />
+              <Controller
+                name="trade_concept"
+                control={control}
+                render={({ field }) => (
+                  <AddableSelect
+                    baseOptions={TRADE_CONCEPTS}
+                    customOptions={customConcepts}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onAdd={addConcept}
+                    onDeleteOption={deleteConcept}
+                  />
+                )}
+              />
             </Field>
             <Field label={t("tradeForm.entry")} error={errors.entry?.message}>
-              <EnumSelect options={entryOptions} {...register("entry")} />
+              <Controller
+                name="entry"
+                control={control}
+                render={({ field }) => (
+                  <AddableSelect
+                    baseOptions={ENTRIES}
+                    customOptions={customEntries}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onAdd={addEntry}
+                    onDeleteOption={deleteEntry}
+                  />
+                )}
+              />
             </Field>
             <Field label={t("tradeForm.weeklyCriteria")} error={errors.weekly_criteria?.message}>
               <EnumSelect options={WEEKLY_CRITERIA} {...register("weekly_criteria")} />

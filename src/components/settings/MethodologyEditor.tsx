@@ -4,37 +4,11 @@ import { ChevronUp, ChevronDown, Lock, Pencil, Trash2, X, Check } from "lucide-r
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
-import { isLockedLegacyField } from "@/lib/methodologyFields";
+import { isLockedLegacyField, parseFieldOptions, slugifyFieldKey } from "@/lib/methodologyFields";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 const FIELD_TYPES: MethodologyField["field_type"][] = ["boolean", "enum", "text", "number", "date"];
-
-/** label -> stable field_key (lowercase, underscores). */
-function slugify(s: string): string {
-  return (
-    s
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .slice(0, 40) || "veld"
-  );
-}
-
-/** Parse a comma/newline separated string into a trimmed, de-duplicated options list. */
-function parseOptions(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(/[,\n]/)) {
-    const v = part.trim();
-    if (v && !seen.has(v.toLowerCase())) {
-      seen.add(v.toLowerCase());
-      out.push(v);
-    }
-  }
-  return out;
-}
 
 /**
  * Editor for the active methodology's fields (Scope C, cyclus 2). System templates
@@ -351,11 +325,11 @@ function FieldForm({
   const conditionValid = !showWhenFieldId || showWhenValues.length > 0;
   // Two labels can slugify to the same key — catch it here with a readable message
   // instead of letting the DB unique constraint surface a raw error.
-  const duplicateKey = isNew && label.trim().length > 0 && allFields.some((f) => f.field_key === slugify(label));
+  const duplicateKey = isNew && label.trim().length > 0 && allFields.some((f) => f.field_key === slugifyFieldKey(label));
   const canSave =
     label.trim().length > 0 &&
     !duplicateKey &&
-    (fieldType !== "enum" || parseOptions(optionsRaw).length > 0) &&
+    (fieldType !== "enum" || parseFieldOptions(optionsRaw).length > 0) &&
     conditionValid;
 
   async function submit() {
@@ -363,10 +337,10 @@ function FieldForm({
     setSaving(true);
     try {
       await onSubmit({
-        field_key: initial?.field_key ?? slugify(label),
+        field_key: initial?.field_key ?? slugifyFieldKey(label),
         label: label.trim(),
         field_type: fieldType,
-        options: fieldType === "enum" ? parseOptions(optionsRaw) : null,
+        options: fieldType === "enum" ? parseFieldOptions(optionsRaw) : null,
         required,
         group_label: group.trim() || null,
         show_when_field_id: showWhenFieldId,
@@ -391,7 +365,7 @@ function FieldForm({
         />
         {isNew && label.trim() && (
           <p className="font-mono text-[10px] text-muted">
-            {t("methodology.keyPreview")}: {slugify(label)}
+            {t("methodology.keyPreview")}: {slugifyFieldKey(label)}
           </p>
         )}
         {duplicateKey && <p className="font-mono text-[10px] text-loss">{t("methodology.duplicateKey")}</p>}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { TRADES_MIGRATED_EVENT } from "@/hooks/useMethodology";
 import type { Trade, TradeInput } from "@/lib/types";
 import type { ImportTradeRow } from "@/lib/import/types";
 
@@ -70,6 +71,15 @@ export function useTrades(scope: TradeScope) {
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  // An option-rename migration (useMethodology.renameFieldOption) rewrites
+  // trades.custom server-side, outside this hook's mutations — refetch so the
+  // in-memory rows (list, Analyse buckets) pick up the new value immediately.
+  useEffect(() => {
+    const onMigrated = () => void refresh();
+    window.addEventListener(TRADES_MIGRATED_EVENT, onMigrated);
+    return () => window.removeEventListener(TRADES_MIGRATED_EVENT, onMigrated);
   }, [refresh]);
 
   async function createTrade(input: TradeSubmitInput): Promise<Trade> {

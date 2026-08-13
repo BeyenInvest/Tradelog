@@ -10,6 +10,32 @@ import type { MethodologyField } from "./types";
  * four can never drift apart on what counts as "a custom field".
  */
 
+/** label -> stable field_key (lowercase, underscores) — shared by the Settings editor and the inline add-field in the trade form. */
+export function slugifyFieldKey(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || "veld"
+  );
+}
+
+/** Parse a comma/newline separated string into a trimmed, de-duplicated options list. */
+export function parseFieldOptions(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[,\n]/)) {
+    const v = part.trim();
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      out.push(v);
+    }
+  }
+  return out;
+}
+
 /** A journal is legacy iff it carries the seeded WPM `fase` field — same heuristic as useMethodology.isLegacyMethodology. */
 export function isLegacyFieldList(fields: MethodologyField[]): boolean {
   return fields.some((f) => f.field_key === "fase");

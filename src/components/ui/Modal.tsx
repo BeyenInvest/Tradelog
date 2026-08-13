@@ -24,7 +24,7 @@ interface ModalProps {
  * per-modal title/subtitle/alignment/width stay exactly as they were.
  */
 export function Modal({ labelledBy, maxWidthClass, scroll = false, isDirty = false, onClose, children }: ModalProps) {
-  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
+  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={requestClose}>
@@ -38,6 +38,7 @@ export function Modal({ labelledBy, maxWidthClass, scroll = false, isDirty = fal
       >
         {children(requestClose)}
       </div>
+      {discardDialog}
     </div>
   );
 }

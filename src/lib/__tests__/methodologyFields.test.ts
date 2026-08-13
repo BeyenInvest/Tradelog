@@ -4,6 +4,8 @@ import {
   isFieldVisible,
   isLockedLegacyField,
   missingRequiredCustomFields,
+  parseFieldOptions,
+  slugifyFieldKey,
 } from "../methodologyFields";
 import type { MethodologyField } from "../types";
 
@@ -109,5 +111,31 @@ describe("missingRequiredCustomFields", () => {
     expect(missingRequiredCustomFields([setup, conditional], null, { setup: "A" }).map((f) => f.field_key)).toEqual([
       "detail",
     ]);
+  });
+});
+
+describe("slugifyFieldKey", () => {
+  it("lowercases and collapses separators/punctuation to single underscores", () => {
+    expect(slugifyFieldKey("Sessie mood")).toBe("sessie_mood");
+    expect(slugifyFieldKey("  Risk/Reward %! ")).toBe("risk_reward");
+  });
+
+  it("falls back to 'veld' when nothing usable remains and caps at 40 chars", () => {
+    expect(slugifyFieldKey("!!!")).toBe("veld");
+    expect(slugifyFieldKey("x".repeat(60))).toHaveLength(40);
+  });
+});
+
+describe("parseFieldOptions", () => {
+  it("splits on commas/newlines, trims, and de-duplicates case-insensitively", () => {
+    expect(parseFieldOptions(" Reversal, continuation\nREVERSAL, , Breakout ")).toEqual([
+      "Reversal",
+      "continuation",
+      "Breakout",
+    ]);
+  });
+
+  it("returns an empty list for blank input", () => {
+    expect(parseFieldOptions("  ,  \n ")).toEqual([]);
   });
 });

@@ -16,7 +16,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(typed.length > 0, onClose);
+  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(typed.length > 0, onClose);
   const canConfirm = typed === CONFIRM_PHRASE && !deleting;
 
   async function handleConfirm() {
@@ -86,6 +86,7 @@ export function DeleteAccountModal({ onConfirm, onClose }: DeleteAccountModalPro
           </button>
         </div>
       </div>
+      {discardDialog}
     </div>
   );
 }

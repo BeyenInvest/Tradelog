@@ -24,7 +24,7 @@ interface ReviewFormModalProps {
  */
 export function ReviewFormModal({ title, titleId, isDirty, onClose, onSubmit, submitting, error, children }: ReviewFormModalProps) {
   const { t } = useTranslation();
-  const { requestClose, containerRef } = useModalGuard<HTMLDivElement>(isDirty, onClose);
+  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(isDirty, onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50" onClick={requestClose}>
@@ -62,6 +62,7 @@ export function ReviewFormModal({ title, titleId, isDirty, onClose, onSubmit, su
           </div>
         </form>
       </div>
+      {discardDialog}
     </div>
   );
 }

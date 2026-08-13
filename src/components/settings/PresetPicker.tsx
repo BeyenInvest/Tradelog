@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LayoutTemplate, ChevronDown, ChevronUp, FilePlus2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -16,12 +16,20 @@ const PREVIEW_FIELDS = 6;
  * "blank or preset?" step; for now it lives in /settings so it is reachable and
  * testable today (public signup is still gated off).
  */
-export function PresetPicker() {
+export function PresetPicker({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  // "+ Nieuw journal" in the switcher lands here via route state — expanded and
+  // scrolled into view, so the intent completes without hunting through Settings.
+  useEffect(() => {
+    if (defaultOpen) anchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [defaultOpen]);
 
   return (
-    <Card>
+    <div ref={anchorRef} className="scroll-mt-4">
+      <Card>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -47,7 +55,8 @@ export function PresetPicker() {
           <PresetChooser onApplied={() => setOpen(false)} />
         </div>
       )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 
