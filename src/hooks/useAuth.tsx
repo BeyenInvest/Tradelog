@@ -11,7 +11,13 @@ interface AuthContextValue {
   isAdmin: boolean;
   /** profile?.hide_fase — user opted out of the fixed 4-fasen system, so every fase-related field/breakdown hides in their own UI. */
   hideFase: boolean;
-  /** profile?.beta_features — soft-launch gate for the multi-journal UI (switcher, preset-picker, editor, direction). False (hidden) until the 0033 column exists and is flipped. */
+  /**
+   * The soft-launch gate for every in-development feature (multi-journal UI, presets, editor,
+   * direction, Fase-E stats, onboarding, …). True when the user has `profile.beta_features` set,
+   * OR is an admin, OR is the owner account — so the owner always sees the beta surface without a
+   * DB flip, and no current end-user ever does until public launch. Every new/unfinished feature
+   * MUST gate on this so it stays away from the live users. (Was: raw `profile.beta_features`.)
+   */
   betaFeatures: boolean;
   loading: boolean;
   /**
@@ -33,6 +39,13 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+/**
+ * Owner accounts that always get the beta surface, regardless of the profiles.beta_features flag.
+ * Keeps in-development features visible to the owner while staying hidden from the live users,
+ * without needing a DB flip. Compared case-insensitively against the signed-in email.
+ */
+const OWNER_BETA_EMAILS = ["superrrdun@gmail.com"];
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -126,7 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isAdmin: profile?.role === "admin",
         hideFase: profile?.hide_fase ?? false,
-        betaFeatures: profile?.beta_features ?? false,
+        betaFeatures:
+          (profile?.beta_features ?? false) ||
+          profile?.role === "admin" ||
+          OWNER_BETA_EMAILS.includes((session?.user.email ?? "").toLowerCase()),
         loading,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",

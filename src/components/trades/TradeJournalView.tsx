@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
+import { useAuth } from "@/hooks/useAuth";
 import {
   computeOverviewKpis,
   computeDisciplineCurve,
@@ -63,6 +64,9 @@ interface TradeJournalViewProps {
  */
 export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding }: TradeJournalViewProps) {
   const { t } = useTranslation();
+  // Soft-launch gate: Fase-E additions (profit factor, current-streak line) stay hidden
+  // from the live users until public launch — only owner/beta accounts see them.
+  const { betaFeatures } = useAuth();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -270,18 +274,20 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 </label>
               </div>
             )}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-2 ${betaFeatures ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-4`}>
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
               label={t("journal.statResult")}
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
             />
+            {betaFeatures && (
             <StatCard
               label={t("journal.statProfitFactor")}
               value={formatProfitFactor(kpis.profitFactor)}
               tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
             />
+            )}
             <StatCard
               label={t("journal.statAvgR")}
               value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
@@ -301,6 +307,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                   {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
                   <span className="text-win">{kpis.maxWinningStreak}</span>
                 </p>
+                {betaFeatures && (
                 <p className="font-mono text-xs mt-1 text-muted">
                   {t("journal.currentStreak")}:{" "}
                   {kpis.currentStreak.type === "none" ? (
@@ -320,6 +327,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                     </span>
                   )}
                 </p>
+                )}
               </div>
             </Card>
             </div>

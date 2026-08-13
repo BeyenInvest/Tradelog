@@ -53,7 +53,9 @@ export default function JournalPage() {
           scope={{ type: "live" }}
           tradesApi={tradesApi}
           title={t("journal.title")}
-          onboarding={onboarding}
+          // Soft-launch: the Fase-C onboarding empty-state ships to owner/beta accounts only;
+          // live users keep the pre-launch behaviour until public launch.
+          onboarding={betaFeatures ? onboarding : undefined}
         />
       ) : (
         <BacktestingAnalysisView key={journalKey} trades={realTrades} />
