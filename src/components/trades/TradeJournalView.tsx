@@ -26,6 +26,7 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
+import { formatProfitFactor } from "@/lib/format";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
@@ -269,12 +270,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 </label>
               </div>
             )}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
               label={t("journal.statResult")}
               value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
               tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              label={t("journal.statProfitFactor")}
+              value={formatProfitFactor(kpis.profitFactor)}
+              tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
             />
             <StatCard
               label={t("journal.statAvgR")}
@@ -289,11 +295,30 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
-              <div>
+              <div className="min-w-0">
                 <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.statStreaks")}</p>
                 <p className="font-mono text-sm mt-1 text-ink">
                   {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
                   <span className="text-win">{kpis.maxWinningStreak}</span>
+                </p>
+                <p className="font-mono text-xs mt-1 text-muted">
+                  {t("journal.currentStreak")}:{" "}
+                  {kpis.currentStreak.type === "none" ? (
+                    <span className="text-faint">—</span>
+                  ) : (
+                    <span
+                      className={
+                        kpis.currentStreak.type === "Win"
+                          ? "text-win"
+                          : kpis.currentStreak.type === "Loss"
+                            ? "text-loss"
+                            : "text-be"
+                      }
+                    >
+                      {kpis.currentStreak.count}{" "}
+                      {t(`journal.streakType_${kpis.currentStreak.type}`)}
+                    </span>
+                  )}
                 </p>
               </div>
             </Card>
@@ -309,6 +334,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 <span className="text-be">{kpis.be}BE</span>
                 <span className="text-loss">{kpis.losses}L</span>
               </div>
+              {kpis.winRateExclBe != null && (
+                <p className="mt-2 font-mono text-[11px] text-muted">
+                  {t("journal.winRateExclBe", { pct: (kpis.winRateExclBe * 100).toFixed(0) })}
+                </p>
+              )}
             </Card>
 
             <Card className="lg:col-span-2">

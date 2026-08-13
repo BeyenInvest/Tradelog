@@ -15,6 +15,7 @@ import {
 import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import { formatProfitFactor } from "@/lib/format";
 import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -164,6 +165,11 @@ export function BacktestingAnalysisView({
           label={t("backtestingAnalysis.winLossRatio")}
           value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}
           sub={kpis.avgWin != null && kpis.avgLoss != null ? t("backtestingAnalysis.avgWinLoss", { win: kpis.avgWin, loss: kpis.avgLoss }) : undefined}
+        />
+        <StatCard
+          label={t("backtestingAnalysis.profitFactor")}
+          value={formatProfitFactor(kpis.profitFactor)}
+          tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
         />
       </section>
 

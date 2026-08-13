@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
 
 describe("round2", () => {
@@ -125,6 +125,51 @@ describe("computeExpectancy", () => {
     const result = computeExpectancy(trades);
     expect(result.avgWin).toBe(1);
     expect(result.avgLoss).toBe(-1);
+  });
+});
+
+describe("computeProfitFactor", () => {
+  it("divides gross profit by gross loss", () => {
+    const trades = [
+      makeTrade({ resultaat_pct: 2, outcome: "Win" }),
+      makeTrade({ resultaat_pct: 4, outcome: "Win" }),
+      makeTrade({ resultaat_pct: -1, outcome: "Loss" }),
+      makeTrade({ resultaat_pct: -3, outcome: "Loss" }),
+    ];
+    const result = computeProfitFactor(trades);
+    expect(result.grossProfit).toBe(6);
+    expect(result.grossLoss).toBe(4);
+    expect(result.profitFactor).toBe(1.5); // 6 / 4
+  });
+
+  it("is Infinity when there are winners but no losers", () => {
+    const result = computeProfitFactor(makeSequence(["Win", "Win"]));
+    expect(result.grossLoss).toBe(0);
+    expect(result.profitFactor).toBe(Infinity);
+  });
+
+  it("is null when nothing is decisive (no winners and no losers)", () => {
+    const result = computeProfitFactor(makeSequence(["BE", "BE"]));
+    expect(result.grossProfit).toBe(0);
+    expect(result.grossLoss).toBe(0);
+    expect(result.profitFactor).toBeNull();
+  });
+
+  it("is null for an empty set", () => {
+    expect(computeProfitFactor([]).profitFactor).toBeNull();
+  });
+
+  it("sign of resultaat_pct decides the side, not the outcome enum", () => {
+    // A 'Win' logged at exactly 0% lands on neither side (BE-like).
+    const trades = [
+      makeTrade({ resultaat_pct: 0, outcome: "Win" }),
+      makeTrade({ resultaat_pct: 3, outcome: "Win" }),
+      makeTrade({ resultaat_pct: -1.5, outcome: "Loss" }),
+    ];
+    const result = computeProfitFactor(trades);
+    expect(result.grossProfit).toBe(3);
+    expect(result.grossLoss).toBe(1.5);
+    expect(result.profitFactor).toBe(2);
   });
 });
 

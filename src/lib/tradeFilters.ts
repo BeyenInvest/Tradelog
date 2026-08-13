@@ -15,12 +15,20 @@ export interface JournalFilters {
   tradeEvaluation?: TradeEvaluation;
   sessie?: Sessie;
   nieuws?: boolean;
+  /**
+   * Filters on the active journal's own custom fields (Scope C, cyclus E), keyed
+   * by field_key. enum → the chosen option string; boolean → true/false. A key is
+   * present only while that field is being filtered; matched against trades.custom.
+   */
+  custom?: Record<string, string | boolean>;
 }
 
 export const EMPTY_FILTERS: JournalFilters = {};
 
 export function activeFilterCount(f: JournalFilters): number {
-  return Object.values(f).filter((v) => v !== undefined).length;
+  const { custom, ...fixed } = f;
+  const fixedCount = Object.values(fixed).filter((v) => v !== undefined).length;
+  return fixedCount + (custom ? Object.keys(custom).length : 0);
 }
 
 function inRange(dateIso: string, range: DateRange | null): boolean {
@@ -40,6 +48,18 @@ export function applyJournalFilters(trades: Trade[], range: DateRange | null, fi
     if (filters.tradeEvaluation && t.trade_evaluation !== filters.tradeEvaluation) return false;
     if (filters.sessie && t.sessie !== filters.sessie) return false;
     if (filters.nieuws !== undefined && t.nieuws !== filters.nieuws) return false;
+    if (filters.custom) {
+      for (const [key, want] of Object.entries(filters.custom)) {
+        const have = t.custom?.[key];
+        if (typeof want === "boolean") {
+          // A boolean field only matches its exact value; missing (null) matches neither
+          // true nor false — same "unset is not false" rule the nieuws filter follows.
+          if (have !== want) return false;
+        } else if (have == null || String(have) !== want) {
+          return false;
+        }
+      }
+    }
     return true;
   });
 }
