@@ -48,7 +48,7 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
   const warnings: string[] = [];
   let skipped = 0;
 
-  for (const row of rows) {
+  rows.forEach((row, rowIndex) => {
     const symbol = cell(row, cols.symbol).trim();
     const net = parseNumber(cell(row, cols.net));
     const profit = parseNumber(cell(row, cols.profit));
@@ -64,14 +64,20 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
     // A row is a real deal only if it names an instrument and carries some figure.
     if (!symbol || (pnlAmount == null && returnPct == null)) {
       skipped++;
-      continue;
+      return;
     }
 
     const detectedTicket = cell(row, cols.ticket).trim();
     const openTime = parseDateOnly(cell(row, cols.openTime));
     const closeTime = parseDateOnly(cell(row, cols.closeTime));
     // Stable fallback id when the export has no ticket column, so dedup still works.
-    const ticket = detectedTicket || `${symbol}|${openTime ?? ""}|${closeTime ?? ""}|${pnlAmount ?? returnPct ?? ""}`;
+    // The row index keeps two genuinely distinct deals apart when they share a
+    // symbol/date/P&L (dates are day-only, so same-day scalps with identical results
+    // would otherwise collapse to one ref — and a duplicate ref aborts the whole
+    // bulk insert). It stays stable across re-imports of the same file, so
+    // re-importing is still an idempotent no-op via the import_ref dedup.
+    const ticket =
+      detectedTicket || `r${rowIndex}|${symbol}|${openTime ?? ""}|${closeTime ?? ""}|${pnlAmount ?? returnPct ?? ""}`;
 
     deals.push({
       ticket,
@@ -84,7 +90,7 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
       balanceAfter,
       raw: Object.fromEntries(headers.map((h, i) => [h, cell(row, i)])),
     });
-  }
+  });
 
   if (skipped > 0) warnings.push(`${skipped} rij(en) overgeslagen (geen herkenbare trade-gegevens).`);
   return { deals, warnings };

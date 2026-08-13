@@ -208,6 +208,21 @@ describe("prepareImport", () => {
     expect(res.rows.map((r) => r.instrument)).toEqual(["AAPL", "US30"]);
     expect(res.rows.every((r) => r.pair === "EURUSD")).toBe(true); // placeholder
   });
+
+  it("dedupes a repeated import_ref within the same batch (never emits a colliding row)", () => {
+    // Two deals with the same ticket would map to the same import_ref, and the
+    // DB's partial unique index would abort the whole bulk insert. The planner
+    // must keep only the first and count the rest as duplicates.
+    const deals = [
+      deal({ ticket: "1", symbol: "EURUSD", pnlAmount: 100 }),
+      deal({ ticket: "1", symbol: "EURUSD", pnlAmount: 100 }),
+    ];
+    const res = prepareImport(deals, "ctrader", opts);
+    expect(res.rows).toHaveLength(1);
+    expect(res.duplicateCount).toBe(1);
+    // No two prepared rows may ever share an import_ref.
+    expect(new Set(res.rows.map((r) => r.import_ref)).size).toBe(res.rows.length);
+  });
 });
 
 describe("parsers end-to-end", () => {
@@ -232,6 +247,30 @@ describe("parsers end-to-end", () => {
     expect(prepared.needsBalance).toBe(false);
     expect(prepared.rows).toHaveLength(2);
     expect(prepared.rows[0].resultaat_pct).toBe(10); // 100 on 1000-before
+  });
+
+  it("keeps same-day, same-result deals distinct when the export has no ticket column", () => {
+    // No ID/ticket column, so the parser builds a fallback id. Two genuinely
+    // distinct scalps on the same day with the same result (times are dropped)
+    // must not collapse into one ref — otherwise one is lost and the bulk insert
+    // could abort on the duplicate.
+    const csv = [
+      "Symbol,Direction,Close Time,Net USD,Balance",
+      "EURUSD,Buy,2024.03.15 10:00:00,50,1050",
+      "EURUSD,Buy,2024.03.15 14:00:00,50,1100",
+    ].join("\n");
+    const res = parseCtrader(csv);
+    expect(res.deals).toHaveLength(2);
+    expect(res.deals[0].ticket).not.toBe(res.deals[1].ticket);
+
+    const prepared = prepareImport(res.deals, "ctrader", {
+      pairMap: {},
+      accountBalance: 1000,
+      existingImportRefs: new Set(),
+    });
+    expect(prepared.rows).toHaveLength(2);
+    expect(prepared.duplicateCount).toBe(0);
+    expect(new Set(prepared.rows.map((r) => r.import_ref)).size).toBe(2);
   });
 
   it("parses a MetaTrader HTML statement table", () => {
