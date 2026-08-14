@@ -105,8 +105,10 @@ const styles = StyleSheet.create({
   kpiLabel: { fontSize: T.micro, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 },
   kpiValue: { fontFamily: SANS_BOLD, fontSize: T.title },
 
-  chartsRow: { flexDirection: "row", gap: 10, marginBottom: 18 },
-  chartBox: { borderWidth: 0.5, borderColor: C.border, borderRadius: 6, padding: 12 },
+  chartsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  // Charts share the exact surface of the KPI tiles so the whole top block reads
+  // as one "dashboard" tier — no competing box treatments (borders vs fills).
+  chartBox: { backgroundColor: C.surface2, borderRadius: 6, padding: 12 },
   chartLabel: { fontSize: T.micro, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8 },
 
   donutWrap: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
@@ -120,32 +122,20 @@ const styles = StyleSheet.create({
 
   errorLine: { fontSize: T.small, color: C.muted, marginBottom: 18 },
 
-  section: { marginBottom: 14 },
-  sectionBody: { fontSize: T.body, lineHeight: 1.55, color: C.ink },
-  voiceBox: {
-    backgroundColor: C.surface2,
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 14,
-  },
-  voiceBody: { fontFamily: SANS, fontSize: T.body, lineHeight: 1.55, color: C.ink },
-  takeawayBox: {
-    borderWidth: 0.5,
-    borderColor: C.gold,
-    backgroundColor: "#FBF6EA",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
-  },
-  takeawayBody: { fontFamily: SANS, fontSize: T.lead, lineHeight: 1.35, color: C.ink },
-  overallBox: {
-    borderWidth: 0.5,
-    borderColor: C.gold,
-    backgroundColor: "#FBF6EA",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
-  },
+  // Every written section — narrative, technical, mental, overall — shares ONE
+  // treatment: a gold eyebrow label + plain body at a single size. The reflective
+  // blocks are no longer boxed in assorted tints; the page reads as one calm
+  // editorial column instead of a stack of mismatched cards.
+  section: { marginBottom: 15 },
+  sectionBody: { fontSize: T.body, lineHeight: 1.6, color: C.ink },
+
+  // The takeaway is the document's single moment of emphasis: a gold rule and the
+  // brand serif (the same face as the masthead), set larger. One deliberate accent
+  // reads as hierarchy, not as another competing box.
+  quote: { flexDirection: "row", marginTop: 2, marginBottom: 20 },
+  quoteBar: { width: 2.5, borderRadius: 2, backgroundColor: C.gold, marginRight: 14 },
+  quoteContent: { flex: 1 },
+  quoteBody: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.title, lineHeight: 1.4, color: C.ink, marginTop: 3 },
 
   actie: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 4 },
   actieText: { fontSize: T.body, color: C.ink },
@@ -238,7 +228,7 @@ function WinLossDonut({ wins, be, losses, labels }: { wins: number; be: number; 
       <View style={{ width: size, height: size, position: "relative" }}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {total === 0
-            ? ring(C.surface2)
+            ? ring(C.border)
             : segs.length === 1
               ? ring(segs[0].c)
               : segs.map((s) => {
@@ -355,27 +345,16 @@ function StatusMarker({ status }: { status: ReviewPdfActie["status"] }) {
 }
 
 function Section({ s }: { s: ReviewPdfSection }) {
-  if (s.kind === "voice") {
-    return (
-      <View style={styles.voiceBox} wrap={false}>
-        <Text style={styles.sectionLabel}>{s.label}</Text>
-        <Text style={styles.voiceBody}>{s.body}</Text>
-      </View>
-    );
-  }
+  // The takeaway is the one pull-quote; every other kind (text / voice / overall)
+  // shares the single plain treatment for a uniform editorial column.
   if (s.kind === "takeaway") {
     return (
-      <View style={styles.takeawayBox} wrap={false}>
-        <Text style={styles.sectionLabel}>{s.label}</Text>
-        <Text style={styles.takeawayBody}>&ldquo;{s.body}&rdquo;</Text>
-      </View>
-    );
-  }
-  if (s.kind === "overall") {
-    return (
-      <View style={styles.overallBox} wrap={false}>
-        <Text style={styles.sectionLabel}>{s.label}</Text>
-        <Text style={styles.sectionBody}>{s.body}</Text>
+      <View style={styles.quote} wrap={false}>
+        <View style={styles.quoteBar} />
+        <View style={styles.quoteContent}>
+          <Text style={styles.sectionLabel}>{s.label}</Text>
+          <Text style={styles.quoteBody}>&ldquo;{s.body}&rdquo;</Text>
+        </View>
       </View>
     );
   }
@@ -383,6 +362,23 @@ function Section({ s }: { s: ReviewPdfSection }) {
     <View style={styles.section} wrap={false}>
       <Text style={styles.sectionLabel}>{s.label}</Text>
       <Text style={styles.sectionBody}>{s.body}</Text>
+    </View>
+  );
+}
+
+// A trade table taller than this can't fit on a single A4 body, so it's allowed
+// to flow across pages — keeping it together (wrap={false}) would clip the
+// overflow. Below the threshold the whole section is kept on one sheet.
+const TABLE_ROWS_PER_PAGE = 28;
+
+function TradeSection({ heading, rows, labels }: { heading: string; rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"] }) {
+  const fitsOnePage = rows.length <= TABLE_ROWS_PER_PAGE;
+  return (
+    <View style={styles.section} wrap={!fitsOnePage}>
+      <Text style={styles.sectionLabel}>
+        {heading} ({rows.length})
+      </Text>
+      <TradeTable rows={rows} labels={labels} />
     </View>
   );
 }
@@ -483,21 +479,11 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
           ) : null}
 
           {data.takenRows.length > 0 ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>
-                {labels.takenHeading} ({data.takenRows.length})
-              </Text>
-              <TradeTable rows={data.takenRows} labels={labels} />
-            </View>
+            <TradeSection heading={labels.takenHeading} rows={data.takenRows} labels={labels} />
           ) : null}
 
           {data.missedRows.length > 0 ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>
-                {labels.missedHeading} ({data.missedRows.length})
-              </Text>
-              <TradeTable rows={data.missedRows} labels={labels} />
-            </View>
+            <TradeSection heading={labels.missedHeading} rows={data.missedRows} labels={labels} />
           ) : null}
         </View>
 
