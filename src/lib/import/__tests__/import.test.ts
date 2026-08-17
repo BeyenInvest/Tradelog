@@ -6,6 +6,8 @@ import { resolveResultaatPct, deriveOutcome, dealToImportRow } from "../mapToTra
 import { prepareImport } from "../prepare";
 import { parseCtrader } from "../parsers/ctrader";
 import { parseMt } from "../parsers/mt";
+import { parseTradingview } from "../parsers/tradingview";
+import { detectBroker } from "../index";
 import type { ParsedDeal } from "../types";
 
 function deal(overrides: Partial<ParsedDeal>): ParsedDeal {
@@ -37,6 +39,10 @@ describe("parseNumber", () => {
   it("reads negatives and parentheses", () => {
     expect(parseNumber("-12.34")).toBe(-12.34);
     expect(parseNumber("(12.34)")).toBe(-12.34);
+  });
+  it("reads the Unicode minus TradingView emits", () => {
+    expect(parseNumber("−12.34")).toBe(-12.34); // U+2212, not the ASCII hyphen
+    expect(parseNumber("−2.5")).toBe(-2.5);
   });
   it("returns null for blanks/junk", () => {
     expect(parseNumber("")).toBeNull();
@@ -209,6 +215,21 @@ describe("prepareImport", () => {
     expect(res.rows.every((r) => r.pair === "EURUSD")).toBe(true); // placeholder
   });
 
+  it("counts symbol-less deals separately (TradingView exports name no symbol)", () => {
+    const deals = [
+      deal({ ticket: "1", symbol: "", pnlAmount: 100 }),
+      deal({ ticket: "2", symbol: "EURUSD", pnlAmount: 100 }),
+    ];
+    const res = prepareImport(deals, "tradingview", opts);
+    expect(res.missingSymbolCount).toBe(1);
+    expect(res.rows).toHaveLength(1);
+    expect(res.unknownSymbols).toEqual([]); // "" must never appear as an unknown symbol
+
+    const nonForex = prepareImport(deals, "tradingview", { ...opts, forexJournal: false });
+    expect(nonForex.missingSymbolCount).toBe(1);
+    expect(nonForex.rows).toHaveLength(1);
+  });
+
   it("dedupes a repeated import_ref within the same batch (never emits a colliding row)", () => {
     // Two deals with the same ticket would map to the same import_ref, and the
     // DB's partial unique index would abort the whole bulk insert. The planner
@@ -271,6 +292,70 @@ describe("parsers end-to-end", () => {
     expect(prepared.rows).toHaveLength(2);
     expect(prepared.duplicateCount).toBe(0);
     expect(new Set(prepared.rows.map((r) => r.import_ref)).size).toBe(2);
+  });
+
+  it("parses a TradingView Strategy Tester export (paired entry/exit rows, newest first)", () => {
+    const csv = [
+      "Trade #,Type,Signal,Date/Time,Price USD,Contracts,Profit USD,Profit %,Cum. Profit USD,Cum. Profit %,Run-up USD,Run-up %,Drawdown USD,Drawdown %",
+      "2,Exit short,Cover,2024-03-20 15:00,1.0700,1,−25.00,−2.5,75,7.5,5,0.5,30,3",
+      "2,Entry short,Short,2024-03-19 09:00,1.0650,1,,,,,,,,",
+      "1,Exit long,TP,2024-03-16 12:00,1.0800,1,100.00,4.87,100,4.87,10,1,5,0.5",
+      "1,Entry long,Long,2024-03-15 10:00,1.0600,1,,,,,,,,",
+    ].join("\n");
+    const res = parseTradingview(csv);
+    expect(res.broker).toBe("tradingview");
+    expect(res.deals).toHaveLength(2);
+
+    const t2 = res.deals.find((d) => d.ticket.startsWith("2|"))!;
+    expect(t2).toMatchObject({ direction: "sell", openTime: "2024-03-19", closeTime: "2024-03-20", returnPct: -2.5 });
+    const t1 = res.deals.find((d) => d.ticket.startsWith("1|"))!;
+    expect(t1).toMatchObject({ direction: "buy", openTime: "2024-03-15", closeTime: "2024-03-16", returnPct: 4.87 });
+    // No symbol column in this export — the dialog asks the user for one.
+    expect(res.deals.every((d) => d.symbol === "")).toBe(true);
+
+    // With the file-wide symbol applied, Profit % is used verbatim — no balance needed.
+    const withSymbol = res.deals.map((d) => ({ ...d, symbol: "EURUSD" }));
+    const prepared = prepareImport(withSymbol, "tradingview", {
+      pairMap: {},
+      accountBalance: null,
+      existingImportRefs: new Set(),
+    });
+    expect(prepared.needsBalance).toBe(false);
+    expect(prepared.rows).toHaveLength(2);
+    expect(prepared.rows.map((r) => r.resultaat_pct).sort((a, b) => a - b)).toEqual([-2.5, 4.87]);
+  });
+
+  it("skips a still-open TradingView trade and sums scale-out exits", () => {
+    const csv = [
+      "Trade #,Type,Signal,Date/Time,Price USD,Contracts,Profit USD,Profit %",
+      "3,Entry long,Long,2024-04-01 10:00,1.0600,2,,",
+      "2,Exit long,TP2,2024-03-21 15:00,1.0750,1,30.00,1.5",
+      "2,Exit long,TP1,2024-03-20 12:00,1.0700,1,20.00,1.0",
+      "2,Entry long,Long,2024-03-19 09:00,1.0650,2,,",
+    ].join("\n");
+    const res = parseTradingview(csv);
+    // Trade 3 has no exit yet → skipped with a structured warning.
+    expect(res.deals).toHaveLength(1);
+    expect(res.warnings).toEqual([{ kind: "openTrades", count: 1 }]);
+    // Trade 2 scale-out: both exits summed, close = last exit seen.
+    expect(res.deals[0].returnPct).toBe(2.5);
+    expect(res.deals[0].pnlAmount).toBe(50);
+  });
+
+  it("routes a flat (non-paired) TradingView positions export through the generic table path", () => {
+    const csv = [
+      "Symbol,Side,Closing Time,P/L,Balance",
+      "EURUSD,Buy,2024-03-15 12:00,100,1100",
+    ].join("\n");
+    const res = parseTradingview(csv);
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0]).toMatchObject({ symbol: "EURUSD", pnlAmount: 100, balanceAfter: 1100 });
+  });
+
+  it("detects a Strategy Tester file from its header trio", () => {
+    const csv = "Trade #,Type,Signal,Date/Time,Price USD\n1,Entry long,Long,2024-03-15 10:00,1.06";
+    expect(detectBroker(csv, "chart.csv")).toBe("tradingview");
+    expect(detectBroker("Deal ID,Symbol,Net USD\n1,EURUSD,5", "history_ctrader.csv")).toBe("ctrader");
   });
 
   it("parses a MetaTrader HTML statement table", () => {

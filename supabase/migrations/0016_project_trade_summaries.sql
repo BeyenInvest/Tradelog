@@ -58,9 +58,11 @@ as $$
   group by t.backtest_project_id;
 $$;
 
--- Lock execution to signed-in users. Postgres grants EXECUTE to PUBLIC by default,
--- which would let the anon role call this too; SECURITY INVOKER + the auth.uid()
--- filter already return nothing for anon, but keep the grant explicit and matching
--- schema.sql. Safe to re-run — revoke/grant are idempotent.
-revoke all on function get_project_trade_summaries() from public;
+-- Lock execution to signed-in users. On Supabase a PUBLIC revoke alone is NOT
+-- enough: default privileges grant every new function EXECUTE to anon/
+-- authenticated/service_role *directly*, so anon must be revoked by name
+-- (verified against prod 2026-08-13 — anon still got 200 [] with only the
+-- public revoke). SECURITY INVOKER + the auth.uid() filter already return
+-- nothing for anon, so this is hygiene, not a leak. Safe to re-run — idempotent.
+revoke execute on function get_project_trade_summaries() from public, anon;
 grant execute on function get_project_trade_summaries() to authenticated;

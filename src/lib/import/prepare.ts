@@ -34,6 +34,12 @@ export interface PreparedImport {
   duplicateCount: number;
   /** Deals with no usable date at all — skipped. */
   undatedCount: number;
+  /**
+   * Deals whose export carried no symbol at all (a TradingView Strategy Tester
+   * file is per-chart and has no symbol column). The dialog asks the user for
+   * one file-wide symbol and re-prepares with it applied.
+   */
+  missingSymbolCount: number;
 }
 
 /**
@@ -55,11 +61,17 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
   let needsBalance = false;
   let duplicateCount = 0;
   let undatedCount = 0;
+  let missingSymbolCount = 0;
 
   for (const deal of deals) {
     const importRef = `${broker}:${deal.ticket}`;
     if (opts.existingImportRefs.has(importRef) || batchRefs.has(importRef)) {
       duplicateCount++;
+      continue;
+    }
+
+    if (!deal.symbol.trim()) {
+      missingSymbolCount++;
       continue;
     }
 
@@ -79,8 +91,7 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       pair = resolved;
       instrument = resolved;
     } else {
-      instrument = deal.symbol.trim();
-      if (!instrument) continue; // a nameless symbol can't be a meaningful instrument
+      instrument = deal.symbol.trim(); // non-empty — the missing-symbol gate above caught blanks
       pair = NON_FOREX_PAIR_PLACEHOLDER;
     }
 
@@ -99,5 +110,5 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
     rows.push(dealToImportRow(deal, pair, instrument, pct, broker));
   }
 
-  return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount };
+  return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount, missingSymbolCount };
 }

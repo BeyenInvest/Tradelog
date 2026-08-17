@@ -1,6 +1,6 @@
 import { cell, detectColumns } from "../csv";
 import { parseNumber, parseDateOnly } from "../values";
-import type { ParsedDeal } from "../types";
+import type { ParsedDeal, ParseWarning } from "../types";
 
 /**
  * Header aliases per logical field. Broad on purpose — a real export only needs
@@ -42,10 +42,10 @@ function direction(raw: string): "buy" | "sell" | null {
  * splits a deal's profit from its swap/commission, while cTrader tends to carry
  * a ready "Net" column.
  */
-export function tableToDeals(headers: string[], rows: string[][]): { deals: ParsedDeal[]; warnings: string[] } {
+export function tableToDeals(headers: string[], rows: string[][]): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
   const cols = detectColumns<Field>(headers, ALIASES as unknown as Record<Field, string[]>);
   const deals: ParsedDeal[] = [];
-  const warnings: string[] = [];
+  const warnings: ParseWarning[] = [];
   let skipped = 0;
 
   rows.forEach((row, rowIndex) => {
@@ -92,6 +92,6 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
     });
   });
 
-  if (skipped > 0) warnings.push(`${skipped} rij(en) overgeslagen (geen herkenbare trade-gegevens).`);
+  if (skipped > 0) warnings.push({ kind: "skippedRows", count: skipped });
   return { deals, warnings };
 }

@@ -664,7 +664,9 @@ as $$
   group by t.backtest_project_id;
 $$;
 
-revoke all on function get_project_trade_summaries() from public;
+-- Supabase default privileges grant anon EXECUTE directly, so revoke it by name
+-- — "from public" alone leaves the anon grant in place.
+revoke execute on function get_project_trade_summaries() from public, anon;
 grant execute on function get_project_trade_summaries() to authenticated;
 
 -- ---------- fork_methodology (Scope C, cyclus 2 — see 0024) ----------
