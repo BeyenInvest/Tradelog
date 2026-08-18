@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { TradeForm } from "@/components/trades/TradeForm";
@@ -30,7 +31,12 @@ interface PeriodicReviewDetailProps {
 export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
-  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+  const { unit: resultUnit, saldo } = useResultDisplay();
+  // In de eenheid van de kijker (Fase J): counts veranderen niet, alleen missedResultaat.
+  const errorCounts = useMemo(
+    () => computeErrorCounts(tradesInResultUnit(taken, resultUnit, saldo), tradesInResultUnit(missed, resultUnit, saldo)),
+    [taken, missed, resultUnit, saldo]
+  );
   const [addOpen, setAddOpen] = useState(false);
 
   // No FK: a trade added inside the period's date range shows up automatically after the refresh.
@@ -48,7 +54,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
         </div>
         <div className="flex items-center gap-1">
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name }, new Date(), dateLocale(i18n.language))}
+            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />

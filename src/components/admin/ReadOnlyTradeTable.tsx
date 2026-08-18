@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
+import { rMultiple } from "@/lib/stats";
+import { useResultUnit } from "@/hooks/useResultUnit";
 import type { Trade } from "@/lib/types";
 
 /**
@@ -10,6 +12,7 @@ import type { Trade } from "@/lib/types";
  */
 export function ReadOnlyTradeTable({ trades, onRowClick }: { trades: Trade[]; onRowClick?: (trade: Trade) => void }) {
   const { t, i18n } = useTranslation();
+  const resultUnit = useResultUnit();
   if (trades.length === 0) return <p className="font-body text-sm text-muted">{t("reviews.noTradesShort")}</p>;
 
   return (
@@ -38,9 +41,8 @@ export function ReadOnlyTradeTable({ trades, onRowClick }: { trades: Trade[]; on
               <td className="py-2 pr-4 text-muted">{tr.fase}</td>
               <td className="py-2 pr-4 text-ink">{tr.instrument ?? tr.pair}</td>
               <td className="py-2 pr-4 text-muted">{tr.outcome}</td>
-              <td className={`py-2 pr-4 ${tr.resultaat_pct >= 0 ? "text-win" : "text-loss"}`}>
-                {tr.resultaat_pct > 0 ? "+" : ""}
-                {tr.resultaat_pct}%
+              <td className={`py-2 pr-4 ${resultDisplayValue(tr.resultaat_pct, resultUnit, { rMultiple: rMultiple(tr) }) >= 0 ? "text-win" : "text-loss"}`}>
+                {formatResult(tr.resultaat_pct, resultUnit, { rMultiple: rMultiple(tr) })}
               </td>
               <td className="py-2 pr-4 text-muted">{tr.trade_evaluation ?? "—"}</td>
             </tr>

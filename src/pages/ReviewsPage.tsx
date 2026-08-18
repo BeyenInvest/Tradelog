@@ -14,7 +14,8 @@ import { PeriodicReviewDetail } from "@/components/reviews/PeriodicReviewDetail"
 import { PeriodicReviewForm } from "@/components/reviews/PeriodicReviewForm";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, tradesInResultUnit } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades, round2 } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
@@ -107,15 +108,18 @@ function WeeklyReviewsTab({
 
   // Precomputed once per reviews/trades change instead of re-filtering+reducing per row on every
   // ReviewList render (resultaatOf and tradeCountOf used to each independently call takenTradesOf).
+  // Sommen lopen over tradesInResultUnit, dus in R/geld-modus zijn dit R- resp.
+  // geld-totalen (Fase J); de lijst-component formatteert in dezelfde eenheid.
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const statsByReview = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const review of reviews) {
-      const taken = takenTradesOf(review);
+      const taken = tradesInResultUnit(takenTradesOf(review), resultUnit, saldo);
       m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviews, tradesByReview]);
+  }, [reviews, tradesByReview, resultUnit, saldo]);
 
   function resultaatOf(review: WeeklyReview): number {
     return statsByReview.get(review.id)?.resultaat ?? 0;
@@ -250,15 +254,17 @@ function PeriodicReviewsTab({
 
   // Precomputed once per reviews/trades change instead of re-filtering+reducing per row on every
   // PeriodicReviewList render (resultaatOf and tradeCountOf used to each independently call takenTradesOf).
+  // Zelfde eenheid-conversie als de weekly-tab (Fase J).
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const statsByReview = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const review of reviews) {
-      const taken = takenTradesOf(review);
+      const taken = tradesInResultUnit(takenTradesOf(review), resultUnit, saldo);
       m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviews, trades]);
+  }, [reviews, trades, resultUnit, saldo]);
 
   function resultaatOf(review: PeriodicReview): number {
     return statsByReview.get(review.id)?.resultaat ?? 0;

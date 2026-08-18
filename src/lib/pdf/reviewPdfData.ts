@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
-import type { Outcome, PeriodType } from "@/lib/constants";
+import type { Outcome, PeriodType, ResultUnit } from "@/lib/constants";
 import type { PeriodicReview, Trade, WeeklyReview } from "@/lib/types";
 import { computeOverviewKpis, computeErrorCounts, sortChronological, round2 } from "@/lib/stats";
+import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { periodLabel } from "@/lib/periodRanges";
 
 /**
@@ -79,6 +80,8 @@ export interface ReviewPdfData {
   traderName: string | null;
   generatedOn: string;
   kpis: ReviewPdfKpis;
+  /** De resultaat-eenheid waarin alle getallen hierin al staan (Fase J) — het document formatteert ermee via formatAggregate. */
+  unit: ResultUnit;
   /** Cumulative resultaat after each taken trade, chronological. Empty if no taken trades. */
   equity: number[];
   errorLine: string | null;
@@ -102,11 +105,16 @@ export type ReviewPdfInput = (
 ) & {
   /** The signed-in trader's display name (profile.display_name), for the header. */
   traderName?: string | null;
+  /**
+   * Resultaat-eenheid van de kijker (Fase J) — default 'percent'. In R/geld-modus
+   * worden alle bedragen (KPI's, equity, traderijen, error-regel) vooraf omgerekend
+   * via tradesInResultUnit, zodat de PDF exact het scherm volgt.
+   */
+  resultUnit?: ResultUnit;
+  /** Actief account-saldo (uit useResultDisplay) — vereist voor 'currency'; zonder saldo valt de PDF terug op %. */
+  saldo?: number | null;
 };
 
-function signedPct(n: number): string {
-  return `${n > 0 ? "+" : ""}${n}%`;
-}
 
 /**
  * Mirrors parseActie in ReviewContentBlocks.tsx — kept in sync deliberately, but
@@ -146,12 +154,12 @@ function equityCurve(taken: Trade[]): number[] {
   });
 }
 
-function buildErrorLine(t: TFunction, taken: Trade[], missed: Trade[]): string | null {
+function buildErrorLine(t: TFunction, taken: Trade[], missed: Trade[], unit: ResultUnit): string | null {
   const { emotional, technical, missedCount, missedResultaat } = computeErrorCounts(taken, missed);
   const parts: string[] = [];
   if (emotional > 0) parts.push(t("reviewErrorStats.emotional", { count: emotional }));
   if (technical > 0) parts.push(t("reviewErrorStats.technical", { count: technical }));
-  if (missedCount > 0) parts.push(t("reviewErrorStats.missed", { count: missedCount, pct: signedPct(missedResultaat) }));
+  if (missedCount > 0) parts.push(t("reviewErrorStats.missed", { count: missedCount, pct: formatAggregate(missedResultaat, unit) }));
   return parts.length > 0 ? parts.join("   ·   ") : null;
 }
 
@@ -237,7 +245,13 @@ function formatDate(now: Date): string {
 
 /** Builds the full presentation-ready payload for one review's branded PDF. `locale` (BCP47, from dateLocale(i18n.language)) localizes the period heading. */
 export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Date = new Date(), locale = "en-GB"): ReviewPdfData {
-  const { taken, missed } = input;
+  // Eenheid-conversie aan de bron (Fase J): daarna staat álles hieronder (KPI's,
+  // equity-sparkline, traderijen, error-regel) automatisch in de gekozen eenheid.
+  // Currency zonder saldo valt eerlijk terug op % — zelfde regel als de provider.
+  const preferred = input.resultUnit ?? "percent";
+  const resultUnit: ResultUnit = preferred === "currency" && input.saldo == null ? "percent" : preferred;
+  const taken = tradesInResultUnit(input.taken, resultUnit, input.saldo);
+  const missed = tradesInResultUnit(input.missed, resultUnit, input.saldo);
   const kpis = computeOverviewKpis(taken);
   const decisive = kpis.wins + kpis.losses;
   const avgRR = decisive > 0 ? round2(kpis.totalResultaat / decisive) : 0;
@@ -267,8 +281,9 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
       be: kpis.be,
       losses: kpis.losses,
     },
+    unit: resultUnit,
     equity: equityCurve(taken),
-    errorLine: buildErrorLine(t, taken, missed),
+    errorLine: buildErrorLine(t, taken, missed, resultUnit),
     sections,
     acties: input.review.acties.map(parseActie),
     takenRows: sortChronological(taken).map((tr) => toRow(tr, false)),

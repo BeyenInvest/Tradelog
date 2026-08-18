@@ -8,7 +8,8 @@ import { PeriodicReviewContentDisplay } from "@/components/reviews/PeriodicRevie
 import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, tradesInResultUnit } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 import type { PeriodicReview, Trade } from "@/lib/types";
 
 /** Read-only equivalent of PeriodicReviewDetail — no edit/delete, for the admin debug view. */
@@ -27,7 +28,12 @@ export function ReadOnlyPeriodicReviewModal({
   }, [trades, review]);
   const taken = useMemo(() => takenTrades(inPeriod), [inPeriod]);
   const missed = useMemo(() => missedTrades(inPeriod), [inPeriod]);
-  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+  // In de eenheid van de kijkende admin (Fase J): counts veranderen niet, alleen missedResultaat.
+  const resultUnit = useResultUnit();
+  const errorCounts = useMemo(
+    () => computeErrorCounts(tradesInResultUnit(taken, resultUnit), tradesInResultUnit(missed, resultUnit)),
+    [taken, missed, resultUnit]
+  );
 
   return (
     <Modal labelledBy="admin-periodic-review-title" maxWidthClass="max-w-2xl" scroll onClose={onClose}>

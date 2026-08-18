@@ -4,19 +4,22 @@ import { Card } from "@/components/ui/Card";
 import type { PeriodicReview } from "@/lib/types";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel } from "@/lib/periodRanges";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 
 interface PeriodicReviewListProps {
   periodType: PeriodType;
   reviews: PeriodicReview[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Al in de actieve resultaat-eenheid (ReviewsPage rekent via tradesInResultUnit) — hier alleen het achtervoegsel. */
   resultaatOf: (review: PeriodicReview) => number;
   tradeCountOf: (review: PeriodicReview) => number;
 }
 
 export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, resultaatOf, tradeCountOf }: PeriodicReviewListProps) {
   const { t, i18n } = useTranslation();
+  const resultUnit = useResultUnit();
   return (
     <Card className="flex flex-col gap-2">
       <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{PERIOD_TYPE_LABELS[periodType]} reviews</h3>
@@ -38,8 +41,7 @@ export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, 
               {rv.titel ? ` — ${rv.titel}` : ""}
             </p>
             <p className={clsx("font-mono text-xs mt-1", resultaat >= 0 ? "text-win" : "text-loss")}>
-              {resultaat > 0 ? "+" : ""}
-              {resultaat}% · {t("journal.tradesCount", { count: tradeCountOf(rv) })}
+              {formatAggregate(resultaat, resultUnit)} · {t("journal.tradesCount", { count: tradeCountOf(rv) })}
             </p>
           </button>
         );

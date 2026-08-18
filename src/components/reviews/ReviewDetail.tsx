@@ -5,7 +5,9 @@ import { Card } from "@/components/ui/Card";
 import type { Trade, WeeklyReview } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { tradesInResultUnit } from "@/lib/format";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
@@ -25,10 +27,15 @@ interface ReviewDetailProps {
 export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
   const { t } = useTranslation();
   const { profile, betaFeatures } = useAuth();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
-  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+  // In de eenheid van de kijker (Fase J): counts veranderen niet, alleen missedResultaat.
+  const errorCounts = useMemo(
+    () => computeErrorCounts(tradesInResultUnit(taken, resultUnit, saldo), tradesInResultUnit(missed, resultUnit, saldo)),
+    [taken, missed, resultUnit, saldo]
+  );
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -41,7 +48,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
         </div>
         <div className="flex items-center gap-1">
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken, missed, traderName: profile?.display_name, betaFeatures })}
+            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken, missed, traderName: profile?.display_name, betaFeatures, resultUnit, saldo })}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />

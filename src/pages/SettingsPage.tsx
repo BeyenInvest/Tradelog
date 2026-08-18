@@ -10,7 +10,7 @@ import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { PresetPicker } from "@/components/settings/PresetPicker";
-import { ENTRIES, TRADE_CONCEPTS } from "@/lib/constants";
+import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, type ResultUnit } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
@@ -51,6 +51,9 @@ export default function SettingsPage() {
           <TimezoneSettings />
 
           <LanguageSettings />
+
+          {/* Fase J (0037): resultaat-eenheid %/R/geld — beta tot de weergave-conversie af is. */}
+          {betaFeatures && <ResultUnitSettings />}
         </section>
 
         {/* Multi-journal configuration — soft-launch: beta-flagged users only (0033)
@@ -175,6 +178,69 @@ function DisplayNameSettings() {
       {saving && <p className="font-mono text-[11px] mt-2 text-muted">{t("settings.saving")}</p>}
       {saved && !saving && <p className="font-mono text-[11px] mt-2 text-win">{t("settings.saved")}</p>}
       {error && <p className="font-mono text-[11px] mt-2 text-loss">{error}</p>}
+    </Card>
+  );
+}
+
+/**
+ * Resultaat-eenheid (Fase J / 0037): %, R of geld. Puur een weergave-voorkeur
+ * (profiles.result_unit) — stats en opslag blijven in %. De daadwerkelijke
+ * conversie in de views volgt in latere sub-slices; tot die tijd beta-only.
+ */
+function ResultUnitSettings() {
+  const { t } = useTranslation();
+  const { resultUnit, updateProfile } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const labels: Record<ResultUnit, string> = {
+    percent: t("settings.resultUnitPercent"),
+    R: t("settings.resultUnitR"),
+    currency: t("settings.resultUnitCurrency"),
+  };
+
+  async function handleChange(unit: ResultUnit) {
+    if (unit === resultUnit) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await updateProfile({ result_unit: unit });
+    } catch (err) {
+      setError(toErrorMessage(err, t("settings.saveFailed")));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("settings.resultUnit")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{t("settings.resultUnitDescription")}</p>
+        </div>
+        <div className="inline-flex shrink-0 rounded-lg border border-border divide-x divide-border overflow-hidden">
+          {RESULT_UNITS.map((unit) => (
+            <button
+              key={unit}
+              type="button"
+              onClick={() => void handleChange(unit)}
+              disabled={saving}
+              aria-pressed={resultUnit === unit}
+              className={`px-3 py-1.5 text-xs font-body transition-colors disabled:opacity-50 ${
+                resultUnit === unit ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              {labels[unit]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {resultUnit === "currency" && (
+        <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.resultUnitCurrencyHint")}</p>
+      )}
+      {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
+      {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
     </Card>
   );
 }

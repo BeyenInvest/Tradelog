@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import { groupTrades, groupTradesByOutcome, type TradeGroup } from "@/lib/tradeGrouping";
-import { sortChronological } from "@/lib/stats";
+import { computeRStats, sortChronological, takenTrades } from "@/lib/stats";
+import { formatResult, resultDisplayValue } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
 import { TradeListItem } from "@/components/trades/TradeListItem";
 import { TradeListHeader } from "@/components/trades/TradeListHeader";
@@ -24,6 +26,7 @@ function sortDesc(trades: Trade[]): Trade[] {
 
 function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defaultOpenKey: string | null }) {
   const { t } = useTranslation();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(groups.map((g) => g.key).filter((k) => k !== defaultOpenKey))
   );
@@ -46,6 +49,13 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
     <div className="flex flex-col gap-2">
       {groups.map((g) => {
         const isCollapsed = collapsed.has(g.key);
+        // Zelfde missed-exclusie als realResultaatTotal, zodat de R-som over
+        // dezelfde trades gaat als de %-som (missed-secties tonen hun eigen groepen).
+        const groupCtx = {
+          rMultiple: computeRStats(takenTrades(g.trades)).totalR,
+          amount: saldo != null ? (g.resultaatTotal / 100) * saldo : undefined,
+        };
+        const groupTotal = resultDisplayValue(g.resultaatTotal, resultUnit, groupCtx);
         return (
           <div key={g.key} className="rounded-lg border border-border-soft overflow-hidden">
             <button
@@ -64,11 +74,10 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
               </span>
               <span
                 className={`font-mono text-xs ${
-                  g.resultaatTotal > 0 ? "text-win" : g.resultaatTotal < 0 ? "text-loss" : "text-be"
+                  groupTotal > 0 ? "text-win" : groupTotal < 0 ? "text-loss" : "text-be"
                 }`}
               >
-                {g.resultaatTotal > 0 ? "+" : ""}
-                {g.resultaatTotal}%
+                {formatResult(g.resultaatTotal, resultUnit, groupCtx)}
               </span>
             </button>
             {!isCollapsed &&

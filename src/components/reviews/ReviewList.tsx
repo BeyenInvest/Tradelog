@@ -1,18 +1,22 @@
 import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
+import { formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 import type { WeeklyReview } from "@/lib/types";
 
 interface ReviewListProps {
   reviews: WeeklyReview[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Al in de actieve resultaat-eenheid (ReviewsPage rekent via tradesInResultUnit) — hier alleen het achtervoegsel. */
   resultaatOf: (review: WeeklyReview) => number;
   tradeCountOf: (review: WeeklyReview) => number;
 }
 
 export function ReviewList({ reviews, selectedId, onSelect, resultaatOf, tradeCountOf }: ReviewListProps) {
   const { t } = useTranslation();
+  const resultUnit = useResultUnit();
   return (
     <Card className="flex flex-col gap-2">
       <h3 className="font-display text-xl italic mb-2 px-1 text-ink">Weekly reviews</h3>
@@ -34,8 +38,7 @@ export function ReviewList({ reviews, selectedId, onSelect, resultaatOf, tradeCo
               {rv.titel ? ` — ${rv.titel}` : ""}
             </p>
             <p className={clsx("font-mono text-xs mt-1", resultaat >= 0 ? "text-win" : "text-loss")}>
-              {resultaat > 0 ? "+" : ""}
-              {resultaat}% · {t("journal.tradesCount", { count: tradeCountOf(rv) })}
+              {formatAggregate(resultaat, resultUnit)} · {t("journal.tradesCount", { count: tradeCountOf(rv) })}
             </p>
           </button>
         );

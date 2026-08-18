@@ -15,7 +15,8 @@ import {
 import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
-import { formatProfitFactor } from "@/lib/format";
+import { formatAggregate, formatProfitFactor, formatResult, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,24 +61,30 @@ export function BacktestingAnalysisView({
   );
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
-  const byFase = useMemo(() => breakdownBy(scopedTrades, (t) => t.fase, { sortOrder: FASES }), [scopedTrades]);
+  // Weergavelaag-conversie (Fase J): alle som-gebaseerde uitsplitsingen hieronder
+  // rekenen op deze lijst, waarin resultaat_pct in R-modus de R-ratio is. De KPI's
+  // hierboven blijven op de echte %-trades (Resultaat converteert via kpis.totalR;
+  // ratio's en drawdown blijven bewust %-gebaseerd).
+  const { unit: resultUnit, saldo } = useResultDisplay();
+  const displayTrades = useMemo(() => tradesInResultUnit(scopedTrades, resultUnit, saldo), [scopedTrades, resultUnit, saldo]);
+  const byFase = useMemo(() => breakdownBy(displayTrades, (t) => t.fase, { sortOrder: FASES }), [displayTrades]);
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
-  const series = useMemo(() => groupIntoSeries(scopedTrades, 5), [scopedTrades]);
+  const series = useMemo(() => groupIntoSeries(displayTrades, 5), [displayTrades]);
 
   // Per-dimension row-label translator: the breakdown key stays a stable id, the
   // label follows the UI language (weekday abbreviations, Yes/No). Omitted → key shown as-is.
   const labelFnFor = (d: (typeof BREAKDOWN_DIMENSIONS)[number]) =>
     d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined;
   const dimensionRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopedTrades, t]
+    [displayTrades, t]
   );
   const dimensionGridRows = useMemo(
     () =>
-      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopedTrades, t]
+    [displayTrades, t]
   );
   // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
   // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
@@ -112,9 +119,9 @@ export function BacktestingAnalysisView({
     () =>
       FASE_KENMERKEN.filter((k) => !k.computed).map((k) => ({
         config: k,
-        rows: breakdownByFaseKenmerk(scopedTrades, k, { minSample: 1 }),
+        rows: breakdownByFaseKenmerk(displayTrades, k, { minSample: 1 }),
       })),
-    [scopedTrades]
+    [displayTrades]
   );
 
   // Config-driven breakdowns for the active journal's own custom fields (cyclus 4),
@@ -125,13 +132,13 @@ export function BacktestingAnalysisView({
   const customDimRows = useMemo(
     () =>
       customDims
-        .map((d) => ({ dim: d, rows: breakdownBy(scopedTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined }) }))
+        .map((d) => ({ dim: d, rows: breakdownBy(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined }) }))
         // Skip custom-field dimensions with no data yet (rows.length 0) — same as
         // timingDimRows above. A fresh preset journal defines many fields before any
         // trade fills them, which otherwise rendered a wall of empty "No data." cards.
         .filter(({ rows }) => rows.length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopedTrades, customDims, t]
+    [displayTrades, customDims, t]
   );
 
   return (
@@ -147,8 +154,11 @@ export function BacktestingAnalysisView({
         <StatCard label={t("backtestingAnalysis.totalTrades")} value={kpis.totalTrades} />
         <StatCard
           label={t("backtestingAnalysis.result")}
-          value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
-          tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+          value={formatResult(kpis.totalResultaat, resultUnit, {
+            rMultiple: kpis.totalR,
+            amount: saldo != null ? (kpis.totalResultaat / 100) * saldo : undefined,
+          })}
+          tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
         />
         <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
         <StatCard
@@ -184,8 +194,7 @@ export function BacktestingAnalysisView({
                   {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
                 </p>
                 <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
-                  {f.resultaatTotal > 0 ? "+" : ""}
-                  {f.resultaatTotal}%
+                  {formatAggregate(f.resultaatTotal, resultUnit)}
                 </p>
                 <p className="font-body text-xs mt-1 text-muted">
                   <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
@@ -230,8 +239,7 @@ export function BacktestingAnalysisView({
               >
                 <span className="text-muted">#{s.seriesIndex}</span>
                 <span className={s.resultaatTotal >= 0 ? "text-win" : "text-loss"}>
-                  {s.resultaatTotal > 0 ? "+" : ""}
-                  {s.resultaatTotal}%
+                  {formatAggregate(s.resultaatTotal, resultUnit)}
                 </span>
                 <span className="text-muted">{s.winCount}/{s.trades.length}W</span>
               </div>

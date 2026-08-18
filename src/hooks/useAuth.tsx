@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session } from "@supabase/supabase-js";
 import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
+import type { ResultUnit } from "@/lib/constants";
 import i18n from "@/i18n";
 
 interface AuthContextValue {
@@ -19,6 +20,11 @@ interface AuthContextValue {
    * MUST gate on this so it stays away from the live users. (Was: raw `profile.beta_features`.)
    */
   betaFeatures: boolean;
+  /**
+   * profile?.result_unit — hoe deze gebruiker resultaten getoond wil zien (%, R of
+   * geld; Fase J / 0037). Puur een weergave-voorkeur: stats rekenen altijd in %.
+   */
+  resultUnit: ResultUnit;
   loading: boolean;
   /**
    * True from the moment a PASSWORD_RECOVERY auth event fires until sign-out — a hint, not the
@@ -34,7 +40,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id">>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -125,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }
 
-  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id">>) {
+  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit">>) {
     if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;
@@ -143,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (profile?.beta_features ?? false) ||
           profile?.role === "admin" ||
           OWNER_BETA_EMAILS.includes((session?.user.email ?? "").toLowerCase()),
+        resultUnit: profile?.result_unit ?? "percent",
         loading,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",

@@ -27,7 +27,8 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
-import { formatProfitFactor } from "@/lib/format";
+import { formatProfitFactor, formatResult, resultDisplayValue } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
@@ -67,6 +68,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   // Soft-launch gate: Fase-E additions (profit factor, current-streak line) stay hidden
   // from the live users until public launch — only owner/beta accounts see them.
   const { betaFeatures } = useAuth();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -282,8 +284,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <StatCard
               label={t("journal.statResult")}
-              value={`${kpis.totalResultaat > 0 ? "+" : ""}${kpis.totalResultaat}%`}
-              tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+              value={formatResult(kpis.totalResultaat, resultUnit, {
+                rMultiple: kpis.totalR,
+                amount: saldo != null ? (kpis.totalResultaat / 100) * saldo : undefined,
+              })}
+              tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
             />
             {betaFeatures && (
             <StatCard

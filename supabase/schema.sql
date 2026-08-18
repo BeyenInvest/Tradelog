@@ -28,6 +28,9 @@ create type cc_enum as enum ('03','07','11','15','19','23');
 create type sessie_enum as enum ('Asia','London','Overlap','New York');
 create type structuur_enum as enum ('Inner','Outer');
 create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded','Private');
+-- Weergave-eenheid voor resultaten (Fase J / 0037) — puur een display-voorkeur,
+-- alle opslag en stats blijven in % (resultaat_pct).
+create type result_unit_enum as enum ('percent','R','currency');
 
 -- ---------- PROFILES ----------
 -- 1:1 with auth.users, auto-provisioned by the trigger below. `plan` defaults
@@ -47,6 +50,9 @@ create table profiles (
   -- timezone-aware `trades.sessie` mapping (see compute_sessie / 0019). Default
   -- is the reference zone the methodology was authored in.
   timezone text not null default 'Europe/Brussels',
+  -- Hoe resultaten getoond worden: %, R of geld (Fase J / 0037). Display-only —
+  -- conversie gebeurt in de frontend, stats rekenen altijd in %.
+  result_unit result_unit_enum not null default 'percent',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

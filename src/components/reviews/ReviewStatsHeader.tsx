@@ -4,13 +4,11 @@ import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { computeOverviewKpis, round2 } from "@/lib/stats";
+import { formatAggregate } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { Trade } from "@/lib/types";
 
 type View = "taken" | "missed";
-
-function signedPct(n: number): string {
-  return `${n > 0 ? "+" : ""}${n}%`;
-}
 
 /**
  * The "Resultaat" block for a review detail: the real numbers (trades, total
@@ -22,6 +20,7 @@ function signedPct(n: number): string {
  */
 export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: Trade[] }) {
   const { t } = useTranslation();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const [view, setView] = useState<View>("taken");
   const hasMissed = missed.length > 0;
 
@@ -30,7 +29,16 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
   const rows = view === "taken" ? taken : missed;
   const kpis = computeOverviewKpis(rows);
   const decisive = kpis.wins + kpis.losses;
-  const avgRR = decisive > 0 ? round2(kpis.totalResultaat / decisive) : 0;
+  // Totaal + Ø RR in de gekozen eenheid: R gebruikt kpis.totalR (zelfde
+  // som-dan-afronden als computeRStats), geld pct/100 × saldo, % het bestaande totaal.
+  const shownTotal =
+    resultUnit === "R"
+      ? kpis.totalR
+      : resultUnit === "currency" && saldo != null
+        ? round2((kpis.totalResultaat / 100) * saldo)
+        : kpis.totalResultaat;
+  const avgRR = decisive > 0 ? round2(shownTotal / decisive) : 0;
+  const signed = (n: number) => formatAggregate(n, resultUnit);
 
   const options: { key: View; label: string }[] = [
     { key: "taken", label: t("reviews.taken") },
@@ -62,11 +70,11 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
         <StatCard label={t("reviews.trades")} value={kpis.totalTrades} compact />
         <StatCard
           label={t("reviews.totalResult")}
-          value={signedPct(kpis.totalResultaat)}
-          tone={kpis.totalResultaat >= 0 ? "up" : "down"}
+          value={signed(shownTotal)}
+          tone={shownTotal >= 0 ? "up" : "down"}
           compact
         />
-        <StatCard label={t("reviews.avgRR")} value={signedPct(avgRR)} tone={avgRR >= 0 ? "up" : "down"} compact />
+        <StatCard label={t("reviews.avgRR")} value={signed(avgRR)} tone={avgRR >= 0 ? "up" : "down"} compact />
       </div>
 
       {rows.length > 0 ? (

@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
-import { dateLocale } from "@/lib/format";
+import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
+import { computeRStats, takenTrades } from "@/lib/stats";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { Trade } from "@/lib/types";
 import { TradeListItem } from "./TradeListItem";
 import { TradeListHeader } from "./TradeListHeader";
@@ -31,6 +33,7 @@ export function TradeList({
   fixedGroupBy,
 }: TradeListProps) {
   const { t, i18n } = useTranslation();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>(fixedGroupBy ?? "week");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -126,6 +129,13 @@ export function TradeList({
             // runs before grouping) — force it open rather than leaving a stale collapse from before the
             // search started, which used to hide real matches with no indication they existed.
             const isCollapsed = search ? false : collapsed.has(g.key);
+            // Group total in the gekozen eenheid — takenTrades mirrors realResultaatTotal's
+            // missed-exclusie, zodat de R-som over dezelfde trades gaat als de %-som.
+            const groupCtx = {
+              rMultiple: computeRStats(takenTrades(g.trades)).totalR,
+              amount: saldo != null ? (g.resultaatTotal / 100) * saldo : undefined,
+            };
+            const groupTotal = resultDisplayValue(g.resultaatTotal, resultUnit, groupCtx);
             return (
               <div key={g.key} className="rounded-lg border border-border-soft overflow-hidden">
                 <button
@@ -144,11 +154,10 @@ export function TradeList({
                   </span>
                   <span
                     className={`font-mono text-xs ${
-                      g.resultaatTotal > 0 ? "text-win" : g.resultaatTotal < 0 ? "text-loss" : "text-be"
+                      groupTotal > 0 ? "text-win" : groupTotal < 0 ? "text-loss" : "text-be"
                     }`}
                   >
-                    {g.resultaatTotal > 0 ? "+" : ""}
-                    {g.resultaatTotal}%
+                    {formatResult(g.resultaatTotal, resultUnit, groupCtx)}
                   </span>
                 </button>
                 {!isCollapsed && (

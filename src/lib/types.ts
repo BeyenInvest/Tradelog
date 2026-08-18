@@ -1,5 +1,5 @@
 import type {
-  CC, Currency, Direction, Outcome, Pair, PeriodType, PropFase, Sessie,
+  CC, Currency, Direction, Outcome, Pair, PeriodType, PropFase, ResultUnit, Sessie,
   Structuur, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
 } from "./constants";
 
@@ -201,6 +201,11 @@ export interface Profile {
    * SQL only — no UI toggle, deliberately.
    */
   beta_features: boolean;
+  /**
+   * Weergave-eenheid voor resultaten (Fase J / 0037): '%', R of geld. Display-only —
+   * stats en opslag blijven in % (resultaat_pct), conversie zit in de weergavelaag.
+   */
+  result_unit: ResultUnit;
   created_at: string;
   updated_at: string;
 }

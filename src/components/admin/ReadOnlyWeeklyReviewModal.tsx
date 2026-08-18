@@ -7,6 +7,8 @@ import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
 import { ReviewContentDisplay } from "@/components/reviews/ReviewContentDisplay";
 import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { tradesInResultUnit } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 import type { Trade, WeeklyReview } from "@/lib/types";
 
 /** Read-only equivalent of ReviewDetail — no edit/delete/relink, for the admin debug view. */
@@ -21,7 +23,12 @@ export function ReadOnlyWeeklyReviewModal({
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
-  const errorCounts = useMemo(() => computeErrorCounts(taken, missed), [taken, missed]);
+  // In de eenheid van de kijkende admin (Fase J): counts veranderen niet, alleen missedResultaat.
+  const resultUnit = useResultUnit();
+  const errorCounts = useMemo(
+    () => computeErrorCounts(tradesInResultUnit(taken, resultUnit), tradesInResultUnit(missed, resultUnit)),
+    [taken, missed, resultUnit]
+  );
 
   return (
     <Modal labelledBy="admin-weekly-review-title" maxWidthClass="max-w-2xl" scroll onClose={onClose}>

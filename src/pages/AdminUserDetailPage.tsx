@@ -18,6 +18,8 @@ import {
   getBacktestProjectsForUser, getPropAccountsForUser,
 } from "@/lib/admin/adminQueries";
 import { takenTrades, round2 } from "@/lib/stats";
+import { tradesInResultUnit } from "@/lib/format";
+import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -40,7 +42,24 @@ const REVIEW_TABS: { key: ReviewTab; label: string }[] = [
   { key: "year", label: "Yearly" },
 ];
 
+/**
+ * De admin-detailpagina toont andermans trades — het eigen account-saldo van de
+ * kijkende admin is daar betekenisloos, dus 'currency' wordt hier via een genest
+ * provider-override teruggezet naar %. R blijft wel gelden (risk-gebaseerd, kijker-
+ * onafhankelijk).
+ */
 export default function AdminUserDetailPage() {
+  const own = useResultDisplay();
+  return (
+    <ResultDisplayProvider
+      override={{ unit: own.unit === "currency" ? "percent" : own.unit, saldo: null }}
+    >
+      <AdminUserDetailPageInner />
+    </ResultDisplayProvider>
+  );
+}
+
+function AdminUserDetailPageInner() {
   const { t } = useTranslation();
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -110,14 +129,18 @@ export default function AdminUserDetailPage() {
     return m;
   }, [liveTrades]);
 
+  // Review-badges in de eenheid van de kijkende admin (Fase J) — ReviewList/
+  // PeriodicReviewList formatteren in dezelfde eenheid, dus de som moet mee.
+  // (Binnen de override hierboven: currency is hier al teruggezet naar %.)
+  const { unit: resultUnit } = useResultDisplay();
   const weeklyStats = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const r of weeklyReviews) {
-      const rt = takenTrades(tradesByWeeklyReview.get(r.id) ?? []);
+      const rt = tradesInResultUnit(takenTrades(tradesByWeeklyReview.get(r.id) ?? []), resultUnit);
       m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
     }
     return m;
-  }, [weeklyReviews, tradesByWeeklyReview]);
+  }, [weeklyReviews, tradesByWeeklyReview, resultUnit]);
 
   const periodicReviewsForTab = useMemo(
     () => (reviewTab === "week" ? [] : periodicReviews.filter((r) => r.period_type === reviewTab)),
@@ -128,11 +151,11 @@ export default function AdminUserDetailPage() {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const r of periodicReviewsForTab) {
       const { start, end } = rangeOfPeriod(r.period_type, r.jaar, r.periode_nummer);
-      const rt = takenTrades(liveTrades.filter((t) => t.datum_open >= start && t.datum_open <= end));
+      const rt = tradesInResultUnit(takenTrades(liveTrades.filter((t) => t.datum_open >= start && t.datum_open <= end)), resultUnit);
       m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
     }
     return m;
-  }, [periodicReviewsForTab, liveTrades]);
+  }, [periodicReviewsForTab, liveTrades, resultUnit]);
 
   return (
     <>

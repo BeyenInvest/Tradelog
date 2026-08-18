@@ -3,10 +3,11 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
-import { isMissed } from "@/lib/stats";
-import { dateLocale } from "@/lib/format";
+import { isMissed, rMultiple } from "@/lib/stats";
+import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { useAuth } from "@/hooks/useAuth";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; titleKey: string }>> = {
   "Missed trade": { label: "missed", titleKey: "tradeBadge.missedTitle" },
@@ -24,6 +25,12 @@ interface TradeListItemProps {
 export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
   const { t, i18n } = useTranslation();
   const { hideFase } = useAuth();
+  const { unit: resultUnit, saldo } = useResultDisplay();
+  const resultCtx = {
+    rMultiple: rMultiple(trade),
+    amount: saldo != null ? (trade.resultaat_pct / 100) * saldo : undefined,
+  };
+  const shownResult = resultDisplayValue(trade.resultaat_pct, resultUnit, resultCtx);
   const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
@@ -58,11 +65,10 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
       <span
         className={clsx(
           "text-right",
-          trade.resultaat_pct > 0 ? "text-win" : trade.resultaat_pct < 0 ? "text-loss" : "text-be"
+          shownResult > 0 ? "text-win" : shownResult < 0 ? "text-loss" : "text-be"
         )}
       >
-        {trade.resultaat_pct > 0 ? "+" : ""}
-        {trade.resultaat_pct}%
+        {formatResult(trade.resultaat_pct, resultUnit, resultCtx)}
       </span>
       {!readOnly && (
         <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

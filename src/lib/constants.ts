@@ -37,6 +37,14 @@ export const LEGACY_METHODOLOGY_FIELD_KEYS = new Set([
 ]);
 
 /**
+ * Weergave-eenheid voor resultaten (Fase J / 0037) — puur een display-voorkeur
+ * per gebruiker (profiles.result_unit). Alle opslag en alle stats blijven in %
+ * (resultaat_pct); conversie naar R of geld gebeurt uitsluitend in de weergavelaag.
+ */
+export const RESULT_UNITS = ["percent", "R", "currency"] as const;
+export type ResultUnit = (typeof RESULT_UNITS)[number];
+
+/**
  * Self-assessment of how the trade was executed — separate from outcome
  * (Win/Loss/BE, the P&L result). "Missed trade" is special: a setup you saw
  * but didn't take, still logged with a hypothetical outcome/resultaat_pct,

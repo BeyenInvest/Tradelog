@@ -3,15 +3,19 @@ import { useTranslation } from "react-i18next";
 import type { BreakdownRowWithFaseSplit } from "@/lib/stats";
 import { FASES } from "@/lib/constants";
 import { Card } from "@/components/ui/Card";
+import { formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 
 interface BreakdownGridProps {
   title: string;
+  /** Moet al in de actieve resultaat-eenheid staan (caller: tradesInResultUnit vóór breakdownByWithFaseSplit) — hier alleen de formattering. */
   rows: BreakdownRowWithFaseSplit<string>[];
 }
 
 /** "Per Fase-opsplitsing": same dimension, Fase 1-4 shown side by side. */
 export function BreakdownGrid({ title, rows }: BreakdownGridProps) {
   const { t } = useTranslation();
+  const resultUnit = useResultUnit();
   return (
     <Card>
       <h3 className="font-display text-lg italic mb-3 text-ink">{title} — {t("breakdown.perFaseSuffix")}</h3>
@@ -44,7 +48,7 @@ export function BreakdownGrid({ title, rows }: BreakdownGridProps) {
                       cell.resultaatTotal > 0 ? "text-win" : cell.resultaatTotal < 0 ? "text-loss" : "text-be"
                     )}
                   >
-                    {cell.n ? `${cell.resultaatTotal > 0 ? "+" : ""}${cell.resultaatTotal}%` : "—"}
+                    {cell.n ? formatAggregate(cell.resultaatTotal, resultUnit) : "—"}
                   </span>
                 );
               })}

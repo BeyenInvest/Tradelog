@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
-import { dateLocale, monthName } from "@/lib/format";
+import { dateLocale, monthName, tradesInResultUnit } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -75,7 +76,12 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
   const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
   const takenPreview = takenTrades(tradesInPeriod);
   const missedPreview = missedTrades(tradesInPeriod);
-  const errorCounts = useMemo(() => computeErrorCounts(takenPreview, missedPreview), [takenPreview, missedPreview]);
+  // In de eenheid van de kijker (Fase J): counts veranderen niet, alleen missedResultaat.
+  const { unit: resultUnit, saldo } = useResultDisplay();
+  const errorCounts = useMemo(
+    () => computeErrorCounts(tradesInResultUnit(takenPreview, resultUnit, saldo), tradesInResultUnit(missedPreview, resultUnit, saldo)),
+    [takenPreview, missedPreview, resultUnit, saldo]
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

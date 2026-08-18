@@ -1,9 +1,13 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useTranslation } from "react-i18next";
 import type { BreakdownRow } from "@/lib/stats";
+import { formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 
+/** `data` moet al in de actieve resultaat-eenheid staan (caller: tradesInResultUnit vóór breakdownBy) — hier alleen de formattering. */
 export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
   const { t } = useTranslation();
+  const resultUnit = useResultUnit();
   if (data.every((d) => d.n === 0)) {
     return (
       <div className="h-[220px] flex items-center justify-center">
@@ -36,7 +40,7 @@ export function FaseBarChart({ data }: { data: BreakdownRow<string>[] }) {
             fontFamily: "IBM Plex Mono",
             fontSize: 12,
           }}
-          formatter={(v: number) => [`${v}%`, t("chart.resultaat")]}
+          formatter={(v: number) => [formatAggregate(v, resultUnit), t("chart.resultaat")]}
           labelStyle={{ color: "rgb(var(--color-muted))" }}
         />
         <Bar dataKey="resultaatTotal" radius={[6, 6, 0, 0]}>

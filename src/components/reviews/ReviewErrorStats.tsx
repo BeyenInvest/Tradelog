@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next";
 import type { ErrorCounts } from "@/lib/stats";
+import { formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 
-function signedPct(n: number): string {
-  return `${n > 0 ? "+" : ""}${n}%`;
-}
-
-/** Compact raw-count row for a review: self-flagged errors among taken trades, and what was missed — no synthesized "cost" narrative. */
+/** Compact raw-count row for a review: self-flagged errors among taken trades, and what was missed — no synthesized "cost" narrative. `missedResultaat` moet al in de actieve eenheid staan (caller: computeErrorCounts over tradesInResultUnit). */
 export function ReviewErrorStats({ emotional, technical, missedCount, missedResultaat }: ErrorCounts) {
   const { t } = useTranslation();
+  const resultUnit = useResultUnit();
+  const signedPct = (n: number) => formatAggregate(n, resultUnit);
   if (emotional === 0 && technical === 0 && missedCount === 0) return null;
 
   return (

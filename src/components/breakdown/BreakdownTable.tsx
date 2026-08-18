@@ -2,15 +2,19 @@ import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import type { BreakdownRow } from "@/lib/stats";
 import { Card } from "@/components/ui/Card";
+import { formatAggregate } from "@/lib/format";
+import { useResultUnit } from "@/hooks/useResultUnit";
 
 interface BreakdownTableProps {
   title: string;
+  /** Moet al in de actieve resultaat-eenheid staan (caller: tradesInResultUnit vóór breakdownBy) — hier alleen de formattering. */
   rows: BreakdownRow<string>[];
 }
 
 /** Generic table for any "Per X" split — every dimension renders through this, config-driven. */
 export function BreakdownTable({ title, rows }: BreakdownTableProps) {
   const { t } = useTranslation();
+  const resultUnit = useResultUnit();
   return (
     <Card>
       <h3 className="font-display text-lg italic mb-3 text-ink">{title}</h3>
@@ -36,8 +40,7 @@ export function BreakdownTable({ title, rows }: BreakdownTableProps) {
               <span
                 className={clsx("text-right", r.resultaatTotal > 0 ? "text-win" : r.resultaatTotal < 0 ? "text-loss" : "text-be")}
               >
-                {r.resultaatTotal > 0 ? "+" : ""}
-                {r.resultaatTotal}%
+                {formatAggregate(r.resultaatTotal, resultUnit)}
               </span>
               <span className="text-right text-win">{(r.winRate * 100).toFixed(0)}%</span>
               <span className="text-right text-loss">{(r.lossRate * 100).toFixed(0)}%</span>

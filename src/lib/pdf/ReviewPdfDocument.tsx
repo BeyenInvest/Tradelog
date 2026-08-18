@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Svg, Polyline, Polygon, Line, Rect, Circle, Path } from "@react-pdf/renderer";
 import type { ReviewPdfData, ReviewPdfSection, ReviewPdfTradeRow, ReviewPdfActie } from "./reviewPdfData";
+import { formatAggregate } from "@/lib/format";
+import type { ResultUnit } from "@/lib/constants";
 
 /*
   Branded, self-contained review PDF. Uses only the built-in PDF fonts
@@ -167,8 +169,9 @@ const styles = StyleSheet.create({
   footerText: { fontSize: T.micro, color: C.faint, letterSpacing: 0.4 },
 });
 
-function signed(n: number): string {
-  return `${n > 0 ? "+" : ""}${n}%`;
+/** De getallen staan al in data.unit (reviewPdfData) — hier alleen formatteren via formatAggregate. */
+function signed(n: number, unit: ResultUnit): string {
+  return formatAggregate(n, unit);
 }
 
 function outcomeColor(o: string): string {
@@ -261,7 +264,7 @@ function WinLossDonut({ wins, be, losses, labels }: { wins: number; be: number; 
   );
 }
 
-function EquitySparkline({ equity, xLabel }: { equity: number[]; xLabel: string }) {
+function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: string; unit: ResultUnit }) {
   const w = 300;
   const h = 86;
   const mL = 26; // room for the % (y) axis labels
@@ -289,7 +292,8 @@ function EquitySparkline({ equity, xLabel }: { equity: number[]; xLabel: string 
   // Faint area between the curve and the zero line, so the trend reads as a shape.
   const areaPoints = `${coords[0].x},${zeroY} ${points} ${coords[coords.length - 1].x},${zeroY}`;
 
-  const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${Math.round(v * 10) / 10}%`;
+  // Compacte as-labels: 1 decimaal voor %/R, hele euro's voor geld.
+  const fmtPct = (v: number) => formatAggregate(Math.round(v * 10) / 10, unit, { decimals: unit === "currency" ? 0 : 1 });
   // y ticks: peak, zero and trough — deduped, only those inside the range.
   const yTicks = Array.from(new Set([max, 0, min])).filter((v) => v >= min && v <= max);
   // x ticks: trade index (0 = start). Thin out when there are many trades.
@@ -371,19 +375,19 @@ function Section({ s }: { s: ReviewPdfSection }) {
 // overflow. Below the threshold the whole section is kept on one sheet.
 const TABLE_ROWS_PER_PAGE = 28;
 
-function TradeSection({ heading, rows, labels }: { heading: string; rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"] }) {
+function TradeSection({ heading, rows, labels, unit }: { heading: string; rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
   const fitsOnePage = rows.length <= TABLE_ROWS_PER_PAGE;
   return (
     <View style={styles.section} wrap={!fitsOnePage}>
       <Text style={styles.sectionLabel}>
         {heading} ({rows.length})
       </Text>
-      <TradeTable rows={rows} labels={labels} />
+      <TradeTable rows={rows} labels={labels} unit={unit} />
     </View>
   );
 }
 
-function TradeTable({ rows, labels }: { rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"] }) {
+function TradeTable({ rows, labels, unit }: { rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
   return (
     <View style={styles.table}>
       <View style={styles.th}>
@@ -402,7 +406,7 @@ function TradeTable({ rows, labels }: { rows: ReviewPdfTradeRow[]; labels: Revie
           <Text style={[styles.td, styles.cConcept, { color: C.muted }]}>{r.concept ?? "—"}</Text>
           <Text style={[styles.td, styles.cEntry, { color: C.muted }]}>{r.entry ?? "—"}</Text>
           <Text style={[styles.td, styles.cOut, { color: outcomeColor(r.outcome) }]}>{r.outcome}</Text>
-          <Text style={[styles.td, styles.cRes, { color: r.resultaat >= 0 ? C.win : C.loss }]}>{signed(r.resultaat)}</Text>
+          <Text style={[styles.td, styles.cRes, { color: r.resultaat >= 0 ? C.win : C.loss }]}>{signed(r.resultaat, unit)}</Text>
           <Text style={[styles.td, styles.cEval, { color: C.muted }]}>{r.evaluation ?? "—"}</Text>
         </View>
       ))}
@@ -440,8 +444,8 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
           <Text style={styles.sectionLabel}>{labels.resultHeading}</Text>
           <View style={styles.kpiRow}>
             <Kpi label={labels.kpiTrades} value={String(kpis.trades)} />
-            <Kpi label={labels.kpiTotal} value={signed(kpis.resultaat)} color={kpis.resultaat >= 0 ? C.win : C.loss} />
-            <Kpi label={labels.kpiAvgRR} value={signed(kpis.avgRR)} color={kpis.avgRR >= 0 ? C.win : C.loss} />
+            <Kpi label={labels.kpiTotal} value={signed(kpis.resultaat, data.unit)} color={kpis.resultaat >= 0 ? C.win : C.loss} />
+            <Kpi label={labels.kpiAvgRR} value={signed(kpis.avgRR, data.unit)} color={kpis.avgRR >= 0 ? C.win : C.loss} />
           </View>
 
           {kpis.trades > 0 ? (
@@ -453,7 +457,7 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
               <View style={[styles.chartBox, { flex: 1 }]}>
                 <Text style={styles.chartLabel}>{labels.cumulative}</Text>
                 <View style={styles.chartBody}>
-                  <EquitySparkline equity={data.equity} xLabel={labels.chartXTrades} />
+                  <EquitySparkline equity={data.equity} xLabel={labels.chartXTrades} unit={data.unit} />
                 </View>
               </View>
             </View>
@@ -479,11 +483,11 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
           ) : null}
 
           {data.takenRows.length > 0 ? (
-            <TradeSection heading={labels.takenHeading} rows={data.takenRows} labels={labels} />
+            <TradeSection heading={labels.takenHeading} rows={data.takenRows} labels={labels} unit={data.unit} />
           ) : null}
 
           {data.missedRows.length > 0 ? (
-            <TradeSection heading={labels.missedHeading} rows={data.missedRows} labels={labels} />
+            <TradeSection heading={labels.missedHeading} rows={data.missedRows} labels={labels} unit={data.unit} />
           ) : null}
         </View>
 

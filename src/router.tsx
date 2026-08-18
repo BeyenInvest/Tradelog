@@ -3,6 +3,7 @@ import { lazy, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { MethodologyProvider } from "@/hooks/useMethodology";
+import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { AppShell } from "@/components/layout/AppShell";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
@@ -68,7 +69,9 @@ export function AppRouter() {
             {/* Session is guaranteed here — the shared methodology state (one
                 fetch for the whole app) can safely read the profile. */}
             <MethodologyProvider>
-              <AppShell />
+              <ResultDisplayProvider>
+                <AppShell />
+              </ResultDisplayProvider>
             </MethodologyProvider>
           </ProtectedRoute>
         }

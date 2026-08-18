@@ -2,16 +2,20 @@ import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useTranslation } from "react-i18next";
 import { computeEquityCurve } from "@/lib/stats";
+import { formatAggregate, tradesInResultUnit } from "@/lib/format";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { Trade } from "@/lib/types";
 
 /**
  * Cumulative equity curve (running sum of resultaat_pct). Takes the already-scoped,
  * missed-decided trade list (Reviews plots missed rows here) and computes the curve
- * itself.
+ * itself — callers always pass raw %-trades; de resultaat-eenheid-conversie (Fase J)
+ * gebeurt hier intern, zodat elke plek met deze chart automatisch meeschakelt.
  */
 export function EquityCurveChart({ trades }: { trades: Trade[] }) {
   const { t } = useTranslation();
-  const data = useMemo(() => computeEquityCurve(trades), [trades]);
+  const { unit: resultUnit, saldo } = useResultDisplay();
+  const data = useMemo(() => computeEquityCurve(tradesInResultUnit(trades, resultUnit, saldo)), [trades, resultUnit, saldo]);
 
   if (data.length === 0) {
     return (
@@ -68,7 +72,7 @@ export function EquityCurveChart({ trades }: { trades: Trade[] }) {
               fontSize: 12,
             }}
             labelStyle={{ color: "rgb(var(--color-muted))" }}
-            formatter={(v: number) => [`${v}%`, t("chart.equityTooltip")]}
+            formatter={(v: number) => [formatAggregate(v, resultUnit), t("chart.equityTooltip")]}
             labelFormatter={(l) => t("chart.equityTradeLabel", { n: l })}
           />
           <Area type="monotone" dataKey="cum" stroke="rgb(var(--color-gold))" strokeWidth={2} fill="url(#cumFill)" />
