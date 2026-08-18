@@ -372,4 +372,62 @@ describe("parsers end-to-end", () => {
     expect(res.deals).toHaveLength(1);
     expect(res.deals[0]).toMatchObject({ ticket: "500", symbol: "eurusd", pnlAmount: 25 });
   });
+
+  it("parses a real-shape FTMO MetaTrader statement (banner + Item column + space thousands)", () => {
+    // Mirrors the structure of an actual FTMO "Save as Report" export, which broke
+    // the naive parser: (1) a multi-cell Account/Name/Currency/Leverage banner
+    // precedes the real header, so the header must be the WIDEST row, not the first
+    // row with >1 cell; (2) the symbol column is labelled "Item"; (3) the balance
+    // seed row, cancelled pending orders (colspan-merged "cancelled" cell), and the
+    // total/summary rows carry no importable figure and must be skipped; (4) profit
+    // uses a space as the thousands separator ("1 116.36").
+    const html = `
+      <html><body><div align=center>
+      <table cellspacing=1 cellpadding=3 border=0>
+      <tr align=left>
+        <td colspan=2><b>Account: 431037290</b></td>
+        <td colspan=5><b>Name: $100k FTMO Account Swing 2-Step</b></td>
+        <td colspan=2><b>Currency: USD</b></td>
+        <td colspan=2><b>Leverage: 1:100</b></td>
+        <td colspan=3 align=right><b>2026 August 18, 19:44</b></td></tr>
+      <tr align=left><td colspan=14><b>Closed Transactions:</b></td></tr>
+      <tr align=center bgcolor="#C0C0C0">
+        <td>Ticket</td><td nowrap>Open Time</td><td>Type</td><td>Size</td><td>Item</td>
+        <td>Price</td><td>S / L</td><td>T / P</td><td nowrap>Close Time</td>
+        <td>Price</td><td>Commission</td><td>Taxes</td><td>Swap</td><td>Profit</td></tr>
+      <tr align=right><td>44408909</td><td>2026.05.06 11:48:58</td><td>balance</td><td colspan=10 align=left>Initial account balance</td><td>100 000.00</td></tr>
+      <tr align=right><td>44469036</td><td>2026.05.08 01:00:57</td><td>sell</td><td>2.93</td><td>eurcad</td><td>1.60198</td><td>1.60550</td><td>1.58750</td><td>2026.05.08 11:30:10</td><td>1.60556</td><td>-14.65</td><td>0.00</td><td>0.00</td><td>-768.05</td></tr>
+      <tr align=right><td>44469084</td><td>2026.05.08 00:16:40</td><td>sell limit</td><td>2.78</td><td>nzdusd</td><td>0.59690</td><td>0.59960</td><td>0.59150</td><td>2026.05.08 10:51:49</td><td>0.59506</td><td colspan=4>cancelled</td></tr>
+      <tr align=right><td>44903674</td><td>2026.05.26 01:11:01</td><td>buy</td><td>3.67</td><td>eurchf</td><td>0.91122</td><td>0.91120</td><td>0.91400</td><td>2026.05.26 21:49:27</td><td>0.91361</td><td>-18.35</td><td>0.00</td><td>0.00</td><td>1 116.36</td></tr>
+      <tr align=right><td colspan=10>&nbsp;</td><td>-597.45</td><td>0.00</td><td>-156.31</td><td>-5 384.02</td></tr>
+      <tr align=right><td colspan=12 align=right><b>Closed P/L:</b></td><td colspan=2 align=right>-6 137.78</td></tr>
+      </table></div></body></html>`;
+    const res = parseMt(html);
+    expect(res.broker).toBe("mt");
+    // Only the two executed buy/sell deals — balance seed, cancelled order and the
+    // two summary rows are skipped.
+    expect(res.deals).toHaveLength(2);
+    expect(res.warnings).toEqual([{ kind: "skippedRows", count: 4 }]);
+
+    const eurcad = res.deals.find((d) => d.symbol === "eurcad")!;
+    expect(eurcad).toMatchObject({ ticket: "44469036", direction: "sell", openTime: "2026-05-08", closeTime: "2026-05-08" });
+    expect(eurcad.pnlAmount).toBeCloseTo(-782.7, 2); // profit -768.05 + commission -14.65 + swap 0
+
+    const eurchf = res.deals.find((d) => d.symbol === "eurchf")!;
+    expect(eurchf).toMatchObject({ direction: "buy" });
+    expect(eurchf.pnlAmount).toBeCloseTo(1098.01, 2); // 1 116.36 + (-18.35) — space thousands parsed
+
+    // End-to-end: a forex journal with the account balance entered resolves both to %.
+    const prepared = prepareImport(res.deals, "mt", {
+      pairMap: {},
+      accountBalance: 100000,
+      existingImportRefs: new Set(),
+      forexJournal: true,
+    });
+    expect(prepared.rows).toHaveLength(2);
+    expect(prepared.unknownSymbols).toEqual([]);
+    const byPair = Object.fromEntries(prepared.rows.map((r) => [r.pair, r]));
+    expect(byPair.EURCAD).toMatchObject({ instrument: "EURCAD", direction: "Short", outcome: "Loss", resultaat_pct: -0.78 });
+    expect(byPair.EURCHF).toMatchObject({ instrument: "EURCHF", direction: "Long", outcome: "Win", resultaat_pct: 1.1 });
+  });
 });

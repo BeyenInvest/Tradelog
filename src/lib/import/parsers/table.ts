@@ -10,7 +10,7 @@ import type { ParsedDeal, ParseWarning } from "../types";
  */
 const ALIASES = {
   ticket: ["deal id", "position id", "order id", "ticket", "deal", "order", "position", "id"],
-  symbol: ["symbol", "instrument", "pair", "market"],
+  symbol: ["symbol", "instrument", "pair", "market", "item"],
   direction: ["direction", "trade side", "side", "type"],
   openTime: ["entry time", "open time", "opening time", "entry", "open"],
   closeTime: ["close time", "closing time", "exit time", "close"],
