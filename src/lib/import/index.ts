@@ -2,7 +2,7 @@ import { parseMt } from "./parsers/mt";
 import { parseCtrader } from "./parsers/ctrader";
 import { parseTradingview } from "./parsers/tradingview";
 import { parseCsv } from "./csv";
-import { tableToDeals } from "./parsers/table";
+import { tableToDeals, locateTable } from "./parsers/table";
 import type { ImportBroker, ParseResult } from "./types";
 
 export type { ImportBroker, ParsedDeal, ParseResult, ParseWarning, ImportTradeRow } from "./types";
@@ -27,7 +27,8 @@ export function detectBroker(text: string, filename: string): ImportBroker {
 /** Flat CSV through the shared column detector — no broker-specific handling at all. */
 function parseGeneric(text: string): ParseResult {
   const { headers, rows } = parseCsv(text);
-  const { deals, warnings } = tableToDeals(headers, rows);
+  const table = locateTable([headers, ...rows]);
+  const { deals, warnings } = tableToDeals(table.headers, table.rows);
   return { broker: "generic", deals, warnings };
 }
 

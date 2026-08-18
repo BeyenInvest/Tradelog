@@ -270,6 +270,69 @@ describe("parsers end-to-end", () => {
     expect(prepared.rows[0].resultaat_pct).toBe(10); // 100 on 1000-before
   });
 
+  it("parses a cTrader deals export and derives % from the running balance", () => {
+    // The documented cTrader History→Deals columns (Order ID, Symbol, Opening
+    // direction, Opening/Closing time, Net (currency), Balance (currency), Swap,
+    // Commissions) all resolve through the shared aliases, and the running Balance
+    // column yields an exact per-trade % without the user entering an account balance.
+    const csv = [
+      "Order ID,Symbol,Opening direction,Closing direction,Opening time,Closing time,Swap,Commissions,Net (currency),Balance (currency)",
+      "501,EURUSD,Buy,Sell,2026-05-08 10:00:00,2026-05-08 12:00:00,0.00,-3.50,116.50,10116.50",
+      "502,GBPUSD,Sell,Buy,2026-05-09 09:00:00,2026-05-09 11:00:00,-1.00,-3.50,-49.50,10067.00",
+    ].join("\n");
+    const res = parseCtrader(csv);
+    expect(res.deals).toHaveLength(2);
+    expect(res.deals[0]).toMatchObject({
+      ticket: "501",
+      symbol: "EURUSD",
+      direction: "buy",
+      pnlAmount: 116.5, // Net (currency) used directly
+      balanceAfter: 10116.5,
+    });
+    const prepared = prepareImport(res.deals, "ctrader", {
+      pairMap: {},
+      accountBalance: null,
+      existingImportRefs: new Set(),
+    });
+    expect(prepared.needsBalance).toBe(false); // running Balance → exact %, no manual balance
+    expect(prepared.rows.map((r) => r.resultaat_pct)).toEqual([1.17, -0.49]);
+  });
+
+  it("finds the real header under leading banner rows in a cTrader statement export", () => {
+    // A cTrader "statement" CSV can open with account/period banner lines before
+    // the column header — the same trap the MetaTrader HTML statement sprang. The
+    // header must be located by content, not assumed to be line 1.
+    const csv = [
+      "cTrader Statement",
+      "Account: 123456 (USD)",
+      "Period: 2026-05-01 - 2026-05-31",
+      "",
+      "Order ID,Symbol,Opening direction,Opening time,Closing time,Net (currency),Balance (currency)",
+      "501,EURUSD,Buy,2026-05-08 10:00:00,2026-05-08 12:00:00,116.50,10116.50",
+    ].join("\n");
+    const res = parseCtrader(csv);
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0]).toMatchObject({ ticket: "501", symbol: "EURUSD", pnlAmount: 116.5 });
+  });
+
+  it("parses a TradingView export using the newer P&L column naming", () => {
+    // TradingView relabelled the Strategy Tester "Profit" columns to "P&L"; the
+    // aliases cover both, and the Unicode minus it emits is normalised.
+    const csv = [
+      "Trade #,Type,Signal,Date/Time,Price USD,Quantity,P&L USD,P&L %,Cumulative P&L USD,Cumulative P&L %",
+      "1,Exit long,TP,2026-03-16 12:00,1.0800,1,100.00,4.87,100,4.87",
+      "1,Entry long,Long,2026-03-15 10:00,1.0600,1,,,,",
+    ].join("\n");
+    const res = parseTradingview(csv);
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0]).toMatchObject({
+      direction: "buy",
+      openTime: "2026-03-15",
+      closeTime: "2026-03-16",
+      returnPct: 4.87,
+    });
+  });
+
   it("keeps same-day, same-result deals distinct when the export has no ticket column", () => {
     // No ID/ticket column, so the parser builds a fallback id. Two genuinely
     // distinct scalps on the same day with the same result (times are dropped)

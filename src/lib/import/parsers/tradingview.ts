@@ -1,6 +1,6 @@
 import { parseCsv, detectColumns, cell } from "../csv";
 import { parseNumber, parseDateOnly } from "../values";
-import { tableToDeals } from "./table";
+import { tableToDeals, locateTable } from "./table";
 import type { ParseResult, ParsedDeal, ParseWarning } from "../types";
 
 /**
@@ -47,7 +47,8 @@ export function parseTradingview(text: string): ParseResult {
     rows.some((r) => /\b(entry|exit)\b/i.test(cell(r, cols.type)));
 
   if (!paired) {
-    const { deals, warnings } = tableToDeals(headers, rows);
+    const table = locateTable([headers, ...rows]);
+    const { deals, warnings } = tableToDeals(table.headers, table.rows);
     return { broker: "tradingview", deals, warnings };
   }
 

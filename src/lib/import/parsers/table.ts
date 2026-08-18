@@ -32,6 +32,32 @@ function direction(raw: string): "buy" | "sell" | null {
 }
 
 /**
+ * Locates the real header row in a parsed CSV and splits it from the data. A
+ * broker "statement" CSV (cTrader, some white-labels) can prepend account/period
+ * banner lines before the column header — the same trap the MetaTrader HTML
+ * statement sprang (see extractLargestTable). Each of the first rows is scored by
+ * how many known columns it yields (requiring a symbol column, so a stray
+ * label/number row can't pose as the header); the best-scoring, earliest row wins.
+ * A clean export whose header is already the first row is unaffected — data rows
+ * match no header alias, so they score zero.
+ */
+export function locateTable(allRows: string[][]): { headers: string[]; rows: string[][] } {
+  let bestIdx = 0;
+  let bestScore = -1;
+  const limit = Math.min(allRows.length, 15);
+  for (let i = 0; i < limit; i++) {
+    const cols = detectColumns<Field>(allRows[i], ALIASES as unknown as Record<Field, string[]>);
+    const detected = Object.values(cols).filter((v) => v !== -1).length;
+    const score = cols.symbol !== -1 ? detected : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+  return { headers: allRows[bestIdx] ?? [], rows: allRows.slice(bestIdx + 1) };
+}
+
+/**
  * Turns a detected header row + data rows into broker-neutral ParsedDeals.
  * Rows without both a symbol and any recognisable P&L/return figure are treated
  * as summary/junk lines (broker exports append totals) and reported as skipped
