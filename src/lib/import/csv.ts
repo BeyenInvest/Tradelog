@@ -9,15 +9,21 @@
 
 const DELIMITERS = [",", ";", "\t"] as const;
 
-/** Picks the delimiter that splits the first non-empty line into the most columns. */
+/**
+ * Picks the delimiter that yields the most columns. Scored over the first several
+ * non-empty lines (not just line 1), because a broker "statement" CSV can open
+ * with account/summary banner lines that don't use the delimiter at all — judging
+ * by line 1 alone would then misread the format.
+ */
 export function detectDelimiter(text: string): string {
-  const firstLine = text.split(/\r?\n/).find((l) => l.trim() !== "") ?? "";
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "").slice(0, 15);
   let best = ",";
   let bestCount = 0;
   for (const d of DELIMITERS) {
-    const count = splitLine(firstLine, d).length;
-    if (count > bestCount) {
-      bestCount = count;
+    let max = 0;
+    for (const line of lines) max = Math.max(max, splitLine(line, d).length);
+    if (max > bestCount) {
+      bestCount = max;
       best = d;
     }
   }

@@ -1,6 +1,6 @@
 import { cell, detectColumns } from "../csv";
 import { parseNumber, parseDateOnly } from "../values";
-import type { ParsedDeal } from "../types";
+import type { ParsedDeal, ParseWarning } from "../types";
 
 /**
  * Header aliases per logical field. Broad on purpose — a real export only needs
@@ -10,7 +10,7 @@ import type { ParsedDeal } from "../types";
  */
 const ALIASES = {
   ticket: ["deal id", "position id", "order id", "ticket", "deal", "order", "position", "id"],
-  symbol: ["symbol", "instrument", "pair", "market"],
+  symbol: ["symbol", "instrument", "pair", "market", "item"],
   direction: ["direction", "trade side", "side", "type"],
   openTime: ["entry time", "open time", "opening time", "entry", "open"],
   closeTime: ["close time", "closing time", "exit time", "close"],
@@ -32,6 +32,32 @@ function direction(raw: string): "buy" | "sell" | null {
 }
 
 /**
+ * Locates the real header row in a parsed CSV and splits it from the data. A
+ * broker "statement" CSV (cTrader, some white-labels) can prepend account/period
+ * banner lines before the column header — the same trap the MetaTrader HTML
+ * statement sprang (see extractLargestTable). Each of the first rows is scored by
+ * how many known columns it yields (requiring a symbol column, so a stray
+ * label/number row can't pose as the header); the best-scoring, earliest row wins.
+ * A clean export whose header is already the first row is unaffected — data rows
+ * match no header alias, so they score zero.
+ */
+export function locateTable(allRows: string[][]): { headers: string[]; rows: string[][] } {
+  let bestIdx = 0;
+  let bestScore = -1;
+  const limit = Math.min(allRows.length, 15);
+  for (let i = 0; i < limit; i++) {
+    const cols = detectColumns<Field>(allRows[i], ALIASES as unknown as Record<Field, string[]>);
+    const detected = Object.values(cols).filter((v) => v !== -1).length;
+    const score = cols.symbol !== -1 ? detected : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+  return { headers: allRows[bestIdx] ?? [], rows: allRows.slice(bestIdx + 1) };
+}
+
+/**
  * Turns a detected header row + data rows into broker-neutral ParsedDeals.
  * Rows without both a symbol and any recognisable P&L/return figure are treated
  * as summary/junk lines (broker exports append totals) and reported as skipped
@@ -42,13 +68,13 @@ function direction(raw: string): "buy" | "sell" | null {
  * splits a deal's profit from its swap/commission, while cTrader tends to carry
  * a ready "Net" column.
  */
-export function tableToDeals(headers: string[], rows: string[][]): { deals: ParsedDeal[]; warnings: string[] } {
+export function tableToDeals(headers: string[], rows: string[][]): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
   const cols = detectColumns<Field>(headers, ALIASES as unknown as Record<Field, string[]>);
   const deals: ParsedDeal[] = [];
-  const warnings: string[] = [];
+  const warnings: ParseWarning[] = [];
   let skipped = 0;
 
-  for (const row of rows) {
+  rows.forEach((row, rowIndex) => {
     const symbol = cell(row, cols.symbol).trim();
     const net = parseNumber(cell(row, cols.net));
     const profit = parseNumber(cell(row, cols.profit));
@@ -64,14 +90,20 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
     // A row is a real deal only if it names an instrument and carries some figure.
     if (!symbol || (pnlAmount == null && returnPct == null)) {
       skipped++;
-      continue;
+      return;
     }
 
     const detectedTicket = cell(row, cols.ticket).trim();
     const openTime = parseDateOnly(cell(row, cols.openTime));
     const closeTime = parseDateOnly(cell(row, cols.closeTime));
     // Stable fallback id when the export has no ticket column, so dedup still works.
-    const ticket = detectedTicket || `${symbol}|${openTime ?? ""}|${closeTime ?? ""}|${pnlAmount ?? returnPct ?? ""}`;
+    // The row index keeps two genuinely distinct deals apart when they share a
+    // symbol/date/P&L (dates are day-only, so same-day scalps with identical results
+    // would otherwise collapse to one ref — and a duplicate ref aborts the whole
+    // bulk insert). It stays stable across re-imports of the same file, so
+    // re-importing is still an idempotent no-op via the import_ref dedup.
+    const ticket =
+      detectedTicket || `r${rowIndex}|${symbol}|${openTime ?? ""}|${closeTime ?? ""}|${pnlAmount ?? returnPct ?? ""}`;
 
     deals.push({
       ticket,
@@ -84,8 +116,8 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
       balanceAfter,
       raw: Object.fromEntries(headers.map((h, i) => [h, cell(row, i)])),
     });
-  }
+  });
 
-  if (skipped > 0) warnings.push(`${skipped} rij(en) overgeslagen (geen herkenbare trade-gegevens).`);
+  if (skipped > 0) warnings.push({ kind: "skippedRows", count: skipped });
   return { deals, warnings };
 }

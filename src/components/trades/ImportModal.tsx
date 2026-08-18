@@ -8,12 +8,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { PAIRS, type Pair } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
-import { detectBroker, parseFile, prepareImport, type ImportBroker, type ParsedDeal } from "@/lib/import";
-import type { TradesApi } from "@/hooks/useTrades";
+import {
+  detectBroker,
+  parseFile,
+  prepareImport,
+  type ImportBroker,
+  type ParsedDeal,
+  type ParseWarning,
+} from "@/lib/import";
+import type { TradesApi, TradeScope } from "@/hooks/useTrades";
 
 const PAIR_MAP_STORAGE_KEY = "beyen.import.pairMap";
 const PREVIEW_LIMIT = 8;
-const BROKERS: ImportBroker[] = ["ctrader", "mt"];
+const BROKERS: ImportBroker[] = ["ctrader", "mt", "tradingview", "generic"];
+const BROKER_LABEL_KEY: Record<ImportBroker, string> = {
+  ctrader: "import.brokerCtrader",
+  mt: "import.brokerMt",
+  tradingview: "import.brokerTradingview",
+  generic: "import.brokerGeneric",
+};
 
 function loadStoredPairMap(): Record<string, Pair> {
   try {
@@ -32,29 +45,37 @@ function loadStoredPairMap(): Record<string, Pair> {
 
 interface ImportModalProps {
   tradesApi: TradesApi;
+  /** Where the imported trades land: the live Journal (active journal) or one backtest project. */
+  scope: TradeScope;
   onClose: () => void;
 }
 
 /**
- * Broker-CSV import wizard. Pick a MetaTrader/cTrader export → the deals are
- * parsed and planned (prepareImport) → the user maps any unknown symbols and,
- * if the export lacks per-trade %/balance, enters an account balance → confirm
- * bulk-inserts. Re-importing the same file is a no-op (import_ref dedup). Every
- * imported trade lands in the live Journal as a *taken* trade (never "Missed").
+ * Broker/platform-CSV import wizard. Pick a MetaTrader/cTrader/TradingView
+ * export → the deals are parsed and planned (prepareImport) → the user maps any
+ * unknown symbols, supplies a file-wide symbol when the export has none (a
+ * TradingView Strategy Tester file is per-chart), and, if the export lacks
+ * per-trade %/balance, enters an account balance → confirm bulk-inserts.
+ * Re-importing the same file is a no-op (import_ref dedup). An imported trade
+ * is always a *taken* trade (never "Missed") and lands in the scope this modal
+ * was opened from: the live Journal's active journal, or the open backtest
+ * project (TradingView backtests belong there).
  */
-export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
+export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const { isForexJournal } = useMethodology();
+  const { isForexJournal, methodology } = useMethodology();
   const userId = session!.user.id;
 
   const [rawText, setRawText] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [broker, setBroker] = useState<ImportBroker>("ctrader");
   const [deals, setDeals] = useState<ParsedDeal[]>([]);
+  const [parseWarnings, setParseWarnings] = useState<ParseWarning[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
   const [pairMap, setPairMap] = useState<Record<string, Pair>>(loadStoredPairMap);
+  const [symbolInput, setSymbolInput] = useState("");
   const [balanceInput, setBalanceInput] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -79,24 +100,35 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
     };
   }, [userId]);
 
+  // A TradingView Strategy Tester export names no symbol (it's per-chart); the
+  // user supplies one for the whole file, applied to every symbol-less deal here.
+  const hasSymbollessDeals = deals.some((d) => !d.symbol.trim());
+  const fileSymbol = symbolInput.trim().toUpperCase();
+  const effectiveDeals = useMemo(
+    () => (fileSymbol === "" ? deals : deals.map((d) => (d.symbol.trim() ? d : { ...d, symbol: fileSymbol }))),
+    [deals, fileSymbol]
+  );
+
   const prepared = useMemo(
     () =>
-      prepareImport(deals, broker, {
+      prepareImport(effectiveDeals, broker, {
         pairMap,
         accountBalance: accountBalance != null && Number.isFinite(accountBalance) ? accountBalance : null,
         existingImportRefs: existingRefs,
         forexJournal: isForexJournal,
       }),
-    [deals, broker, pairMap, accountBalance, existingRefs, isForexJournal]
+    [effectiveDeals, broker, pairMap, accountBalance, existingRefs, isForexJournal]
   );
 
   function parseText(text: string, b: ImportBroker) {
     try {
       const result = parseFile(text, b);
       setDeals(result.deals);
+      setParseWarnings(result.warnings);
       setParseError(result.deals.length === 0 ? t("import.noDeals") : null);
     } catch (err) {
       setDeals([]);
+      setParseWarnings([]);
       setParseError(toErrorMessage(err, t("import.parseFailed")));
     }
   }
@@ -146,7 +178,7 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
     }
   }
 
-  const skippedTotal = prepared.undatedCount + prepared.unknownSymbols.length;
+  const skippedTotal = prepared.undatedCount + prepared.unknownSymbols.length + prepared.missingSymbolCount;
 
   return (
     <Modal labelledBy="import-title" maxWidthClass="max-w-3xl" scroll onClose={onClose}>
@@ -180,7 +212,13 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
             </div>
           ) : (
             <>
-              <p className="font-body text-sm text-muted">{t("import.intro")}</p>
+              <p className="font-body text-sm text-muted">
+                {scope.type === "live"
+                  ? methodology?.naam
+                    ? t("import.introJournal", { name: methodology.naam })
+                    : t("import.intro")
+                  : t("import.introProject")}
+              </p>
 
               {/* File picker + broker */}
               <div className="flex flex-wrap items-center gap-3">
@@ -212,7 +250,7 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
                     >
                       {BROKERS.map((b) => (
                         <option key={b} value={b}>
-                          {t(b === "mt" ? "import.brokerMt" : "import.brokerCtrader")}
+                          {t(BROKER_LABEL_KEY[b])}
                         </option>
                       ))}
                     </select>
@@ -230,6 +268,33 @@ export function ImportModal({ tradesApi, onClose }: ImportModalProps) {
                     {prepared.duplicateCount > 0 && <> · {t("import.summaryDupes", { count: prepared.duplicateCount })}</>}
                     {skippedTotal > 0 && <> · {t("import.summarySkipped", { count: skippedTotal })}</>}
                   </p>
+
+                  {/* Parser warnings (junk rows, still-open trades) — informative, not blocking */}
+                  {parseWarnings.map((w) => (
+                    <p key={w.kind} className="font-body text-xs text-muted">
+                      {t(w.kind === "openTrades" ? "import.warnOpenTrades" : "import.warnSkippedRows", {
+                        count: w.count,
+                      })}
+                    </p>
+                  ))}
+
+                  {/* File-wide symbol for symbol-less exports (TradingView Strategy Tester) */}
+                  {hasSymbollessDeals && (
+                    <div className="rounded-lg border border-gold/40 p-3 flex flex-col gap-2">
+                      <p className="font-body text-sm text-ink">{t("import.symbolTitle")}</p>
+                      <p className="font-body text-xs text-muted">{t("import.symbolHint")}</p>
+                      <label className="flex items-center gap-2 font-body text-xs text-muted mt-1">
+                        {t("import.symbolLabel")}
+                        <input
+                          type="text"
+                          value={symbolInput}
+                          onChange={(e) => setSymbolInput(e.target.value)}
+                          placeholder="EURUSD"
+                          className="input text-xs py-1.5 w-40 font-mono uppercase"
+                        />
+                      </label>
+                    </div>
+                  )}
 
                   {/* Unknown symbol mapping */}
                   {prepared.unknownSymbols.length > 0 && (

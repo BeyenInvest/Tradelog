@@ -160,7 +160,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
           // duplicate New trade / Import in the header would just be noise.
           showOnboarding ? undefined : (
           <div className="flex items-center gap-2">
-            {isLive && (
+            {/* Import is still Beta (untested against real broker exports) and since
+                Fase I also opens inside backtest projects (TradingView backtests land
+                there) — soft-launch rule: beta accounts only, until validated. */}
+            {betaFeatures && (
               <button
                 onClick={() => setImportOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
@@ -194,6 +197,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
         <JournalEmptyState
           hasFields={onboarding.hasFields}
           showPresetPicker={onboarding.showPresetPicker}
+          showImport={betaFeatures}
           onNewTrade={() => openCreate()}
           onImport={() => setImportOpen(true)}
         />
@@ -479,7 +483,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
         />
       )}
 
-      {importOpen && <ImportModal tradesApi={tradesApi} onClose={() => setImportOpen(false)} />}
+      {importOpen && <ImportModal tradesApi={tradesApi} scope={scope} onClose={() => setImportOpen(false)} />}
 
       {deletingTrade && (
         <ConfirmDialog

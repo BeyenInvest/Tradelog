@@ -115,8 +115,8 @@ export function useTrades(scope: TradeScope) {
    * their import_ref (the dedup key); the DB's partial unique index
    * (trades_user_import_ref_unique) is the last line of defence against a
    * double-import that slipped past the client-side dedup. Returns how many rows
-   * were inserted. Import only ever targets the live Journal, but the scope is
-   * honoured for symmetry with createTrade.
+   * were inserted. The scope decides where rows land: the live Journal's active
+   * journal, or a backtest project (TradingView backtest imports, Fase I).
    */
   async function createTradesBulk(rows: ImportTradeRow[]): Promise<number> {
     if (rows.length === 0) return 0;

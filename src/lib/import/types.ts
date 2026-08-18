@@ -1,7 +1,12 @@
 import type { TradeInput } from "@/lib/types";
 
-/** Supported broker export formats. Extend with new parsers as needed. */
-export type ImportBroker = "mt" | "ctrader";
+/**
+ * Supported broker export formats. Extend with new parsers as needed.
+ * "generic" is the escape hatch for any flat CSV the alias-based column detector
+ * can read (FX Replay and other journal/backtest tools) without naming a parser
+ * per tool.
+ */
+export type ImportBroker = "mt" | "ctrader" | "tradingview" | "generic";
 
 /**
  * Broker-neutral representation of one closed deal, extracted by a parser before
@@ -27,11 +32,22 @@ export interface ParsedDeal {
   raw: Record<string, string>;
 }
 
+/**
+ * A non-fatal parse issue, kept structured (kind + count) instead of a prose
+ * string so the dialog can render it in the user's language.
+ *   - "skippedRows": rows without recognisable trade data (broker summary/junk lines)
+ *   - "openTrades": trades without an exit at export time (TradingView) — nothing to import yet
+ */
+export interface ParseWarning {
+  kind: "skippedRows" | "openTrades";
+  count: number;
+}
+
 export interface ParseResult {
   broker: ImportBroker;
   deals: ParsedDeal[];
-  /** Non-fatal issues (skipped junk rows, missing optional columns) surfaced in the import preview. */
-  warnings: string[];
+  /** Non-fatal issues (skipped junk rows, still-open trades) surfaced in the import preview. */
+  warnings: ParseWarning[];
 }
 
 /** A trade row ready to insert, carrying the import dedup reference alongside the normal trade payload. */

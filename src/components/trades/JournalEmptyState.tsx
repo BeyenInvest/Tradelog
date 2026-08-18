@@ -19,6 +19,8 @@ interface JournalEmptyStateProps {
    * variant. Kept as an explicit prop so the gate lives in one place.
    */
   showPresetPicker: boolean;
+  /** Import is Beta — the CTA follows the same beta_features gate as the header button. */
+  showImport: boolean;
   onNewTrade: () => void;
   onImport: () => void;
 }
@@ -32,7 +34,7 @@ interface JournalEmptyStateProps {
  * Never shown for a backtest project (JournalPage passes it only for the live
  * scope) and never once the journal has at least one trade.
  */
-export function JournalEmptyState({ hasFields, showPresetPicker, onNewTrade, onImport }: JournalEmptyStateProps) {
+export function JournalEmptyState({ hasFields, showPresetPicker, showImport, onNewTrade, onImport }: JournalEmptyStateProps) {
   const { t } = useTranslation();
 
   // A journal that still has to be shaped (no fields yet) and the picker is
@@ -59,12 +61,14 @@ export function JournalEmptyState({ hasFields, showPresetPicker, onNewTrade, onI
           >
             <Plus size={15} /> {t("journalEmpty.logFirstTrade")}
           </button>
-          <button
-            onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
-          >
-            <Upload size={15} /> {t("journalEmpty.importHint")}
-          </button>
+          {showImport && (
+            <button
+              onClick={onImport}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
+            >
+              <Upload size={15} /> {t("journalEmpty.importHint")}
+            </button>
+          )}
         </div>
       </Card>
 

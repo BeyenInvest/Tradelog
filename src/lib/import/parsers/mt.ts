@@ -1,5 +1,5 @@
 import { parseCsv } from "../csv";
-import { tableToDeals } from "./table";
+import { tableToDeals, locateTable } from "./table";
 import { extractLargestTable } from "./html";
 import type { ParseResult } from "../types";
 
@@ -17,7 +17,14 @@ function isHtml(text: string): boolean {
  * revisit against a real export.
  */
 export function parseMt(text: string): ParseResult {
-  const { headers, rows } = isHtml(text) ? extractLargestTable(text) : parseCsv(text);
+  let headers: string[];
+  let rows: string[][];
+  if (isHtml(text)) {
+    ({ headers, rows } = extractLargestTable(text)); // HTML picks the widest row as header
+  } else {
+    const csv = parseCsv(text);
+    ({ headers, rows } = locateTable([csv.headers, ...csv.rows])); // CSV export may lead with banner rows
+  }
   const { deals, warnings } = tableToDeals(headers, rows);
   return { broker: "mt", deals, warnings };
 }

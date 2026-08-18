@@ -57,3 +57,12 @@ as $$
     and t.trade_evaluation is distinct from 'Missed trade'
   group by t.backtest_project_id;
 $$;
+
+-- Lock execution to signed-in users. On Supabase a PUBLIC revoke alone is NOT
+-- enough: default privileges grant every new function EXECUTE to anon/
+-- authenticated/service_role *directly*, so anon must be revoked by name
+-- (verified against prod 2026-08-13 — anon still got 200 [] with only the
+-- public revoke). SECURITY INVOKER + the auth.uid() filter already return
+-- nothing for anon, so this is hygiene, not a leak. Safe to re-run — idempotent.
+revoke execute on function get_project_trade_summaries() from public, anon;
+grant execute on function get_project_trade_summaries() to authenticated;

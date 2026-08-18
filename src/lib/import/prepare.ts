@@ -30,10 +30,16 @@ export interface PreparedImport {
   unknownSymbols: string[];
   /** True when at least one deal needs an account balance to compute its % (no return/running balance in the export). */
   needsBalance: boolean;
-  /** Deals already imported before (import_ref already present). */
+  /** Deals skipped as duplicates — already in the DB, or a repeat of an earlier deal in this same file. */
   duplicateCount: number;
   /** Deals with no usable date at all — skipped. */
   undatedCount: number;
+  /**
+   * Deals whose export carried no symbol at all (a TradingView Strategy Tester
+   * file is per-chart and has no symbol column). The dialog asks the user for
+   * one file-wide symbol and re-prepares with it applied.
+   */
+  missingSymbolCount: number;
 }
 
 /**
@@ -48,14 +54,24 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
   const rows: ImportTradeRow[] = [];
   const unknownSet = new Set<string>();
   const unknownSymbols: string[] = [];
+  // Refs already accepted in THIS batch. The DB has a partial unique index on
+  // (user, import_ref), so a duplicate ref within one file would make the single
+  // bulk INSERT fail as a whole — dedup here so a repeat becomes a counted skip.
+  const batchRefs = new Set<string>();
   let needsBalance = false;
   let duplicateCount = 0;
   let undatedCount = 0;
+  let missingSymbolCount = 0;
 
   for (const deal of deals) {
     const importRef = `${broker}:${deal.ticket}`;
-    if (opts.existingImportRefs.has(importRef)) {
+    if (opts.existingImportRefs.has(importRef) || batchRefs.has(importRef)) {
       duplicateCount++;
+      continue;
+    }
+
+    if (!deal.symbol.trim()) {
+      missingSymbolCount++;
       continue;
     }
 
@@ -75,8 +91,7 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       pair = resolved;
       instrument = resolved;
     } else {
-      instrument = deal.symbol.trim();
-      if (!instrument) continue; // a nameless symbol can't be a meaningful instrument
+      instrument = deal.symbol.trim(); // non-empty — the missing-symbol gate above caught blanks
       pair = NON_FOREX_PAIR_PLACEHOLDER;
     }
 
@@ -91,8 +106,9 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
       continue;
     }
 
+    batchRefs.add(importRef);
     rows.push(dealToImportRow(deal, pair, instrument, pct, broker));
   }
 
-  return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount };
+  return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount, missingSymbolCount };
 }

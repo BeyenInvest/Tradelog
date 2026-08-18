@@ -17,10 +17,15 @@ export function extractLargestTable(html: string): { headers: string[]; rows: st
   }
   if (best.length === 0) return { headers: [], rows: [] };
 
-  // The header is the first row that has more than one cell; earlier one-cell
-  // rows are the report's title/summary banners.
-  const headerIdx = best.findIndex((r) => r.length > 1);
-  if (headerIdx === -1) return { headers: best[0] ?? [], rows: [] };
+  // The header is the WIDEST row (most cells). A MetaTrader statement precedes
+  // the real column header with narrower banner rows — an Account/Name/Currency
+  // line (several colspan cells) and one-cell section titles ("Closed
+  // Transactions:") — so "first row with >1 cell" would wrongly pick the banner.
+  // First occurrence wins, so the Closed-Transactions header beats the
+  // identical-width Open-Trades/Working-Orders headers later in the same table.
+  const maxLen = best.reduce((m, r) => Math.max(m, r.length), 0);
+  if (maxLen <= 1) return { headers: best[0] ?? [], rows: [] };
+  const headerIdx = best.findIndex((r) => r.length === maxLen);
   return { headers: best[headerIdx], rows: best.slice(headerIdx + 1) };
 }
 

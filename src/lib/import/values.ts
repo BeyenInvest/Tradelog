@@ -14,6 +14,10 @@ export function parseNumber(raw: string): number | null {
   let s = raw.trim();
   if (s === "") return null;
 
+  // TradingView (and some locales) emit the Unicode minus/dashes instead of the
+  // ASCII hyphen — normalise before the sign check below.
+  s = s.replace(/[−–—]/g, "-");
+
   let negative = false;
   // Parenthesised negatives, common in accounting-style profit columns.
   if (/^\(.*\)$/.test(s)) {
