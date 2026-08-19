@@ -1,9 +1,53 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // PWA (Fase L): installable app + a precached app shell. The service worker
+    // is registered manually and ONLY for beta accounts (see RegisterSW.tsx) —
+    // injectRegister:null keeps the plugin from auto-registering it for everyone.
+    // The manifest link + icons are injected for all (harmless, just makes the
+    // app installable). Deliberately conservative: no runtimeCaching for
+    // Supabase (auth + data are cross-origin and must always hit the network).
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: null,
+      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      manifest: {
+        name: "Beyen — Trading Journal",
+        short_name: "Beyen",
+        description: "Trading & backtesting journal. Eyes on every trade.",
+        lang: "nl",
+        theme_color: "#1E2024",
+        background_color: "#1E2024",
+        display: "standalone",
+        start_url: "/",
+        scope: "/",
+        icons: [
+          { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+      workbox: {
+        // Precache the built app shell; SPA routes fall back to index.html.
+        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff,woff2}"],
+        // Keep the install light on mobile data: leave the big on-demand chunk
+        // (react-pdf, ~1.4 MB, only pulled when exporting a PDF) OUT of the
+        // precache — it still loads over the network when actually needed.
+        // (Excluded via globIgnores rather than a size cap, which this plugin
+        // treats as a hard build error.)
+        globIgnores: ["**/react-pdf*"],
+        navigateFallback: "/index.html",
+        // Vite dev/HMR and any /api route must not be served the SPA shell.
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

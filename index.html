@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- PWA (Fase L): theme + iOS add-to-home-screen. The manifest link + SW are
+         injected by vite-plugin-pwa at build; the SW only registers for beta. -->
+    <meta name="theme-color" content="#1E2024" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Beyen" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Beyen — Eyes on every trade.</title>
     <!-- External (not inline): the CSP only allows script-src 'self', which blocked the inline version in production. -->
     <script src="/theme-init.js"></script>

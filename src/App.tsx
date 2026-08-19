@@ -3,6 +3,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AppRouter } from "@/router";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RegisterSW } from "@/components/pwa/RegisterSW";
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <ErrorBoundary>
         <BrowserRouter>
           <AuthProvider>
+            <RegisterSW />
             <AppRouter />
           </AuthProvider>
         </BrowserRouter>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Upload, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Upload, Zap, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -11,6 +11,7 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayTradesModal } from "@/components/calendar/DayTradesModal";
 import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
+import { QuickLogForm } from "@/components/trades/QuickLogForm";
 import { ImportModal } from "@/components/trades/ImportModal";
 import { JournalEmptyState } from "@/components/trades/JournalEmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -71,6 +72,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const { unit: resultUnit, saldo } = useResultDisplay();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
@@ -174,6 +176,16 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 <span className="font-mono text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-gold/50 text-gold">
                   Beta
                 </span>
+              </button>
+            )}
+            {/* Quick-log (Fase L): a trade in <30s, details later. Live journal
+                only (a backtest logs full sessions), beta until public launch. */}
+            {betaFeatures && isLive && (
+              <button
+                onClick={() => setQuickOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
+              >
+                <Zap size={15} /> {t("quickLog.button")}
               </button>
             )}
             <button
@@ -485,6 +497,15 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
           onClose={() => setFormOpen(false)}
           allowMissedTrade={isLive}
           initialDate={newTradeDate ?? undefined}
+        />
+      )}
+
+      {quickOpen && (
+        <QuickLogForm
+          onSubmit={async (input) => {
+            await createTrade(input);
+          }}
+          onClose={() => setQuickOpen(false)}
         />
       )}
 

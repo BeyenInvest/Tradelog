@@ -62,6 +62,59 @@ en de screenshot toont in trade-detail én in de review-PDF.
 3. Mobile-viewport nalopen van de geraakte schermen (de kalender heeft al een
    mobiel dot-patroon als voorbeeld).
 
+## Status — Fase K (bijgewerkt 2026-08-19, branch `fase-k-screenshots`, nog niet gecommit)
+
+Kern KLAAR (lint + 209 tests + build clean), achter `betaFeatures`-gate:
+
+- **`0039_screenshots_bucket.sql`** — private bucket `screenshots`, 5 MB, png/jpg/webp/gif,
+  per-user RLS (`{user_id}/…`, alleen `authenticated`, anon niets). **Owner moet 'm nog draaien**
+  in de Supabase SQL-editor; tot dan faalt uploaden (UI werkt wel, tonen van bestaande URL's ook).
+- **`src/lib/storage/`** — `screenshots.ts` (upload → pad, `resolveScreenshotUrl` → signed URL/
+  passthrough) + `screenshotPath.ts` (pure `isStoragePath`/`toExternalUrl`, met tests). Kolommen
+  ongewijzigd: waarde is óf externe URL óf bucket-pad; onderscheid op UUID-map-prefix, dus legacy
+  (ook schemeless) URL's blijven werken.
+- **`ScreenshotUploadField.tsx`** — Ctrl+V / drag-drop / bladeren + thumbnail + lightbox + verwijderen;
+  URL-invoer blijft als fallback. Non-beta houdt de oude `UrlPreviewField` (nu met URL-placeholder,
+  label zonder "(url)"). Gekozen in `TechnicalSection` op `betaFeatures`.
+- **`ReadOnlyTradeDetailModal`** (admin) — opent screenshots via `resolveScreenshotUrl` (signt paden).
+
+Bewust UITGESTELD (niet in deze sessie):
+
+- **Review-PDF embedding (item 5).** De review-PDF is een *aggregaat*-dashboard met een compacte
+  trade-tabel, én heeft een expliciet ontwerp-contract: "generation never depends on a network fetch"
+  (fonts embedded, zie comment in `ReviewPdfDocument.tsx`). Remote screenshots embedden herintroduceert
+  precies die fragiliteit (een mislukte fetch kan de hele export breken). Aanrader: apart vervolgstukje
+  dat bytes downloadt + per-afbeelding graceful fallback, als bijlage-pagina — niet inline in de tabel.
+- **Vrije screenshot-lijst / `trade_screenshots`-tabel (item 3).** Additief restje; de 4 vaste slots
+  dekken "klaar wanneer" (form + trade-detail) al.
+- **Orphan-cleanup.** Uploaden-dan-annuleren/vervangen laat een wees in de bucket (privé, per-user,
+  ongevaarlijk). Bewust geen auto-delete om nooit een nog-gerefereerde afbeelding te wissen.
+
+## Status — Fase L (bijgewerkt 2026-08-19, zelfde branch, nog niet gecommit)
+
+Beide helften KLAAR (lint + 215 tests + build exit 0), achter `betaFeatures`:
+
+- **Quick-log** — `QuickLogForm.tsx` (compacte modal: instrument · richting · resultaat% ·
+  evaluatie), knop "Snel loggen" in de journal-header (beta + live journal only). `outcome`
+  wordt afgeleid uit het teken van resultaat (`deriveOutcome`, zelfde als import — geen tweede
+  waarheid), live als pill getoond. Rest = stille defaults via de pure `src/lib/quickLog.ts`
+  (`quickLogDefaults` + `QUICK_EVALUATIONS` zonder "Missed trade"); test `quickLog.test.ts`
+  bewijst dat defaults + resultaat een `tradeSchema`-valide trade vormen (regressie-guard).
+  Verplichte custom-velden worden hier bewust overgeslagen ("nu loggen, later aanvullen").
+- **PWA** — `vite-plugin-pwa` (devDep), manifest + `sw.js` + iconen gegenereerd bij build.
+  Iconen = **placeholder** (goud merkteken op ink-vlak, `public/pwa-192/512` + `apple-touch-icon`,
+  gemaakt met sharp die daarna weer verwijderd is) — vervangen zodra de designer levert.
+  Service worker registreert **alleen voor beta-accounts** (`src/components/pwa/RegisterSW.tsx`,
+  `injectRegister:null` + dynamische `virtual:pwa-register`-import) omdat een SW origin-brede,
+  plakkende infra is. Conservatief: géén runtimeCaching voor Supabase (auth/data altijd netwerk);
+  react-pdf-chunk (~1,4 MB) via `globIgnores` uit de precache (precache nu ~1,35 MB / 44 entries).
+  index.html kreeg theme-color + apple-touch-icon + iOS-meta.
+- **Niet echt te verifiëren hier**: installeerbaarheid/SW vereist een echt HTTPS-toestel; mijn
+  sandbox-browser dwingt https af en kan de http-dev-server niet laden. Owner test op telefoon.
+- **Openstaand**: mobiel-viewport nalopen van geraakte schermen (item 3) is licht/QoL, niet gedaan;
+  definitieve PWA-iconen (designer); npm-audit meldt 3 vulns (nanoid/react-router) — **pre-existing**,
+  niet door dit werk, bewust niet aangeraakt.
+
 ## Volgorde-advies binnen de sessie
 
 K eerst (afgebakend, eigen migratie), dan L. Elke fase zelfstandig deploybaar.
