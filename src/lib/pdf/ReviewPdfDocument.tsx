@@ -169,11 +169,6 @@ const styles = StyleSheet.create({
   footerText: { fontSize: T.micro, color: C.faint, letterSpacing: 0.4 },
 });
 
-/** De getallen staan al in data.unit (reviewPdfData) — hier alleen formatteren via formatAggregate. */
-function signed(n: number, unit: ResultUnit): string {
-  return formatAggregate(n, unit);
-}
-
 function outcomeColor(o: string): string {
   return o === "Win" ? C.win : o === "Loss" ? C.loss : C.be;
 }
@@ -267,7 +262,6 @@ function WinLossDonut({ wins, be, losses, labels }: { wins: number; be: number; 
 function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: string; unit: ResultUnit }) {
   const w = 300;
   const h = 86;
-  const mL = 26; // room for the % (y) axis labels
   const mR = 8;
   const mT = 8;
   const mB = 22; // room for the trade-count (x) axis labels + title
@@ -277,6 +271,15 @@ function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: s
   const min = Math.min(0, ...series);
   const max = Math.max(0, ...series);
   const span = max - min || 1;
+
+  // Compacte as-labels: 1 decimaal voor %/R, hele euro's voor geld.
+  const fmtPct = (v: number) => formatAggregate(Math.round(v * 10) / 10, unit, { decimals: unit === "currency" ? 0 : 1 });
+  // y ticks: peak, zero and trough — deduped, only those inside the range.
+  const yTicks = Array.from(new Set([max, 0, min])).filter((v) => v >= min && v <= max);
+  // De y-gutter groeit mee met het breedste label (~3.4pt per teken op 6pt
+  // Helvetica): een geld-label als "+€12.500" is veel breder dan "+4.9%" en zou
+  // met een vaste 26pt links uit de viewBox clippen (react-pdf knipt SVG-inhoud af).
+  const mL = Math.max(26, 4 + Math.max(...yTicks.map((v) => fmtPct(v).length)) * 3.4);
   const plotL = mL;
   const plotR = w - mR;
   const plotT = mT;
@@ -292,10 +295,6 @@ function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: s
   // Faint area between the curve and the zero line, so the trend reads as a shape.
   const areaPoints = `${coords[0].x},${zeroY} ${points} ${coords[coords.length - 1].x},${zeroY}`;
 
-  // Compacte as-labels: 1 decimaal voor %/R, hele euro's voor geld.
-  const fmtPct = (v: number) => formatAggregate(Math.round(v * 10) / 10, unit, { decimals: unit === "currency" ? 0 : 1 });
-  // y ticks: peak, zero and trough — deduped, only those inside the range.
-  const yTicks = Array.from(new Set([max, 0, min])).filter((v) => v >= min && v <= max);
   // x ticks: trade index (0 = start). Thin out when there are many trades.
   const n = series.length;
   const xTicks =
@@ -406,7 +405,7 @@ function TradeTable({ rows, labels, unit }: { rows: ReviewPdfTradeRow[]; labels:
           <Text style={[styles.td, styles.cConcept, { color: C.muted }]}>{r.concept ?? "—"}</Text>
           <Text style={[styles.td, styles.cEntry, { color: C.muted }]}>{r.entry ?? "—"}</Text>
           <Text style={[styles.td, styles.cOut, { color: outcomeColor(r.outcome) }]}>{r.outcome}</Text>
-          <Text style={[styles.td, styles.cRes, { color: r.resultaat >= 0 ? C.win : C.loss }]}>{signed(r.resultaat, unit)}</Text>
+          <Text style={[styles.td, styles.cRes, { color: r.resultaat >= 0 ? C.win : C.loss }]}>{formatAggregate(r.resultaat, unit)}</Text>
           <Text style={[styles.td, styles.cEval, { color: C.muted }]}>{r.evaluation ?? "—"}</Text>
         </View>
       ))}
@@ -444,8 +443,8 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
           <Text style={styles.sectionLabel}>{labels.resultHeading}</Text>
           <View style={styles.kpiRow}>
             <Kpi label={labels.kpiTrades} value={String(kpis.trades)} />
-            <Kpi label={labels.kpiTotal} value={signed(kpis.resultaat, data.unit)} color={kpis.resultaat >= 0 ? C.win : C.loss} />
-            <Kpi label={labels.kpiAvgRR} value={signed(kpis.avgRR, data.unit)} color={kpis.avgRR >= 0 ? C.win : C.loss} />
+            <Kpi label={labels.kpiTotal} value={formatAggregate(kpis.resultaat, data.unit)} color={kpis.resultaat >= 0 ? C.win : C.loss} />
+            <Kpi label={labels.kpiAvgRR} value={formatAggregate(kpis.avgRR, data.unit)} color={kpis.avgRR >= 0 ? C.win : C.loss} />
           </View>
 
           {kpis.trades > 0 ? (

@@ -21,6 +21,15 @@ export interface PrepareOptions {
    * broker import has always been forex-only until now.
    */
   forexJournal?: boolean;
+  /**
+   * Optional dedup scope folded into every import_ref (`broker:scope:ticket`).
+   * A backtest-project import passes the project id here, so the same file can
+   * be imported into two different projects without the second one deduping to
+   * zero rows — while a re-import into the SAME project stays a no-op. Omitted
+   * for the live Journal, whose refs keep the bare `broker:ticket` shape
+   * existing imports were stored under.
+   */
+  refScope?: string;
 }
 
 export interface PreparedImport {
@@ -64,7 +73,7 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
   let missingSymbolCount = 0;
 
   for (const deal of deals) {
-    const importRef = `${broker}:${deal.ticket}`;
+    const importRef = opts.refScope ? `${broker}:${opts.refScope}:${deal.ticket}` : `${broker}:${deal.ticket}`;
     if (opts.existingImportRefs.has(importRef) || batchRefs.has(importRef)) {
       duplicateCount++;
       continue;
@@ -107,7 +116,9 @@ export function prepareImport(deals: ParsedDeal[], broker: ImportBroker, opts: P
     }
 
     batchRefs.add(importRef);
-    rows.push(dealToImportRow(deal, pair, instrument, pct, broker));
+    // dealToImportRow builds the bare broker:ticket ref; the scoped one computed
+    // above (the exact string the dedup ran against) wins.
+    rows.push({ ...dealToImportRow(deal, pair, instrument, pct, broker), import_ref: importRef });
   }
 
   return { rows, unknownSymbols, needsBalance, duplicateCount, undatedCount, missingSymbolCount };

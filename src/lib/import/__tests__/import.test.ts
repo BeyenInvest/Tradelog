@@ -6,7 +6,7 @@ import { resolveResultaatPct, deriveOutcome, dealToImportRow } from "../mapToTra
 import { prepareImport } from "../prepare";
 import { parseCtrader } from "../parsers/ctrader";
 import { parseMt } from "../parsers/mt";
-import { parseTradingview } from "../parsers/tradingview";
+import { parseTradingview, applyFileSymbol } from "../parsers/tradingview";
 import { detectBroker } from "../index";
 import type { ParsedDeal } from "../types";
 
@@ -100,6 +100,28 @@ describe("csv", () => {
     expect(headers).toEqual(["a", "b", "c"]);
     expect(rows[0]).toEqual(["1", "two; still two", "3"]);
   });
+  it("keeps the delimiter when one free-text cell is littered with commas", () => {
+    // The comment cell alone has more commas than the file has semicolon columns;
+    // consistency across lines must win over a single line's maximum width.
+    const text = [
+      "Symbol;Close Time;Net;Comment",
+      "EURUSD;2024.03.15 10:00;50;tp hit, partial close, moved SL, re-entry later, news",
+      "GBPUSD;2024.03.16 09:00;-25;plain",
+    ].join("\n");
+    expect(detectDelimiter(text)).toBe(";");
+  });
+
+  it("still detects the delimiter under banner lines that use none", () => {
+    const text = [
+      "cTrader Statement",
+      "Account: 123456 (USD)",
+      "Order ID,Symbol,Net (currency)",
+      "501,EURUSD,116.50",
+      "502,GBPUSD,-49.50",
+    ].join("\n");
+    expect(detectDelimiter(text)).toBe(",");
+  });
+
   it("maps columns by alias, exact match beating substring", () => {
     const cols = detectColumns(["Symbol", "Net Profit", "Balance"], {
       symbol: ["symbol"],
@@ -377,7 +399,7 @@ describe("parsers end-to-end", () => {
     expect(res.deals.every((d) => d.symbol === "")).toBe(true);
 
     // With the file-wide symbol applied, Profit % is used verbatim — no balance needed.
-    const withSymbol = res.deals.map((d) => ({ ...d, symbol: "EURUSD" }));
+    const withSymbol = res.deals.map((d) => applyFileSymbol(d, "EURUSD"));
     const prepared = prepareImport(withSymbol, "tradingview", {
       pairMap: {},
       accountBalance: null,
@@ -400,9 +422,55 @@ describe("parsers end-to-end", () => {
     // Trade 3 has no exit yet → skipped with a structured warning.
     expect(res.deals).toHaveLength(1);
     expect(res.warnings).toEqual([{ kind: "openTrades", count: 1 }]);
-    // Trade 2 scale-out: both exits summed, close = last exit seen.
+    // Trade 2 scale-out: both exits summed, close = the LATEST exit by date —
+    // not the last row seen (the export lists rows newest-first).
     expect(res.deals[0].returnPct).toBe(2.5);
     expect(res.deals[0].pnlAmount).toBe(50);
+    expect(res.deals[0]).toMatchObject({ openTime: "2024-03-19", closeTime: "2024-03-21" });
+  });
+
+  it("uses the earliest entry and latest exit for pyramided trades regardless of row order", () => {
+    const csv = [
+      "Trade #,Type,Signal,Date/Time,Price USD,Contracts,Profit USD,Profit %",
+      "1,Exit long,TP,2024-03-22 12:00,1.0800,2,80.00,4.0",
+      "1,Entry long,Add,2024-03-20 10:00,1.0650,1,,",
+      "1,Entry long,Long,2024-03-18 10:00,1.0600,1,,",
+    ].join("\n");
+    const res = parseTradingview(csv);
+    expect(res.deals).toHaveLength(1);
+    // Newest-first order: the add-on entry is seen before the original — the
+    // trade must still open at the original (earliest) entry.
+    expect(res.deals[0]).toMatchObject({ openTime: "2024-03-18", closeTime: "2024-03-22" });
+  });
+
+  it("bakes the file-wide symbol into the ticket so two charts' backtests never collide", () => {
+    // Two different-chart exports whose trades coincide on trade #, day-dates and
+    // result. Without the symbol in the ticket their import_refs would be equal
+    // and the second file would silently dedup to zero.
+    const csv = [
+      "Trade #,Type,Signal,Date/Time,Price USD,Contracts,Profit USD,Profit %",
+      "1,Exit long,TP,2024-03-16 12:00,1.0800,1,100.00,4.87",
+      "1,Entry long,Long,2024-03-15 10:00,1.0600,1,,",
+    ].join("\n");
+    const chartA = parseTradingview(csv).deals.map((d) => applyFileSymbol(d, "EURUSD"));
+    const chartB = parseTradingview(csv).deals.map((d) => applyFileSymbol(d, "GBPUSD"));
+    expect(chartA[0].symbol).toBe("EURUSD");
+    expect(chartA[0].ticket).toContain("EURUSD");
+    expect(chartA[0].ticket).not.toBe(chartB[0].ticket);
+
+    // End-to-end: chart B still imports after chart A's refs are in the DB.
+    const preparedA = prepareImport(chartA, "tradingview", {
+      pairMap: {},
+      accountBalance: null,
+      existingImportRefs: new Set(),
+    });
+    const preparedB = prepareImport(chartB, "tradingview", {
+      pairMap: {},
+      accountBalance: null,
+      existingImportRefs: new Set(preparedA.rows.map((r) => r.import_ref)),
+    });
+    expect(preparedB.rows).toHaveLength(1);
+    expect(preparedB.duplicateCount).toBe(0);
   });
 
   it("routes a flat (non-paired) TradingView positions export through the generic table path", () => {
@@ -421,6 +489,55 @@ describe("parsers end-to-end", () => {
     expect(detectBroker("Deal ID,Symbol,Net USD\n1,EURUSD,5", "history_ctrader.csv")).toBe("ctrader");
   });
 
+  it("keeps fallback refs stable when a newer export prepends extra rows", () => {
+    // No ticket column → content-based fallback refs. A later, fuller export of
+    // the same account (newest-first, new deals on top) must yield the SAME refs
+    // for the previously imported deals, or a re-import would duplicate them all.
+    const older = [
+      "Symbol,Direction,Close Time,Net USD",
+      "EURUSD,Buy,2024.03.15 10:00:00,50",
+      "GBPUSD,Sell,2024.03.14 09:00:00,-25",
+    ].join("\n");
+    const newer = [
+      "Symbol,Direction,Close Time,Net USD",
+      "XAUUSD,Buy,2024.03.18 11:00:00,75",
+      "EURUSD,Buy,2024.03.15 10:00:00,50",
+      "GBPUSD,Sell,2024.03.14 09:00:00,-25",
+    ].join("\n");
+    const oldTickets = parseCtrader(older).deals.map((d) => d.ticket);
+    const newTickets = parseCtrader(newer).deals.map((d) => d.ticket);
+    expect(newTickets.slice(1)).toEqual(oldTickets);
+  });
+
+  it("scopes import refs per backtest project so the same file imports into two projects", () => {
+    const deals = [deal({ ticket: "1", symbol: "EURUSD", pnlAmount: 100 })];
+    const base = { pairMap: {}, accountBalance: 1000 };
+    const projectA = prepareImport(deals, "tradingview", {
+      ...base,
+      existingImportRefs: new Set(),
+      refScope: "pA",
+    });
+    expect(projectA.rows[0].import_ref).toBe("tradingview:pA:1");
+
+    // Same file into project B: A's refs are in the DB but must not collide.
+    const projectB = prepareImport(deals, "tradingview", {
+      ...base,
+      existingImportRefs: new Set(projectA.rows.map((r) => r.import_ref)),
+      refScope: "pB",
+    });
+    expect(projectB.rows).toHaveLength(1);
+    expect(projectB.duplicateCount).toBe(0);
+
+    // Re-import into the SAME project stays a no-op.
+    const again = prepareImport(deals, "tradingview", {
+      ...base,
+      existingImportRefs: new Set(projectA.rows.map((r) => r.import_ref)),
+      refScope: "pA",
+    });
+    expect(again.rows).toHaveLength(0);
+    expect(again.duplicateCount).toBe(1);
+  });
+
   it("parses a MetaTrader HTML statement table", () => {
     const html = `
       <html><body>
@@ -434,6 +551,26 @@ describe("parsers end-to-end", () => {
     expect(res.broker).toBe("mt");
     expect(res.deals).toHaveLength(1);
     expect(res.deals[0]).toMatchObject({ ticket: "500", symbol: "eurusd", pnlAmount: 25 });
+  });
+
+  it("skips still-open positions in a full MT4 statement (Open Trades in the same table)", () => {
+    // A statement saved while positions are open carries the Open Trades section
+    // in the SAME table: the row has an Open Time and a floating Profit, but its
+    // Close-Time cell holds the current price, not a date. It must not import as
+    // a closed trade.
+    const html = `
+      <html><body>
+      <table>
+        <tr><th>Ticket</th><th>Open Time</th><th>Type</th><th>Item</th><th>Close Time</th><th>Profit</th></tr>
+        <tr><td>1</td><td>2024.03.15 10:00</td><td>buy</td><td>eurusd</td><td>2024.03.15 12:00</td><td>25.00</td></tr>
+        <tr><td colspan=6>Open Trades:</td></tr>
+        <tr><td>2</td><td>2024.03.16 09:00</td><td>buy</td><td>gbpusd</td><td>1.2650</td><td>13.50</td></tr>
+      </table>
+      </body></html>`;
+    const res = parseMt(html);
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0].ticket).toBe("1");
+    expect(res.warnings).toContainEqual({ kind: "openTrades", count: 1 });
   });
 
   it("parses a real-shape FTMO MetaTrader statement (banner + Item column + space thousands)", () => {

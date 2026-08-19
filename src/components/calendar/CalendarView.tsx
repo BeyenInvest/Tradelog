@@ -4,8 +4,8 @@ import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
-import { dateLocale, formatAggregate } from "@/lib/format";
-import { riskPct } from "@/lib/stats";
+import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
+import { round2 } from "@/lib/stats";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -27,15 +27,6 @@ interface CalendarViewProps {
 export function CalendarView({ trades, missedTrades = [], onDayClick }: CalendarViewProps) {
   const { t, i18n } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
-  // Dag-totaal in de gekozen eenheid (Fase J): % sommeert resultaat_pct, R sommeert
-  // R-multiples, geld sommeert pct/100 × saldo (weergavelaag; rekent via de
-  // stats-helper riskPct resp. het provider-saldo).
-  const dayUnitValue = (trade: Trade) =>
-    resultUnit === "R"
-      ? trade.resultaat_pct / riskPct(trade)
-      : resultUnit === "currency" && saldo != null
-        ? (trade.resultaat_pct / 100) * saldo
-        : trade.resultaat_pct;
   const [monthDate, setMonthDate] = useState(() => new Date());
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -114,11 +105,12 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
       const d = new Date(t.datum_open + "T00:00:00");
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
-        m.set(day, (m.get(day) ?? 0) + dayUnitValue(t));
+        // Dag-totaal in de gekozen eenheid (Fase J) — resultInUnit is de gedeelde
+        // conversie (zelfde regels als tradesInResultUnit).
+        m.set(day, (m.get(day) ?? 0) + resultInUnit(t, resultUnit, saldo));
       }
     }
     return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missedTrades, year, month, resultUnit, saldo]);
 
   const cells: (number | null)[] = [];
@@ -162,8 +154,11 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
         {cells.map((d, i) => {
           if (!d) return <div key={i} />;
           const dayTrades = byDay.get(d);
-          const dayResult = dayTrades ? dayTrades.reduce((s, t) => s + dayUnitValue(t), 0) : null;
-          const missedResult = missedDayResult.get(d) ?? null;
+          // round2 op de rauwe som (CLAUDE.md-invariant): normaliseert -0/float-stof,
+          // zodat de win/loss-celkleur en het getal nooit op -2.8e-17 kunnen afgaan.
+          const dayResult = dayTrades ? round2(dayTrades.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0)) : null;
+          const missed = missedDayResult.get(d);
+          const missedResult = missed != null ? round2(missed) : null;
 
           let bg = "rgb(var(--color-bg))";
           let border = "rgb(var(--color-border-soft))";

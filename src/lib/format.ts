@@ -1,6 +1,6 @@
 import type { ResultUnit } from "./constants";
 import type { Trade } from "./types";
-import { riskPct } from "./stats/core";
+import { computeRStats, riskPct, takenTrades } from "./stats/core";
 
 /** Consistent EUR formatting (nl-BE grouping/decimal style) for account sizes, payouts, etc. */
 export function formatEUR(n: number): string {
@@ -17,21 +17,64 @@ export function formatEUR(n: number): string {
  * a geld-bron per trade bestaat — sub-slice 4/5); same for R without `rMultiple`.
  */
 export function resultDisplayValue(pct: number, unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): number {
-  if (unit === "R" && ctx?.rMultiple != null) return ctx.rMultiple;
-  if (unit === "currency" && ctx?.amount != null) return ctx.amount;
+  const eff = effectiveUnit(unit, ctx);
+  if (eff === "R") return ctx!.rMultiple!; // effectiveUnit garandeert aanwezigheid
+  if (eff === "currency") return ctx!.amount!;
   return pct;
 }
 
 /**
- * Central display conversion for the resultaat-eenheid voorkeur (profiles.result_unit,
- * Fase J): "+1.10%", "+1.10R" of "+1 234,56". Puur weergave — stats en opslag blijven
- * in %; pass the al-berekende `rMultiple`/`amount` via ctx (uit stats-helpers zoals
- * `rMultiple()`/`computeRStats()`), hier wordt niet gerekend. Falls back to % when
- * the unit's context value is missing (see resultDisplayValue).
+ * De eenheid die — gegeven de beschikbare ctx-waarden — daadwerkelijk gerenderd
+ * wordt: R zonder rMultiple en currency zonder amount vallen op % terug. Eén
+ * plek voor die fallback-regels, zodat resultDisplayValue (de waarde, en dus de
+ * win/loss-kleur) en formatResult (de string) nooit uiteen kunnen lopen.
  */
+function effectiveUnit(unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): ResultUnit {
+  if (unit === "R" && ctx?.rMultiple != null) return "R";
+  if (unit === "currency" && ctx?.amount != null) return "currency";
+  return "percent";
+}
+
 /** Het eenheid-achtervoegsel voor compacte plekken (kalendercellen, tabellen, chart-tooltips): "R" in R-modus, anders "%". Currency heeft geen suffix — gebruik daar formatAggregate. */
 export function resultUnitSuffix(unit: ResultUnit): string {
   return unit === "R" ? "R" : "%";
+}
+
+/** Geldbedrag voor een %-resultaat (het currency-MVP: pct/100 × saldo); undefined zonder saldo — resultDisplayValue/formatResult vallen dan terug op %. */
+export function pctToAmount(pct: number, saldo: number | null | undefined): number | undefined {
+  return saldo != null ? (pct / 100) * saldo : undefined;
+}
+
+/**
+ * De weergavewaarde van één trade in de gekozen eenheid — dezelfde regels als
+ * tradesInResultUnit, voor plekken die zelf per trade sommeren (kalender-
+ * dagtotalen) in plaats van een geconverteerde lijst te aggregeren.
+ */
+export function resultInUnit<T extends Pick<Trade, "resultaat_pct" | "risk_pct">>(
+  trade: T,
+  unit: ResultUnit,
+  saldo?: number | null
+): number {
+  if (unit === "R") return trade.resultaat_pct / riskPct(trade);
+  if (unit === "currency" && saldo != null) return (trade.resultaat_pct / 100) * saldo;
+  return trade.resultaat_pct;
+}
+
+/**
+ * Ctx voor het totaal van een trade-groep (TradeList, ReviewTradeGroups): rekent
+ * alleen uit wat de eenheid nodig heeft (geen R-som voor %-kijkers). takenTrades
+ * spiegelt realResultaatTotal's missed-exclusie, zodat de R-som over dezelfde
+ * trades gaat als de %-som.
+ */
+export function groupResultCtx(
+  trades: Trade[],
+  totalPct: number,
+  unit: ResultUnit,
+  saldo: number | null
+): { rMultiple?: number; amount?: number } {
+  if (unit === "R") return { rMultiple: computeRStats(takenTrades(trades)).totalR };
+  if (unit === "currency") return { amount: pctToAmount(totalPct, saldo) };
+  return {};
 }
 
 /**
@@ -50,9 +93,8 @@ export function tradesInResultUnit<T extends Pick<Trade, "resultaat_pct" | "risk
   unit: ResultUnit,
   saldo?: number | null
 ): T[] {
-  if (unit === "R") return trades.map((t) => ({ ...t, resultaat_pct: t.resultaat_pct / riskPct(t) }));
-  if (unit === "currency" && saldo != null) return trades.map((t) => ({ ...t, resultaat_pct: (t.resultaat_pct / 100) * saldo }));
-  return trades;
+  if (unit === "percent" || (unit === "currency" && saldo == null)) return trades;
+  return trades.map((t) => ({ ...t, resultaat_pct: resultInUnit(t, unit, saldo) }));
 }
 
 /**
@@ -62,22 +104,38 @@ export function tradesInResultUnit<T extends Pick<Trade, "resultaat_pct" | "risk
  * getal geprint zoals het (al ge-round2'd) binnenkomt, en geld altijd via formatEUR.
  */
 export function formatAggregate(v: number, unit: ResultUnit, opts?: { decimals?: number }): string {
+  // -0/float-dust-normalisatie (zelfde invariant als round2 in stats/core): een
+  // rauwe som als 0.3-0.2-0.1 is -2.8e-17 en zou anders als "-0.0R"/"-€0" met
+  // verliesteken renderen. Alles dat op weergaveprecisie op 0 afrondt, ís 0.
+  const digits = opts?.decimals ?? 2;
+  if (Math.round(v * 10 ** digits) === 0) v = 0;
   if (unit === "currency") {
-    const abs = opts?.decimals != null ? Math.abs(v).toFixed(opts.decimals) : formatEUR(Math.abs(v));
+    // toLocaleString i.p.v. toFixed zodat de duizendtal-groepering (nl-BE, zoals
+    // formatEUR) ook met afgedwongen decimalen behouden blijft: "+€12.500", niet "+€12500".
+    const abs =
+      opts?.decimals != null
+        ? Math.abs(v).toLocaleString("nl-BE", { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals })
+        : formatEUR(Math.abs(v));
     return `${v > 0 ? "+" : v < 0 ? "-" : ""}€${abs}`;
   }
   const num = opts?.decimals != null ? v.toFixed(opts.decimals) : String(v);
   return `${v > 0 ? "+" : ""}${num}${resultUnitSuffix(unit)}`;
 }
 
+/**
+ * Central display conversion for the resultaat-eenheid voorkeur (profiles.result_unit,
+ * Fase J): "+1.10%", "+1.10R" of "+€1.234,56". Puur weergave — stats en opslag
+ * blijven in %; pass the al-berekende `rMultiple`/`amount` via ctx (uit stats-
+ * helpers zoals `rMultiple()`/`computeRStats()`, of pctToAmount), hier wordt niet
+ * gerekend. Waarde én fallback komen uit resultDisplayValue/effectiveUnit, zodat
+ * de string altijd bij dezelfde waarde hoort als de win/loss-kleur van de caller.
+ */
 export function formatResult(pct: number, unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): string {
-  if (unit === "R" && ctx?.rMultiple != null) {
-    return `${ctx.rMultiple > 0 ? "+" : ""}${ctx.rMultiple.toFixed(2)}R`;
-  }
-  if (unit === "currency" && ctx?.amount != null) {
-    return formatAggregate(ctx.amount, "currency");
-  }
-  return `${pct > 0 ? "+" : ""}${pct}%`;
+  const eff = effectiveUnit(unit, ctx);
+  const v = resultDisplayValue(pct, unit, ctx);
+  if (eff === "R") return `${v > 0 ? "+" : ""}${v.toFixed(2)}R`;
+  if (eff === "currency") return formatAggregate(v, "currency");
+  return `${v > 0 ? "+" : ""}${v}%`;
 }
 
 /**

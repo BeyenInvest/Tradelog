@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { PROP_ACCOUNTS_CHANGED_EVENT } from "@/hooks/usePropAccounts";
 import type { ResultUnit } from "@/lib/constants";
 
 /**
@@ -32,18 +33,30 @@ export function ResultDisplayProvider({ children, override }: { children: ReactN
   const { profile, resultUnit, betaFeatures } = useAuth();
   // Beta-gate (gating-regel): niet-beta-accounts zien altijd %, wat er ook in hun profiel staat.
   const preferred: ResultUnit = betaFeatures ? resultUnit : "percent";
+  // Alleen id + journal als deps — het hele profile-object wisselt bij elke
+  // settings-save en zou dan telkens een onnodige saldo-refetch triggeren.
+  const profileId = profile?.id ?? null;
   const activeJournalId = profile?.methodology_id ?? null;
   const [saldo, setSaldo] = useState<number | null>(null);
+  // Opgehoogd door het prop-accounts-event: een account bewerken/activeren/
+  // verwijderen ververst het saldo direct, zonder harde reload.
+  const [accountsVersion, setAccountsVersion] = useState(0);
 
   useEffect(() => {
-    if (override || preferred !== "currency" || !profile) {
+    const bump = () => setAccountsVersion((v) => v + 1);
+    window.addEventListener(PROP_ACCOUNTS_CHANGED_EVENT, bump);
+    return () => window.removeEventListener(PROP_ACCOUNTS_CHANGED_EVENT, bump);
+  }, []);
+
+  useEffect(() => {
+    if (override || preferred !== "currency" || profileId == null) {
       setSaldo(null);
       return;
     }
     let cancelled = false;
     void (async () => {
       // Actieve accounts eerst, dan meest recente — zelfde journal-scoping als usePropAccounts.
-      let query = supabase.from("prop_accounts").select("account_size, actief").eq("user_id", profile.id);
+      let query = supabase.from("prop_accounts").select("account_size, actief").eq("user_id", profileId);
       query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
       const { data, error } = await query
         .order("actief", { ascending: false })
@@ -56,15 +69,20 @@ export function ResultDisplayProvider({ children, override }: { children: ReactN
     return () => {
       cancelled = true;
     };
-  }, [override, preferred, profile, activeJournalId]);
+  }, [override, preferred, profileId, activeJournalId, accountsVersion]);
 
-  const value: ResultDisplayValue = override
-    ? override
-    : preferred === "currency"
-      ? saldo != null
-        ? { unit: "currency", saldo }
-        : PERCENT // geen (geladen) saldo → eerlijk % tonen, nooit €0-getallen
-      : { unit: preferred, saldo: null };
+  // Gememoized zodat consumers (elke trade-rij leest deze context) alleen
+  // re-renderen wanneer de weergave echt verandert.
+  const value: ResultDisplayValue = useMemo(
+    () =>
+      override ??
+      (preferred === "currency"
+        ? saldo != null
+          ? { unit: "currency", saldo }
+          : PERCENT // geen (geladen) saldo → eerlijk % tonen, nooit €0-getallen
+        : { unit: preferred, saldo: null }),
+    [override, preferred, saldo]
+  );
 
   return <ResultDisplayContext.Provider value={value}>{children}</ResultDisplayContext.Provider>;
 }

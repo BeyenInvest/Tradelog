@@ -1,13 +1,13 @@
 import { parseMt } from "./parsers/mt";
 import { parseCtrader } from "./parsers/ctrader";
 import { parseTradingview } from "./parsers/tradingview";
-import { parseCsv } from "./csv";
-import { tableToDeals, locateTable } from "./parsers/table";
+import { parseFlatCsv } from "./parsers/table";
 import type { ImportBroker, ParseResult } from "./types";
 
 export type { ImportBroker, ParsedDeal, ParseResult, ParseWarning, ImportTradeRow } from "./types";
 export { prepareImport, type PreparedImport, type PrepareOptions } from "./prepare";
 export { normalizeSymbol } from "./symbols";
+export { applyFileSymbol } from "./parsers/tradingview";
 
 /** Best-effort broker guess from file contents/name; the user can override it in the import dialog. */
 export function detectBroker(text: string, filename: string): ImportBroker {
@@ -24,14 +24,6 @@ export function detectBroker(text: string, filename: string): ImportBroker {
   return "ctrader"; // plain CSV default
 }
 
-/** Flat CSV through the shared column detector — no broker-specific handling at all. */
-function parseGeneric(text: string): ParseResult {
-  const { headers, rows } = parseCsv(text);
-  const table = locateTable([headers, ...rows]);
-  const { deals, warnings } = tableToDeals(table.headers, table.rows);
-  return { broker: "generic", deals, warnings };
-}
-
 export function parseFile(text: string, broker: ImportBroker): ParseResult {
   switch (broker) {
     case "mt":
@@ -39,7 +31,8 @@ export function parseFile(text: string, broker: ImportBroker): ParseResult {
     case "tradingview":
       return parseTradingview(text);
     case "generic":
-      return parseGeneric(text);
+      // Flat CSV through the shared column detector — no broker-specific handling at all.
+      return parseFlatCsv(text, "generic");
     case "ctrader":
       return parseCtrader(text);
   }

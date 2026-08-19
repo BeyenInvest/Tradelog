@@ -9,6 +9,7 @@ import { useMethodology } from "@/hooks/useMethodology";
 import { PAIRS, type Pair } from "@/lib/constants";
 import { toErrorMessage } from "@/lib/errorMessage";
 import {
+  applyFileSymbol,
   detectBroker,
   parseFile,
   prepareImport,
@@ -105,7 +106,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   const hasSymbollessDeals = deals.some((d) => !d.symbol.trim());
   const fileSymbol = symbolInput.trim().toUpperCase();
   const effectiveDeals = useMemo(
-    () => (fileSymbol === "" ? deals : deals.map((d) => (d.symbol.trim() ? d : { ...d, symbol: fileSymbol }))),
+    () => (fileSymbol === "" ? deals : deals.map((d) => applyFileSymbol(d, fileSymbol))),
     [deals, fileSymbol]
   );
 
@@ -116,8 +117,13 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
         accountBalance: accountBalance != null && Number.isFinite(accountBalance) ? accountBalance : null,
         existingImportRefs: existingRefs,
         forexJournal: isForexJournal,
+        // Dedup per target: the same TradingView file may be imported into two
+        // different backtest projects (compare filters/annotations), so project
+        // imports carry the project id in their refs. Live-journal refs keep the
+        // bare broker:ticket shape existing imports were stored under.
+        refScope: scope.type === "project" ? `p${scope.projectId}` : undefined,
       }),
-    [effectiveDeals, broker, pairMap, accountBalance, existingRefs, isForexJournal]
+    [effectiveDeals, broker, pairMap, accountBalance, existingRefs, isForexJournal, scope]
   );
 
   function parseText(text: string, b: ImportBroker) {

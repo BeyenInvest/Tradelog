@@ -7,9 +7,24 @@ import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAna
 import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { useTrades } from "@/hooks/useTrades";
+import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 export default function ProjectDashboardPage() {
+  const own = useResultDisplay();
+  return (
+    // Geld-modus uit binnen een backtest-project: een project heeft geen eigen
+    // account, dus €-bedragen zouden met het saldo van het LIVE journal rekenen —
+    // fictieve cijfers die bovendien per actief journal wisselen. R blijft wél
+    // gelden (per-trade risk is journal-onafhankelijk). Zelfde patroon als
+    // AdminUserDetailPage.
+    <ResultDisplayProvider override={{ unit: own.unit === "currency" ? "percent" : own.unit, saldo: null }}>
+      <ProjectDashboardPageInner />
+    </ResultDisplayProvider>
+  );
+}
+
+function ProjectDashboardPageInner() {
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();

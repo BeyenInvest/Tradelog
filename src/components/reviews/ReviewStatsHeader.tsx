@@ -4,7 +4,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { computeOverviewKpis, round2 } from "@/lib/stats";
-import { formatAggregate } from "@/lib/format";
+import { formatAggregate, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { Trade } from "@/lib/types";
 
@@ -29,14 +29,16 @@ export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: T
   const rows = view === "taken" ? taken : missed;
   const kpis = computeOverviewKpis(rows);
   const decisive = kpis.wins + kpis.losses;
-  // Totaal + Ø RR in de gekozen eenheid: R gebruikt kpis.totalR (zelfde
-  // som-dan-afronden als computeRStats), geld pct/100 × saldo, % het bestaande totaal.
-  const shownTotal =
-    resultUnit === "R"
-      ? kpis.totalR
-      : resultUnit === "currency" && saldo != null
-        ? round2((kpis.totalResultaat / 100) * saldo)
-        : kpis.totalResultaat;
+  // Totaal + Ø RR in de gekozen eenheid, via de gedeelde fallback-regels: R
+  // gebruikt kpis.totalR (zelfde som-dan-afronden als computeRStats), geld
+  // pctToAmount, % het bestaande totaal. round2 is idempotent op de al-gerondde
+  // %/R-waarden en normaliseert het geldbedrag.
+  const shownTotal = round2(
+    resultDisplayValue(kpis.totalResultaat, resultUnit, {
+      rMultiple: kpis.totalR,
+      amount: pctToAmount(kpis.totalResultaat, saldo),
+    })
+  );
   const avgRR = decisive > 0 ? round2(shownTotal / decisive) : 0;
   const signed = (n: number) => formatAggregate(n, resultUnit);
 

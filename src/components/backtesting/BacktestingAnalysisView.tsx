@@ -15,7 +15,7 @@ import {
 import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
-import { formatAggregate, formatProfitFactor, formatResult, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
+import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
 import type { Trade } from "@/lib/types";
@@ -156,7 +156,7 @@ export function BacktestingAnalysisView({
           label={t("backtestingAnalysis.result")}
           value={formatResult(kpis.totalResultaat, resultUnit, {
             rMultiple: kpis.totalR,
-            amount: saldo != null ? (kpis.totalResultaat / 100) * saldo : undefined,
+            amount: pctToAmount(kpis.totalResultaat, saldo),
           })}
           tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
         />

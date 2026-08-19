@@ -27,7 +27,7 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
-import { formatProfitFactor, formatResult, resultDisplayValue } from "@/lib/format";
+import { formatProfitFactor, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -286,7 +286,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
               label={t("journal.statResult")}
               value={formatResult(kpis.totalResultaat, resultUnit, {
                 rMultiple: kpis.totalR,
-                amount: saldo != null ? (kpis.totalResultaat / 100) * saldo : undefined,
+                amount: pctToAmount(kpis.totalResultaat, saldo),
               })}
               tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
             />

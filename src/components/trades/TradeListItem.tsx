@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
 import { isMissed, rMultiple } from "@/lib/stats";
-import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
+import { dateLocale, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { useAuth } from "@/hooks/useAuth";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -28,7 +28,7 @@ export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
   const { unit: resultUnit, saldo } = useResultDisplay();
   const resultCtx = {
     rMultiple: rMultiple(trade),
-    amount: saldo != null ? (trade.resultaat_pct / 100) * saldo : undefined,
+    amount: pctToAmount(trade.resultaat_pct, saldo),
   };
   const shownResult = resultDisplayValue(trade.resultaat_pct, resultUnit, resultCtx);
   const readOnly = !onEdit && !onDelete;

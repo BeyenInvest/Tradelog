@@ -3,6 +3,18 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 
+/**
+ * Fired after an account mutation (create/update/delete). ResultDisplayProvider
+ * listens and re-fetches its saldo, so geld-modus bedragen nooit op een oud
+ * account_size blijven rekenen. Window event, zoals TRADES_MIGRATED_EVENT:
+ * de provider heeft geen handle op deze hook-instantie.
+ */
+export const PROP_ACCOUNTS_CHANGED_EVENT = "beyen:prop-accounts-changed";
+
+function notifyAccountsChanged() {
+  window.dispatchEvent(new CustomEvent(PROP_ACCOUNTS_CHANGED_EVENT));
+}
+
 export function usePropAccounts() {
   const { session, profile } = useAuth();
   const userId = session!.user.id;
@@ -61,6 +73,7 @@ export function usePropAccounts() {
     if (err) throw err;
     const created = data as PropAccount;
     setAccounts((prev) => [created, ...prev]);
+    notifyAccountsChanged();
     return created;
   }
 
@@ -69,6 +82,7 @@ export function usePropAccounts() {
     if (err) throw err;
     const updated = data as PropAccount;
     setAccounts((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    notifyAccountsChanged();
     return updated;
   }
 
@@ -77,6 +91,7 @@ export function usePropAccounts() {
     if (err) throw err;
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     setPayouts((prev) => prev.filter((p) => p.account_id !== id));
+    notifyAccountsChanged();
   }
 
   async function createPayout(input: PayoutInput): Promise<Payout> {

@@ -10,20 +10,27 @@
 const DELIMITERS = [",", ";", "\t"] as const;
 
 /**
- * Picks the delimiter that yields the most columns. Scored over the first several
- * non-empty lines (not just line 1), because a broker "statement" CSV can open
- * with account/summary banner lines that don't use the delimiter at all — judging
- * by line 1 alone would then misread the format.
+ * Picks the delimiter whose multi-column line width is the most CONSISTENT over
+ * the first several non-empty lines. Scanning several lines (not just line 1)
+ * copes with broker "statement" CSVs that open with account/summary banner lines
+ * that don't use the delimiter at all; scoring by consistency (how many lines
+ * agree on the same width) instead of the maximum width keeps a single
+ * comma-littered free-text cell from flipping a semicolon/tab file to commas.
  */
 export function detectDelimiter(text: string): string {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "").slice(0, 15);
   let best = ",";
-  let bestCount = 0;
+  let bestScore = 0;
   for (const d of DELIMITERS) {
-    let max = 0;
-    for (const line of lines) max = Math.max(max, splitLine(line, d).length);
-    if (max > bestCount) {
-      bestCount = max;
+    const freq = new Map<number, number>();
+    for (const line of lines) {
+      const count = splitLine(line, d).length;
+      if (count > 1) freq.set(count, (freq.get(count) ?? 0) + 1);
+    }
+    let score = 0;
+    for (const n of freq.values()) score = Math.max(score, n);
+    if (score > bestScore) {
+      bestScore = score;
       best = d;
     }
   }

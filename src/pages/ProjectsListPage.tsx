@@ -104,6 +104,10 @@ export default function ProjectsListPage() {
                   <div className="flex items-center gap-4 font-mono text-sm">
                     <span className="text-ink">{t("journal.tradesCount", { count: summary?.n ?? 0 })}</span>
                     {summary && summary.n > 0 && (
+                      // Bewust altijd % — de server-RPC (get_project_trade_summaries)
+                      // levert alleen een %-totaal, zonder per-trade risk om naar R om
+                      // te rekenen; geld-modus is binnen backtests sowieso uitgezet
+                      // (zie ProjectDashboardPage). Het detail toont R-users wél R.
                       <span className={summary.resultaatTotal >= 0 ? "text-win" : "text-loss"}>
                         {summary.resultaatTotal > 0 ? "+" : ""}
                         {summary.resultaatTotal}%

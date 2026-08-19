@@ -55,6 +55,21 @@ export function parseTradingview(text: string): ParseResult {
   return { broker: "tradingview", ...pairedRowsToDeals(headers, rows, cols) };
 }
 
+/**
+ * Applies the user's file-wide symbol (a Strategy Tester export is per-chart and
+ * names none) to a symbol-less deal INCLUDING its ticket: the ticket's empty
+ * symbol slot is what keeps two charts' backtests with coinciding trade
+ * numbers/dates/results from colliding on the same import_ref. Deals that
+ * already carry a symbol are returned untouched.
+ */
+export function applyFileSymbol(deal: ParsedDeal, symbol: string): ParsedDeal {
+  if (deal.symbol.trim() !== "" || symbol === "") return deal;
+  const parts = deal.ticket.split("|");
+  // Paired-shape ticket: tradeNo|symbol|open|close|result — fill the empty slot.
+  if (parts.length === 5 && parts[1] === "") parts[1] = symbol;
+  return { ...deal, symbol, ticket: parts.join("|") };
+}
+
 interface TradeGroup {
   tradeNo: string;
   symbol: string;
@@ -63,7 +78,6 @@ interface TradeGroup {
   closeTime: string | null;
   profitPct: number | null;
   pnlAmount: number | null;
-  hasEntry: boolean;
   hasExit: boolean;
   raw: Record<string, string>;
 }
@@ -74,8 +88,7 @@ function pairedRowsToDeals(
   rows: string[][],
   cols: Record<Field, number>
 ): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
-  const groups = new Map<string, TradeGroup>();
-  const order: string[] = []; // Map preserves insertion order, but keep explicit for clarity
+  const groups = new Map<string, TradeGroup>(); // Map preserves insertion order — output follows file order
 
   for (const row of rows) {
     const tradeNo = cell(row, cols.tradeNo).trim();
@@ -92,23 +105,25 @@ function pairedRowsToDeals(
         closeTime: null,
         profitPct: null,
         pnlAmount: null,
-        hasEntry: false,
         hasExit: false,
         raw: Object.fromEntries(headers.map((h, i) => [h, cell(row, i)])),
       };
       groups.set(tradeNo, group);
-      order.push(tradeNo);
     }
 
     const date = parseDateOnly(cell(row, cols.dateTime));
     if (/entry/i.test(type)) {
-      group.hasEntry = true;
-      group.openTime = group.openTime ?? date;
+      // Pyramiding spreads entries over several rows; the trade opens at the
+      // EARLIEST entry. Compare dates (ISO strings sort lexicographically) instead
+      // of trusting row order — exports list rows newest-first.
+      if (date != null && (group.openTime == null || date < group.openTime)) group.openTime = date;
       if (/long|buy/i.test(type)) group.direction = "buy";
       else if (/short|sell/i.test(type)) group.direction = "sell";
     } else if (/exit/i.test(type)) {
       group.hasExit = true;
-      group.closeTime = date ?? group.closeTime; // scale-outs: keep the last exit's date
+      // Scale-outs spread exits over several rows; the trade closes at the LATEST
+      // exit — again by date comparison, not row order.
+      if (date != null && (group.closeTime == null || date > group.closeTime)) group.closeTime = date;
       // A scale-out spreads the trade's P&L over several exit rows — sum them so
       // the imported trade carries the whole result.
       const pct = parseNumber(cell(row, cols.profitPct));
@@ -125,8 +140,7 @@ function pairedRowsToDeals(
 
   const deals: ParsedDeal[] = [];
   let openCount = 0;
-  for (const tradeNo of order) {
-    const g = groups.get(tradeNo)!;
+  for (const g of groups.values()) {
     if (!g.hasExit) {
       openCount++; // still-open position at export time — no result to import
       continue;

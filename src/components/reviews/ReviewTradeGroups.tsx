@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import { groupTrades, groupTradesByOutcome, type TradeGroup } from "@/lib/tradeGrouping";
-import { computeRStats, sortChronological, takenTrades } from "@/lib/stats";
-import { formatResult, resultDisplayValue } from "@/lib/format";
+import { sortChronological } from "@/lib/stats";
+import { formatResult, groupResultCtx, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
 import { TradeListItem } from "@/components/trades/TradeListItem";
@@ -49,12 +49,7 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
     <div className="flex flex-col gap-2">
       {groups.map((g) => {
         const isCollapsed = collapsed.has(g.key);
-        // Zelfde missed-exclusie als realResultaatTotal, zodat de R-som over
-        // dezelfde trades gaat als de %-som (missed-secties tonen hun eigen groepen).
-        const groupCtx = {
-          rMultiple: computeRStats(takenTrades(g.trades)).totalR,
-          amount: saldo != null ? (g.resultaatTotal / 100) * saldo : undefined,
-        };
+        const groupCtx = groupResultCtx(g.trades, g.resultaatTotal, resultUnit, saldo);
         const groupTotal = resultDisplayValue(g.resultaatTotal, resultUnit, groupCtx);
         return (
           <div key={g.key} className="rounded-lg border border-border-soft overflow-hidden">
