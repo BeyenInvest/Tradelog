@@ -6,13 +6,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
+import { ScreenshotUploadField } from "./ScreenshotUploadField";
 import { FaseKenmerkenSection } from "./FaseKenmerkenSection";
 
 export function TechnicalSection() {
   const { t } = useTranslation();
   const { register, control } = useFormContext<TradeFormValues>();
-  const { hideFase } = useAuth();
+  const { hideFase, betaFeatures } = useAuth();
   const { isLegacyMethodology } = useMethodology();
+
+  // Beta users get paste/upload straight into the private screenshots bucket
+  // (Fase K); everyone else keeps the plain URL field until public launch.
+  const ScreenshotInput = betaFeatures ? ScreenshotUploadField : UrlPreviewField;
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,10 +48,10 @@ export function TechnicalSection() {
           journal gets those; every other journal (blank/futures/crypto) sees
           neutral "Screenshot 1-4" so the labels never lie about a timeframe. */}
       <div className="grid grid-cols-2 gap-4">
-        <UrlPreviewField name="w_screenshot" label={isLegacyMethodology ? t("tradeForm.weeklyScreenshot") : t("tradeForm.screenshot1")} />
-        <UrlPreviewField name="d_screenshot" label={isLegacyMethodology ? t("tradeForm.dailyScreenshot") : t("tradeForm.screenshot2")} />
-        <UrlPreviewField name="h4_screenshot" label={isLegacyMethodology ? t("tradeForm.h4Screenshot") : t("tradeForm.screenshot3")} />
-        <UrlPreviewField name="h2_screenshot" label={isLegacyMethodology ? t("tradeForm.h2Screenshot") : t("tradeForm.screenshot4")} />
+        <ScreenshotInput name="w_screenshot" label={isLegacyMethodology ? t("tradeForm.weeklyScreenshot") : t("tradeForm.screenshot1")} />
+        <ScreenshotInput name="d_screenshot" label={isLegacyMethodology ? t("tradeForm.dailyScreenshot") : t("tradeForm.screenshot2")} />
+        <ScreenshotInput name="h4_screenshot" label={isLegacyMethodology ? t("tradeForm.h4Screenshot") : t("tradeForm.screenshot3")} />
+        <ScreenshotInput name="h2_screenshot" label={isLegacyMethodology ? t("tradeForm.h2Screenshot") : t("tradeForm.screenshot4")} />
       </div>
       <Field label={t("tradeForm.notes")}>
         <textarea rows={3} className="input" {...register("notes")} />

@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import { Field } from "./Field";
 
-type ScreenshotField = "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot";
+export type ScreenshotFieldName = "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot";
 
 interface UrlPreviewFieldProps {
-  name: ScreenshotField;
+  name: ScreenshotFieldName;
   label: string;
 }
 
@@ -24,7 +24,11 @@ export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <Field label={label}>
+    // Non-beta (URL-only) variant keeps its original "(url)" label hint; the beta
+    // upload field (ScreenshotUploadField) is passed the clean label. Keeping the
+    // suffix here — not in the shared i18n label — means existing users see the
+    // form exactly as before while the feature stays behind the beta gate.
+    <Field label={`${label}${t("tradeForm.urlLabelSuffix")}`}>
       <div className="flex gap-2">
         <input type="text" className="input" {...register(name)} />
         <button

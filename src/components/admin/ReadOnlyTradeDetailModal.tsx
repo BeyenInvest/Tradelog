@@ -6,6 +6,7 @@ import { ImagePreviewModal } from "@/components/trades/TradeFormSections/UrlPrev
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
 import { rMultiple } from "@/lib/stats";
+import { resolveScreenshotUrl } from "@/lib/storage/screenshots";
 import { useResultUnit } from "@/hooks/useResultUnit";
 import type { Trade } from "@/lib/types";
 
@@ -32,9 +33,11 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
   const resultUnit = useResultUnit();
   const [previewSrc, setPreviewSrc] = useState<{ src: string; label: string } | null>(null);
 
-  function openScreenshot(url: string, label: string) {
-    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-    setPreviewSrc({ src: href, label });
+  // A screenshot value is either an external URL or a private-bucket path (Fase K);
+  // resolveScreenshotUrl mints a signed URL for the latter and passes URLs through.
+  async function openScreenshot(value: string, label: string) {
+    const src = await resolveScreenshotUrl(value);
+    if (src) setPreviewSrc({ src, label });
   }
 
   return (
@@ -78,7 +81,7 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
                     <button
                       key={f.key}
                       type="button"
-                      onClick={() => openScreenshot(trade[f.key] as string, f.label)}
+                      onClick={() => void openScreenshot(trade[f.key] as string, f.label)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 text-xs font-body text-ink hover:bg-ink/5"
                     >
                       <Eye size={13} /> {f.label}
