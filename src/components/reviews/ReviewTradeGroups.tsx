@@ -24,7 +24,7 @@ function sortDesc(trades: Trade[]): Trade[] {
   return sortChronological(trades).reverse();
 }
 
-function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defaultOpenKey: string | null }) {
+function TradeGroupList({ groups, defaultOpenKey, hideFaseOverride }: { groups: TradeGroup[]; defaultOpenKey: string | null; hideFaseOverride?: boolean }) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -81,9 +81,9 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
               ) : (
                 <div className="px-3 pb-1 pt-2 overflow-x-auto">
                   <div className="min-w-[640px]">
-                    <TradeListHeader />
+                    <TradeListHeader hideFaseOverride={hideFaseOverride} />
                     {g.trades.map((t) => (
-                      <TradeListItem key={t.id} trade={t} />
+                      <TradeListItem key={t.id} trade={t} hideFaseOverride={hideFaseOverride} />
                     ))}
                   </div>
                 </div>
@@ -100,11 +100,13 @@ function ReviewTradeSection({
   trades,
   emptyLabel,
   groupMode,
+  hideFaseOverride,
 }: {
   label: string;
   trades: Trade[];
   emptyLabel: string;
   groupMode: GroupMode;
+  hideFaseOverride?: boolean;
 }) {
   const groups = useMemo(() => {
     const sorted = sortDesc(trades);
@@ -123,7 +125,7 @@ function ReviewTradeSection({
       {trades.length === 0 ? (
         <p className="text-xs text-muted">{emptyLabel}</p>
       ) : (
-        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} />
+        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} hideFaseOverride={hideFaseOverride} />
       )}
     </div>
   );
@@ -141,10 +143,12 @@ interface ReviewTradeGroupsProps {
   missed: Trade[];
   /** Extra grouping modes beyond the default Win/BE/Loss, in display order — e.g. ["week"] for a monthly review, ["month", "quarter"] for a yearly one. Weekly reviews pass none. */
   extraGroupModes?: GroupMode[];
+  /** Anonymous share views pass the owner's hide_fase instead of the viewer's (who has no profile) — threaded through to the trade rows/header. */
+  hideFaseOverride?: boolean;
 }
 
 /** Collapsible Win/BE/Loss (or, for periodic reviews, per-week/month/quarter) trade groups for a review — read-only, replaces the old flat TradeRows. */
-export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: ReviewTradeGroupsProps) {
+export function ReviewTradeGroups({ taken, missed, extraGroupModes = [], hideFaseOverride }: ReviewTradeGroupsProps) {
   const { t } = useTranslation();
   const modes: GroupMode[] = ["outcome", ...extraGroupModes];
   const [groupMode, setGroupMode] = useState<GroupMode>("outcome");
@@ -168,9 +172,9 @@ export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: Revie
         </div>
       )}
 
-      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} />
+      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} />
       {missed.length > 0 && (
-        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} />
+        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} />
       )}
     </div>
   );

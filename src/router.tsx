@@ -31,6 +31,7 @@ const AdminUserDetailPage = lazy(() => import("@/pages/AdminUserDetailPage"));
 // the first paint for a normal visitor — a coach opening a token-URL gets the same
 // brief loading state the app pages show. Outside AppShell, so it needs its own Suspense.
 const SharePage = lazy(() => import("@/pages/SharePage"));
+const ShareReviewPage = lazy(() => import("@/pages/ShareReviewPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, passwordRecovery } = useAuth();
@@ -63,6 +64,15 @@ export function AppRouter() {
       <Route path="/privacy" element={<PrivacyPage />} />
       {/* Read-only journal behind a share-link token (Fase M) — no account, no auth gate.
           The token is the capability; validation happens in the get_shared_journal RPC. */}
+      {/* /share/review vóór /share/:token, anders vangt de token-route het woord "review". */}
+      <Route
+        path="/share/review/:token"
+        element={
+          <Suspense fallback={<FullScreenLoading />}>
+            <ShareReviewPage />
+          </Suspense>
+        }
+      />
       <Route
         path="/share/:token"
         element={

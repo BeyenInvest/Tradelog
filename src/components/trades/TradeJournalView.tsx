@@ -30,7 +30,7 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
-import { formatProfitFactor, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
+import { AvgRStatCard, MaxDrawdownStatCard, ProfitFactorStatCard, ResultStatCard } from "@/components/trades/JournalKpiCards";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -319,32 +319,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             )}
             <div className={`grid grid-cols-2 ${betaFeatures ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-4`}>
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
-            <StatCard
-              label={t("journal.statResult")}
-              value={formatResult(kpis.totalResultaat, resultUnit, {
-                rMultiple: kpis.totalR,
-                amount: pctToAmount(kpis.totalResultaat, saldo),
-              })}
-              tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
-            />
-            {betaFeatures && (
-            <StatCard
-              label={t("journal.statProfitFactor")}
-              value={formatProfitFactor(kpis.profitFactor)}
-              tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
-            />
-            )}
-            <StatCard
-              label={t("journal.statAvgR")}
-              value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
-              tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
-              sub={kpis.avgR != null ? t("journal.statTotalR", { total: kpis.totalR.toFixed(2) }) : undefined}
-            />
-            <StatCard
-              label={t("journal.statMaxDrawdown")}
-              value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`}
-              tone={kpis.maxDrawdownPct > 0 ? "down" : "neutral"}
-            />
+            <ResultStatCard kpis={kpis} unit={resultUnit} saldo={saldo} />
+            {betaFeatures && <ProfitFactorStatCard kpis={kpis} />}
+            <AvgRStatCard kpis={kpis} />
+            <MaxDrawdownStatCard kpis={kpis} />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
               <div className="min-w-0">
@@ -537,7 +515,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
       {importOpen && <ImportModal tradesApi={tradesApi} scope={scope} onClose={() => setImportOpen(false)} />}
 
       {shareOpen && profile && (
+        // Keyed by journal: ShareLinksModal fetches its list once on mount, so if the
+        // active journal ever changes while open, a remount keeps list and create in sync.
         <ShareJournalModal
+          key={profile.methodology_id ?? "legacy"}
           userId={profile.id}
           methodologyId={profile.methodology_id ?? null}
           onClose={() => setShareOpen(false)}

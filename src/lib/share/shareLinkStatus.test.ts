@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expiryFromChoice, shareLinkStatus, shareUrl } from "./shareLinkStatus";
+import { expiryFromChoice, shareLinkStatus, shareReviewUrl, shareUrl } from "./shareLinkStatus";
 
 const NOW = new Date("2026-08-20T12:00:00Z");
 
@@ -34,5 +34,11 @@ describe("shareLinkStatus", () => {
 describe("shareUrl", () => {
   it("builds the public route from origin + token", () => {
     expect(shareUrl("https://beyen.app", "abc123")).toBe("https://beyen.app/share/abc123");
+  });
+});
+
+describe("shareReviewUrl", () => {
+  it("builds the review route from origin + token", () => {
+    expect(shareReviewUrl("https://beyen.app", "abc123")).toBe("https://beyen.app/share/review/abc123");
   });
 });

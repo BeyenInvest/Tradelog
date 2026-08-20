@@ -9,6 +9,7 @@ import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
+import { ShareReviewButton } from "@/components/share/ShareReviewButton";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
 import { ReviewContentDisplay } from "./ReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
@@ -40,7 +41,6 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
     () => computeErrorCounts(taken, tradesInResultUnit(missedClosed, resultUnit, saldo)),
     [taken, missedClosed, resultUnit, saldo]
   );
-
   return (
     <Card className="lg:col-span-2 p-6">
       <div className="flex items-start justify-between mb-5">
@@ -51,6 +51,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-1">
+          <ShareReviewButton reviewRef={{ kind: "weekly", id: review.id }} />
           <DownloadReviewPdfButton
             getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, betaFeatures, resultUnit, saldo })}
           />

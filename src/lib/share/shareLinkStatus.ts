@@ -28,3 +28,18 @@ export function shareLinkStatus(link: Pick<ShareLink, "revoked" | "expires_at">,
 export function shareUrl(origin: string, token: string): string {
   return `${origin}/share/${token}`;
 }
+
+/**
+ * Review-links live on their own route (0042) so the page knows which RPC to
+ * call without a discriminator round-trip; a journal token pasted here (or vice
+ * versa) simply validates to null server-side via the scope check.
+ */
+export function shareReviewUrl(origin: string, token: string): string {
+  return `${origin}/share/review/${token}`;
+}
+
+/** Which review a 'review' share-link points at — weekly and periodic reviews live in separate tables. */
+export interface ReviewRef {
+  kind: "weekly" | "periodic";
+  id: string;
+}

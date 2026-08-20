@@ -8,7 +8,7 @@ import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
 import { rMultiple } from "@/lib/stats";
 import { resolveScreenshotUrl } from "@/lib/storage/screenshots";
 import { useResultUnit } from "@/hooks/useResultUnit";
-import type { Trade } from "@/lib/types";
+import type { SharedMethodologyField, Trade } from "@/lib/types";
 
 const SCREENSHOT_FIELDS: { key: keyof Pick<Trade, "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot">; label: string }[] = [
   { key: "w_screenshot", label: "Weekly" },
@@ -32,20 +32,44 @@ function Row({ label, value }: { label: string; value: string | number | null | 
  * one trade including screenshots and notes, for the admin debug view and the
  * anonymous share view (Fase M). `hideFase` honours the owner's hide_fase setting
  * on surfaces where the viewer has no useAuth profile of their own (the share view).
+ * `fields` (share RPC's methodology_fields slice, 0042) labels the trades.custom
+ * values of a config-journal; without it those values stay hidden rather than
+ * showing raw field_keys.
  */
 export function ReadOnlyTradeDetailModal({
   trade,
   onClose,
   hideFase = false,
+  fields,
 }: {
   trade: Trade;
   onClose: () => void;
   hideFase?: boolean;
+  fields?: SharedMethodologyField[];
 }) {
   const { t, i18n } = useTranslation();
   const resultUnit = useResultUnit();
   const [previewSrc, setPreviewSrc] = useState<{ src: string; label: string } | null>(null);
   const screenshotFields = SCREENSHOT_FIELDS.filter((f) => trade[f.key]);
+
+  // Custom-veld-rijen (Scope C journals): only fields with a filled value in the
+  // trade's custom bag. Computed fields are never stored in the bag, so they
+  // fall out naturally; sort_order matches the owner's own form order.
+  const customRows = (fields ?? [])
+    .filter((f) => {
+      const raw = trade.custom?.[f.field_key];
+      return raw !== null && raw !== undefined && raw !== "";
+    })
+    .map((f) => {
+      const raw = trade.custom[f.field_key];
+      let value: string;
+      if (f.field_type === "boolean") value = raw ? t("common.yes") : t("common.no");
+      else if (f.field_type === "date")
+        value = new Date(String(raw) + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "numeric" });
+      else value = String(raw);
+      // field_key is the unique key (labels are free owner text and may repeat).
+      return { key: f.field_key, label: f.label, value };
+    });
 
   // A screenshot value is either an external URL or a private-bucket path (Fase K);
   // resolveScreenshotUrl mints a signed URL for the latter and passes URLs through.
@@ -97,6 +121,9 @@ export function ReadOnlyTradeDetailModal({
               <Row label={t("tradeForm.weeklyCriteria")} value={trade.weekly_criteria} />
               <Row label={t("tradeForm.weeklyKenmerk")} value={trade.weekly_kenmerk} />
               <Row label={t("filters.news")} value={trade.nieuws ? t("common.yes") : t("common.no")} />
+              {customRows.map((r) => (
+                <Row key={r.key} label={r.label} value={r.value} />
+              ))}
             </div>
 
             {screenshotFields.length > 0 && (

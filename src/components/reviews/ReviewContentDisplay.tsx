@@ -10,14 +10,17 @@ interface ReviewContentDisplayProps {
   acties: string[];
   takeaway: string | null;
   overall_comment: string | null;
+  /** Anonymous share views pass the layout choice explicitly — the viewer has no profile, and the sharing owner (beta-gated share button) authored the review in the merged layout. */
+  betaFeaturesOverride?: boolean;
 }
 
 /** Read-only rendering of the technisch/mentaal/acties/takeaway/overall-comment fields, shared by weekly and periodic review detail views. */
-export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
+export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment, betaFeaturesOverride }: ReviewContentDisplayProps) {
   const { t } = useTranslation();
   // Fase F soft-launch (beta_features): beta users see the merged, neutrally-labelled review;
   // everyone else keeps the original two-voice WPM layout until public launch.
-  const { betaFeatures } = useAuth();
+  const { betaFeatures: ownBetaFeatures } = useAuth();
+  const betaFeatures = betaFeaturesOverride ?? ownBetaFeatures;
   return (
     <>
       {verhalen && <ContentBlock label={betaFeatures ? t("reviewContent.verhalenNeutral") : t("reviewContent.verhalen")}>{verhalen}</ContentBlock>}

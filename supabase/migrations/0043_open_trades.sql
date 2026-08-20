@@ -88,6 +88,13 @@ $$;
 revoke execute on function get_project_trade_summaries() from public, anon;
 grant execute on function get_project_trade_summaries() to authenticated;
 
+-- get_shared_journal / get_shared_review are re-created identically to migration
+-- 0042 (M2, review-sharing) but with an extra `and not t.is_open` on every trades
+-- subquery, so a still-running trade (null outcome/resultaat) never crosses the
+-- anonymous share boundary and breaks the viewer's client-side stats. The 0042
+-- helpers shared_trade_json + shared_methodology_fields are unchanged and reused.
+-- (This file must stay in sync with 0042's bodies: re-creating from the older 0040
+-- shape would silently drop M2's `fields` block and shared_trade_json refactor.)
 create or replace function get_shared_journal(share_token text)
 returns jsonb
 language sql
@@ -100,53 +107,10 @@ as $$
     'display_name', p.display_name,
     'result_unit', p.result_unit,
     'hide_fase', p.hide_fase,
+    'fields', shared_methodology_fields(l.methodology_id, l.user_id),
     'trades', coalesce(
       (
-        select jsonb_agg(jsonb_build_object(
-          'id', t.id,
-          'fase', t.fase,
-          'datum_open', t.datum_open,
-          'datum_sluiting', t.datum_sluiting,
-          'duur_dagen', t.duur_dagen,
-          'pair', t.pair,
-          'instrument', t.instrument,
-          'direction', t.direction,
-          'outcome', t.outcome,
-          'resultaat_pct', t.resultaat_pct,
-          'risk_pct', t.risk_pct,
-          'trade_evaluation', t.trade_evaluation,
-          'weekly_criteria', t.weekly_criteria,
-          'weekly_kenmerk', t.weekly_kenmerk,
-          'trade_concept', t.trade_concept,
-          'entry', t.entry,
-          'cc', t.cc,
-          'sessie', t.sessie,
-          'nieuws', t.nieuws,
-          'w_confirm', t.w_confirm,
-          'd_confirm', t.d_confirm,
-          'h4_confirm', t.h4_confirm,
-          'w_screenshot', case when t.w_screenshot ~* '^https?://' then t.w_screenshot end,
-          'd_screenshot', case when t.d_screenshot ~* '^https?://' then t.d_screenshot end,
-          'h4_screenshot', case when t.h4_screenshot ~* '^https?://' then t.h4_screenshot end,
-          'h2_screenshot', case when t.h2_screenshot ~* '^https?://' then t.h2_screenshot end,
-          'extra_d_conf', t.extra_d_conf,
-          'notes', t.notes,
-          'fase1_daily_respecteert_zone', t.fase1_daily_respecteert_zone,
-          'fase1_spelers_verleden', t.fase1_spelers_verleden,
-          'fase2_daily_respecteert_zone', t.fase2_daily_respecteert_zone,
-          'fase2_structuur', t.fase2_structuur,
-          'fase3_zone_min_2_touches', t.fase3_zone_min_2_touches,
-          'fase3_engulfing_candle', t.fase3_engulfing_candle,
-          'fase3_beide', t.fase3_beide,
-          'fase3_structuur', t.fase3_structuur,
-          'fase4_weekly_bevestigingscandle', t.fase4_weekly_bevestigingscandle,
-          'weekly_review_id', t.weekly_review_id,
-          'backtest_project_id', t.backtest_project_id,
-          'methodology_id', t.methodology_id,
-          'custom', t.custom,
-          'created_at', t.created_at,
-          'updated_at', t.updated_at
-        ) order by t.datum_open, t.id)
+        select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
         from trades t
         where t.user_id = l.user_id
           and t.backtest_project_id is null
@@ -168,6 +132,112 @@ $$;
 
 revoke execute on function get_shared_journal(text) from public;
 grant execute on function get_shared_journal(text) to anon, authenticated;
+
+create or replace function get_shared_review(share_token text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when l.weekly_review_id is not null then
+      (
+        select jsonb_build_object(
+          'kind', 'weekly',
+          'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
+          'display_name', p.display_name,
+          'result_unit', p.result_unit,
+          'hide_fase', p.hide_fase,
+          'review', jsonb_build_object(
+            'id', r.id,
+            'week_nummer', r.week_nummer,
+            'jaar', r.jaar,
+            'titel', r.titel,
+            'verhalen', r.verhalen,
+            'technisch', r.technisch,
+            'mentaal_owner', r.mentaal_owner,
+            'mentaal_trader', r.mentaal_trader,
+            'acties', to_jsonb(r.acties),
+            'takeaway', r.takeaway,
+            'overall_comment', r.overall_comment
+          ),
+          'trades', coalesce(
+            (
+              select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
+              from trades t
+              where t.user_id = l.user_id
+                and t.weekly_review_id = r.id
+                and t.backtest_project_id is null
+                and t.methodology_id is not distinct from r.methodology_id
+                and not t.is_open
+            ),
+            '[]'::jsonb
+          )
+        )
+        from weekly_reviews r
+        where r.id = l.weekly_review_id and r.user_id = l.user_id
+      )
+    else
+      (
+        select jsonb_build_object(
+          'kind', 'periodic',
+          'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
+          'display_name', p.display_name,
+          'result_unit', p.result_unit,
+          'hide_fase', p.hide_fase,
+          'review', jsonb_build_object(
+            'id', r.id,
+            'period_type', r.period_type,
+            'jaar', r.jaar,
+            'periode_nummer', r.periode_nummer,
+            'titel', r.titel,
+            'technisch', r.technisch,
+            'mentaal_owner', r.mentaal_owner,
+            'mentaal_trader', r.mentaal_trader,
+            'acties', to_jsonb(r.acties),
+            'takeaway', r.takeaway,
+            'overall_comment', r.overall_comment,
+            'periode_overzicht', r.periode_overzicht
+          ),
+          -- Kalenderperiode identiek aan rangeOfPeriod() client-side
+          -- (src/lib/periodRanges.ts): maand / kwartaal / jaar, inclusieve grenzen.
+          'trades', coalesce(
+            (
+              select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
+              from trades t
+              where t.user_id = l.user_id
+                and t.backtest_project_id is null
+                and t.methodology_id is not distinct from r.methodology_id
+                and not t.is_open
+                and t.datum_open >= case r.period_type
+                    when 'month' then make_date(r.jaar, r.periode_nummer, 1)
+                    when 'quarter' then make_date(r.jaar, (r.periode_nummer - 1) * 3 + 1, 1)
+                    else make_date(r.jaar, 1, 1)
+                  end
+                and t.datum_open <= case r.period_type
+                    when 'month' then (make_date(r.jaar, r.periode_nummer, 1) + interval '1 month - 1 day')::date
+                    when 'quarter' then (make_date(r.jaar, (r.periode_nummer - 1) * 3 + 1, 1) + interval '3 months - 1 day')::date
+                    else make_date(r.jaar, 12, 31)
+                  end
+            ),
+            '[]'::jsonb
+          )
+        )
+        from periodic_reviews r
+        where r.id = l.periodic_review_id and r.user_id = l.user_id
+      )
+  end
+  from share_links l
+  join profiles p on p.id = l.user_id
+  where l.token = share_token
+    and l.scope = 'review'
+    and not l.revoked
+    and (l.expires_at is null or l.expires_at > now());
+$$;
+
+revoke execute on function get_shared_review(text) from public;
+grant execute on function get_shared_review(text) to anon, authenticated;
 
 -- ---------------------------------------------------------
 -- Read-only verificatie (na de run):
