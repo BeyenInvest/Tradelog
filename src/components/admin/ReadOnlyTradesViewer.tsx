@@ -14,7 +14,16 @@ import type { Trade } from "@/lib/types";
  * section and the per-project view on AdminUserDetailPage — same trio of nested modals
  * as the owner-facing Journal, just without any edit/delete/add-trade affordances.
  */
-export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title?: string }) {
+export function ReadOnlyTradesViewer({
+  trades,
+  title,
+  hideFase,
+}: {
+  trades: Trade[];
+  title?: string;
+  /** Share view (Fase M): honour the owner's hide_fase setting (the anonymous viewer has no profile of their own). */
+  hideFase?: boolean;
+}) {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -60,7 +69,7 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
         <CalendarView trades={taken} missedTrades={missed} onDayClick={setSelectedDay} />
       ) : (
         <Card>
-          <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} />
+          <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} hideFase={hideFase} />
         </Card>
       )}
 
@@ -73,7 +82,9 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
         />
       )}
 
-      {selectedTrade && <ReadOnlyTradeDetailModal trade={selectedTrade} onClose={() => setSelectedTrade(null)} />}
+      {selectedTrade && (
+        <ReadOnlyTradeDetailModal trade={selectedTrade} hideFase={hideFase} onClose={() => setSelectedTrade(null)} />
+      )}
     </>
   );
 }

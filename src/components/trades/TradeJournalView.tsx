@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Upload, Zap, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Upload, Zap, Share2, Eye, EyeOff, CalendarDays, List as ListIcon, CalendarClock, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
@@ -13,6 +13,7 @@ import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { QuickLogForm } from "@/components/trades/QuickLogForm";
 import { ImportModal } from "@/components/trades/ImportModal";
+import { ShareJournalModal } from "@/components/share/ShareJournalModal";
 import { JournalEmptyState } from "@/components/trades/JournalEmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
@@ -68,12 +69,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const { t } = useTranslation();
   // Soft-launch gate: Fase-E additions (profit factor, current-streak line) stay hidden
   // from the live users until public launch — only owner/beta accounts see them.
-  const { betaFeatures } = useAuth();
+  const { betaFeatures, profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
   const [showMissed, setShowMissed] = useState(false);
@@ -182,6 +184,20 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 only (a backtest logs full sessions), beta until public launch.
                 Icon-only + tooltip so it stays a light accent next to the primary
                 "New trade" CTA rather than a competing full-size button. */}
+            {/* Share-links (Fase M): read-only coach view via token-URL. Managing
+                links is beta-gated (gating-regel) and live-journal only — the
+                token view itself is per-token, not per-user. Same icon-button
+                treatment as quick-log to keep the header calm. */}
+            {betaFeatures && isLive && profile && (
+              <button
+                onClick={() => setShareOpen(true)}
+                title={t("share.button")}
+                aria-label={t("share.button")}
+                className="flex items-center justify-center h-9 px-3 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+              >
+                <Share2 size={16} />
+              </button>
+            )}
             {betaFeatures && isLive && (
               <button
                 onClick={() => setQuickOpen(true)}
@@ -514,6 +530,14 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
       )}
 
       {importOpen && <ImportModal tradesApi={tradesApi} scope={scope} onClose={() => setImportOpen(false)} />}
+
+      {shareOpen && profile && (
+        <ShareJournalModal
+          userId={profile.id}
+          methodologyId={profile.methodology_id ?? null}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {deletingTrade && (
         <ConfirmDialog

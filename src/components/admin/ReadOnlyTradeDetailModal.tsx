@@ -27,11 +27,25 @@ function Row({ label, value }: { label: string; value: string | number | null | 
   );
 }
 
-/** Read-only equivalent of TradeForm — no inputs, no submit, just everything about one trade including screenshots and notes, for the admin debug view. */
-export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onClose: () => void }) {
+/**
+ * Read-only equivalent of TradeForm — no inputs, no submit, just everything about
+ * one trade including screenshots and notes, for the admin debug view and the
+ * anonymous share view (Fase M). `hideFase` honours the owner's hide_fase setting
+ * on surfaces where the viewer has no useAuth profile of their own (the share view).
+ */
+export function ReadOnlyTradeDetailModal({
+  trade,
+  onClose,
+  hideFase = false,
+}: {
+  trade: Trade;
+  onClose: () => void;
+  hideFase?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const resultUnit = useResultUnit();
   const [previewSrc, setPreviewSrc] = useState<{ src: string; label: string } | null>(null);
+  const screenshotFields = SCREENSHOT_FIELDS.filter((f) => trade[f.key]);
 
   // A screenshot value is either an external URL or a private-bucket path (Fase K);
   // resolveScreenshotUrl mints a signed URL for the latter and passes URLs through.
@@ -63,7 +77,7 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
             </div>
 
             <div className="mb-4">
-              <Row label={t("filters.fase")} value={trade.fase} />
+              {!hideFase && <Row label={t("filters.fase")} value={trade.fase} />}
               <Row label={t("filters.evaluation")} value={trade.trade_evaluation} />
               <Row label={t("admin.ccSessie")} value={`${trade.cc} · ${trade.sessie}`} />
               <Row label={t("tradeForm.tradeConcept")} value={trade.trade_concept} />
@@ -73,11 +87,11 @@ export function ReadOnlyTradeDetailModal({ trade, onClose }: { trade: Trade; onC
               <Row label={t("filters.news")} value={trade.nieuws ? t("common.yes") : t("common.no")} />
             </div>
 
-            {SCREENSHOT_FIELDS.some((f) => trade[f.key]) && (
+            {screenshotFields.length > 0 && (
               <div className="mb-4">
                 <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">{t("admin.screenshots")}</p>
                 <div className="flex flex-wrap gap-2">
-                  {SCREENSHOT_FIELDS.filter((f) => trade[f.key]).map((f) => (
+                  {screenshotFields.map((f) => (
                     <button
                       key={f.key}
                       type="button"
