@@ -179,13 +179,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
               </button>
             )}
             {/* Quick-log (Fase L): a trade in <30s, details later. Live journal
-                only (a backtest logs full sessions), beta until public launch. */}
+                only (a backtest logs full sessions), beta until public launch.
+                Icon-only + tooltip so it stays a light accent next to the primary
+                "New trade" CTA rather than a competing full-size button. */}
             {betaFeatures && isLive && (
               <button
                 onClick={() => setQuickOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
+                title={t("quickLog.button")}
+                aria-label={t("quickLog.button")}
+                className="flex items-center justify-center h-9 w-9 rounded-lg text-muted hover:text-ink hover:bg-ink/5 transition-colors"
               >
-                <Zap size={15} /> {t("quickLog.button")}
+                <Zap size={16} />
               </button>
             )}
             <button
