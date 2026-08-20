@@ -1,17 +1,16 @@
 # Fase N — startdocument (voor nieuwe sessie, model: **gemengd, per stuk kiezen**)
 
-> Geschreven 2026-08-20 na afronding van Fase M (share-links, live op prod).
-> Model-afspraak (memory `beyen_model_per_fase`): **N = gemengd** — stats-motor /
-> migraties / security → Fable, UI-stukken → Opus. Vervangt samen met
-> `docs/fase-M-N-handoff.md` (M-deel is AF) het oude startpunt.
+> Geschreven 2026-08-20 na afronding van Fase M; bijgewerkt 2026-08-20 na
+> afronding van **N2 (AF, live op prod)**. Model-afspraak (memory
+> `beyen_model_per_fase`): **N = gemengd** — stats-motor / migraties / security
+> → Fable, UI-stukken → Opus. Vervangt samen met `docs/fase-M-N-handoff.md`
+> (M-deel is AF) het oude startpunt.
 
 ## Uitgangsstand (belangrijk — lees eerst)
 
-- **Fase M is AF en live op prod**: `main` = merge `17e7e68` (fase-commit
-  `59b2e54`), gepusht, Vercel-deploy geverifieerd. Migratie `0040` (share_links
-  + `get_shared_journal`-RPC) is op prod gedraaid en read-only geverifieerd.
-  Werkboom schoon. In dezelfde merge liftte de losse fix mee: admin-kalender
-  telt missed trades niet meer mee (PR #8).
+- **N2 is AF en live op prod**: `main` = `8bc783d` (feature `342a9f1` +
+  live-journal-only-fix), gepusht, Vercel-deploy geverifieerd (nieuwe bundle
+  op beyen.app). Geen migratie gebruikt. Werkboom schoon.
 - **Eerstvolgende vrije migratienummer: `0041`.**
 - Branch per N-stuk **vanaf `main`**; gedeelde worktree (nooit `git add -A`,
   alleen eigen bestanden stagen); commit alleen op expliciete vraag;
@@ -38,12 +37,20 @@ Nieuwe journal-presets: ICT/SMC, breakout, mean-reversion, opties-wheel, ….
   (cyclus 6), ontwerp in `docs/journal-presets.md` (uitbreiden).
 - Puur additief: preset-definities + seeds, geen gedragswijziging.
 
-### N2. Regel-adherentie-analyse (stats-motor → **Fable**)
-"Wat kost afwijken van je eigen condities?" — koppel `trade_evaluation`
-(Emotional/Technical error) + veld-waarde-combinaties aan P&L-verschil.
-- Pure functies in `src/lib/stats/` (nieuw bestand, met tests), view leest alleen.
-- UI: extra sectie in de Analyse-tab (`BacktestingAnalysisView` of eigen kaart),
-  beta-gated. Geen migratie nodig — alles zit al in de trade-data.
+### N2. Regel-adherentie-analyse — **AF** (2026-08-20, Fable)
+Live op prod (`342a9f1` + `8bc783d`), beta-gated. Wat er staat:
+- `src/lib/stats/adherence.ts`: `computeEvaluationImpact` (Good vs
+  Emotional/Technical in R + gap/geschatte kost) en `computeConditionGaps`
+  (best/slechtst presterende veld-waarde per dimensie, min. 15 trades).
+- `AdherenceSection` in de Analyse-tab, **live-journal-only**
+  (`showAdherence`-prop; owner-besluit: niet in backtest-projecten) en zonder
+  dag/kwartaal (`dateDerived`-vlag — kalender-splitsingen zijn geen condities).
+- Bijvangst voor volgende sessies: `groupByKey` (gedeelde grouping-primitive in
+  `stats/breakdown.ts`), `GRADED_EVALUATIONS`/`GradedEvaluation` afgeleid in
+  `constants.ts`, `isGraded`/`isGradedError` in `stats/core.ts`.
+- Bewust open gelaten (review-finding, aparte refactor): de actieve-dimensie-
+  lijst wordt 2× afgeleid in `BacktestingAnalysisView` (breakdown-secties +
+  `adherenceDims`).
 
 ### N3. MAE/MFE (migratie + stats → **Fable**) — **WACHT op Fase I-validatie**
 Twee optionele kolommen (handmatig of uit CSV) + exit-analyse-rapport.
@@ -71,11 +78,21 @@ Restjes uit de M-review, genoteerd in memory `beyen-fase-m-sharing`:
 - Klein: KPI-rij van SharePage ↔ TradeJournalView delen (bewust geskipte
   reuse-finding).
 
-## Volgorde-advies
+## Volgorde-advies (bijgewerkt na N2)
 
-**N2 (regel-adherentie) eerst** — hoogste trader-waarde, geen migratie, past bij
-een Fable-sessie. Daarna N1 (presets, snelle brede winst) of N4 (onboarding,
-launch-voorbereiding). N3 wacht op echte CSV-tests; N5 is het grootste stuk.
+1. **N4 onboarding-wizard → Opus** — eerstvolgende sessie. Grootste
+   launch-waarde (signup staat nog dicht; nieuwe gebruikers landen anders in
+   een leeg journal). Puur UI, hergebruikt `PresetPicker` + `JournalEmptyState`.
+2. **N1 meer presets → Opus** — snelle brede winst, puur additief
+   (migratie-seeds volgens het 0027/0028-patroon + `docs/journal-presets.md`
+   uitbreiden). Kan ook vóór N4 als je iets kleins wil.
+3. **N3 MAE/MFE → Fable** — blijft WACHTEN op Fase I-validatie met een echte
+   broker-CSV (memory `import_workflow_parked`). Pas daarna oppakken.
+4. **N5 review-secties configureerbaar → gemengd** (migratie/datamodel Fable,
+   editor-UI Opus) — grootste stuk, als laatste.
+
+Optioneel tussendoor: **Fase M sessie 2** (review-sharing + custom-velden in de
+gedeelde modal) **→ Fable** (RPC-uitbreiding + CHECK-versoepeling = security-werk).
 
 Na elk stuk: `/code-review` over de branch vóór merge (ving bij M 10 findings,
 waarvan 2 security; bij K 2; bij J 14).
