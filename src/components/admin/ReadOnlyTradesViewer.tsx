@@ -7,7 +7,7 @@ import { ReadOnlyTradeTable } from "@/components/admin/ReadOnlyTradeTable";
 import { ReadOnlyDayTradesModal } from "@/components/admin/ReadOnlyDayTradesModal";
 import { ReadOnlyTradeDetailModal } from "@/components/admin/ReadOnlyTradeDetailModal";
 import { takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
-import type { Trade } from "@/lib/types";
+import type { SharedMethodologyField, Trade } from "@/lib/types";
 
 /**
  * Calendar/list toggle + day and trade drill-down modals, shared by the live-journal
@@ -18,11 +18,14 @@ export function ReadOnlyTradesViewer({
   trades,
   title,
   hideFase,
+  fields,
 }: {
   trades: Trade[];
   title?: string;
   /** Share view (Fase M): honour the owner's hide_fase setting (the anonymous viewer has no profile of their own). */
   hideFase?: boolean;
+  /** Share view (0042): the shared journal's field definitions, so the detail modal can label trades.custom values. */
+  fields?: SharedMethodologyField[];
 }) {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -83,7 +86,7 @@ export function ReadOnlyTradesViewer({
       )}
 
       {selectedTrade && (
-        <ReadOnlyTradeDetailModal trade={selectedTrade} hideFase={hideFase} onClose={() => setSelectedTrade(null)} />
+        <ReadOnlyTradeDetailModal trade={selectedTrade} hideFase={hideFase} fields={fields} onClose={() => setSelectedTrade(null)} />
       )}
     </>
   );

@@ -12,6 +12,7 @@ import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { TradeForm } from "@/components/trades/TradeForm";
+import { ShareReviewButton } from "@/components/share/ShareReviewButton";
 import { PeriodicReviewContentDisplay } from "./PeriodicReviewContentDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
@@ -53,6 +54,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
           {review.titel && <p className="font-body text-sm text-muted mt-1">{review.titel}</p>}
         </div>
         <div className="flex items-center gap-1">
+          <ShareReviewButton reviewRef={{ kind: "periodic", id: review.id }} />
           <DownloadReviewPdfButton
             getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken, missed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
           />

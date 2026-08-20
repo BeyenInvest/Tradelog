@@ -20,11 +20,14 @@ interface TradeListItemProps {
   /** Omit both to render read-only (no action column) — used by review trade lists. */
   onEdit?: (trade: Trade) => void;
   onDelete?: (trade: Trade) => void;
+  /** Anonymous share views pass the owner's hide_fase instead of the viewer's (who has no profile) — same pattern as BacktestingAnalysisView. */
+  hideFaseOverride?: boolean;
 }
 
-export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
+export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: TradeListItemProps) {
   const { t, i18n } = useTranslation();
-  const { hideFase } = useAuth();
+  const { hideFase: ownHideFase } = useAuth();
+  const hideFase = hideFaseOverride ?? ownHideFase;
   const { unit: resultUnit, saldo } = useResultDisplay();
   const resultCtx = {
     rMultiple: rMultiple(trade),

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import type { ShareLink, SharedJournal } from "@/lib/types";
+import type { ShareLink, SharedJournal, SharedReview } from "@/lib/types";
+import type { ReviewRef } from "./shareLinkStatus";
 
 export * from "./shareLinkStatus";
 
@@ -41,4 +42,43 @@ export async function getSharedJournal(token: string): Promise<SharedJournal | n
   const { data, error } = await supabase.rpc("get_shared_journal", { share_token: token });
   if (error) throw error;
   return (data as SharedJournal | null) ?? null;
+}
+
+/** The review-link column that carries the ref — the other one stays null (DB CHECK 0042). */
+function reviewRefColumn(ref: ReviewRef): "weekly_review_id" | "periodic_review_id" {
+  return ref.kind === "weekly" ? "weekly_review_id" : "periodic_review_id";
+}
+
+/** All of the owner's links for one review, newest first. */
+export async function listReviewShareLinks(ref: ReviewRef): Promise<ShareLink[]> {
+  const { data, error } = await supabase
+    .from("share_links")
+    .select("*")
+    .eq("scope", "review")
+    .eq(reviewRefColumn(ref), ref.id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as ShareLink[];
+}
+
+/**
+ * Create a link for one review; the DB default generates the token.
+ * methodology_id stays null on review links — the journal follows from the
+ * review row itself server-side, so there's no second source to keep in sync.
+ */
+export async function createReviewShareLink(userId: string, ref: ReviewRef, expiresAt: string | null): Promise<ShareLink> {
+  const { data, error } = await supabase
+    .from("share_links")
+    .insert({ user_id: userId, scope: "review", [reviewRefColumn(ref)]: ref.id, expires_at: expiresAt })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ShareLink;
+}
+
+/** The anonymous read path for a shared review. null = invalid/revoked/expired token. */
+export async function getSharedReview(token: string): Promise<SharedReview | null> {
+  const { data, error } = await supabase.rpc("get_shared_review", { share_token: token });
+  if (error) throw error;
+  return (data as SharedReview | null) ?? null;
 }
