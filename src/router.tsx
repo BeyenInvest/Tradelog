@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { MethodologyProvider } from "@/hooks/useMethodology";
 import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { AppShell } from "@/components/layout/AppShell";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { FullScreenLoading } from "@/components/ui/FullScreenLoading";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
@@ -78,6 +79,9 @@ export function AppRouter() {
             <MethodologyProvider>
               <ResultDisplayProvider>
                 <AppShell />
+                {/* First-run onboarding (Fase N4) — a one-time overlay above the
+                    shell, route-independent. Renders null unless it should show. */}
+                <OnboardingWizard />
               </ResultDisplayProvider>
             </MethodologyProvider>
           </ProtectedRoute>

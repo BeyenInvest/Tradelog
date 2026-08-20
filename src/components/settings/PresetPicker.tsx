@@ -67,8 +67,13 @@ export function PresetPicker({ defaultOpen = false }: { defaultOpen?: boolean })
  * Applying a choice switches the active journal (usePresets → updateProfile),
  * which remounts the journal view downstream; `onApplied` is an optional hook
  * for the settings card to also collapse itself.
+ *
+ * `hideBlank` drops the "Blanco" card — the first-run onboarding wizard reuses
+ * this grid but offers "start blank" as its own action (the brand-new account
+ * already owns an empty default journal, so createBlank there would just make a
+ * duplicate).
  */
-export function PresetChooser({ onApplied }: { onApplied?: () => void }) {
+export function PresetChooser({ onApplied, hideBlank = false }: { onApplied?: () => void; hideBlank?: boolean }) {
   const { t } = useTranslation();
   const { presets, loading, error, applyPreset, createBlank } = usePresets();
   // Which choice is awaiting confirmation: a preset, "blank", or null.
@@ -136,17 +141,19 @@ export function PresetChooser({ onApplied }: { onApplied?: () => void }) {
               <PresetCard key={p.id} preset={p} onChoose={() => setConfirming(p)} />
             ))}
             {/* Blanco — start from the universal core only. */}
-            <button
-              type="button"
-              onClick={() => setConfirming("blank")}
-              className="flex flex-col gap-1.5 rounded-xl border border-dashed border-border p-3 text-left hover:border-gold"
-            >
-              <div className="flex items-center gap-2">
-                <FilePlus2 size={15} className="text-muted" />
-                <span className="font-body text-sm text-ink">{t("presets.blankName")}</span>
-              </div>
-              <p className="font-mono text-[11px] text-muted">{t("presets.blankDesc")}</p>
-            </button>
+            {!hideBlank && (
+              <button
+                type="button"
+                onClick={() => setConfirming("blank")}
+                className="flex flex-col gap-1.5 rounded-xl border border-dashed border-border p-3 text-left hover:border-gold"
+              >
+                <div className="flex items-center gap-2">
+                  <FilePlus2 size={15} className="text-muted" />
+                  <span className="font-body text-sm text-ink">{t("presets.blankName")}</span>
+                </div>
+                <p className="font-mono text-[11px] text-muted">{t("presets.blankDesc")}</p>
+              </button>
+            )}
           </div>
         )
       )}

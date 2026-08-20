@@ -190,6 +190,20 @@
     "logFirstTrade": "Log je eerste trade",
     "importHint": "Importeer van broker"
   },
+  "onboarding": {
+    "welcomeTitle": "Welkom bij Beyen",
+    "welcomeBody": "Twee snelle dingen en je bent klaar. Eerst: hoe mogen we je noemen en in welke tijdzone handel je?",
+    "nameLabel": "Je naam",
+    "timezoneLabel": "Tijdzone",
+    "timezoneHint": "De tijdzone waarin je de candle close (cc) afleest — die bepaalt in welke sessie elke trade valt.",
+    "journalTitle": "Kies een startpunt",
+    "journalBody": "Kies een kant-en-klaar journal om het jouwe vorm te geven, of begin blanco en bouw later je eigen velden. Je kunt alles nog aanpassen in Instellingen.",
+    "continue": "Doorgaan",
+    "back": "Terug",
+    "skip": "Nu overslaan",
+    "startBlank": "Begin met een blanco journal",
+    "saveFailed": "Opslaan mislukt — probeer het opnieuw"
+  },
   "import": {
     "title": "Trades importeren",
     "intro": "Kies een export-bestand van je broker of platform. Trades worden in je live Journal gezet; dubbele imports worden automatisch overgeslagen.",
