@@ -187,9 +187,11 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 onClick={() => setQuickOpen(true)}
                 title={t("quickLog.button")}
                 aria-label={t("quickLog.button")}
-                className="flex items-center justify-center h-9 w-9 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+                className="flex items-center px-3 py-2 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
               >
-                <Zap size={16} />
+                {/* h-5/w-5 (20px) = the text-sm line-height of the sibling buttons,
+                    so with the same py-2 this box is exactly their height. */}
+                <Zap className="h-5 w-5" />
               </button>
             )}
             <button
