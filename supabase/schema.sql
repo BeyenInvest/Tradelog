@@ -53,6 +53,9 @@ create table profiles (
   -- Hoe resultaten getoond worden: %, R of geld (Fase J / 0037). Display-only —
   -- conversie gebeurt in de frontend, stats rekenen altijd in %.
   result_unit result_unit_enum not null default 'percent',
+  -- First-run onboarding marker (Fase N4 / 0041). NULL = wizard not yet completed;
+  -- stamped now() when the user finishes/skips it. Beta-gated in the UI.
+  onboarded_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

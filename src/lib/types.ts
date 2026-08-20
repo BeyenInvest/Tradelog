@@ -206,6 +206,12 @@ export interface Profile {
    * stats en opslag blijven in % (resultaat_pct), conversie zit in de weergavelaag.
    */
   result_unit: ResultUnit;
+  /**
+   * First-run onboarding marker (Fase N4 / 0041). null = the onboarding wizard
+   * hasn't been completed yet → it shows on next login (beta-gated); stamped
+   * ISO-now the moment the user finishes or skips it.
+   */
+  onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 }

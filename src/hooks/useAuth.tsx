@@ -40,7 +40,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit">>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }
 
-  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit">>) {
+  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) {
     if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;

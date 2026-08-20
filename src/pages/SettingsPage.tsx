@@ -11,6 +11,7 @@ import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { PresetPicker } from "@/components/settings/PresetPicker";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, type ResultUnit } from "@/lib/constants";
+import { timezoneOptions } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
@@ -275,23 +276,6 @@ function LanguageSettings() {
   );
 }
 
-/** Full IANA timezone list from the runtime, with the reference default guaranteed present. */
-function useTimezoneOptions(current: string): string[] {
-  return useMemo(() => {
-    const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
-    const zones = intl.supportedValuesOf?.("timeZone") ?? [
-      "UTC",
-      "Europe/Brussels",
-      "Europe/London",
-      "Africa/Johannesburg",
-      "America/New_York",
-    ];
-    // The stored value (and the reference default) must always be selectable.
-    const extras = ["Europe/Brussels", current].filter((z) => !zones.includes(z));
-    return extras.length ? [...extras, ...zones] : zones;
-  }, [current]);
-}
-
 /**
  * IANA timezone the user reads candle-close (cc) times in. Drives the tz-aware
  * `trades.sessie` mapping (compute_sessie in the DB) — changing it re-buckets all
@@ -304,7 +288,7 @@ function TimezoneSettings() {
   const [error, setError] = useState<string | null>(null);
 
   const current = profile?.timezone ?? "Europe/Brussels";
-  const zones = useTimezoneOptions(current);
+  const zones = useMemo(() => timezoneOptions(current), [current]);
 
   async function handleChange(tz: string) {
     if (tz === current) return;

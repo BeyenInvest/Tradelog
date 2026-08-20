@@ -190,6 +190,20 @@
     "logFirstTrade": "Log your first trade",
     "importHint": "Import from broker"
   },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Beyen",
+    "welcomeBody": "Two quick things and you're set. First, how should we address you and which timezone do you trade in?",
+    "nameLabel": "Your name",
+    "timezoneLabel": "Timezone",
+    "timezoneHint": "The timezone you read the candle close (cc) in — it decides which session each trade falls into.",
+    "journalTitle": "Pick a starting point",
+    "journalBody": "Choose a ready-made journal to shape yours, or start blank and build your own fields later. You can change everything in Settings.",
+    "continue": "Continue",
+    "back": "Back",
+    "skip": "Skip for now",
+    "startBlank": "Start with a blank journal",
+    "saveFailed": "Couldn't save — please try again"
+  },
   "import": {
     "title": "Import trades",
     "intro": "Choose a broker or platform export file. Trades go into your live Journal; duplicate imports are skipped automatically.",
