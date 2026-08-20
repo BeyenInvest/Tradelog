@@ -69,7 +69,7 @@ export function ReadOnlyTradesViewer({
       </div>
 
       {viewMode === "calendar" ? (
-        <CalendarView trades={closedTrades(taken)} missedTrades={closedTrades(missed)} onDayClick={setSelectedDay} />
+        <CalendarView trades={closedTrades(taken)} missedTrades={closedTrades(missed)} openTrades={taken.filter((tr) => tr.is_open)} onDayClick={setSelectedDay} />
       ) : (
         <Card>
           <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} hideFase={hideFase} />

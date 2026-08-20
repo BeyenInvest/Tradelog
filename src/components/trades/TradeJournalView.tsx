@@ -107,6 +107,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   // excluded via closedTrades, on top of the missed-trade exclusion of takenTrades).
   const takenList = useMemo(() => takenTrades(scopedTrades), [scopedTrades]);
   const realTrades = useMemo(() => closedTrades(takenList), [takenList]);
+  // Still-running trades in scope — shown as neutral grey markers on the calendar
+  // (they carry no result, so they never color a day or reach the KPIs).
+  const openScoped = useMemo(() => takenList.filter((t) => t.is_open), [takenList]);
   const missedTrades = useMemo(() => filterMissedTrades(scopedTrades), [scopedTrades]);
   const missedCount = missedTrades.length;
   const listTrades = isLive && showMissed ? scopedTrades : takenList;
@@ -457,6 +460,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             <CalendarView
               trades={realTrades}
               missedTrades={isLive && showMissed ? closedTrades(missedTrades) : undefined}
+              openTrades={openScoped}
               onDayClick={setSelectedDay}
             />
           ) : viewMode === "list" ? (

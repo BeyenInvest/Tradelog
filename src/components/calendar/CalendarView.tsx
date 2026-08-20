@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
@@ -20,11 +21,13 @@ interface CalendarViewProps {
   trades: ClosedTrade[];
   /** Missed trades to render, e.g. only passed when the "toon missed trades" toggle is on. Never affects a day's real coloring/value — that's driven by `trades` alone; missed-only days get their own dashed gold styling. */
   missedTrades?: ClosedTrade[];
+  /** Still-running open trades — shown as a neutral light-grey marker (no result value yet), never colored win/loss/BE. A day with a real result keeps that result's coloring; open trades only style days that have no closed result of their own. */
+  openTrades?: Trade[];
   /** Fires for any clicked day, even empty ones — the caller decides whether that means "show trades" or "add a trade here". */
   onDayClick?: (dateIso: string) => void;
 }
 
-export function CalendarView({ trades, missedTrades = [], onDayClick }: CalendarViewProps) {
+export function CalendarView({ trades, missedTrades = [], openTrades = [], onDayClick }: CalendarViewProps) {
   const { t, i18n } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const [monthDate, setMonthDate] = useState(() => new Date());
@@ -113,6 +116,23 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
     return m;
   }, [missedTrades, year, month, resultUnit, saldo]);
 
+  // Still-running trades per day — neutral chips (no outcome color, no value). The
+  // placeholder "BE" outcome is never read: open chips always render grey (displayOpen).
+  const openPairsByDay = useMemo(() => {
+    const m = new Map<number, PairChip[]>();
+    for (const t of openTrades) {
+      const d = new Date(t.datum_open + "T00:00:00");
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        const chips = m.get(day) ?? [];
+        const sym = t.instrument ?? t.pair;
+        if (!chips.some((c) => c.pair === sym)) chips.push({ pair: sym, outcome: "BE" });
+        m.set(day, chips);
+      }
+    }
+    return m;
+  }, [openTrades, year, month]);
+
   const cells: (number | null)[] = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -159,6 +179,8 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
           const dayResult = dayTrades ? round2(dayTrades.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0)) : null;
           const missed = missedDayResult.get(d);
           const missedResult = missed != null ? round2(missed) : null;
+          const openPairs = openPairsByDay.get(d);
+          const hasOpen = openPairs != null;
 
           let bg = "rgb(var(--color-bg))";
           let border = "rgb(var(--color-border-soft))";
@@ -166,6 +188,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
           let displayValue = dayResult;
           let displayColor = "rgb(var(--color-gold))";
           let displayMissed = false;
+          let displayOpen = false;
 
           if (dayResult != null) {
             if (dayResult > 0) {
@@ -186,6 +209,14 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
               border = "rgb(var(--color-muted) / 0.6)";
               borderStyle = "dashed";
             }
+          } else if (hasOpen) {
+            // A day whose only activity is a still-running trade — no realized result
+            // yet, so it reads neutral light-grey (solid, not the dashed grey of a
+            // hypothetical missed trade) and shows no value.
+            bg = "rgb(var(--color-muted) / 0.06)";
+            border = "rgb(var(--color-muted) / 0.35)";
+            borderStyle = "solid";
+            displayOpen = true;
           } else if (missedResult != null) {
             bg = "rgb(var(--color-muted) / 0.08)";
             border = "rgb(var(--color-muted) / 0.5)";
@@ -197,7 +228,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
 
           const dateIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const errorTypes = errorDayTypes.get(d);
-          const dayPairs = dayTrades ? pairsByDay.get(d) : missedResult != null ? missedPairsByDay.get(d) : undefined;
+          const dayPairs = dayTrades ? pairsByDay.get(d) : displayOpen ? openPairs : missedResult != null ? missedPairsByDay.get(d) : undefined;
           const visiblePairs = dayPairs?.slice(0, 2) ?? [];
           const extraPairCount = dayPairs ? dayPairs.length - visiblePairs.length : 0;
 
@@ -211,9 +242,11 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
               title={
                 displayMissed
                   ? t("calendar.missedHypothetical")
-                  : errorTypes
-                    ? Array.from(errorTypes).join(", ")
-                    : dayPairs?.map((c) => c.pair).join(", ")
+                  : displayOpen
+                    ? `${t("tradeBadge.open")} — ${dayPairs?.map((c) => c.pair).join(", ")}`
+                    : errorTypes
+                      ? Array.from(errorTypes).join(", ")
+                      : dayPairs?.map((c) => c.pair).join(", ")
               }
             >
               {errorTypes && <TriangleAlert size={11} strokeWidth={2.5} className="absolute top-1 right-1 text-gold" />}
@@ -227,7 +260,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
                         key={`${chip.pair}-${chip.outcome}`}
                         className="w-[4px] h-[4px] rounded-full border"
                         style={{
-                          borderColor: displayMissed
+                          borderColor: displayMissed || displayOpen
                             ? "rgb(var(--color-muted) / 0.8)"
                             : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / 0.9)`,
                         }}
@@ -248,7 +281,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
                       <span
                         className="w-[4px] h-[4px] rounded-full shrink-0"
                         style={{
-                          background: displayMissed ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
+                          background: displayMissed || displayOpen ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
                         }}
                       />
                       {chip.pair}
@@ -270,6 +303,8 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
                   {formatAggregate(displayValue, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
                 </span>
               )}
+              {/* Open trade: no result yet — a small neutral "loopt" marker where the value would sit. */}
+              {displayOpen && <span className="font-mono text-[9px] self-end text-faint">{t("tradeBadge.open")}</span>}
             </button>
           );
         })}
