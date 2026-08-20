@@ -6,6 +6,7 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { ReadOnlyTradeTable } from "@/components/admin/ReadOnlyTradeTable";
 import { ReadOnlyDayTradesModal } from "@/components/admin/ReadOnlyDayTradesModal";
 import { ReadOnlyTradeDetailModal } from "@/components/admin/ReadOnlyTradeDetailModal";
+import { takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
 /**
@@ -18,6 +19,13 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+
+  // Missed trades are hypothetical — they may never drive the calendar's day
+  // coloring/sums, only its badge-only `missedTrades` overlay. The list and the
+  // day modal keep showing them: those are per-trade rows without aggregation,
+  // and the evaluation column labels each one as "Missed trade".
+  const taken = useMemo(() => takenTrades(trades), [trades]);
+  const missed = useMemo(() => filterMissedTrades(trades), [trades]);
 
   const selectedDayTrades = useMemo(
     () => (selectedDay ? trades.filter((t) => t.datum_open === selectedDay) : []),
@@ -49,7 +57,7 @@ export function ReadOnlyTradesViewer({ trades, title }: { trades: Trade[]; title
       </div>
 
       {viewMode === "calendar" ? (
-        <CalendarView trades={trades} onDayClick={setSelectedDay} />
+        <CalendarView trades={taken} missedTrades={missed} onDayClick={setSelectedDay} />
       ) : (
         <Card>
           <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} />
