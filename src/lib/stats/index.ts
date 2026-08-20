@@ -1,3 +1,4 @@
+export * from "./adherence";
 export * from "./core";
 export * from "./breakdown";
 export * from "./duration";

@@ -24,21 +24,17 @@ export interface BreakdownOpts<K extends string> {
 }
 
 /**
- * The one function every "Per X" split calls. `keyFn` returns:
+ * Shared grouping primitive: buckets trades by `keyFn`, preserving first-seen
+ * insertion order (Map iteration order). `keyFn` returns:
  *  - a single key -> trade counts toward that bucket
  *  - an array of keys -> trade counts toward every bucket (e.g. Per Currency:
  *    one pair contributes to both its currencies)
- *  - null -> trade excluded from this breakdown entirely
+ *  - null -> trade excluded from this grouping entirely
+ * Both breakdownBy and computeConditionGaps (adherence.ts) build on this, so
+ * the keyFn contract has exactly one owner.
  */
-export function breakdownBy<K extends string>(
-  trades: Trade[],
-  keyFn: (t: Trade) => K | K[] | null,
-  opts: BreakdownOpts<K> = {}
-): BreakdownRow<K>[] {
-  const minSample = opts.minSample ?? MIN_SAMPLE_SIZE;
+export function groupByKey<K extends string>(trades: Trade[], keyFn: (t: Trade) => K | K[] | null): Map<K, Trade[]> {
   const groups = new Map<K, Trade[]>();
-  const order: K[] = [];
-
   for (const t of trades) {
     const result = keyFn(t);
     if (result == null) continue;
@@ -48,11 +44,22 @@ export function breakdownBy<K extends string>(
       if (!bucket) {
         bucket = [];
         groups.set(key, bucket);
-        order.push(key);
       }
       bucket.push(t);
     }
   }
+  return groups;
+}
+
+/** The one function every "Per X" split calls — groupByKey plus the standard outcome/resultaat aggregates per bucket. */
+export function breakdownBy<K extends string>(
+  trades: Trade[],
+  keyFn: (t: Trade) => K | K[] | null,
+  opts: BreakdownOpts<K> = {}
+): BreakdownRow<K>[] {
+  const minSample = opts.minSample ?? MIN_SAMPLE_SIZE;
+  const groups = groupByKey(trades, keyFn);
+  const order = [...groups.keys()];
 
   const orderedKeys = opts.sortOrder
     ? [...order].sort((a, b) => {

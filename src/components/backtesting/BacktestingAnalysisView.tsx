@@ -6,6 +6,7 @@ import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
+import { AdherenceSection, type AdherenceDimension } from "@/components/backtesting/AdherenceSection";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
@@ -41,7 +42,7 @@ export function BacktestingAnalysisView({
   hideFaseOverride?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase } = useAuth();
+  const { hideFase: ownHideFase, betaFeatures } = useAuth();
   const { fields, isLegacyMethodology, isForexJournal } = useMethodology();
   const hideFase = hideFaseOverride ?? ownHideFase;
   // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
@@ -139,6 +140,26 @@ export function BacktestingAnalysisView({
         .filter(({ rows }) => rows.length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [displayTrades, customDims, t]
+  );
+
+  // Regel-adherentie (Fase N2, beta): same dimension set as the breakdowns below
+  // (journal-type-aware + the journal's own custom fields), with titles/value-labels
+  // already resolved so the section stays i18n-free of dimension knowledge. Reads
+  // scopedTrades (real %), not displayTrades — adherence is R-based internally.
+  const adherenceDims = useMemo<AdherenceDimension[]>(
+    () =>
+      [
+        ...(isLegacyMethodology ? BREAKDOWN_DIMENSIONS.slice(0, kenmerkenSplit) : []),
+        ...BREAKDOWN_DIMENSIONS.slice(kenmerkenSplit).filter(showTimingDim),
+        ...customDims,
+      ].map((d) => ({
+        id: d.id,
+        title: d.label ?? timingDimTitle(d.id),
+        keyFn: d.keyFn,
+        labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isLegacyMethodology, isForexJournal, customDims, t]
   );
 
   return (
@@ -248,6 +269,9 @@ export function BacktestingAnalysisView({
           </div>
         </Card>
       </section>
+
+      {/* Regel-adherentie (Fase N2) — beta-gated like every new feature */}
+      {betaFeatures && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
 
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">

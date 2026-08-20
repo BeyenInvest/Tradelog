@@ -21,6 +21,21 @@ export function missedTrades<T extends Pick<Trade, "trade_evaluation">>(trades: 
   return trades.filter(isMissed);
 }
 
+/**
+ * Taken trade carrying one of the three execution grades (GRADED_EVALUATIONS in
+ * constants.ts) — ungraded (null) and hypothetical "Missed trade" rows count
+ * toward no discipline/adherence stat. The single classification every
+ * discipline/adherence helper routes through.
+ */
+export function isGraded(trade: Pick<Trade, "trade_evaluation">): boolean {
+  return trade.trade_evaluation != null && !isMissed(trade);
+}
+
+/** Graded as a rule deviation: an Emotional or Technical error. */
+export function isGradedError(trade: Pick<Trade, "trade_evaluation">): boolean {
+  return isGraded(trade) && trade.trade_evaluation !== "Good trade";
+}
+
 /** Sorts chronologically by datum_open, tie-broken by id for deterministic output. */
 export function sortChronological(trades: Trade[]): Trade[] {
   return [...trades].sort((a, b) => {
@@ -387,12 +402,7 @@ export interface DisciplinePoint {
  * the other real-performance helpers).
  */
 export function computeDisciplineCurve(trades: Trade[]): DisciplinePoint[] {
-  const graded = sortChronological(trades).filter(
-    (t) =>
-      t.trade_evaluation === "Good trade" ||
-      t.trade_evaluation === "Emotional error" ||
-      t.trade_evaluation === "Technical error"
-  );
+  const graded = sortChronological(trades).filter(isGraded);
   let goodSoFar = 0;
   return graded.map((t, i) => {
     if (t.trade_evaluation === "Good trade") goodSoFar += 1;

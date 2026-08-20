@@ -54,6 +54,14 @@ export type ResultUnit = (typeof RESULT_UNITS)[number];
 export const TRADE_EVALUATIONS = ["Good trade", "Emotional error", "Technical error", "Missed trade"] as const;
 export type TradeEvaluation = (typeof TRADE_EVALUATIONS)[number];
 
+/**
+ * The three execution grades of a *taken* trade — every evaluation except the
+ * hypothetical "Missed trade". Derived from TRADE_EVALUATIONS so an enum change
+ * flows through automatically instead of needing a parallel literal list.
+ */
+export type GradedEvaluation = Exclude<TradeEvaluation, "Missed trade">;
+export const GRADED_EVALUATIONS = TRADE_EVALUATIONS.filter((e): e is GradedEvaluation => e !== "Missed trade");
+
 export const PAIRS = [
   "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD",
   "CADCHF", "CADJPY", "CHFJPY",
