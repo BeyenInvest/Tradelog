@@ -58,7 +58,7 @@ export default function JournalPage() {
           onboarding={betaFeatures ? onboarding : undefined}
         />
       ) : (
-        <BacktestingAnalysisView key={journalKey} trades={realTrades} />
+        <BacktestingAnalysisView key={journalKey} trades={realTrades} showAdherence />
       )}
     </div>
   );

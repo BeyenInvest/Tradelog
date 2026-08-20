@@ -23,6 +23,12 @@ export interface DimensionConfig {
   /** Forex-only dimension (pair/currency split) — shown only for a forex journal (cyclus 7). */
   forex?: boolean;
   /**
+   * Calendar-derived split (weekday/quarter): not a condition the trader chooses
+   * or a rule to adhere to, so the Regel-adherentie section skips it (owner
+   * feedback, Fase N2) — the plain breakdown tables already cover these.
+   */
+  dateDerived?: boolean;
+  /**
    * Translates a row's key into its display label. Kept separate from `keyFn` so
    * the grouping key stays a stable, language-independent identifier (e.g. "Ma",
    * "Ja") while the visible label follows the UI language. Omit → the key is shown
@@ -51,8 +57,8 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "weekly_kenmerk", keyFn: (t) => t.weekly_kenmerk },
   { id: "cc", keyFn: (t) => t.cc, sortOrder: CCS },
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
-  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true, labelFn: weekdayLabel },
-  { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true },
+  { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true, dateDerived: true, labelFn: weekdayLabel },
+  { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true, dateDerived: true },
   // Instrument is the universal "what did you trade" (cyclus 7) — on a forex
   // journal instrument mirrors pair on every write path, so a separate "Per Pair"
   // dimension would render the identical table twice. Currency stays: that split

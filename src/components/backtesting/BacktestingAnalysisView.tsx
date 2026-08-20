@@ -35,11 +35,18 @@ import { useMethodology } from "@/hooks/useMethodology";
  * never mix with another's.
  */
 export function BacktestingAnalysisView({
-  trades, hideFaseOverride,
+  trades, hideFaseOverride, showAdherence = false,
 }: {
   trades: Trade[];
   /** Admin read-only view passes the viewed profile's own hide_fase here instead of the viewer's — see AdminUserDetailPage. */
   hideFaseOverride?: boolean;
+  /**
+   * Regel-adherentie (Fase N2) is live-journal-only: trade_evaluation isn't
+   * selectable in a backtest project, and there the condition gaps would just
+   * summarize the breakdown tables below (owner feedback). Live-journal call
+   * sites (JournalPage, AdminUserDetailPage) opt in; project views don't.
+   */
+  showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
   const { hideFase: ownHideFase, betaFeatures } = useAuth();
@@ -142,15 +149,17 @@ export function BacktestingAnalysisView({
     [displayTrades, customDims, t]
   );
 
-  // Regel-adherentie (Fase N2, beta): same dimension set as the breakdowns below
-  // (journal-type-aware + the journal's own custom fields), with titles/value-labels
-  // already resolved so the section stays i18n-free of dimension knowledge. Reads
-  // scopedTrades (real %), not displayTrades — adherence is R-based internally.
+  // Regel-adherentie (Fase N2, beta): same journal-type-aware dimension set as the
+  // breakdowns below (+ the journal's own custom fields), minus the calendar-derived
+  // splits (weekday/quarter) — those aren't conditions to adhere to and their tables
+  // already exist below. Titles/value-labels are pre-resolved so the section stays
+  // i18n-free of dimension knowledge. Reads scopedTrades (real %), not
+  // displayTrades — adherence is R-based internally.
   const adherenceDims = useMemo<AdherenceDimension[]>(
     () =>
       [
         ...(isLegacyMethodology ? BREAKDOWN_DIMENSIONS.slice(0, kenmerkenSplit) : []),
-        ...BREAKDOWN_DIMENSIONS.slice(kenmerkenSplit).filter(showTimingDim),
+        ...BREAKDOWN_DIMENSIONS.slice(kenmerkenSplit).filter((d) => showTimingDim(d) && !d.dateDerived),
         ...customDims,
       ].map((d) => ({
         id: d.id,
@@ -270,8 +279,8 @@ export function BacktestingAnalysisView({
         </Card>
       </section>
 
-      {/* Regel-adherentie (Fase N2) — beta-gated like every new feature */}
-      {betaFeatures && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
+      {/* Regel-adherentie (Fase N2) — live-journal-only, beta-gated like every new feature */}
+      {showAdherence && betaFeatures && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
 
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">

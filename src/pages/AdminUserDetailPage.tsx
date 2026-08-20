@@ -211,7 +211,7 @@ function AdminUserDetailPageInner() {
               {journalTab === "journal" ? (
                 <ReadOnlyTradesViewer trades={liveTrades} title={t("admin.journalTradesTitle")} />
               ) : (
-                <BacktestingAnalysisView trades={taken} hideFaseOverride={profile?.hide_fase} />
+                <BacktestingAnalysisView trades={taken} hideFaseOverride={profile?.hide_fase} showAdherence />
               )}
             </div>
           )}
