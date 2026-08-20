@@ -1,8 +1,9 @@
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { TradeFormValues } from "@/lib/validation";
 import { OUTCOMES, TRADE_EVALUATIONS } from "@/lib/constants";
 import { EnumSelect } from "@/components/ui/EnumSelect";
+import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
 
 function durationDays(open: string, close: string | null | undefined): number | null {
@@ -22,6 +23,7 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
   const { t } = useTranslation();
   const {
     register,
+    control,
     watch,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
@@ -37,11 +39,21 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionResult")}</h3>
 
       {allowMissedTrade && (
-        <label className="flex items-center gap-2 text-sm font-body text-ink cursor-pointer">
-          <input type="checkbox" className="h-4 w-4 rounded border-border accent-gold" {...register("is_open")} />
-          {t("tradeForm.stillOpen")}
-          <span className="text-xs text-muted">{t("tradeForm.stillOpenHint")}</span>
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-body text-sm text-muted">{t("tradeForm.tradeStatus")}</span>
+          <Controller
+            name="is_open"
+            control={control}
+            render={({ field }) => (
+              <BooleanToggle
+                value={field.value ?? false}
+                onChange={field.onChange}
+                labels={[t("tradeForm.statusOpen"), t("tradeForm.statusClosed")]}
+              />
+            )}
+          />
+          {isOpen && <span className="font-body text-xs text-muted">{t("tradeForm.stillOpenHint")}</span>}
+        </div>
       )}
 
       {isOpen ? (
