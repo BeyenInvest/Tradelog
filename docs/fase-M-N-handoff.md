@@ -8,10 +8,13 @@
 
 ## Uitgangsstand (belangrijk — lees eerst)
 
-- **K + L zijn AF en gecommit** op branch `fase-k-screenshots`:
+- **K + L zijn AF, getest door de owner en gecommit** op branch `fase-k-screenshots`
+  (HEAD = `cb9a547`, werkboom schoon, lint+test+build clean):
   - `618eaf8` Fase K (screenshot-upload, migratie `0039` = private bucket, al
     gedraaid + read-only geverifieerd op prod).
   - `c6bb2cb` Fase L (PWA beta-only service worker + quick-log).
+  - `04f1f34` … `cb9a547` = L-polish: theme-color-meta weg (niet-beta browsing
+    ongewijzigd) + quick-log-knop compact/uitgelijnd in de header.
   - **Nog NIET gepusht/gemerged naar `main`.** Doet de owner expliciet.
   - ⚠️ **Begin M pas nadat K/L op `main` staat** (branch M vanaf `main`), óf branch
     M vanaf `fase-k-screenshots` als merge nog niet gebeurd is — anders mis je K/L.
