@@ -170,7 +170,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             {betaFeatures && (
               <button
                 onClick={() => setImportOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
+                className="flex items-center gap-2 h-9 px-4 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5"
               >
                 <Upload size={15} /> {t("journal.importTrades")}
                 <span className="font-mono text-[9px] uppercase tracking-wider px-1 py-0.5 rounded border border-gold/50 text-gold">
@@ -187,16 +187,14 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 onClick={() => setQuickOpen(true)}
                 title={t("quickLog.button")}
                 aria-label={t("quickLog.button")}
-                className="flex items-center px-3 py-2 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+                className="flex items-center justify-center h-9 px-3 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
               >
-                {/* h-5/w-5 (20px) = the text-sm line-height of the sibling buttons,
-                    so with the same py-2 this box is exactly their height. */}
-                <Zap className="h-5 w-5" />
+                <Zap size={16} />
               </button>
             )}
             <button
               onClick={() => openCreate()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
+              className="flex items-center gap-2 h-9 px-4 rounded-lg font-body text-sm font-medium bg-gold text-on-gold"
             >
               <Plus size={15} /> {t("journal.newTrade")}
             </button>
