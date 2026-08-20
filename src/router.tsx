@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { lazy, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { lazy, Suspense, type ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { MethodologyProvider } from "@/hooks/useMethodology";
 import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { AppShell } from "@/components/layout/AppShell";
+import { FullScreenLoading } from "@/components/ui/FullScreenLoading";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
@@ -26,18 +26,15 @@ const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage")
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const AdminUsersListPage = lazy(() => import("@/pages/AdminUsersListPage"));
 const AdminUserDetailPage = lazy(() => import("@/pages/AdminUserDetailPage"));
+// Public but lazy: the share view pulls in the charts/stats bundle, and it's never
+// the first paint for a normal visitor — a coach opening a token-URL gets the same
+// brief loading state the app pages show. Outside AppShell, so it needs its own Suspense.
+const SharePage = lazy(() => import("@/pages/SharePage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, passwordRecovery } = useAuth();
-  const { t } = useTranslation();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-bg">
-        <p className="font-mono text-sm text-muted">{t("common.loading")}</p>
-      </div>
-    );
-  }
+  if (loading) return <FullScreenLoading />;
 
   if (!session) return <Navigate to="/login" replace />;
   // An accepted invite lands here fully authenticated but with no password ever set (Supabase
@@ -63,6 +60,16 @@ export function AppRouter() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      {/* Read-only journal behind a share-link token (Fase M) — no account, no auth gate.
+          The token is the capability; validation happens in the get_shared_journal RPC. */}
+      <Route
+        path="/share/:token"
+        element={
+          <Suspense fallback={<FullScreenLoading />}>
+            <SharePage />
+          </Suspense>
+        }
+      />
       <Route
         element={
           <ProtectedRoute>
