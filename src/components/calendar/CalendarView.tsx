@@ -303,8 +303,6 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
                   {formatAggregate(displayValue, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
                 </span>
               )}
-              {/* Open trade: no result yet — a small neutral "loopt" marker where the value would sit. */}
-              {displayOpen && <span className="font-mono text-[9px] self-end text-faint">{t("tradeBadge.open")}</span>}
             </button>
           );
         })}
