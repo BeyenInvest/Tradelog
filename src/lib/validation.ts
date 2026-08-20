@@ -11,12 +11,6 @@ const nullableNumber = z.preprocess(
   z.coerce.number().nullable()
 );
 
-/** Empty-string inputs must fail as "required", not silently coerce to 0 — same z.coerce.number() footgun as above, but for a required field. */
-const requiredNumber = z.preprocess(
-  (val) => (val === "" || val == null ? undefined : val),
-  z.coerce.number({ required_error: "tradeForm.required", invalid_type_error: "tradeForm.mustBeNumber" })
-);
-
 /** An empty <input type="date"> submits "" — must become null, not an invalid empty-string date. */
 const nullableDateString = z.preprocess(
   (val) => (val === "" || val == null ? null : val),
@@ -51,8 +45,12 @@ export const tradeSchema = z
     // submit; non-forex journals type their own. Free text like `entry`, not an enum.
     instrument: nullableString.optional().default(null),
     direction: nullableEnum(DIRECTIONS).optional().default(null),
-    outcome: z.enum(OUTCOMES),
-    resultaat_pct: requiredNumber,
+    // A still-running trade (migration 0043): outcome + resultaat are omitted while
+    // open and required once closed — enforced conditionally in the superRefine below,
+    // not as a static z.enum/requiredNumber, so an open trade can be saved without them.
+    is_open: z.boolean().default(false),
+    outcome: nullableEnum(OUTCOMES).optional().default(null),
+    resultaat_pct: nullableNumber.optional().default(null),
     // Optional planned risk %; null = the default 1% (DEFAULT_RISK_PCT). Positivity is
     // checked in the superRefine below (null passes; any entered value must be > 0).
     risk_pct: nullableNumber.optional().default(null),
@@ -110,15 +108,24 @@ export const tradeSchema = z
     if (data.risk_pct != null && data.risk_pct <= 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["risk_pct"], message: "tradeForm.riskMustBePositive" });
     }
-    // Guard against a fat-fingered sign: win-rate reads the `outcome` enum while
-    // equity/drawdown/expectancy/R read the sign of resultaat_pct — a Loss logged
-    // as +% (or a Win as -%) makes those two lenses silently contradict. BE is
-    // left unconstrained (a scratch can carry a small spread cost either way).
-    if (data.outcome === "Loss" && data.resultaat_pct > 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.lossMustBeNegative" });
-    }
-    if (data.outcome === "Win" && data.resultaat_pct < 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.winMustBePositive" });
+    // A still-running trade has no realized result yet; a closed one must carry both.
+    if (!data.is_open) {
+      if (data.outcome == null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "tradeForm.required" });
+      }
+      if (data.resultaat_pct == null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.required" });
+      }
+      // Guard against a fat-fingered sign: win-rate reads the `outcome` enum while
+      // equity/drawdown/expectancy/R read the sign of resultaat_pct — a Loss logged
+      // as +% (or a Win as -%) makes those two lenses silently contradict. BE is
+      // left unconstrained (a scratch can carry a small spread cost either way).
+      if (data.outcome === "Loss" && data.resultaat_pct != null && data.resultaat_pct > 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.lossMustBeNegative" });
+      }
+      if (data.outcome === "Win" && data.resultaat_pct != null && data.resultaat_pct < 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resultaat_pct"], message: "tradeForm.winMustBePositive" });
+      }
     }
   });
 

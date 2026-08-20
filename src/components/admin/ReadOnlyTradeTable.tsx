@@ -38,24 +38,30 @@ export function ReadOnlyTradeTable({
           </tr>
         </thead>
         <tbody>
-          {trades.map((tr) => (
-            <tr
-              key={tr.id}
-              onClick={() => onRowClick?.(tr)}
-              className={`border-b border-border/50 ${onRowClick ? "cursor-pointer hover:bg-ink/5" : ""}`}
-            >
-              <td className="py-2 pr-4 text-ink">
-                {new Date(tr.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
-              </td>
-              {!hideFase && <td className="py-2 pr-4 text-muted">{tr.fase}</td>}
-              <td className="py-2 pr-4 text-ink">{tr.instrument ?? tr.pair}</td>
-              <td className="py-2 pr-4 text-muted">{tr.outcome}</td>
-              <td className={`py-2 pr-4 ${resultDisplayValue(tr.resultaat_pct, resultUnit, { rMultiple: rMultiple(tr) }) >= 0 ? "text-win" : "text-loss"}`}>
-                {formatResult(tr.resultaat_pct, resultUnit, { rMultiple: rMultiple(tr) })}
-              </td>
-              <td className="py-2 pr-4 text-muted">{tr.trade_evaluation ?? "—"}</td>
-            </tr>
-          ))}
+          {trades.map((tr) => {
+            // A still-running trade has no realized result yet — show a badge + "—".
+            const closed = !tr.is_open;
+            const ctx = closed ? { rMultiple: rMultiple({ resultaat_pct: tr.resultaat_pct!, risk_pct: tr.risk_pct }) } : undefined;
+            const shown = closed ? resultDisplayValue(tr.resultaat_pct!, resultUnit, ctx) : 0;
+            return (
+              <tr
+                key={tr.id}
+                onClick={() => onRowClick?.(tr)}
+                className={`border-b border-border/50 ${onRowClick ? "cursor-pointer hover:bg-ink/5" : ""}`}
+              >
+                <td className="py-2 pr-4 text-ink">
+                  {new Date(tr.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                </td>
+                {!hideFase && <td className="py-2 pr-4 text-muted">{tr.fase}</td>}
+                <td className="py-2 pr-4 text-ink">{tr.instrument ?? tr.pair}</td>
+                <td className="py-2 pr-4 text-muted">{closed ? tr.outcome : t("tradeBadge.open")}</td>
+                <td className={`py-2 pr-4 ${!closed ? "text-faint" : shown >= 0 ? "text-win" : "text-loss"}`}>
+                  {closed ? formatResult(tr.resultaat_pct!, resultUnit, ctx) : "—"}
+                </td>
+                <td className="py-2 pr-4 text-muted">{tr.trade_evaluation ?? "—"}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

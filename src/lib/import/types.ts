@@ -1,4 +1,5 @@
 import type { TradeInput } from "@/lib/types";
+import type { Outcome } from "@/lib/constants";
 
 /**
  * Supported broker export formats. Extend with new parsers as needed.
@@ -50,5 +51,15 @@ export interface ParseResult {
   warnings: ParseWarning[];
 }
 
-/** A trade row ready to insert, carrying the import dedup reference alongside the normal trade payload. */
-export type ImportTradeRow = Omit<TradeInput, "backtest_project_id"> & { import_ref: string };
+/**
+ * A trade row ready to insert, carrying the import dedup reference alongside the
+ * normal trade payload. An imported deal is always a closed, realized trade
+ * (still-open broker trades are skipped at parse time — see ParseWarning
+ * "openTrades"), so outcome/resultaat_pct are non-null and is_open is always false.
+ */
+export type ImportTradeRow = Omit<TradeInput, "backtest_project_id" | "outcome" | "resultaat_pct" | "is_open"> & {
+  import_ref: string;
+  is_open: false;
+  outcome: Outcome;
+  resultaat_pct: number;
+};

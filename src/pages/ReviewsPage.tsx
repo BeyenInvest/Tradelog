@@ -17,7 +17,7 @@ import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
-import { takenTrades, missedTrades, round2 } from "@/lib/stats";
+import { takenTrades, missedTrades, closedTrades, round2 } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 
 type ReviewTab = "week" | PeriodType;
@@ -114,7 +114,7 @@ function WeeklyReviewsTab({
   const statsByReview = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const review of reviews) {
-      const taken = tradesInResultUnit(takenTradesOf(review), resultUnit, saldo);
+      const taken = tradesInResultUnit(closedTrades(takenTradesOf(review)), resultUnit, saldo);
       m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
     }
     return m;
@@ -259,7 +259,7 @@ function PeriodicReviewsTab({
   const statsByReview = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const review of reviews) {
-      const taken = tradesInResultUnit(takenTradesOf(review), resultUnit, saldo);
+      const taken = tradesInResultUnit(closedTrades(takenTradesOf(review)), resultUnit, saldo);
       m.set(review.id, { resultaat: round2(taken.reduce((s, t) => s + t.resultaat_pct, 0)), count: taken.length });
     }
     return m;

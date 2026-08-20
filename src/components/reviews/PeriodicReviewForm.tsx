@@ -6,7 +6,7 @@ import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { dateLocale, monthName, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { rangeOfPeriod } from "@/lib/periodRanges";
-import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
@@ -76,11 +76,15 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
   const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
   const takenPreview = takenTrades(tradesInPeriod);
   const missedPreview = missedTrades(tradesInPeriod);
+  // Realized-stats input excludes still-running open trades (missed rows are closed);
+  // the raw previews still drive the display panel below.
+  const takenClosed = closedTrades(takenPreview);
+  const missedClosed = closedTrades(missedPreview);
   // In de eenheid van de kijker (Fase J): counts veranderen niet, alleen missedResultaat.
   const { unit: resultUnit, saldo } = useResultDisplay();
   const errorCounts = useMemo(
-    () => computeErrorCounts(tradesInResultUnit(takenPreview, resultUnit, saldo), tradesInResultUnit(missedPreview, resultUnit, saldo)),
-    [takenPreview, missedPreview, resultUnit, saldo]
+    () => computeErrorCounts(takenPreview, tradesInResultUnit(missedClosed, resultUnit, saldo)),
+    [takenPreview, missedClosed, resultUnit, saldo]
   );
 
   async function handleSubmit(e: FormEvent) {
@@ -150,7 +154,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
         </div>
       </div>
 
-      <ReviewStatsHeader taken={takenPreview} missed={missedPreview} />
+      <ReviewStatsHeader taken={takenClosed} missed={missedClosed} />
       <ReviewErrorStats {...errorCounts} />
 
       <div className="flex flex-col gap-1.5">

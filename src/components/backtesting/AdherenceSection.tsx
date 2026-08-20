@@ -2,10 +2,9 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { Card } from "@/components/ui/Card";
-import { computeConditionGaps, computeEvaluationImpact, type ConditionDimension } from "@/lib/stats";
+import { computeConditionGaps, computeEvaluationImpact, type ConditionDimension, type ClosedTrade } from "@/lib/stats";
 import { MIN_SAMPLE_SIZE, type GradedEvaluation } from "@/lib/constants";
 import { formatAggregate } from "@/lib/format";
-import type { Trade } from "@/lib/types";
 
 export interface AdherenceDimension extends ConditionDimension {
   /** Already-translated card title for this dimension (breakdown.<id> or the custom field's own label). */
@@ -35,7 +34,7 @@ const signClass = (v: number) => (v > 0 ? "text-win" : v < 0 ? "text-loss" : "te
  * (e.g. a backtest project, where trade_evaluation isn't selectable, with too
  * few trades per value for a gap).
  */
-export function AdherenceSection({ trades, dims }: { trades: Trade[]; dims: AdherenceDimension[] }) {
+export function AdherenceSection({ trades, dims }: { trades: ClosedTrade[]; dims: AdherenceDimension[] }) {
   const { t } = useTranslation();
   const impact = useMemo(() => computeEvaluationImpact(trades), [trades]);
   const gaps = useMemo(() => computeConditionGaps(trades, dims).slice(0, MAX_GAPS), [trades, dims]);

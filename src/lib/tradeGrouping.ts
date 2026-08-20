@@ -12,9 +12,13 @@ export interface TradeGroup {
   resultaatTotal: number;
 }
 
-/** Missed trades are hypothetical and must never count toward a group's real resultaat total, even though they still appear in `trades` for display when a caller chooses to include them. */
+/**
+ * Missed trades (hypothetical) and still-running open trades (no realized result
+ * yet, resultaat_pct null) must never count toward a group's real resultaat total,
+ * even though both still appear in `trades` for display when a caller includes them.
+ */
 function realResultaatTotal(trades: Trade[]): number {
-  return round2(trades.reduce((s, t) => (isMissed(t) ? s : s + t.resultaat_pct), 0));
+  return round2(trades.reduce((s, t) => (isMissed(t) || t.resultaat_pct == null ? s : s + t.resultaat_pct), 0));
 }
 
 function monthKey(dateIso: string, locale: string): { key: string; label: string } {

@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useTranslation } from "react-i18next";
-import { computeEquityCurve } from "@/lib/stats";
+import { computeEquityCurve, type ClosedTrade } from "@/lib/stats";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import type { Trade } from "@/lib/types";
 
 /**
  * Cumulative equity curve (running sum of resultaat_pct). Takes the already-scoped,
@@ -12,7 +11,7 @@ import type { Trade } from "@/lib/types";
  * itself — callers always pass raw %-trades; de resultaat-eenheid-conversie (Fase J)
  * gebeurt hier intern, zodat elke plek met deze chart automatisch meeschakelt.
  */
-export function EquityCurveChart({ trades }: { trades: Trade[] }) {
+export function EquityCurveChart({ trades }: { trades: ClosedTrade[] }) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const data = useMemo(() => computeEquityCurve(tradesInResultUnit(trades, resultUnit, saldo)), [trades, resultUnit, saldo]);

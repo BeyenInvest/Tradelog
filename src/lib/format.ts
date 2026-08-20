@@ -1,6 +1,6 @@
 import type { ResultUnit } from "./constants";
 import type { Trade } from "./types";
-import { computeRStats, riskPct, takenTrades } from "./stats/core";
+import { closedTrades, computeRStats, riskPct, takenTrades, type ClosedTrade } from "./stats/core";
 
 /** Consistent EUR formatting (nl-BE grouping/decimal style) for account sizes, payouts, etc. */
 export function formatEUR(n: number): string {
@@ -50,7 +50,7 @@ export function pctToAmount(pct: number, saldo: number | null | undefined): numb
  * tradesInResultUnit, voor plekken die zelf per trade sommeren (kalender-
  * dagtotalen) in plaats van een geconverteerde lijst te aggregeren.
  */
-export function resultInUnit<T extends Pick<Trade, "resultaat_pct" | "risk_pct">>(
+export function resultInUnit<T extends Pick<ClosedTrade, "resultaat_pct" | "risk_pct">>(
   trade: T,
   unit: ResultUnit,
   saldo?: number | null
@@ -72,7 +72,7 @@ export function groupResultCtx(
   unit: ResultUnit,
   saldo: number | null
 ): { rMultiple?: number; amount?: number } {
-  if (unit === "R") return { rMultiple: computeRStats(takenTrades(trades)).totalR };
+  if (unit === "R") return { rMultiple: computeRStats(closedTrades(takenTrades(trades))).totalR };
   if (unit === "currency") return { amount: pctToAmount(totalPct, saldo) };
   return {};
 }
@@ -88,7 +88,7 @@ export function groupResultCtx(
  * `saldo` komt uit useResultDisplay(); zonder saldo blijft currency onvertaald
  * (de provider levert dan al 'percent' als effectieve eenheid).
  */
-export function tradesInResultUnit<T extends Pick<Trade, "resultaat_pct" | "risk_pct">>(
+export function tradesInResultUnit<T extends Pick<ClosedTrade, "resultaat_pct" | "risk_pct">>(
   trades: T[],
   unit: ResultUnit,
   saldo?: number | null

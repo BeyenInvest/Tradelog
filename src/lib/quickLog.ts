@@ -28,6 +28,7 @@ export function quickLogDefaults(fase: string, today: string): TradeFormValues {
     pair: "EURUSD",
     instrument: null,
     direction: null,
+    is_open: false,
     outcome: "BE",
     resultaat_pct: 0,
     risk_pct: null,

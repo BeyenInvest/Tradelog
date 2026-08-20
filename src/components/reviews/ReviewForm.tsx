@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
-import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -66,11 +66,15 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
   const newTradeDate = today >= weekRange.start && today <= weekRange.end ? today : weekRange.start;
   const takenPreview = takenTrades(tradesInWeek);
   const missedPreview = missedTrades(tradesInWeek);
+  // Realized-stats input excludes still-running open trades (missed rows are closed);
+  // the raw previews still drive the display panel below.
+  const takenClosed = closedTrades(takenPreview);
+  const missedClosed = closedTrades(missedPreview);
   // In de eenheid van de kijker (Fase J): counts veranderen niet, alleen missedResultaat.
   const { unit: resultUnit, saldo } = useResultDisplay();
   const errorCounts = useMemo(
-    () => computeErrorCounts(tradesInResultUnit(takenPreview, resultUnit, saldo), tradesInResultUnit(missedPreview, resultUnit, saldo)),
-    [takenPreview, missedPreview, resultUnit, saldo]
+    () => computeErrorCounts(takenPreview, tradesInResultUnit(missedClosed, resultUnit, saldo)),
+    [takenPreview, missedClosed, resultUnit, saldo]
   );
 
   async function handleSubmit(e: FormEvent) {
@@ -123,7 +127,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
         </div>
       </div>
 
-      <ReviewStatsHeader taken={takenPreview} missed={missedPreview} />
+      <ReviewStatsHeader taken={takenClosed} missed={missedClosed} />
       <ReviewErrorStats {...errorCounts} />
 
       <ReviewContentFields value={content} onChange={handleContentChange} />

@@ -1,6 +1,6 @@
 import type { Trade } from "../types";
 import { FASES, MIN_SAMPLE_SIZE, QUARTERS, WEEKDAYS, type Fase, type Quarter, type Weekday } from "../constants";
-import { round2 } from "./core";
+import { round2, type ClosedTrade } from "./core";
 
 export interface BreakdownRow<K extends string> {
   key: K;
@@ -33,8 +33,8 @@ export interface BreakdownOpts<K extends string> {
  * Both breakdownBy and computeConditionGaps (adherence.ts) build on this, so
  * the keyFn contract has exactly one owner.
  */
-export function groupByKey<K extends string>(trades: Trade[], keyFn: (t: Trade) => K | K[] | null): Map<K, Trade[]> {
-  const groups = new Map<K, Trade[]>();
+export function groupByKey<T, K extends string>(trades: T[], keyFn: (t: T) => K | K[] | null): Map<K, T[]> {
+  const groups = new Map<K, T[]>();
   for (const t of trades) {
     const result = keyFn(t);
     if (result == null) continue;
@@ -53,8 +53,8 @@ export function groupByKey<K extends string>(trades: Trade[], keyFn: (t: Trade) 
 
 /** The one function every "Per X" split calls — groupByKey plus the standard outcome/resultaat aggregates per bucket. */
 export function breakdownBy<K extends string>(
-  trades: Trade[],
-  keyFn: (t: Trade) => K | K[] | null,
+  trades: ClosedTrade[],
+  keyFn: (t: ClosedTrade) => K | K[] | null,
   opts: BreakdownOpts<K> = {}
 ): BreakdownRow<K>[] {
   const minSample = opts.minSample ?? MIN_SAMPLE_SIZE;
@@ -103,8 +103,8 @@ export interface BreakdownRowWithFaseSplit<K extends string> extends BreakdownRo
  * fase, and merges by key — no separate aggregation logic.
  */
 export function breakdownByWithFaseSplit<K extends string>(
-  trades: Trade[],
-  keyFn: (t: Trade) => K | K[] | null,
+  trades: ClosedTrade[],
+  keyFn: (t: ClosedTrade) => K | K[] | null,
   opts: BreakdownOpts<K> = {}
 ): BreakdownRowWithFaseSplit<K>[] {
   const overall = breakdownBy(trades, keyFn, opts);
@@ -136,7 +136,7 @@ export interface FaseKenmerkConfigLike {
  * (src/lib/constants.ts) — filters to the config's fase, maps the field to a
  * display value, then delegates to breakdownBy.
  */
-export function breakdownByFaseKenmerk(trades: Trade[], config: FaseKenmerkConfigLike, opts: BreakdownOpts<string> = {}) {
+export function breakdownByFaseKenmerk(trades: ClosedTrade[], config: FaseKenmerkConfigLike, opts: BreakdownOpts<string> = {}) {
   const scoped = trades.filter((t) => t.fase === config.fase);
   return breakdownBy(
     scoped,

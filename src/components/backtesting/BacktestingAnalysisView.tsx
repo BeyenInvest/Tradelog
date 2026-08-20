@@ -11,7 +11,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
-  computeDurationByOutcome, groupIntoSeries, takenTrades,
+  computeDurationByOutcome, groupIntoSeries, takenTrades, closedTrades,
 } from "@/lib/stats";
 import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
@@ -61,10 +61,11 @@ export function BacktestingAnalysisView({
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
 
-  // Backtest projects don't offer "Missed trade" as an evaluation in the UI, but there's no DB
-  // constraint enforcing that — filter defensively so a stray one can never dilute these KPIs.
+  // Backtest projects don't offer "Missed trade" (or a still-running "open") trade
+  // in the UI, but there's no DB constraint enforcing that — filter defensively via
+  // takenTrades + closedTrades so a stray one can never dilute these KPIs.
   const scopedTrades = useMemo(
-    () => takenTrades(applyJournalFilters(trades, period, filters)),
+    () => closedTrades(takenTrades(applyJournalFilters(trades, period, filters))),
     [trades, period, filters]
   );
 

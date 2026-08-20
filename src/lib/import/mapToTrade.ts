@@ -65,6 +65,8 @@ export function dealToImportRow(
     pair,
     instrument,
     direction: deal.direction === "buy" ? "Long" : deal.direction === "sell" ? "Short" : null,
+    // An imported deal is always a closed, realized trade — never a still-running one.
+    is_open: false,
     outcome: deriveOutcome(resultaatPct),
     resultaat_pct: resultaatPct,
     risk_pct: null,

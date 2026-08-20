@@ -62,18 +62,24 @@ export function useJournals() {
     setJournals(list);
     setLoading(false);
 
-    // Live *taken* trade count per journal — matches the journal header's count
-    // (realTrades), so a journal reads the same number in both places. Head-only
-    // exact counts (no rows pulled). Backtest trades live under a project, so
-    // they're excluded; missed trades are hypothetical (never dilute a count), so
-    // taken = all-live − missed-live keeps it consistent without a null-prone
-    // "not missed" filter. A handful of journals → a couple of tiny requests each.
+    // Live *realized* trade count per journal — matches the journal header's count
+    // (realTrades = closedTrades(takenTrades)), so a journal reads the same number in
+    // both places. Head-only exact counts (no rows pulled). Backtest trades live under
+    // a project, so they're excluded; missed trades are hypothetical and still-running
+    // open trades have no result yet — neither dilutes the count. realized = all-live −
+    // missed-live − open-live keeps it consistent without a null-prone "not missed"
+    // filter (missed and open are mutually exclusive — see trades_open_no_eval_chk — so
+    // the two subtractions never overlap). A handful of journals → a few tiny requests each.
     const entries = await Promise.all(
       list.map(async (j) => {
         const base = () =>
           supabase.from("trades").select("*", { count: "exact", head: true }).eq("methodology_id", j.id).is("backtest_project_id", null);
-        const [all, missed] = await Promise.all([base(), base().eq("trade_evaluation", "Missed trade")]);
-        return [j.id, (all.count ?? 0) - (missed.count ?? 0)] as const;
+        const [all, missed, open] = await Promise.all([
+          base(),
+          base().eq("trade_evaluation", "Missed trade"),
+          base().eq("is_open", true),
+        ]);
+        return [j.id, (all.count ?? 0) - (missed.count ?? 0) - (open.count ?? 0)] as const;
       })
     );
     setTradeCounts(Object.fromEntries(entries));

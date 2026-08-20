@@ -6,7 +6,7 @@ import { CalendarView } from "@/components/calendar/CalendarView";
 import { ReadOnlyTradeTable } from "@/components/admin/ReadOnlyTradeTable";
 import { ReadOnlyDayTradesModal } from "@/components/admin/ReadOnlyDayTradesModal";
 import { ReadOnlyTradeDetailModal } from "@/components/admin/ReadOnlyTradeDetailModal";
-import { takenTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
+import { takenTrades, closedTrades, missedTrades as filterMissedTrades } from "@/lib/stats";
 import type { Trade } from "@/lib/types";
 
 /**
@@ -66,7 +66,7 @@ export function ReadOnlyTradesViewer({
       </div>
 
       {viewMode === "calendar" ? (
-        <CalendarView trades={taken} missedTrades={missed} onDayClick={setSelectedDay} />
+        <CalendarView trades={closedTrades(taken)} missedTrades={closedTrades(missed)} onDayClick={setSelectedDay} />
       ) : (
         <Card>
           <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} hideFase={hideFase} />

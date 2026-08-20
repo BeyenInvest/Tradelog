@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve, isOpen, closedTrades, takenTrades, computeOverviewKpis } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
 
 describe("round2", () => {
@@ -333,5 +333,38 @@ describe("computeEquityCurve", () => {
 
   it("is empty for no trades", () => {
     expect(computeEquityCurve([])).toEqual([]);
+  });
+});
+
+describe("open (still-running) trades", () => {
+  it("isOpen reflects the is_open flag", () => {
+    expect(isOpen(makeTrade({ is_open: true }))).toBe(true);
+    expect(isOpen(makeTrade({ is_open: false }))).toBe(false);
+  });
+
+  it("closedTrades drops still-running trades, keeping closed (incl. missed) ones", () => {
+    const trades = [
+      makeTrade({ id: "a", outcome: "Win", resultaat_pct: 2 }),
+      makeTrade({ id: "b", is_open: true }),
+      makeTrade({ id: "c", outcome: "Loss", resultaat_pct: -1, trade_evaluation: "Missed trade" }),
+    ];
+    expect(closedTrades(trades).map((t) => t.id)).toEqual(["a", "c"]);
+  });
+
+  it("an open trade never dilutes realized KPIs once routed through closedTrades", () => {
+    const closed = makeSequence(["Win", "Loss"]); // +1, -1
+    const withOpen = [...closed, makeTrade({ id: "open-1", is_open: true, resultaat_pct: 999, outcome: "Win" })];
+    // Same as if the open trade weren't there at all.
+    expect(computeOverviewKpis(closedTrades(withOpen))).toEqual(computeOverviewKpis(closed));
+    expect(computeOverviewKpis(closedTrades(withOpen)).totalTrades).toBe(2);
+  });
+
+  it("closedTrades composes with takenTrades to drop both open and missed", () => {
+    const trades = [
+      makeTrade({ id: "real", outcome: "Win", resultaat_pct: 1 }),
+      makeTrade({ id: "open", is_open: true }),
+      makeTrade({ id: "missed", trade_evaluation: "Missed trade", resultaat_pct: 5, outcome: "Win" }),
+    ];
+    expect(closedTrades(takenTrades(trades)).map((t) => t.id)).toEqual(["real"]);
   });
 });

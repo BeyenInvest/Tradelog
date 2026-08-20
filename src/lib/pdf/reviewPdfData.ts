@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { Outcome, PeriodType, ResultUnit } from "@/lib/constants";
-import type { PeriodicReview, Trade, WeeklyReview } from "@/lib/types";
-import { computeOverviewKpis, computeErrorCounts, sortChronological, round2 } from "@/lib/stats";
+import type { PeriodicReview, WeeklyReview } from "@/lib/types";
+import { computeOverviewKpis, computeErrorCounts, sortChronological, round2, type ClosedTrade } from "@/lib/stats";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { periodLabel } from "@/lib/periodRanges";
 
@@ -96,12 +96,12 @@ export type ReviewPdfInput = (
   | {
       kind: "weekly";
       review: WeeklyReview;
-      taken: Trade[];
-      missed: Trade[];
+      taken: ClosedTrade[];
+      missed: ClosedTrade[];
       /** Fase F soft-launch: beta users get the neutral one-Mentaal layout; others the WPM layout. */
       betaFeatures?: boolean;
     }
-  | { kind: "periodic"; review: PeriodicReview; taken: Trade[]; missed: Trade[] }
+  | { kind: "periodic"; review: PeriodicReview; taken: ClosedTrade[]; missed: ClosedTrade[] }
 ) & {
   /** The signed-in trader's display name (profile.display_name), for the header. */
   traderName?: string | null;
@@ -131,7 +131,7 @@ function parseActie(a: string): ReviewPdfActie {
   return { label: m[1].trim(), status, value: status ? null : value };
 }
 
-function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
+function toRow(t: ClosedTrade, missed: boolean): ReviewPdfTradeRow {
   return {
     datum: t.datum_open,
     pair: t.instrument ?? t.pair, // instrument (falls back to pair) so non-forex journals read right (cyclus 7)
@@ -145,7 +145,7 @@ function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
 }
 
 /** Cumulative resultaat after each taken trade, chronological (for the equity sparkline). */
-function equityCurve(taken: Trade[]): number[] {
+function equityCurve(taken: ClosedTrade[]): number[] {
   const sorted = sortChronological(taken);
   let running = 0;
   return sorted.map((t) => {
@@ -154,7 +154,7 @@ function equityCurve(taken: Trade[]): number[] {
   });
 }
 
-function buildErrorLine(t: TFunction, taken: Trade[], missed: Trade[], unit: ResultUnit): string | null {
+function buildErrorLine(t: TFunction, taken: ClosedTrade[], missed: ClosedTrade[], unit: ResultUnit): string | null {
   const { emotional, technical, missedCount, missedResultaat } = computeErrorCounts(taken, missed);
   const parts: string[] = [];
   if (emotional > 0) parts.push(t("reviewErrorStats.emotional", { count: emotional }));

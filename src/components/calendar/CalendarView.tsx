@@ -2,10 +2,9 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
-import { round2 } from "@/lib/stats";
+import { round2, type ClosedTrade } from "@/lib/stats";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -17,9 +16,10 @@ interface PairChip {
 const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
 
 interface CalendarViewProps {
-  trades: Trade[];
+  /** Realized (closed) trades only — the calendar colors days by real result; still-running open trades carry none and are excluded by the caller (closedTrades). */
+  trades: ClosedTrade[];
   /** Missed trades to render, e.g. only passed when the "toon missed trades" toggle is on. Never affects a day's real coloring/value — that's driven by `trades` alone; missed-only days get their own dashed gold styling. */
-  missedTrades?: Trade[];
+  missedTrades?: ClosedTrade[];
   /** Fires for any clicked day, even empty ones — the caller decides whether that means "show trades" or "add a trade here". */
   onDayClick?: (dateIso: string) => void;
 }
@@ -35,7 +35,7 @@ export function CalendarView({ trades, missedTrades = [], onDayClick }: Calendar
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const byDay = useMemo(() => {
-    const m = new Map<number, Trade[]>();
+    const m = new Map<number, ClosedTrade[]>();
     for (const t of trades) {
       const d = new Date(t.datum_open + "T00:00:00");
       if (d.getFullYear() === year && d.getMonth() === month) {

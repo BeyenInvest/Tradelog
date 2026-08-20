@@ -11,7 +11,7 @@ import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { ReadOnlyTradesViewer } from "@/components/admin/ReadOnlyTradesViewer";
 import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { getSharedJournal } from "@/lib/share/shareLinks";
-import { computeOverviewKpis, takenTrades } from "@/lib/stats";
+import { computeOverviewKpis, takenTrades, closedTrades } from "@/lib/stats";
 import { formatProfitFactor, formatResult, resultDisplayValue } from "@/lib/format";
 import type { ResultUnit } from "@/lib/constants";
 import type { SharedJournal } from "@/lib/types";
@@ -100,9 +100,10 @@ function SharedJournalView({ data }: { data: SharedJournal }) {
   // Honour the owner's display unit for % and R; currency needs an account
   // saldo an anonymous session doesn't have, so it falls back to honest %.
   const unit: ResultUnit = data.result_unit === "currency" ? "percent" : data.result_unit;
-  // Missed trades are hypothetical — the share view shows real performance only.
-  // (The RPC already excludes them; see the header comment.)
-  const trades = useMemo(() => takenTrades(data.trades), [data.trades]);
+  // Missed trades are hypothetical and still-running open trades have no result yet —
+  // the share view shows real performance only. (The RPC already excludes both; this
+  // mirror-filter also narrows the type to the realized ClosedTrade shape.)
+  const trades = useMemo(() => closedTrades(takenTrades(data.trades)), [data.trades]);
   const kpis = useMemo(() => computeOverviewKpis(trades), [trades]);
 
   return (

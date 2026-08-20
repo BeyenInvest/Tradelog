@@ -324,6 +324,8 @@
     "weeklyKenmerk": "Weekly characteristic",
     "newsNearTrade": "News near trade?",
     "outcome": "Outcome",
+    "stillOpen": "Trade still running",
+    "stillOpenHint": "you'll enter the result when you close it",
     "resultPct": "Result % (R)",
     "plannedRisk": "Planned risk % (blank = 1%)",
     "tradeEvaluation": "Trade evaluation",
@@ -426,7 +428,8 @@
     "colConcept": "Concept",
     "colEntry": "Entry",
     "colOutcome": "Outcome",
-    "colResult": "Result"
+    "colResult": "Result",
+    "closeTrade": "Close"
   },
   "calendar": {
     "addTradeOnDay": "Add trade on this day",
@@ -436,7 +439,9 @@
   "tradeBadge": {
     "missedTitle": "Hypothetical — this trade wasn't taken",
     "emotionalTitle": "Self-assessment: emotional error",
-    "technicalTitle": "Self-assessment: technical error"
+    "technicalTitle": "Self-assessment: technical error",
+    "open": "running",
+    "openTitle": "Trade still running — no result yet, excluded from your stats"
   },
   "weekdays": {
     "Ma": "Mon",

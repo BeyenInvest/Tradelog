@@ -28,8 +28,18 @@ export interface Trade {
   instrument: string | null;
   /** Long/Short — universal core field (Scope C, cyclus 5). null on trades logged before it existed. */
   direction: Direction | null;
-  outcome: Outcome;
-  resultaat_pct: number;
+  /**
+   * A still-running trade logged before it's closed (migration 0043). While true,
+   * `outcome`/`resultaat_pct` are null (no realized result yet) and the trade is
+   * excluded from every realized number via closedTrades() in stats/core.ts —
+   * the same exclusion contract as a "Missed trade". Closing it (edit form) flips
+   * this to false and fills in the result.
+   */
+  is_open: boolean;
+  /** null only while `is_open` — a closed trade always carries its Win/Loss/BE (DB check trades_open_result_chk). */
+  outcome: Outcome | null;
+  /** null only while `is_open` — a closed trade always carries its realized % (DB check trades_open_result_chk). */
+  resultaat_pct: number | null;
   /** Planned risk % this trade was taken with. null = the default 1% (DEFAULT_RISK_PCT). Denominator for R-multiples — read it via riskPct() in stats/core.ts, never divide directly. */
   risk_pct: number | null;
   trade_evaluation: TradeEvaluation | null;

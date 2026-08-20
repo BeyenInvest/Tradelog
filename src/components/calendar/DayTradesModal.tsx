@@ -19,11 +19,12 @@ interface DayTradesModalProps {
   onAddTrade: (dateIso: string) => void;
 }
 
-/** Sorted real trades first (Win, then Loss, then BE), missed (hypothetical) trades last within their own outcome order — TradeListItem already dims/badges missed rows. */
+/** Sorted real trades first (Win, then Loss, then BE), still-running open trades after those, missed (hypothetical) trades last within their own outcome order — TradeListItem already dims/badges missed and open rows. */
 function sortDayTrades(trades: Trade[]): Trade[] {
+  const order = (t: Trade) => (t.outcome ? (OUTCOME_ORDER.get(t.outcome) ?? 0) : 99);
   return [...trades].sort((a, b) => {
     if (isMissed(a) !== isMissed(b)) return isMissed(a) ? 1 : -1;
-    return (OUTCOME_ORDER.get(a.outcome) ?? 0) - (OUTCOME_ORDER.get(b.outcome) ?? 0);
+    return order(a) - order(b);
   });
 }
 

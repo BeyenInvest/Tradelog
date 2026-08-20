@@ -1,6 +1,6 @@
 import type { Trade } from "../types";
 import { GRADED_EVALUATIONS, MIN_SAMPLE_SIZE, type GradedEvaluation } from "../constants";
-import { computeOutcomeCounts, computeRStats, isGraded, isGradedError, round2, takenTrades } from "./core";
+import { closedTrades, computeOutcomeCounts, computeRStats, isGraded, isGradedError, round2, takenTrades, type ClosedTrade } from "./core";
 import { groupByKey } from "./breakdown";
 
 /**
@@ -55,8 +55,8 @@ export interface EvaluationImpact {
   estimatedCostR: number | null;
 }
 
-export function computeEvaluationImpact(taken: Trade[]): EvaluationImpact {
-  const byEvaluation = new Map<GradedEvaluation, Trade[]>(GRADED_EVALUATIONS.map((ev) => [ev, []]));
+export function computeEvaluationImpact(taken: ClosedTrade[]): EvaluationImpact {
+  const byEvaluation = new Map<GradedEvaluation, ClosedTrade[]>(GRADED_EVALUATIONS.map((ev) => [ev, []]));
   for (const t of taken) {
     // Ungraded (null) and a stray "Missed trade" match no bucket and count nowhere.
     byEvaluation.get(t.trade_evaluation as GradedEvaluation)?.push(t);
@@ -124,7 +124,9 @@ export function computeConditionGaps(
   opts: { minSample?: number } = {}
 ): ConditionGap[] {
   const minSample = opts.minSample ?? MIN_SAMPLE_SIZE;
-  const taken = takenTrades(trades);
+  // Missed (takenTrades) AND still-running (closedTrades) excluded — an open trade
+  // has no realized R to bucket, on top of the caller contract.
+  const taken = closedTrades(takenTrades(trades));
   const gaps: ConditionGap[] = [];
 
   for (const dim of dims) {

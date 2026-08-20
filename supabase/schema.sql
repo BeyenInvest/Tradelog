@@ -143,8 +143,20 @@ create table trades (
   -- own ticker/coin and leave pair on a default. See 0032.
   instrument text,
   direction direction_enum, -- Long/Short; nullable (unknown on trades logged before cyclus 5 / imports without a side)
-  outcome outcome_enum not null,
-  resultaat_pct numeric(7,2) not null,
+  -- A running trade (is_open = true) has no realized result yet — outcome/resultaat_pct
+  -- stay null until it's closed. Excluded from every realized number app-side via
+  -- closedTrades() (same contract as missed trades). See 0043_open_trades.sql.
+  is_open boolean not null default false,
+  outcome outcome_enum, -- null only while is_open (see trades_open_result_chk)
+  resultaat_pct numeric(7,2), -- null only while is_open (see trades_open_result_chk)
+  -- Closed ⇒ must have a result; open ⇒ must not carry one (kept clean, not stale).
+  constraint trades_open_result_chk check (
+    (is_open and outcome is null and resultaat_pct is null)
+    or (not is_open and outcome is not null and resultaat_pct is not null)
+  ),
+  -- An open trade carries no execution grade yet, and can never be a "Missed trade"
+  -- (a setup you didn't take is the opposite of a live position still running).
+  constraint trades_open_no_eval_chk check (not is_open or trade_evaluation is null),
   -- Planned risk % the trade was taken with. NULL = the default 1% (DEFAULT_RISK_PCT),
   -- which keeps R ≡ resultaat_pct for everyone on the flat-1% workflow. See 0012_risk_pct.sql.
   risk_pct numeric(7,2) check (risk_pct > 0),
@@ -670,6 +682,7 @@ as $$
   where t.backtest_project_id is not null
     and t.user_id = auth.uid()
     and t.trade_evaluation is distinct from 'Missed trade'
+    and not t.is_open
   group by t.backtest_project_id;
 $$;
 

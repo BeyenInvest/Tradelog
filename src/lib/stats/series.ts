@@ -1,5 +1,5 @@
 import type { Trade } from "../types";
-import { sortChronological, round2 } from "./core";
+import { sortChronological, round2, type ClosedTrade } from "./core";
 
 export interface TradeSeries {
   seriesIndex: number;
@@ -8,8 +8,8 @@ export interface TradeSeries {
   winCount: number;
 }
 
-/** Chronological grouping into series of `size` consecutive trades (default 5). */
-export function groupIntoSeries(trades: Trade[], size = 5): TradeSeries[] {
+/** Chronological grouping into series of `size` consecutive trades (default 5). Input is already closed (realized) — open trades carry no result to sum. */
+export function groupIntoSeries(trades: ClosedTrade[], size = 5): TradeSeries[] {
   const sorted = sortChronological(trades);
   const series: TradeSeries[] = [];
 

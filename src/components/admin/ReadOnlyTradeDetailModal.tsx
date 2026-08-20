@@ -70,10 +70,22 @@ export function ReadOnlyTradeDetailModal({
             </div>
 
             <div className="flex items-center gap-3 mb-4">
-              <OutcomePill outcome={trade.outcome} />
-              <span className={`font-mono text-sm ${resultDisplayValue(trade.resultaat_pct, resultUnit, { rMultiple: rMultiple(trade) }) >= 0 ? "text-win" : "text-loss"}`}>
-                {formatResult(trade.resultaat_pct, resultUnit, { rMultiple: rMultiple(trade) })}
-              </span>
+              {trade.is_open ? (
+                <span className="font-mono text-sm text-gold">{t("tradeBadge.open")}</span>
+              ) : (
+                <>
+                  <OutcomePill outcome={trade.outcome!} />
+                  <span
+                    className={`font-mono text-sm ${
+                      resultDisplayValue(trade.resultaat_pct!, resultUnit, { rMultiple: rMultiple({ resultaat_pct: trade.resultaat_pct!, risk_pct: trade.risk_pct }) }) >= 0
+                        ? "text-win"
+                        : "text-loss"
+                    }`}
+                  >
+                    {formatResult(trade.resultaat_pct!, resultUnit, { rMultiple: rMultiple({ resultaat_pct: trade.resultaat_pct!, risk_pct: trade.risk_pct }) })}
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="mb-4">

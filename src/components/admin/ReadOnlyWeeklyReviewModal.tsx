@@ -6,7 +6,7 @@ import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
 import { ReviewContentDisplay } from "@/components/reviews/ReviewContentDisplay";
 import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
-import { takenTrades, missedTrades, computeErrorCounts } from "@/lib/stats";
+import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
 import type { Trade, WeeklyReview } from "@/lib/types";
@@ -26,7 +26,7 @@ export function ReadOnlyWeeklyReviewModal({
   // In de eenheid van de kijkende admin (Fase J): counts veranderen niet, alleen missedResultaat.
   const resultUnit = useResultUnit();
   const errorCounts = useMemo(
-    () => computeErrorCounts(tradesInResultUnit(taken, resultUnit), tradesInResultUnit(missed, resultUnit)),
+    () => computeErrorCounts(taken, tradesInResultUnit(closedTrades(missed), resultUnit)),
     [taken, missed, resultUnit]
   );
 
@@ -47,7 +47,7 @@ export function ReadOnlyWeeklyReviewModal({
           </div>
 
           <div className="flex flex-col gap-6">
-            <ReviewStatsHeader taken={taken} missed={missed} />
+            <ReviewStatsHeader taken={closedTrades(taken)} missed={closedTrades(missed)} />
             <ReviewErrorStats {...errorCounts} />
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">

@@ -33,6 +33,7 @@ const EMPTY_DEFAULTS: TradeFormValues = {
   pair: "EURUSD",
   instrument: null,
   direction: null,
+  is_open: false,
   outcome: "Win",
   resultaat_pct: 0,
   risk_pct: null,
@@ -72,6 +73,7 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     pair: trade.pair,
     instrument: trade.instrument,
     direction: trade.direction,
+    is_open: trade.is_open,
     outcome: trade.outcome,
     resultaat_pct: trade.resultaat_pct,
     risk_pct: trade.risk_pct,
@@ -171,6 +173,11 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
     try {
       const payload: TradeSubmitInput = {
         ...values,
+        // A still-running trade carries no realized result: force the result-side
+        // fields null (belt-and-braces over the schema) so a leftover value — e.g.
+        // after re-opening a previously closed trade — can't violate the DB check
+        // (trades_open_result_chk) or slip into a stat.
+        ...(values.is_open ? { outcome: null, resultaat_pct: null, datum_sluiting: null, trade_evaluation: null } : {}),
         // Record which journal this trade belongs to. Editing keeps the trade's
         // own methodology; a new trade takes the active one.
         methodology_id: values.methodology_id ?? methodology?.id ?? null,

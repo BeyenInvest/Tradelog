@@ -26,6 +26,7 @@ import {
   computeDisciplineStats,
   lastNChronological,
   takenTrades,
+  closedTrades,
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
@@ -101,10 +102,14 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
     setFilters(EMPTY_FILTERS);
   }
   const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
-  const realTrades = useMemo(() => takenTrades(scopedTrades), [scopedTrades]);
+  // takenList = shown in the trade list (includes still-running open trades, badged);
+  // realTrades = the realized-performance set for KPIs/charts/calendar (open trades
+  // excluded via closedTrades, on top of the missed-trade exclusion of takenTrades).
+  const takenList = useMemo(() => takenTrades(scopedTrades), [scopedTrades]);
+  const realTrades = useMemo(() => closedTrades(takenList), [takenList]);
   const missedTrades = useMemo(() => filterMissedTrades(scopedTrades), [scopedTrades]);
   const missedCount = missedTrades.length;
-  const listTrades = isLive && showMissed ? scopedTrades : realTrades;
+  const listTrades = isLive && showMissed ? scopedTrades : takenList;
 
   // Scopes only the performance snapshot (KPI row + win-rate + equity curve) to
   // the last N taken trades — never the calendar, list, or discipline trend
@@ -473,7 +478,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
           {viewMode === "calendar" ? (
             <CalendarView
               trades={realTrades}
-              missedTrades={isLive && showMissed ? missedTrades : undefined}
+              missedTrades={isLive && showMissed ? closedTrades(missedTrades) : undefined}
               onDayClick={setSelectedDay}
             />
           ) : viewMode === "list" ? (

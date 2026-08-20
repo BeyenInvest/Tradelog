@@ -17,7 +17,7 @@ import {
   getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser,
   getBacktestProjectsForUser, getPropAccountsForUser,
 } from "@/lib/admin/adminQueries";
-import { takenTrades, round2 } from "@/lib/stats";
+import { takenTrades, closedTrades, round2 } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
@@ -136,7 +136,7 @@ function AdminUserDetailPageInner() {
   const weeklyStats = useMemo(() => {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const r of weeklyReviews) {
-      const rt = tradesInResultUnit(takenTrades(tradesByWeeklyReview.get(r.id) ?? []), resultUnit);
+      const rt = tradesInResultUnit(closedTrades(takenTrades(tradesByWeeklyReview.get(r.id) ?? [])), resultUnit);
       m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
     }
     return m;
@@ -151,7 +151,7 @@ function AdminUserDetailPageInner() {
     const m = new Map<string, { resultaat: number; count: number }>();
     for (const r of periodicReviewsForTab) {
       const { start, end } = rangeOfPeriod(r.period_type, r.jaar, r.periode_nummer);
-      const rt = tradesInResultUnit(takenTrades(liveTrades.filter((t) => t.datum_open >= start && t.datum_open <= end)), resultUnit);
+      const rt = tradesInResultUnit(closedTrades(takenTrades(liveTrades.filter((t) => t.datum_open >= start && t.datum_open <= end))), resultUnit);
       m.set(r.id, { resultaat: round2(rt.reduce((s, t) => s + t.resultaat_pct, 0)), count: rt.length });
     }
     return m;

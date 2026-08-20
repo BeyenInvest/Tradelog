@@ -22,6 +22,36 @@ export function missedTrades<T extends Pick<Trade, "trade_evaluation">>(trades: 
 }
 
 /**
+ * A closed trade — the narrowed shape every realized-performance helper reads.
+ * A still-running trade (is_open) has no result yet, so its outcome/resultaat_pct
+ * are null; a closed trade always carries both (DB check trades_open_result_chk).
+ */
+export type ClosedTrade = Omit<Trade, "outcome" | "resultaat_pct"> & { outcome: Outcome; resultaat_pct: number };
+
+/**
+ * Still-running trade (migration 0043) — logged before it's closed, no realized
+ * result yet. Excluded from every realized number, the same way isMissed() marks
+ * hypothetical ones — but it's a *separate* axis: a missed trade is closed (carries
+ * a hypothetical result), an open trade is not (carries none).
+ */
+export function isOpen(trade: Pick<Trade, "is_open">): boolean {
+  return trade.is_open;
+}
+
+/**
+ * The single gate that turns a mixed trade list into realized-performance input:
+ * drops still-running trades AND narrows outcome/resultaat_pct to non-null, so no
+ * downstream stat has to null-check. Missed trades pass through (they're closed) —
+ * pair with takenTrades() to exclude those too. Every realized number routes its
+ * input through here (as tsc enforces, since the aggregators now require non-null).
+ */
+export function closedTrades<T extends Pick<Trade, "is_open" | "outcome" | "resultaat_pct">>(
+  trades: T[]
+): (T & { outcome: Outcome; resultaat_pct: number })[] {
+  return trades.filter((t): t is T & { outcome: Outcome; resultaat_pct: number } => !t.is_open);
+}
+
+/**
  * Taken trade carrying one of the three execution grades (GRADED_EVALUATIONS in
  * constants.ts) — ungraded (null) and hypothetical "Missed trade" rows count
  * toward no discipline/adherence stat. The single classification every
@@ -36,8 +66,8 @@ export function isGradedError(trade: Pick<Trade, "trade_evaluation">): boolean {
   return isGraded(trade) && trade.trade_evaluation !== "Good trade";
 }
 
-/** Sorts chronologically by datum_open, tie-broken by id for deterministic output. */
-export function sortChronological(trades: Trade[]): Trade[] {
+/** Sorts chronologically by datum_open, tie-broken by id for deterministic output. Generic so a narrowed list (e.g. ClosedTrade[]) keeps its type through the sort. */
+export function sortChronological<T extends Pick<Trade, "id" | "datum_open">>(trades: T[]): T[] {
   return [...trades].sort((a, b) => {
     const d = a.datum_open.localeCompare(b.datum_open);
     if (d !== 0) return d;
@@ -53,7 +83,7 @@ export function sortChronological(trades: Trade[]): Trade[] {
  * all. Caller passes an already-scoped, missed-excluded list (recent form is a
  * real-performance metric — hypothetical "Missed" trades must not reach it).
  */
-export function lastNChronological(trades: Trade[], n: number): Trade[] {
+export function lastNChronological<T extends Pick<Trade, "id" | "datum_open">>(trades: T[], n: number): T[] {
   if (n <= 0) return [];
   return sortChronological(trades).slice(-n);
 }
@@ -69,8 +99,8 @@ export interface OutcomeCounts {
   resultaatTotal: number;
 }
 
-/** Only needs outcome + resultaat_pct — callers may pass a narrower column selection than a full Trade. */
-export function computeOutcomeCounts(trades: Pick<Trade, "outcome" | "resultaat_pct">[]): OutcomeCounts {
+/** Only needs outcome + resultaat_pct — callers may pass a narrower column selection than a full ClosedTrade. */
+export function computeOutcomeCounts(trades: Pick<ClosedTrade, "outcome" | "resultaat_pct">[]): OutcomeCounts {
   const n = trades.length;
   const wins = trades.filter((t) => t.outcome === "Win").length;
   const losses = trades.filter((t) => t.outcome === "Loss").length;
@@ -99,7 +129,7 @@ export interface StreakResult {
  * streak only by a Win (not BE). BE pauses the streak — it neither resets nor
  * extends it. Sorts chronologically by datum_open internally.
  */
-export function computeStreaks(trades: Trade[]): StreakResult {
+export function computeStreaks(trades: ClosedTrade[]): StreakResult {
   const sorted = sortChronological(trades);
 
   let maxWinningStreak = 0;
@@ -138,7 +168,7 @@ export interface DrawdownResult {
  * Rekenregel 4: largest pullback (%) from a running peak in the chronological
  * cumulative resultaat curve, across all fases combined, sorted by datum_open.
  */
-export function computeMaxDrawdown(trades: Trade[]): DrawdownResult {
+export function computeMaxDrawdown(trades: ClosedTrade[]): DrawdownResult {
   const sorted = sortChronological(trades);
 
   let cum = 0;
@@ -173,7 +203,7 @@ export interface ExpectancyResult {
  * Rekenregel 5: based on the sign of resultaat_pct itself (not the outcome
  * enum), matching the spec's literal definition.
  */
-export function computeExpectancy(trades: Trade[]): ExpectancyResult {
+export function computeExpectancy(trades: ClosedTrade[]): ExpectancyResult {
   const winValues = trades.map((t) => t.resultaat_pct).filter((v) => v > 0);
   const lossValues = trades.map((t) => t.resultaat_pct).filter((v) => v < 0);
 
@@ -203,7 +233,7 @@ export interface ProfitFactorResult {
  * decides the side (matching computeExpectancy), so a "Win" logged at exactly 0%
  * lands on neither side. Callers pass an already-scoped, missed-excluded list.
  */
-export function computeProfitFactor(trades: Pick<Trade, "resultaat_pct">[]): ProfitFactorResult {
+export function computeProfitFactor(trades: Pick<ClosedTrade, "resultaat_pct">[]): ProfitFactorResult {
   let grossProfit = 0;
   let grossLoss = 0;
   for (const t of trades) {
@@ -234,7 +264,7 @@ export function riskPct(trade: Pick<Trade, "risk_pct">): number {
  * was taken with (resultaat_pct / risk). Sign is preserved (a loss is negative
  * R). At the default 1% risk this is exactly resultaat_pct.
  */
-export function rMultiple(trade: Pick<Trade, "resultaat_pct" | "risk_pct">): number {
+export function rMultiple(trade: Pick<ClosedTrade, "resultaat_pct" | "risk_pct">): number {
   return round2(trade.resultaat_pct / riskPct(trade));
 }
 
@@ -250,7 +280,7 @@ export interface RStats {
  * missed-excluded list (same contract as computeOutcomeCounts) — R is a real
  * performance metric, so hypothetical "Missed" trades must not reach it.
  */
-export function computeRStats(trades: Pick<Trade, "resultaat_pct" | "risk_pct">[]): RStats {
+export function computeRStats(trades: Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]): RStats {
   const n = trades.length;
   if (n === 0) return { totalR: 0, avgR: null };
   // Sum the raw (unrounded) R-multiples, then round once — avoids compounding
@@ -272,7 +302,7 @@ export interface EquityPoint {
  * cumulative total in the app. Callers pass an already-scoped, missed-decided list
  * (Reviews deliberately plots missed rows here).
  */
-export function computeEquityCurve(trades: Trade[]): EquityPoint[] {
+export function computeEquityCurve(trades: ClosedTrade[]): EquityPoint[] {
   const sorted = sortChronological(trades);
   let cum = 0;
   return sorted.map((t, i) => {
@@ -309,7 +339,7 @@ export interface OverviewKpis {
  * Single entry point for the Overview KPI row — every view that needs these
  * numbers calls this instead of recomputing streaks/drawdown/expectancy itself.
  */
-export function computeOverviewKpis(trades: Trade[]): OverviewKpis {
+export function computeOverviewKpis(trades: ClosedTrade[]): OverviewKpis {
   const counts = computeOutcomeCounts(trades);
   const streaks = computeStreaks(trades);
   const drawdown = computeMaxDrawdown(trades);
@@ -352,7 +382,7 @@ export interface ErrorCounts {
  * and rejected). Just how many taken trades were self-flagged as an error,
  * and how many trades were missed with what hypothetical result.
  */
-export function computeErrorCounts(taken: Trade[], missed: Trade[]): ErrorCounts {
+export function computeErrorCounts(taken: Trade[], missed: ClosedTrade[]): ErrorCounts {
   return {
     emotional: taken.filter((t) => t.trade_evaluation === "Emotional error").length,
     technical: taken.filter((t) => t.trade_evaluation === "Technical error").length,

@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/ui/StatCard";
 import { WinRatePieChart } from "@/components/charts/WinRatePieChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
-import { computeOverviewKpis, round2 } from "@/lib/stats";
+import { computeOverviewKpis, round2, type ClosedTrade } from "@/lib/stats";
 import { formatAggregate, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import type { Trade } from "@/lib/types";
 
 type View = "taken" | "missed";
 
@@ -18,7 +17,7 @@ type View = "taken" | "missed";
  * win-rate, streaks, equity curve), so each tab is computed in isolation.
  * Avg RR = total result / decisive trades (wins + losses, BE excluded).
  */
-export function ReviewStatsHeader({ taken, missed }: { taken: Trade[]; missed: Trade[] }) {
+export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; missed: ClosedTrade[] }) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const [view, setView] = useState<View>("taken");

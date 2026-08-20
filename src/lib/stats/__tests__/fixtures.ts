@@ -1,9 +1,10 @@
-import type { Trade } from "../../types";
+import type { Outcome } from "../../constants";
+import type { ClosedTrade } from "../core";
 
 let counter = 0;
 
-/** Minimal, valid Trade factory for stats-lib tests. Override only what the test cares about. */
-export function makeTrade(overrides: Partial<Trade> = {}): Trade {
+/** Minimal, valid closed-trade factory for stats-lib tests. Override only what the test cares about. Returns a ClosedTrade (non-null outcome/resultaat) since every realized-stats helper reads that shape; pass `is_open: true` explicitly for an open-trade case. */
+export function makeTrade(overrides: Partial<ClosedTrade> = {}): ClosedTrade {
   counter += 1;
   const id = overrides.id ?? `trade-${String(counter).padStart(4, "0")}`;
   return {
@@ -16,6 +17,7 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
     pair: "EURUSD",
     instrument: "EURUSD",
     direction: null,
+    is_open: false,
     outcome: "Win",
     resultaat_pct: 1,
     risk_pct: null,
@@ -56,10 +58,10 @@ export function makeTrade(overrides: Partial<Trade> = {}): Trade {
   };
 }
 
-/** Builds a chronological sequence of trades from a compact outcome list, one day apart. */
+/** Builds a chronological sequence of closed trades from a compact outcome list, one day apart. */
 export function makeSequence(
-  outcomes: Array<{ outcome: Trade["outcome"]; resultaat_pct?: number } | Trade["outcome"]>
-): Trade[] {
+  outcomes: Array<{ outcome: Outcome; resultaat_pct?: number } | Outcome>
+): ClosedTrade[] {
   return outcomes.map((entry, i) => {
     const day = String(i + 1).padStart(2, "0");
     const spec = typeof entry === "string" ? { outcome: entry } : entry;
