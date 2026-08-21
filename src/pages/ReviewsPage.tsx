@@ -140,6 +140,15 @@ function WeeklyReviewsTab({
   async function handleSubmit(input: WeeklyReviewInput) {
     if (editingReview) {
       await updateReview(editingReview.id, input);
+      // Moving a review to another week/year must take its trade links along
+      // (audit blocker N3): the DB auto-link triggers are insert-only, so
+      // without this the review would keep showing the OLD week's trades.
+      // linkTradesToReview is idempotent — it unlinks out-of-range trades and
+      // links the new week's in one pass.
+      if (input.jaar !== editingReview.jaar || input.week_nummer !== editingReview.week_nummer) {
+        await linkTradesToReview(editingReview.id, input.jaar, input.week_nummer);
+        await refreshTrades();
+      }
     } else {
       const created = await createReview(input);
       setSelectedId(created.id);

@@ -33,6 +33,16 @@ interface AuthContextValue {
    * the app fully authenticated with no password ever set. `isInvite` distinguishes the two only
    * for copy — both are gated through the same reset-password flow.
    */
+  /**
+   * True when the last profile fetch failed (audit blocker N1). A signed-in user
+   * always has a profiles row (auto-provisioned), so a missing/failed profile
+   * means the active journal is unknowable — the router blocks the app behind a
+   * retry screen instead of rendering with `methodology_id` silently null, which
+   * would misfile every new trade into the `null`-journal.
+   */
+  profileError: boolean;
+  /** Re-attempts the profile fetch after a failure (the retry screen's button). */
+  retryProfile: () => Promise<void>;
   passwordRecovery: boolean;
   isInvite: boolean;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
@@ -53,29 +63,51 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  */
 const OWNER_BETA_EMAILS = ["superrrdun@gmail.com"];
 
-async function fetchProfile(userId: string): Promise<Profile | null> {
+/**
+ * The profile is load-bearing (active journal, role, display prefs) — a failed
+ * fetch is FATAL for the app shell, not something to render past (audit blocker
+ * N1; the old "non-fatal — only role gating" comment predated multi-journal).
+ * A missing row counts as failure too: every signed-in user has one
+ * (auto-provisioned by handle_new_user), so absence means something is wrong.
+ */
+async function fetchProfile(userId: string): Promise<{ profile: Profile | null; failed: boolean }> {
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  if (error) return null; // non-fatal — profile is only used for role gating, never blocks core auth
-  return data as Profile | null;
+  if (error || !data) return { profile: null, failed: true };
+  return { profile: data as Profile, failed: false };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    // Applies a fetch result WITHOUT clobbering a previously loaded profile on
+    // failure: onAuthStateChange refetches on every token refresh, and a
+    // transient network error there must not null out good state mid-session
+    // (that would misfile the next trade save — audit blocker N1). Only a
+    // never-loaded profile leaves the app behind the retry screen.
+    const applyProfileFetch = (res: { profile: Profile | null; failed: boolean }) => {
+      setProfileError(res.failed);
+      if (!res.failed) setProfile(res.profile);
+    };
+
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      setProfile(data.session ? await fetchProfile(data.session.user.id) : null);
+      if (data.session) applyProfileFetch(await fetchProfile(data.session.user.id));
+      else setProfile(null);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
-      if (newSession) void fetchProfile(newSession.user.id).then(setProfile);
-      else setProfile(null);
+      if (newSession) void fetchProfile(newSession.user.id).then(applyProfileFetch);
+      else {
+        setProfile(null);
+        setProfileError(false);
+      }
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       if (event === "SIGNED_IN" && pendingAuthRedirectType === "invite") setPasswordRecovery(true);
       if (event === "SIGNED_OUT") setPasswordRecovery(false);
@@ -83,6 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  async function retryProfile() {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const res = await fetchProfile(data.session.user.id);
+    setProfileError(res.failed);
+    if (!res.failed) setProfile(res.profile);
+  }
 
   async function signIn(email: string, password: string, captchaToken?: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
@@ -151,6 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           OWNER_BETA_EMAILS.includes((session?.user.email ?? "").toLowerCase()),
         resultUnit: profile?.result_unit ?? "percent",
         loading,
+        profileError,
+        retryProfile,
         passwordRecovery,
         isInvite: pendingAuthRedirectType === "invite",
         signIn,

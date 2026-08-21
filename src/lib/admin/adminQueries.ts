@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import type {
   BacktestProject, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview,
 } from "@/lib/types";
@@ -11,12 +12,28 @@ import type {
  * read-only flag through the whole journal UI. These only work at all
  * because of the `is_admin()` RLS carve-out (supabase/migrations/0008_admin_role.sql) —
  * a non-admin caller gets an empty result, not an error.
+ *
+ * All list queries page past PostgREST's silent 1000-row cap (H1) via
+ * fetchAllPages, with `.order("id")` as tie-breaker for a stable page order.
  */
 
-export async function getAllProfiles(): Promise<Profile[]> {
-  const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+type PageResult<T> = { data: T[] | null; error: { message: string } | null };
+
+async function allRows<T>(page: (from: number, to: number) => PromiseLike<PageResult<T>>): Promise<T[]> {
+  const { data, error } = await fetchAllPages(page);
   if (error) throw error;
-  return data as Profile[];
+  return data ?? [];
+}
+
+export async function getAllProfiles(): Promise<Profile[]> {
+  return allRows<Profile>((from, to) =>
+    supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getProfileById(userId: string): Promise<Profile | null> {
@@ -26,63 +43,77 @@ export async function getProfileById(userId: string): Promise<Profile | null> {
 }
 
 export async function getTradesForUser(userId: string): Promise<Trade[]> {
-  const { data, error } = await supabase
-    .from("trades")
-    .select("*")
-    .eq("user_id", userId)
-    .order("datum_open", { ascending: true });
-  if (error) throw error;
-  return data as Trade[];
+  return allRows<Trade>((from, to) =>
+    supabase
+      .from("trades")
+      .select("*")
+      .eq("user_id", userId)
+      .order("datum_open", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getWeeklyReviewsForUser(userId: string): Promise<WeeklyReview[]> {
-  const { data, error } = await supabase
-    .from("weekly_reviews")
-    .select("*")
-    .eq("user_id", userId)
-    .order("jaar", { ascending: false })
-    .order("week_nummer", { ascending: false });
-  if (error) throw error;
-  return data as WeeklyReview[];
+  return allRows<WeeklyReview>((from, to) =>
+    supabase
+      .from("weekly_reviews")
+      .select("*")
+      .eq("user_id", userId)
+      .order("jaar", { ascending: false })
+      .order("week_nummer", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getPeriodicReviewsForUser(userId: string): Promise<PeriodicReview[]> {
-  const { data, error } = await supabase
-    .from("periodic_reviews")
-    .select("*")
-    .eq("user_id", userId)
-    .order("jaar", { ascending: false });
-  if (error) throw error;
-  return data as PeriodicReview[];
+  return allRows<PeriodicReview>((from, to) =>
+    supabase
+      .from("periodic_reviews")
+      .select("*")
+      .eq("user_id", userId)
+      .order("jaar", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getBacktestProjectsForUser(userId: string): Promise<BacktestProject[]> {
-  const { data, error } = await supabase
-    .from("backtest_projects")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data as BacktestProject[];
+  return allRows<BacktestProject>((from, to) =>
+    supabase
+      .from("backtest_projects")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getPropAccountsForUser(userId: string): Promise<{ accounts: PropAccount[]; payouts: Payout[] }> {
-  const { data: accounts, error: accountsError } = await supabase
-    .from("prop_accounts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-  if (accountsError) throw accountsError;
+  const accounts = await allRows<PropAccount>((from, to) =>
+    supabase
+      .from("prop_accounts")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
-  const accountIds = (accounts as PropAccount[]).map((a) => a.id);
-  if (accountIds.length === 0) return { accounts: accounts as PropAccount[], payouts: [] };
+  const accountIds = accounts.map((a) => a.id);
+  if (accountIds.length === 0) return { accounts, payouts: [] };
 
-  const { data: payouts, error: payoutsError } = await supabase
-    .from("payouts")
-    .select("*")
-    .in("account_id", accountIds)
-    .order("datum", { ascending: false });
-  if (payoutsError) throw payoutsError;
+  const payouts = await allRows<Payout>((from, to) =>
+    supabase
+      .from("payouts")
+      .select("*")
+      .in("account_id", accountIds)
+      .order("datum", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
-  return { accounts: accounts as PropAccount[], payouts: payouts as Payout[] };
+  return { accounts, payouts };
 }

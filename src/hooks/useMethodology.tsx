@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import { FASES, WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { instrumentsOfConfig, normalizeInstrument } from "@/lib/instruments";
@@ -345,11 +346,18 @@ function useMethodologyState(): MethodologyData {
       // are rare and per-user trade counts modest, so per-row updates in small
       // chunks beat introducing a dedicated SQL function for this.
       const key = target.field_key;
-      const { data: rows, error: selErr } = await supabase
-        .from("trades")
-        .select("id, custom")
-        .eq("methodology_id", target.methodology_id)
-        .eq(`custom->>${key}`, oldValue);
+      // Paginated (H1): above 1000 matching trades a plain fetch would silently
+      // migrate only the first page and split the option's history in two.
+      const { data: rows, error: selErr } = await fetchAllPages<{ id: number; custom: Record<string, unknown> }>(
+        (from, to) =>
+          supabase
+            .from("trades")
+            .select("id, custom")
+            .eq("methodology_id", target.methodology_id)
+            .eq(`custom->>${key}`, oldValue)
+            .order("id", { ascending: true })
+            .range(from, to)
+      );
       if (selErr) throw selErr;
       const affected = (rows ?? []) as { id: number; custom: Record<string, unknown> }[];
       const CHUNK = 20;

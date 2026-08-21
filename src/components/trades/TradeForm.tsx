@@ -179,8 +179,13 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         // (trades_open_result_chk) or slip into a stat.
         ...(values.is_open ? { outcome: null, resultaat_pct: null, datum_sluiting: null, trade_evaluation: null } : {}),
         // Record which journal this trade belongs to. Editing keeps the trade's
-        // own methodology; a new trade takes the active one.
-        methodology_id: values.methodology_id ?? methodology?.id ?? null,
+        // own methodology; a new trade takes the active one — but NEVER a system
+        // template: useMethodology falls back to the WPM template when the
+        // profile has no journal, and stamping that id would file the trade into
+        // a shared system row (audit blocker N1; the DB trigger
+        // trg_trades_journal_ownership now rejects it server-side too).
+        methodology_id:
+          values.methodology_id ?? (methodology && !methodology.is_system ? methodology.id : null),
         // Normalize the free (non-forex) instrument so "es"/"ES"/" es " fold to one
         // Per-Instrument row (cyclus D). The pair enum is already canonical.
         instrument: mirrorPair ? values.pair : normalizeInstrument(values.instrument ?? "") || null,

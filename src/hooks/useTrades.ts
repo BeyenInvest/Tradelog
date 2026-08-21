@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
+import i18n from "@/i18n";
 import { TRADES_MIGRATED_EVENT } from "@/hooks/useMethodology";
 import type { Trade, TradeInput } from "@/lib/types";
 import type { ImportTradeRow } from "@/lib/import/types";
@@ -45,19 +47,29 @@ export function useTrades(scope: TradeScope) {
     // month you scrolled the calendar to, which would otherwise snap back to today).
     if (loadedScopeRef.current !== scopeKey) setLoading(true);
     setError(null);
-    // Explicit user_id filter, not left to implicit RLS scoping — an admin account
-    // also has a blanket read-all RLS policy (supabase/migrations/0008_admin_role.sql),
-    // so an unfiltered query here would return every user's trades on this page.
-    let query = supabase.from("trades").select("*").eq("user_id", userId).order("datum_open", { ascending: true });
-    if (scope.type === "live") {
-      query = query.is("backtest_project_id", null);
-      // Scope the live Journal to the active journal (cyclus 3b). null = an
-      // unassigned journal; match its rows rather than every journal's.
-      query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
-    } else {
-      query = query.eq("backtest_project_id", scope.projectId);
-    }
-    const { data, error: fetchError } = await query;
+    // Paginated past PostgREST's silent 1000-row cap (audit blocker H1) — a fresh
+    // query per page, with `.order("id")` as tie-breaker so equal datum_open rows
+    // can't shuffle across page boundaries. Explicit user_id filter, not left to
+    // implicit RLS scoping — an admin account also has a blanket read-all RLS
+    // policy (supabase/migrations/0008_admin_role.sql), so an unfiltered query
+    // here would return every user's trades on this page.
+    const { data, error: fetchError } = await fetchAllPages<Trade>((from, to) => {
+      let query = supabase
+        .from("trades")
+        .select("*")
+        .eq("user_id", userId)
+        .order("datum_open", { ascending: true })
+        .order("id", { ascending: true });
+      if (scope.type === "live") {
+        query = query.is("backtest_project_id", null);
+        // Scope the live Journal to the active journal (cyclus 3b). null = an
+        // unassigned journal; match its rows rather than every journal's.
+        query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+      } else {
+        query = query.eq("backtest_project_id", scope.projectId);
+      }
+      return query.range(from, to);
+    });
     if (requestId !== requestIdRef.current) return; // a newer request has since superseded this one
     if (fetchError) {
       setError(fetchError.message);
@@ -82,7 +94,19 @@ export function useTrades(scope: TradeScope) {
     return () => window.removeEventListener(TRADES_MIGRATED_EVENT, onMigrated);
   }, [refresh]);
 
+  /**
+   * Refuse writes while the profile hasn't loaded (audit blocker N1): without it
+   * activeJournalId is unknowable, so a new live trade would silently land in the
+   * `null`-journal (or, pre-fix, the WPM template) instead of the user's active
+   * journal. The router already blocks the app on a failed profile fetch — this
+   * is the belt-and-braces for any path that still reaches a mutation.
+   */
+  function requireProfile(): void {
+    if (!profile) throw new Error(i18n.t("auth.profileUnavailable"));
+  }
+
   async function createTrade(input: TradeSubmitInput): Promise<Trade> {
+    requireProfile();
     const backtest_project_id = scope.type === "live" ? null : scope.projectId;
     // A live trade belongs to the active journal (cyclus 3b). The form already sets
     // methodology_id, but default it here too so it's never left unscoped.
@@ -119,6 +143,7 @@ export function useTrades(scope: TradeScope) {
    * journal, or a backtest project (TradingView backtest imports, Fase I).
    */
   async function createTradesBulk(rows: ImportTradeRow[]): Promise<number> {
+    requireProfile();
     if (rows.length === 0) return 0;
     const backtest_project_id = scope.type === "live" ? null : scope.projectId;
     // Imported rows carry methodology_id: null — stamp the active journal so live

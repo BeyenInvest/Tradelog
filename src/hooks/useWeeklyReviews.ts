@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import { isoWeekRange } from "@/lib/isoWeek";
@@ -16,13 +17,19 @@ export function useWeeklyReviews() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
-    let query = supabase.from("weekly_reviews").select("*").eq("user_id", userId);
-    // Scope to the active journal (cyclus 3b); null = unassigned journal.
-    query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
-    const { data, error: fetchError } = await query
-      .order("jaar", { ascending: false })
-      .order("week_nummer", { ascending: false });
+    // Paginated past the 1000-row cap (H1) with an id tie-breaker for a stable
+    // page order — see fetchAllPages. Explicit user_id filter — see useTrades
+    // for why this can't be left to RLS alone.
+    const { data, error: fetchError } = await fetchAllPages<WeeklyReview>((from, to) => {
+      let query = supabase.from("weekly_reviews").select("*").eq("user_id", userId);
+      // Scope to the active journal (cyclus 3b); null = unassigned journal.
+      query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+      return query
+        .order("jaar", { ascending: false })
+        .order("week_nummer", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to);
+    });
     if (fetchError) {
       setError(fetchError.message);
     } else {

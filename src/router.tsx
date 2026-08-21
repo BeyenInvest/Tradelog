@@ -6,6 +6,7 @@ import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { AppShell } from "@/components/layout/AppShell";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { FullScreenLoading } from "@/components/ui/FullScreenLoading";
+import { ProfileErrorScreen } from "@/components/ui/ProfileErrorScreen";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
@@ -34,7 +35,7 @@ const SharePage = lazy(() => import("@/pages/SharePage"));
 const ShareReviewPage = lazy(() => import("@/pages/ShareReviewPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading, passwordRecovery } = useAuth();
+  const { session, profile, loading, passwordRecovery } = useAuth();
 
   if (loading) return <FullScreenLoading />;
 
@@ -43,6 +44,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   // fires a plain SIGNED_IN for invites — see useAuth). Route through the same "set a password"
   // gate as an in-progress recovery before letting either into the app.
   if (passwordRecovery) return <Navigate to="/reset-password" replace />;
+  // A profile that never loaded is FATAL, not something to render past (audit
+  // blocker N1): without it the active journal is unknowable and new trades
+  // would silently land in the `null`-journal. Retry or sign out — nothing else.
+  if (!profile) return <ProfileErrorScreen />;
   return <>{children}</>;
 }
 

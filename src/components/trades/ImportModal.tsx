@@ -4,6 +4,7 @@ import { Upload, X, FileText } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { PAIRS, type Pair } from "@/lib/constants";
@@ -85,17 +86,23 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   const accountBalance = balanceInput.trim() === "" ? null : Number(balanceInput);
 
   // Existing import refs for dedup — fetched once when the modal opens.
+  // Paginated (H1): above 1000 imported trades a plain fetch would silently
+  // miss refs and re-import old rows (the DB unique index would then abort the
+  // whole batch insert).
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("trades")
-      .select("import_ref")
-      .eq("user_id", userId)
-      .not("import_ref", "is", null)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setExistingRefs(new Set((data ?? []).map((r) => (r as { import_ref: string }).import_ref)));
-      });
+    void fetchAllPages<{ import_ref: string }>((from, to) =>
+      supabase
+        .from("trades")
+        .select("import_ref")
+        .eq("user_id", userId)
+        .not("import_ref", "is", null)
+        .order("id", { ascending: true })
+        .range(from, to)
+    ).then(({ data }) => {
+      if (cancelled) return;
+      setExistingRefs(new Set((data ?? []).map((r) => r.import_ref)));
+    });
     return () => {
       cancelled = true;
     };

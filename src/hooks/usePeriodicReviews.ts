@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import type { PeriodicReview, PeriodicReviewInput } from "@/lib/types";
 import type { PeriodType } from "@/lib/constants";
@@ -16,17 +17,23 @@ export function usePeriodicReviews(periodType: PeriodType) {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    // Explicit user_id filter — see useTrades for why this can't be left to RLS alone.
-    let query = supabase
-      .from("periodic_reviews")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("period_type", periodType);
-    // Scope to the active journal (cyclus 3b); null = unassigned journal.
-    query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
-    const { data, error: fetchError } = await query
-      .order("jaar", { ascending: false })
-      .order("periode_nummer", { ascending: false, nullsFirst: false });
+    // Paginated past the 1000-row cap (H1) with an id tie-breaker — see
+    // fetchAllPages. Explicit user_id filter — see useTrades for why this can't
+    // be left to RLS alone.
+    const { data, error: fetchError } = await fetchAllPages<PeriodicReview>((from, to) => {
+      let query = supabase
+        .from("periodic_reviews")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("period_type", periodType);
+      // Scope to the active journal (cyclus 3b); null = unassigned journal.
+      query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+      return query
+        .order("jaar", { ascending: false })
+        .order("periode_nummer", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: true })
+        .range(from, to);
+    });
     if (fetchError) {
       setError(fetchError.message);
     } else {

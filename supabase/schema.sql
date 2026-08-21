@@ -491,6 +491,34 @@ alter table trades add column custom jsonb not null default '{}'::jsonb; -- flex
 -- handle_new_user() (see 0025), not silently handed the Weekly Phase Method template.
 alter table profiles add column methodology_id uuid references methodologies(id) on delete set null;
 
+-- Journal ownership (0044, audit blocker N1): trades.methodology_id has a plain
+-- FK, so nothing else stops a write from pointing a trade at a *system template*
+-- or another user's journal (the client can do exactly that when its profile
+-- fetch fails and the WPM-template fallback kicks in). Any non-null value must
+-- be one of the trade owner's own (non-system) methodologies. Invoker rights:
+-- the methodologies RLS lets a user see their own rows, which is all this needs.
+create or replace function enforce_trades_journal_ownership() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.methodology_id is not null and not exists (
+    select 1 from methodologies m
+    where m.id = new.methodology_id
+      and m.user_id = new.user_id
+      and not m.is_system
+  ) then
+    raise exception 'trades.methodology_id must reference one of the trade owner''s own journals (not a system template)'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_trades_journal_ownership
+  before insert or update of methodology_id, user_id on trades
+  for each row execute function enforce_trades_journal_ownership();
+
 -- ---------- INDEXES ----------
 create index idx_trades_user on trades(user_id);
 create index idx_trades_datum_open on trades(datum_open);
@@ -629,6 +657,14 @@ create trigger on_auth_user_created
 create or replace function delete_own_account() returns void
 language plpgsql security definer set search_path = public, auth as $$
 begin
+  -- GDPR right to erasure covers the uploaded chart screenshots too (0044,
+  -- audit blocker N2). Files live under a per-user `{uid}/...` prefix in the
+  -- private `screenshots` bucket (0039); this must run BEFORE the user row is
+  -- gone, while auth.uid() still resolves.
+  delete from storage.objects
+  where bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text;
+
   delete from auth.users where id = auth.uid();
 end;
 $$;
@@ -808,6 +844,19 @@ create policy "profiles_owner_select" on profiles
   for select using (id = auth.uid());
 create policy "profiles_owner_update" on profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
+
+-- Column-level UPDATE grant (0044, audit blocker K1): the row policy above
+-- can't limit *which columns* an update touches — with the blanket table grant
+-- a user could PATCH their own role='admin' (→ the admin read-all policies
+-- expose every user's data), beta_features or plan. Only the six self-service
+-- columns updateProfile() (useAuth.tsx) writes stay writable; updated_at is
+-- stamped by trg_profiles_updated_at, which is exempt from column grants.
+revoke update on table profiles from authenticated;
+grant update (display_name, hide_fase, timezone, methodology_id, result_unit, onboarded_at)
+  on table profiles to authenticated;
+-- anon has no profiles policy at all (0 rows) — drop its default grants too
+-- ("anon niets" hygiene, see 0038/0040; the share RPCs are SECURITY DEFINER).
+revoke all on table profiles from anon;
 
 create policy "custom_options_owner_all" on custom_options
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());

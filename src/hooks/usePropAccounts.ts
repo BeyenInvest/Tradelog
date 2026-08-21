@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 
@@ -28,13 +29,17 @@ export function usePropAccounts() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    // Explicit user_id filter on accounts — see useTrades for why this can't be left to RLS
-    // alone. Payouts has no user_id of its own, so it's scoped indirectly via account_id once
-    // we know which accounts are ours (same pattern as adminQueries.getPropAccountsForUser).
-    let accountsQuery = supabase.from("prop_accounts").select("*").eq("user_id", userId);
-    // Scope to the active journal (cyclus 3b); null = unassigned journal.
-    accountsQuery = activeJournalId ? accountsQuery.eq("methodology_id", activeJournalId) : accountsQuery.is("methodology_id", null);
-    const accountsRes = await accountsQuery.order("created_at", { ascending: false });
+    // Paginated past the 1000-row cap (H1) with an id tie-breaker — see
+    // fetchAllPages. Explicit user_id filter on accounts — see useTrades for why
+    // this can't be left to RLS alone. Payouts has no user_id of its own, so it's
+    // scoped indirectly via account_id once we know which accounts are ours (same
+    // pattern as adminQueries.getPropAccountsForUser).
+    const accountsRes = await fetchAllPages<PropAccount>((from, to) => {
+      let accountsQuery = supabase.from("prop_accounts").select("*").eq("user_id", userId);
+      // Scope to the active journal (cyclus 3b); null = unassigned journal.
+      accountsQuery = activeJournalId ? accountsQuery.eq("methodology_id", activeJournalId) : accountsQuery.is("methodology_id", null);
+      return accountsQuery.order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to);
+    });
     if (accountsRes.error) {
       setError(accountsRes.error.message);
       setLoading(false);
@@ -49,7 +54,15 @@ export function usePropAccounts() {
       setLoading(false);
       return;
     }
-    const payoutsRes = await supabase.from("payouts").select("*").in("account_id", accountIds).order("datum", { ascending: false });
+    const payoutsRes = await fetchAllPages<Payout>((from, to) =>
+      supabase
+        .from("payouts")
+        .select("*")
+        .in("account_id", accountIds)
+        .order("datum", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to)
+    );
     if (payoutsRes.error) setError(payoutsRes.error.message);
     else setPayouts(payoutsRes.data as Payout[]);
     setLoading(false);
