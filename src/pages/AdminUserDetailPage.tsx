@@ -15,7 +15,7 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { PeriodicReviewList } from "@/components/reviews/PeriodicReviewList";
 import {
   getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser,
-  getBacktestProjectsForUser, getPropAccountsForUser,
+  getBacktestProjectsForUser, getPropAccountsForUser, getMethodologyViewForUser,
 } from "@/lib/admin/adminQueries";
 import { takenTrades, closedTrades, round2 } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
@@ -23,23 +23,23 @@ import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDispla
 import type { PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
-import type { BacktestProject, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
+import type { BacktestProject, MethodologyView, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
 
 type MainTab = "journal" | "backtesting" | "reviews" | "accounts";
 type ReviewTab = "week" | PeriodType;
 
-const MAIN_TABS: { key: MainTab; label: string }[] = [
-  { key: "journal", label: "Journal" },
-  { key: "backtesting", label: "Backtesting" },
-  { key: "reviews", label: "Reviews" },
-  { key: "accounts", label: "Accounts" },
+const MAIN_TABS: { key: MainTab; labelKey: string }[] = [
+  { key: "journal", labelKey: "nav.journal" },
+  { key: "backtesting", labelKey: "nav.backtesting" },
+  { key: "reviews", labelKey: "nav.reviews" },
+  { key: "accounts", labelKey: "nav.accounts" },
 ];
 
-const REVIEW_TABS: { key: ReviewTab; label: string }[] = [
-  { key: "week", label: "Weekly" },
-  { key: "month", label: "Monthly" },
-  { key: "quarter", label: "Quarterly" },
-  { key: "year", label: "Yearly" },
+const REVIEW_TABS: { key: ReviewTab; labelKey: string }[] = [
+  { key: "week", labelKey: "reviews.tabWeekly" },
+  { key: "month", labelKey: "reviews.tabMonthly" },
+  { key: "quarter", labelKey: "reviews.tabQuarterly" },
+  { key: "year", labelKey: "reviews.tabYearly" },
 ];
 
 /**
@@ -63,6 +63,7 @@ function AdminUserDetailPageInner() {
   const { t } = useTranslation();
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [methodologyView, setMethodologyView] = useState<MethodologyView | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [weeklyReviews, setWeeklyReviews] = useState<WeeklyReview[]>([]);
   const [periodicReviews, setPeriodicReviews] = useState<PeriodicReview[]>([]);
@@ -92,7 +93,7 @@ function AdminUserDetailPageInner() {
       getBacktestProjectsForUser(userId),
       getPropAccountsForUser(userId),
     ])
-      .then(([p, t, wr, pr, bp, pa]) => {
+      .then(async ([p, t, wr, pr, bp, pa]) => {
         if (cancelled) return;
         setProfile(p);
         setTrades(t);
@@ -101,6 +102,10 @@ function AdminUserDetailPageInner() {
         setProjects(bp);
         setAccounts(pa.accounts);
         setPayouts(pa.payouts);
+        // The Analyse breakdowns are journal-type-specific: load the viewed user's
+        // active-journal view so they don't follow the admin's own journal (H2).
+        const mv = await getMethodologyViewForUser(p?.methodology_id ?? null);
+        if (!cancelled) setMethodologyView(mv);
       })
       .catch((err) => {
         if (!cancelled) setError(toErrorMessage(err, t("admin.loadUserDataFailed")));
@@ -180,13 +185,13 @@ function AdminUserDetailPageInner() {
       ) : (
         <div className="flex flex-col gap-5">
           <div className="inline-flex rounded-lg border border-border overflow-hidden w-fit">
-            {MAIN_TABS.map((t) => (
+            {MAIN_TABS.map((item) => (
               <button
-                key={t.key}
-                onClick={() => setMainTab(t.key)}
-                className={`px-4 py-2 text-sm font-body ${mainTab === t.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+                key={item.key}
+                onClick={() => setMainTab(item.key)}
+                className={`px-4 py-2 text-sm font-body ${mainTab === item.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
               >
-                {t.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -198,20 +203,25 @@ function AdminUserDetailPageInner() {
                   onClick={() => setJournalTab("journal")}
                   className={`px-4 py-2 text-sm font-body ${journalTab === "journal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
                 >
-                  Journal
+                  {t("journal.tabJournal")}
                 </button>
                 <button
                   onClick={() => setJournalTab("analyse")}
                   className={`px-4 py-2 text-sm font-body ${journalTab === "analyse" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
                 >
-                  Analyse
+                  {t("journal.tabAnalyse")}
                 </button>
               </div>
 
               {journalTab === "journal" ? (
                 <ReadOnlyTradesViewer trades={liveTrades} title={t("admin.journalTradesTitle")} />
               ) : (
-                <BacktestingAnalysisView trades={taken} hideFaseOverride={profile?.hide_fase} showAdherence />
+                <BacktestingAnalysisView
+                  trades={taken}
+                  hideFaseOverride={profile?.hide_fase}
+                  methodologyOverride={methodologyView ?? undefined}
+                  showAdherence
+                />
               )}
             </div>
           )}
@@ -241,16 +251,16 @@ function AdminUserDetailPageInner() {
           {mainTab === "reviews" && (
             <div className="flex flex-col gap-5">
               <div className="flex gap-1 border-b border-border">
-                {REVIEW_TABS.map((t) => (
+                {REVIEW_TABS.map((item) => (
                   <button
-                    key={t.key}
-                    onClick={() => setReviewTab(t.key)}
+                    key={item.key}
+                    onClick={() => setReviewTab(item.key)}
                     className={clsx(
                       "px-4 py-2 font-body text-sm -mb-px border-b-2 transition-colors",
-                      reviewTab === t.key ? "border-gold text-ink" : "border-transparent text-muted"
+                      reviewTab === item.key ? "border-gold text-ink" : "border-transparent text-muted"
                     )}
                   >
-                    {t.label}
+                    {t(item.labelKey)}
                   </button>
                 ))}
               </div>
@@ -285,6 +295,7 @@ function AdminUserDetailPageInner() {
           project={selectedProject}
           trades={trades.filter((t) => t.backtest_project_id === selectedProject.id)}
           hideFaseOverride={profile?.hide_fase}
+          methodologyOverride={methodologyView ?? undefined}
           onClose={() => setSelectedProject(null)}
         />
       )}

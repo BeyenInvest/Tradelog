@@ -19,7 +19,7 @@ export function ReviewList({ reviews, selectedId, onSelect, resultaatOf, tradeCo
   const resultUnit = useResultUnit();
   return (
     <Card className="flex flex-col gap-2">
-      <h3 className="font-display text-xl italic mb-2 px-1 text-ink">Weekly reviews</h3>
+      <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{t("reviews.weeklyReviewsHeading")}</h3>
       {reviews.length === 0 && <p className="text-sm text-muted px-1">{t("reviews.noReviews")}</p>}
       {reviews.map((rv) => {
         const resultaat = resultaatOf(rv);

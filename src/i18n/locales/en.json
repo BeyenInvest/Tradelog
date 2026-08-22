@@ -14,6 +14,7 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
+    "deleteTitle": "Delete?",
     "discardTitle": "Discard changes?",
     "discardBody": "You have unsaved changes. Closing this window will lose them.",
     "discard": "Discard",
@@ -57,7 +58,8 @@
     "checkingContents": "Checking contents…",
     "countTrades": "{{count}} trades",
     "countReviews": "{{count}} reviews",
-    "countAccounts": "{{count}} accounts"
+    "countAccounts": "{{count}} accounts",
+    "shareLinksWarning": "Heads up: {{count}} active share link(s) for this journal will stop working."
   },
   "auth": {
     "name": "Name",
@@ -475,6 +477,11 @@
     "deleteFailed": "Deleting the review failed",
     "selectOrCreate": "Select or create a review.",
     "noReviews": "No reviews yet.",
+    "weeklyReviewsHeading": "Weekly reviews",
+    "tabWeekly": "Weekly",
+    "tabMonthly": "Monthly",
+    "tabQuarterly": "Quarterly",
+    "tabYearly": "Yearly",
     "taken": "Taken",
     "missed": "Missed",
     "resultHeading": "Result",

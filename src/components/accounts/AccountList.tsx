@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { useConfirm } from "@/hooks/useConfirm";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { formatEUR } from "@/lib/format";
@@ -128,10 +129,17 @@ function PropFirmRulesField({ account, onUpdate }: { account: PropAccount; onUpd
 
 export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccount, onCreatePayout, onDeletePayout }: AccountListProps) {
   const { t } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const [error, setError] = useState<string | null>(null);
 
   async function handleDeleteAccount(acc: PropAccount) {
-    if (!confirm(t("accounts.deleteConfirm", { name: acc.naam }))) return;
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("accounts.deleteConfirm", { name: acc.naam }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     setError(null);
     try {
       await onDeleteAccount(acc.id);
@@ -150,6 +158,7 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccoun
 
   return (
     <div className="flex flex-col gap-3">
+      {confirmDialog}
       {error && <p className="text-sm text-loss">{error}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {accounts.map((acc) => (

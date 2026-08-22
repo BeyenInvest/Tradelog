@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { PresetChooser } from "@/components/settings/PresetPicker";
 import { timezoneOptions, guessTimezone } from "@/lib/timezones";
@@ -48,6 +49,8 @@ function OnboardingWizardInner() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // a11y: keep keyboard focus inside the first-run takeover (N15).
+  const containerRef = useFocusTrap<HTMLDivElement>();
 
   /** Persist name + timezone, then advance to the "pick a journal" step. */
   async function saveProfileAndNext() {
@@ -77,6 +80,7 @@ function OnboardingWizardInner() {
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-50 overflow-y-auto bg-bg"
       role="dialog"
       aria-modal="true"

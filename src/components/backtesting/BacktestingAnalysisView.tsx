@@ -19,7 +19,7 @@ import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/t
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
-import type { Trade } from "@/lib/types";
+import type { MethodologyView, Trade } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 
@@ -35,11 +35,17 @@ import { useMethodology } from "@/hooks/useMethodology";
  * never mix with another's.
  */
 export function BacktestingAnalysisView({
-  trades, hideFaseOverride, showAdherence = false,
+  trades, hideFaseOverride, methodologyOverride, showAdherence = false,
 }: {
   trades: Trade[];
   /** Admin read-only view passes the viewed profile's own hide_fase here instead of the viewer's — see AdminUserDetailPage. */
   hideFaseOverride?: boolean;
+  /**
+   * Admin read-only view passes the *viewed* user's journal (fields + is-legacy/
+   * is-forex) here instead of the viewer's own useMethodology() — otherwise the
+   * breakdowns would follow the admin's active journal, not the user's (H2).
+   */
+  methodologyOverride?: MethodologyView;
   /**
    * Regel-adherentie (Fase N2) is live-journal-only: trade_evaluation isn't
    * selectable in a backtest project, and there the condition gaps would just
@@ -50,7 +56,10 @@ export function BacktestingAnalysisView({
 }) {
   const { t } = useTranslation();
   const { hideFase: ownHideFase, betaFeatures } = useAuth();
-  const { fields, isLegacyMethodology, isForexJournal } = useMethodology();
+  const ownMethodology = useMethodology();
+  // Admin read-only view supplies the viewed user's journal; every other call site
+  // uses the signed-in user's own active methodology.
+  const { fields, isLegacyMethodology, isForexJournal } = methodologyOverride ?? ownMethodology;
   const hideFase = hideFaseOverride ?? ownHideFase;
   // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
   // per-fase cards + fase-kenmerken + WPM-only breakdowns would be all-empty. Gate that whole
@@ -201,7 +210,14 @@ export function BacktestingAnalysisView({
         <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
         <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
         <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
-        <StatCard label={t("backtestingAnalysis.currentStreak")} value={`${kpis.currentStreak.count} ${kpis.currentStreak.type}`} />
+        <StatCard
+          label={t("backtestingAnalysis.currentStreak")}
+          value={
+            kpis.currentStreak.type === "none"
+              ? "—"
+              : `${kpis.currentStreak.count} ${t(`journal.streakType_${kpis.currentStreak.type}`)}`
+          }
+        />
         <StatCard
           label={t("backtestingAnalysis.winLossRatio")}
           value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}

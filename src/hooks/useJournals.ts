@@ -15,6 +15,12 @@ export interface JournalCounts {
   trades: number;
   reviews: number;
   accounts: number;
+  /**
+   * Journal-scoped share links (Fase M). These don't block deletion — they only
+   * cascade-die with the journal (ON DELETE CASCADE, 0040) — but a delete kills
+   * live links silently, so the switcher warns when any exist (N13).
+   */
+  shareLinks: number;
 }
 
 /**
@@ -123,16 +129,18 @@ export function useJournals() {
   const fetchCounts = useCallback(async (id: string): Promise<JournalCounts> => {
     const headCount = (table: string) =>
       supabase.from(table).select("*", { count: "exact", head: true }).eq("methodology_id", id);
-    const [tr, wr, pr, acc] = await Promise.all([
+    const [tr, wr, pr, acc, sl] = await Promise.all([
       headCount("trades").is("backtest_project_id", null),
       headCount("weekly_reviews"),
       headCount("periodic_reviews"),
       headCount("prop_accounts"),
+      headCount("share_links"),
     ]);
     return {
       trades: tr.count ?? 0,
       reviews: (wr.count ?? 0) + (pr.count ?? 0),
       accounts: acc.count ?? 0,
+      shareLinks: sl.count ?? 0,
     };
   }, []);
 
@@ -145,6 +153,21 @@ export function useJournals() {
     async (id: string) => {
       if (id === activeId) throw new Error("cannot delete the active journal");
       if (journals.length <= 1) throw new Error("cannot delete the last journal");
+      // The activeId above is the locally-cached profile; re-read it authoritatively
+      // so a stale UI (or another tab that just switched journals) can't slip a
+      // delete of the now-active journal past — that would leave profiles.methodology_id
+      // dangling at a deleted row and break every journal-scoped scope (N13 / cf. N1).
+      if (userId) {
+        const { data: prof, error: profErr } = await supabase
+          .from("profiles")
+          .select("methodology_id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (profErr) throw profErr;
+        if ((prof as { methodology_id: string | null } | null)?.methodology_id === id) {
+          throw new Error("cannot delete the active journal");
+        }
+      }
       const counts = await fetchCounts(id);
       if (counts.trades > 0 || counts.reviews > 0 || counts.accounts > 0) {
         throw new Error("journal is not empty");
@@ -153,7 +176,7 @@ export function useJournals() {
       if (err) throw err;
       await load();
     },
-    [activeId, journals.length, fetchCounts, load]
+    [activeId, journals.length, userId, fetchCounts, load]
   );
 
   return {

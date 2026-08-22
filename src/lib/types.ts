@@ -245,6 +245,20 @@ export interface Methodology {
   updated_at: string;
 }
 
+/**
+ * The methodology-derived facts BacktestingAnalysisView needs to render the right
+ * breakdowns (which are journal-type-specific): the field list (for custom-field
+ * breakdowns), and whether the journal is the legacy Weekly-Phase-Method / a forex
+ * journal. Normally read from the live `useMethodology()` context, but the admin
+ * read-only view must pass the *viewed* user's journal instead of the viewer's —
+ * see getMethodologyViewForUser + the `methodologyOverride` prop (H2).
+ */
+export interface MethodologyView {
+  fields: MethodologyField[];
+  isLegacyMethodology: boolean;
+  isForexJournal: boolean;
+}
+
 /** One fase within a methodology (replaces the fixed FASES enum). */
 export interface MethodologyFase {
   id: string;

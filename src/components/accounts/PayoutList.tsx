@@ -5,6 +5,7 @@ import type { Payout, PayoutInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { formatEUR } from "@/lib/format";
 import { localTodayIso } from "@/lib/localDate";
+import { useConfirm } from "@/hooks/useConfirm";
 
 interface PayoutListProps {
   accountId: string;
@@ -15,6 +16,7 @@ interface PayoutListProps {
 
 export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutListProps) {
   const { t } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const [bedrag, setBedrag] = useState("");
   const [datum, setDatum] = useState(localTodayIso);
   const [adding, setAdding] = useState(false);
@@ -40,7 +42,13 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
   }
 
   async function handleDelete(payout: Payout) {
-    if (!confirm(t("accounts.deletePayoutConfirm", { amount: formatEUR(payout.bedrag), date: payout.datum }))) return;
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("accounts.deletePayoutConfirm", { amount: formatEUR(payout.bedrag), date: payout.datum }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     setError(null);
     try {
       await onDelete(payout.id);
@@ -53,6 +61,7 @@ export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutLis
 
   return (
     <div className="flex flex-col gap-2 mt-3">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <p className="font-body text-xs uppercase tracking-wider text-muted">{t("accounts.payouts")}</p>
         <span className="font-mono text-xs text-win">{t("accounts.payoutsTotal", { amount: formatEUR(total) })}</span>

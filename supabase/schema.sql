@@ -888,6 +888,14 @@ create policy "methodology_fields_write" on methodology_fields
   with check (exists (
     select 1 from methodologies m where m.id = methodology_fields.methodology_id and m.user_id = auth.uid()));
 
+-- Read-only admin carve-out (0046, mirrors 0008) — the admin debug view needs the
+-- viewed user's own methodology + fields to render their journal-type breakdowns.
+-- `to authenticated` is required so anon never evaluates is_admin() (see 0036).
+create policy "methodologies_admin_select" on methodologies
+  for select to authenticated using (is_admin());
+create policy "methodology_fields_admin_select" on methodology_fields
+  for select to authenticated using (is_admin());
+
 create policy "trades_owner_all" on trades
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "weekly_reviews_owner_all" on weekly_reviews
@@ -905,17 +913,21 @@ create policy "payouts_owner_all" on payouts
 -- Admin read-only carve-out: additive permissive SELECT policies (Postgres
 -- ORs multiple permissive policies together), so every owner policy above
 -- is untouched — admins simply gain read access on top.
+-- All scoped `to authenticated` (0036): a policy with no TO clause also applies to
+-- anon, which — after 0036 revoked anon's EXECUTE on is_admin() — would make every
+-- anon SELECT on these tables fail with 42501. anon reads go through the owner
+-- policies (auth.uid() = null → zero rows), never through is_admin().
 create policy "profiles_admin_select" on profiles
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "trades_admin_select" on trades
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "weekly_reviews_admin_select" on weekly_reviews
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "periodic_reviews_admin_select" on periodic_reviews
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "backtest_projects_admin_select" on backtest_projects
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "prop_accounts_admin_select" on prop_accounts
-  for select using (is_admin());
+  for select to authenticated using (is_admin());
 create policy "payouts_admin_select" on payouts
-  for select using (is_admin());
+  for select to authenticated using (is_admin());

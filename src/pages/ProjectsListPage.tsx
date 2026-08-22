@@ -8,6 +8,7 @@ import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { supabase } from "@/lib/supabase";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { useConfirm } from "@/hooks/useConfirm";
 
 /**
  * One aggregated row per project from the get_project_trade_summaries() RPC
@@ -25,6 +26,7 @@ interface ProjectSummaryRow {
 
 export default function ProjectsListPage() {
   const { t } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const { projects, loading, createProject, deleteProject } = useBacktestProjects();
   const [summaries, setSummaries] = useState<ProjectSummaryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,18 +52,24 @@ export default function ProjectsListPage() {
   }, [summaries]);
 
   async function handleDelete(id: string, naam: string) {
-    if (confirm(t("backtesting.deleteConfirm", { name: naam }))) {
-      setError(null);
-      try {
-        await deleteProject(id);
-      } catch (err) {
-        setError(toErrorMessage(err, t("backtesting.deleteFailed")));
-      }
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("backtesting.deleteConfirm", { name: naam }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteProject(id);
+    } catch (err) {
+      setError(toErrorMessage(err, t("backtesting.deleteFailed")));
     }
   }
 
   return (
     <>
+      {confirmDialog}
       <PageHeader title={t("nav.backtesting")} subtitle={t("backtesting.subtitle")} />
 
       <div className="flex flex-col gap-5">

@@ -9,6 +9,7 @@ import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { useTrades } from "@/hooks/useTrades";
 import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export default function ProjectDashboardPage() {
   const own = useResultDisplay();
@@ -26,6 +27,7 @@ export default function ProjectDashboardPage() {
 
 function ProjectDashboardPageInner() {
   const { t } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { projects, loading: projectsLoading, updateProject, deleteProject } = useBacktestProjects();
@@ -52,19 +54,25 @@ function ProjectDashboardPageInner() {
   }
 
   async function handleDelete() {
-    if (confirm(t("backtesting.deleteConfirm", { name: project!.naam }))) {
-      setError(null);
-      try {
-        await deleteProject(project!.id);
-        navigate("/backtesting");
-      } catch (err) {
-        setError(toErrorMessage(err, t("backtesting.deleteFailed")));
-      }
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("backtesting.deleteConfirm", { name: project!.naam }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteProject(project!.id);
+      navigate("/backtesting");
+    } catch (err) {
+      setError(toErrorMessage(err, t("backtesting.deleteFailed")));
     }
   }
 
   return (
     <div className="flex flex-col gap-5">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <Link to="/backtesting" className="flex items-center gap-1.5 text-sm text-muted hover:text-ink w-fit">
           <ArrowLeft size={14} /> {t("backtesting.backToProjects")}

@@ -14,6 +14,7 @@
     "cancel": "Annuleren",
     "confirm": "Bevestigen",
     "delete": "Verwijderen",
+    "deleteTitle": "Verwijderen?",
     "discardTitle": "Wijzigingen weggooien?",
     "discardBody": "Je hebt onopgeslagen wijzigingen. Sluit je dit venster, dan gaan die verloren.",
     "discard": "Weggooien",
@@ -57,7 +58,8 @@
     "checkingContents": "Inhoud controleren…",
     "countTrades": "{{count}} trades",
     "countReviews": "{{count}} reviews",
-    "countAccounts": "{{count}} accounts"
+    "countAccounts": "{{count}} accounts",
+    "shareLinksWarning": "Let op: {{count}} actieve deel-link(s) voor dit journal stopt met werken."
   },
   "auth": {
     "name": "Naam",
@@ -475,6 +477,11 @@
     "deleteFailed": "Verwijderen van review is mislukt",
     "selectOrCreate": "Selecteer of maak een review.",
     "noReviews": "Nog geen reviews.",
+    "weeklyReviewsHeading": "Weekreviews",
+    "tabWeekly": "Wekelijks",
+    "tabMonthly": "Maandelijks",
+    "tabQuarterly": "Per kwartaal",
+    "tabYearly": "Jaarlijks",
     "taken": "Genomen",
     "missed": "Missed",
     "resultHeading": "Resultaat",

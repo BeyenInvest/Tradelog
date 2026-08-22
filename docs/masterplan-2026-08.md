@@ -59,6 +59,20 @@ Q en R zijn de nieuwe poortwachters: geen launch zolang Q niet af is. S is gespl
 
 **Klaar wanneer:** alle audit-bevindingen t/m MIDDEL dicht of bewust gedocumenteerd; lint/tests/build groen; repo-hygiëne op orde.
 
+### Migratie-register (N11 — bijgewerkt 2026-08-22)
+
+Volgorde van de recente/relevante migraties en hun status op prod. Eerstvolgend vrij nummer: **0047**.
+
+| Nr | Bestand | Wat | Status prod |
+|---|---|---|---|
+| 0036 | `revoke_anon_execute` | anon EXECUTE per naam intrekken op alle RPC's + admin-policies `to authenticated` | ✅ gedraaid (2026-08-13). **Bestand ontbrak op main**, hersteld in branch `fase-r-correctheid` (stond alleen op `claude/jolly-cannon-8d47fc`) |
+| 0043 | `open_trades` | lopende trades (is_open) | ✅ gedraaid (2026-08-20) |
+| 0044 | `audit_hardening` | K1 kolom-grants + N1 ownership-trigger + N2 storage-delete | ✅ gedraaid |
+| 0045 | `rename_field_option` | transactionele option-rename-RPC (Fase R s1, M5) | ✅ gedraaid |
+| 0046 | `admin_methodology_select` | is_admin() SELECT op methodologies + methodology_fields (Fase R s2, H2) | ⏳ **moet nog draaien** |
+
+> **0046 is de enige openstaande.** Zonder 0046 valt de admin-analyse voor een user met een *eigen* (niet-systeem) journal stil terug op universele breakdowns (geen crash — RLS geeft leeg terug). `to authenticated` op de nieuwe policies is verplicht, anders 42501 voor anon (les van 0036).
+
 ## Fase G-rest + launch-week (owner-ops + klein code)
 
 Zoals het oude plan, aangevuld vanuit de audit:

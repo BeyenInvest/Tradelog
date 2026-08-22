@@ -16,17 +16,18 @@ import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
+import { useConfirm } from "@/hooks/useConfirm";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades, closedTrades, round2 } from "@/lib/stats";
 import type { PeriodicReview, PeriodicReviewInput, Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 
 type ReviewTab = "week" | PeriodType;
 
-const TABS: { key: ReviewTab; label: string }[] = [
-  { key: "week", label: "Weekly" },
-  { key: "month", label: "Monthly" },
-  { key: "quarter", label: "Quarterly" },
-  { key: "year", label: "Yearly" },
+const TABS: { key: ReviewTab; labelKey: string }[] = [
+  { key: "week", labelKey: "reviews.tabWeekly" },
+  { key: "month", labelKey: "reviews.tabMonthly" },
+  { key: "quarter", labelKey: "reviews.tabQuarterly" },
+  { key: "year", labelKey: "reviews.tabYearly" },
 ];
 
 export default function ReviewsPage() {
@@ -54,7 +55,7 @@ export default function ReviewsPage() {
               tab === item.key ? "border-gold text-ink" : "border-transparent text-muted"
             )}
           >
-            {item.label}
+            {t(item.labelKey)}
           </button>
         ))}
       </div>
@@ -78,6 +79,7 @@ function WeeklyReviewsTab({
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const { reviews, loading, createReview, updateReview, deleteReview, linkTradesToReview } = useWeeklyReviews();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -156,14 +158,19 @@ function WeeklyReviewsTab({
   }
 
   async function handleDelete(review: WeeklyReview) {
-    if (confirm(t("reviews.deleteWeeklyConfirm", { week: review.week_nummer, year: review.jaar }))) {
-      setError(null);
-      try {
-        await deleteReview(review.id);
-        if (selectedId === review.id) setSelectedId(null);
-      } catch (err) {
-        setError(toErrorMessage(err, t("reviews.deleteFailed")));
-      }
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("reviews.deleteWeeklyConfirm", { week: review.week_nummer, year: review.jaar }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteReview(review.id);
+      if (selectedId === review.id) setSelectedId(null);
+    } catch (err) {
+      setError(toErrorMessage(err, t("reviews.deleteFailed")));
     }
   }
 
@@ -175,6 +182,7 @@ function WeeklyReviewsTab({
 
   return (
     <>
+      {confirmDialog}
       <div className="flex justify-end mb-4">
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
           <Plus size={15} /> {t("reviews.newReview")}
@@ -237,6 +245,7 @@ function PeriodicReviewsTab({
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
+  const { confirm, confirmDialog } = useConfirm();
   const { reviews, loading, createReview, updateReview, deleteReview } = usePeriodicReviews(periodType);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -301,26 +310,28 @@ function PeriodicReviewsTab({
   }
 
   async function handleDelete(review: PeriodicReview) {
-    if (
-      confirm(
-        t("reviews.deletePeriodicConfirm", {
-          type: PERIOD_TYPE_LABELS[periodType],
-          label: periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language)),
-        })
-      )
-    ) {
-      setError(null);
-      try {
-        await deleteReview(review.id);
-        if (selectedId === review.id) setSelectedId(null);
-      } catch (err) {
-        setError(toErrorMessage(err, t("reviews.deleteFailed")));
-      }
+    const ok = await confirm({
+      title: t("common.deleteTitle"),
+      message: t("reviews.deletePeriodicConfirm", {
+        type: PERIOD_TYPE_LABELS[periodType],
+        label: periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language)),
+      }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteReview(review.id);
+      if (selectedId === review.id) setSelectedId(null);
+    } catch (err) {
+      setError(toErrorMessage(err, t("reviews.deleteFailed")));
     }
   }
 
   return (
     <>
+      {confirmDialog}
       <div className="flex justify-end mb-4">
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
           <Plus size={15} /> {t("reviews.newPeriodicReview", { type: PERIOD_TYPE_LABELS[periodType].toLowerCase() })}

@@ -1,7 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { fetchAllPages } from "@/lib/fetchAll";
+import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import type {
-  BacktestProject, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview,
+  BacktestProject, Methodology, MethodologyField, MethodologyView,
+  PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview,
 } from "@/lib/types";
 
 /**
@@ -40,6 +42,42 @@ export async function getProfileById(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
   return data as Profile | null;
+}
+
+/**
+ * The viewed user's active-journal methodology view for the read-only analysis
+ * (H2). Mirrors useMethodology's resolution — the profile's methodology_id, else
+ * the built-in Weekly-Phase-Method template — so the admin's Analyse tab renders
+ * the *viewed* user's breakdowns (fase/forex/custom-field), not the admin's own.
+ * Needs the is_admin() SELECT carve-out on methodologies + methodology_fields
+ * (migration 0046); returns a neutral empty view if nothing resolves.
+ */
+export async function getMethodologyViewForUser(methodologyId: string | null): Promise<MethodologyView> {
+  let id = methodologyId;
+  if (!id) {
+    const { data: sys } = await supabase
+      .from("methodologies")
+      .select("id")
+      .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
+      .maybeSingle();
+    id = (sys as { id: string } | null)?.id ?? null;
+  }
+  if (!id) return { fields: [], isLegacyMethodology: false, isForexJournal: false };
+
+  const [m, fl] = await Promise.all([
+    supabase.from("methodologies").select("*").eq("id", id).maybeSingle(),
+    supabase.from("methodology_fields").select("*").eq("methodology_id", id).order("sort_order"),
+  ]);
+  if (m.error) throw m.error;
+  if (fl.error) throw fl.error;
+
+  const methodology = (m.data as Methodology | null) ?? null;
+  const fields = (fl.data as MethodologyField[] | null) ?? [];
+  return {
+    fields,
+    isLegacyMethodology: fields.some((f) => f.field_key === "fase"),
+    isForexJournal: methodology?.asset_class === "forex",
+  };
 }
 
 export async function getTradesForUser(userId: string): Promise<Trade[]> {

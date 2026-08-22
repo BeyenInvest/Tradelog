@@ -263,6 +263,13 @@ export function JournalSwitcher({ compact = false }: { compact?: boolean }) {
               )}
             </ul>
           )}
+          {/* Share links cascade-die with the journal (they never block the delete) —
+              warn even for an otherwise-empty, deletable journal (N13). */}
+          {deleteCounts && deleteCounts.shareLinks > 0 && !hasContents && (
+            <p className="font-mono text-[11px] text-loss/80">
+              {t("journalSwitcher.shareLinksWarning", { count: deleteCounts.shareLinks })}
+            </p>
+          )}
           {deleteError && <p className="font-mono text-[11px] text-loss">{deleteError}</p>}
         </ConfirmDialog>
       )}
