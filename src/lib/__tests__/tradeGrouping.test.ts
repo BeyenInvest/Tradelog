@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupTrades, matchesSearch } from "../tradeGrouping";
+import { groupTrades, groupTradesByOutcome, matchesSearch } from "../tradeGrouping";
 import { makeTrade } from "../stats/__tests__/fixtures";
 
 describe("groupTrades", () => {
@@ -53,6 +53,28 @@ describe("groupTrades", () => {
     expect(groups).toHaveLength(2);
     expect(groups[0].trades).toHaveLength(2);
     expect(groups[1].trades).toHaveLength(1);
+  });
+});
+
+describe("groupTradesByOutcome", () => {
+  it("always returns Win/BE/Loss buckets, even empty, when there are no open trades", () => {
+    const groups = groupTradesByOutcome([makeTrade({ outcome: "Win" })]);
+    expect(groups.map((g) => g.key)).toEqual(["Win", "BE", "Loss"]);
+  });
+
+  it("adds a leading Open bucket for still-running trades instead of dropping them", () => {
+    const open = makeTrade({ is_open: true });
+    const won = makeTrade({ outcome: "Win", resultaat_pct: 1 });
+    const groups = groupTradesByOutcome([open, won]);
+    expect(groups.map((g) => g.key)).toEqual(["Open", "Win", "BE", "Loss"]);
+    expect(groups[0].trades).toEqual([open]);
+    expect(groups[1].trades).toEqual([won]);
+  });
+
+  it("an open trade never counts toward any bucket's resultaatTotal, even one still carrying a stale outcome/resultaat_pct", () => {
+    const open = makeTrade({ is_open: true, outcome: "Win", resultaat_pct: 999 });
+    const groups = groupTradesByOutcome([open]);
+    expect(groups[0].resultaatTotal).toBe(0);
   });
 });
 

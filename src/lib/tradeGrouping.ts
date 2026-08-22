@@ -1,7 +1,7 @@
 import type { Trade } from "./types";
 import { type Outcome } from "./constants";
 import { monthName } from "./format";
-import { isMissed, round2 } from "./stats/core";
+import { isMissed, isOpen, round2 } from "./stats/core";
 
 export type GroupBy = "month" | "week" | "quarter" | "backtestDag";
 
@@ -18,7 +18,9 @@ export interface TradeGroup {
  * even though both still appear in `trades` for display when a caller includes them.
  */
 function realResultaatTotal(trades: Trade[]): number {
-  return round2(trades.reduce((s, t) => (isMissed(t) || t.resultaat_pct == null ? s : s + t.resultaat_pct), 0));
+  return round2(
+    trades.reduce((s, t) => (isMissed(t) || isOpen(t) || t.resultaat_pct == null ? s : s + t.resultaat_pct), 0)
+  );
 }
 
 function monthKey(dateIso: string, locale: string): { key: string; label: string } {
@@ -90,10 +92,24 @@ export function groupTrades(trades: Trade[], groupBy: GroupBy, locale = "en-GB")
 
 const OUTCOME_ORDER: Outcome[] = ["Win", "BE", "Loss"];
 
-/** Groups trades into fixed Win/BE/Loss buckets (always all three, even empty) — order matches the rest of the review UI (pie chart legend, outcome counts). */
+/**
+ * Groups trades into fixed Win/BE/Loss buckets (always all three, even empty),
+ * plus a leading "Open" bucket for still-running trades — their `outcome` is
+ * null (see trades_open_result_chk), so without this they'd match none of the
+ * three outcome buckets and silently vanish from every outcome-grouped view
+ * (e.g. the weekly review's linked-trades panel). Order matches the rest of
+ * the review UI (pie chart legend, outcome counts).
+ */
 export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
-  return OUTCOME_ORDER.map((outcome) => {
-    const bucketTrades = trades.filter((t) => t.outcome === outcome);
+  const openTrades = trades.filter((t) => t.is_open);
+  const openGroup: TradeGroup = {
+    key: "Open",
+    label: "Open",
+    trades: openTrades,
+    resultaatTotal: realResultaatTotal(openTrades),
+  };
+  const outcomeGroups = OUTCOME_ORDER.map((outcome) => {
+    const bucketTrades = trades.filter((t) => !t.is_open && t.outcome === outcome);
     return {
       key: outcome,
       label: outcome,
@@ -101,6 +117,7 @@ export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
       resultaatTotal: realResultaatTotal(bucketTrades),
     };
   });
+  return openTrades.length > 0 ? [openGroup, ...outcomeGroups] : outcomeGroups;
 }
 
 /** Free-text search across the fields a trader would actually search on. */
