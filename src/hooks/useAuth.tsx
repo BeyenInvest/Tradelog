@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
@@ -82,29 +82,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileError, setProfileError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  // Same guard as useTrades' requestIdRef (M3): profile fetches fire from
+  // getSession, every onAuthStateChange (token refreshes included), retryProfile
+  // and updateProfile — a slow older response must not land after a newer one and
+  // resurrect a stale profile (e.g. the journal you just switched away from).
+  const profileSeqRef = useRef(0);
+
+  // Applies a fetch result WITHOUT clobbering a previously loaded profile on
+  // failure: onAuthStateChange refetches on every token refresh, and a
+  // transient network error there must not null out good state mid-session
+  // (that would misfile the next trade save — audit blocker N1). Only a
+  // never-loaded profile leaves the app behind the retry screen.
+  async function loadProfile(userId: string) {
+    const seq = ++profileSeqRef.current;
+    const res = await fetchProfile(userId);
+    if (seq !== profileSeqRef.current) return; // superseded by a newer fetch/update
+    setProfileError(res.failed);
+    if (!res.failed) setProfile(res.profile);
+  }
 
   useEffect(() => {
-    // Applies a fetch result WITHOUT clobbering a previously loaded profile on
-    // failure: onAuthStateChange refetches on every token refresh, and a
-    // transient network error there must not null out good state mid-session
-    // (that would misfile the next trade save — audit blocker N1). Only a
-    // never-loaded profile leaves the app behind the retry screen.
-    const applyProfileFetch = (res: { profile: Profile | null; failed: boolean }) => {
-      setProfileError(res.failed);
-      if (!res.failed) setProfile(res.profile);
-    };
-
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session) applyProfileFetch(await fetchProfile(data.session.user.id));
+      if (data.session) await loadProfile(data.session.user.id);
       else setProfile(null);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
-      if (newSession) void fetchProfile(newSession.user.id).then(applyProfileFetch);
+      if (newSession) void loadProfile(newSession.user.id);
       else {
+        profileSeqRef.current += 1; // an in-flight fetch must not re-apply a profile after sign-out
         setProfile(null);
         setProfileError(false);
       }
@@ -114,14 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => listener.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function retryProfile() {
     const { data } = await supabase.auth.getSession();
     if (!data.session) return;
-    const res = await fetchProfile(data.session.user.id);
-    setProfileError(res.failed);
-    if (!res.failed) setProfile(res.profile);
+    await loadProfile(data.session.user.id);
   }
 
   async function signIn(email: string, password: string, captchaToken?: string) {
@@ -175,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;
+    profileSeqRef.current += 1; // this row is now fresher than any in-flight fetch
     setProfile(data as Profile);
   }
 

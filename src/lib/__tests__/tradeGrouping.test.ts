@@ -84,15 +84,29 @@ describe("matchesSearch", () => {
   });
 
   it("matches case-insensitively against pair, fase, concept, entry and notes", () => {
-    const t = makeTrade({ pair: "GBPUSD", trade_concept: "Reversal", notes: "Sterke daily zone" });
+    const t = makeTrade({ pair: "GBPUSD", instrument: "GBPUSD", trade_concept: "Reversal", notes: "Sterke daily zone" });
     expect(matchesSearch(t, "gbpusd")).toBe(true);
     expect(matchesSearch(t, "reversal")).toBe(true);
     expect(matchesSearch(t, "daily zone")).toBe(true);
     expect(matchesSearch(t, "eurusd")).toBe(false);
   });
 
+  it("matches the instrument — what a non-forex journal actually trades under (M4)", () => {
+    // Non-forex: pair holds the placeholder "EURUSD", the real symbol is instrument.
+    const t = makeTrade({ pair: "EURUSD", instrument: "NAS100" });
+    expect(matchesSearch(t, "nas")).toBe(true);
+    expect(matchesSearch(t, "nas100")).toBe(true);
+  });
+
+  it("matches string values in the custom bag, ignoring non-strings (M4)", () => {
+    const t = makeTrade({ custom: { setup: "Breakout retest", confluences: 3, valid: true } });
+    expect(matchesSearch(t, "breakout")).toBe(true);
+    expect(matchesSearch(t, "retest")).toBe(true);
+    expect(matchesSearch(t, "3")).toBe(false); // numbers/booleans aren't searched
+  });
+
   it("null fields don't crash the search", () => {
-    const t = makeTrade({ trade_concept: null, entry: null, notes: null });
+    const t = makeTrade({ instrument: null, trade_concept: null, entry: null, notes: null, pair: "GBPUSD", fase: "Fase 1" });
     expect(matchesSearch(t, "anything")).toBe(false);
   });
 });

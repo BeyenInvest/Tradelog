@@ -160,37 +160,59 @@ export function computeStreaks(trades: ClosedTrade[]): StreakResult {
 
 export interface DrawdownResult {
   maxDrawdownPct: number;
+  /** Trade at the peak the max drawdown fell from. null when the drawdown ran from the 0-baseline start, or when there is no drawdown at all. */
   peakTradeId: string | null;
+  /** Trade at the bottom of the max drawdown. null when there is no drawdown. */
   troughTradeId: string | null;
+  /** Cumulative % at that peak (0 for the baseline / no-drawdown case). */
+  peakCum: number;
+  /** Cumulative % at that trough (0 when there is no drawdown). */
+  troughCum: number;
 }
 
 /**
  * Rekenregel 4: largest pullback (%) from a running peak in the chronological
  * cumulative resultaat curve, across all fases combined, sorted by datum_open.
+ * The peak starts at the 0-baseline (starting equity), so an opening losing
+ * streak counts in full — it is not measured from its own first trade.
+ * peak/trough identify the max drawdown itself, so equity-curve views can mark
+ * the exact segment.
  */
 export function computeMaxDrawdown(trades: ClosedTrade[]): DrawdownResult {
   const sorted = sortChronological(trades);
 
   let cum = 0;
-  let peak = -Infinity;
-  let peakTradeId: string | null = null;
+  let runningPeak = 0;
+  let runningPeakTradeId: string | null = null;
   let maxDrawdownPct = 0;
+  let peakTradeId: string | null = null;
   let troughTradeId: string | null = null;
+  let peakCum = 0;
+  let troughCum = 0;
 
   for (const t of sorted) {
     cum += t.resultaat_pct;
-    if (cum > peak) {
-      peak = cum;
-      peakTradeId = t.id;
+    if (cum > runningPeak) {
+      runningPeak = cum;
+      runningPeakTradeId = t.id;
     }
-    const dd = peak - cum;
+    const dd = runningPeak - cum;
     if (dd > maxDrawdownPct) {
       maxDrawdownPct = dd;
+      peakTradeId = runningPeakTradeId;
       troughTradeId = t.id;
+      peakCum = runningPeak;
+      troughCum = cum;
     }
   }
 
-  return { maxDrawdownPct: round2(maxDrawdownPct), peakTradeId, troughTradeId };
+  return {
+    maxDrawdownPct: round2(maxDrawdownPct),
+    peakTradeId,
+    troughTradeId,
+    peakCum: round2(peakCum),
+    troughCum: round2(troughCum),
+  };
 }
 
 export interface ExpectancyResult {
@@ -287,6 +309,74 @@ export function computeRStats(trades: Pick<ClosedTrade, "resultaat_pct" | "risk_
   // per-trade rounding error into the total/average.
   const total = trades.reduce((s, t) => s + t.resultaat_pct / riskPct(t), 0);
   return { totalR: round2(total), avgR: round2(total / n) };
+}
+
+export interface RDistributionStats {
+  /** Sample standard deviation (n−1) of the per-trade R-multiples. null with fewer than 2 trades. */
+  stdDevR: number | null;
+  /**
+   * Van Tharp's System Quality Number: (avg R ÷ stdDev R) · √n. Expectancy
+   * scaled by consistency — higher is a smoother, more tradable edge. null when
+   * stdDevR is null or 0 (identical results carry no spread to quality-score).
+   */
+  sqn: number | null;
+}
+
+/**
+ * Spread/quality of the R-multiple distribution. Same contract as
+ * computeRStats: caller passes an already-scoped, missed-excluded closed list.
+ */
+export function computeRDistribution(trades: Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]): RDistributionStats {
+  const n = trades.length;
+  if (n < 2) return { stdDevR: null, sqn: null };
+  const rs = trades.map((t) => t.resultaat_pct / riskPct(t));
+  const avg = mean(rs);
+  const variance = rs.reduce((s, r) => s + (r - avg) * (r - avg), 0) / (n - 1);
+  const stdDev = Math.sqrt(variance);
+  if (stdDev === 0) return { stdDevR: 0, sqn: null };
+  return { stdDevR: round2(stdDev), sqn: round2((avg / stdDev) * Math.sqrt(n)) };
+}
+
+export interface ExtremesResult {
+  /** Highest positive resultaat_pct. null when no trade is in profit. */
+  largestWin: number | null;
+  largestWinTradeId: string | null;
+  /** Most negative resultaat_pct (kept negative). null when no trade is in loss. */
+  largestLoss: number | null;
+  largestLossTradeId: string | null;
+}
+
+/**
+ * Largest single win and loss. Sign of resultaat_pct decides the side
+ * (matching computeExpectancy/computeProfitFactor), so a 0% trade is neither.
+ * Ties keep the chronologically earliest trade.
+ */
+export function computeExtremes(trades: Pick<ClosedTrade, "id" | "datum_open" | "resultaat_pct">[]): ExtremesResult {
+  let win: { value: number; id: string } | null = null;
+  let loss: { value: number; id: string } | null = null;
+  for (const t of sortChronological(trades)) {
+    if (t.resultaat_pct > 0 && (win == null || t.resultaat_pct > win.value)) {
+      win = { value: t.resultaat_pct, id: t.id };
+    } else if (t.resultaat_pct < 0 && (loss == null || t.resultaat_pct < loss.value)) {
+      loss = { value: t.resultaat_pct, id: t.id };
+    }
+  }
+  return {
+    largestWin: win ? round2(win.value) : null,
+    largestWinTradeId: win?.id ?? null,
+    largestLoss: loss ? round2(loss.value) : null,
+    largestLossTradeId: loss?.id ?? null,
+  };
+}
+
+/**
+ * Mean planned risk % per trade, through the same riskPct() fallback the
+ * R-multiples use (null/non-positive risk_pct counts as DEFAULT_RISK_PCT, so
+ * this always reflects what R was actually computed against). null when empty.
+ */
+export function computeAvgRiskPct(trades: Pick<Trade, "risk_pct">[]): number | null {
+  if (trades.length === 0) return null;
+  return round2(mean(trades.map(riskPct)));
 }
 
 export interface EquityPoint {

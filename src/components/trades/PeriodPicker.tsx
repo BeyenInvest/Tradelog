@@ -3,14 +3,11 @@ import { useTranslation } from "react-i18next";
 import { CalendarRange, ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { monthRange, quarterRange, yearRange, type DateRange } from "@/lib/periodRanges";
+import { localTodayIso, toLocalIso } from "@/lib/localDate";
 
 interface PeriodPickerProps {
   value: DateRange | null;
   onChange: (range: DateRange | null) => void;
-}
-
-function isoToday(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function thisWeekRange(): DateRange {
@@ -18,7 +15,8 @@ function thisWeekRange(): DateRange {
   const mondayOffset = (now.getDay() + 6) % 7; // 0=Mon..6=Sun
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
   const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
+  // toLocalIso, not toISOString: these are *local*-midnight Dates — UTC would shift them a day back.
+  return { start: toLocalIso(monday), end: toLocalIso(sunday) };
 }
 
 function formatNl(iso: string): string {
@@ -119,7 +117,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
               <input
                 type="date"
                 value={customStart}
-                max={customEnd || isoToday()}
+                max={customEnd || localTodayIso()}
                 onChange={(e) => setStart(e.target.value)}
                 className="input text-xs py-1.5 flex-1"
               />

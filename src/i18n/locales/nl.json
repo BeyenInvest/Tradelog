@@ -255,7 +255,13 @@
     "done_one": "{{count}} trade geïmporteerd.",
     "done_other": "{{count}} trades geïmporteerd.",
     "importFailed": "Importeren is mislukt",
-    "nothingReady": "Nog niets klaar om te importeren."
+    "nothingReady": "Nog niets klaar om te importeren.",
+    "dedupFailed": "Kon niet controleren op eerder geïmporteerde trades — importeren is gepauzeerd om dubbels te vermijden.",
+    "dedupRetry": "Opnieuw proberen",
+    "dateOrderTitle": "Welk datumformaat gebruikt dit bestand?",
+    "dateOrderHint": "Dit bestand bevat datums zoals 03/04/2024 die anders lezen als dag-eerst vs. maand-eerst. Controleer de preview na je keuze.",
+    "dateOrderDmy": "Dag eerst — 03/04 = 3 april (EU)",
+    "dateOrderMdy": "Maand eerst — 03/04 = 4 maart (VS)"
   },
   "filters": {
     "title": "Filters",
@@ -503,6 +509,7 @@
     "kwartaal": "Kwartaal",
     "tradesInWeek": "Trades in week ({{count}})",
     "tradesInPeriod": "Trades in periode ({{count}})",
+    "invalidWeek": "{{jaar}} heeft {{maxWeek}} ISO-weken — kies een week tussen 1 en {{maxWeek}}",
     "saveFailed": "Opslaan van de review is mislukt"
   },
   "reviewContent": {
@@ -639,6 +646,8 @@
     "propFirmRules": "Prop-firm regels",
     "profitTarget": "Winstdoel",
     "maxDrawdown": "Max drawdown",
+    "maxDrawdownStatic": "Max drawdown (vanaf startbalans)",
+    "maxDrawdownStaticHint": "Gemeten t.o.v. de startbalans, niet t.o.v. een trailing high-water mark. Op een trailing-drawdown-account kan de echte limiet eerder geraakt worden dan deze balk suggereert.",
     "dailyLossLimit": "Daglimiet",
     "targetReached": "bereikt",
     "limitBreached": "overschreden",

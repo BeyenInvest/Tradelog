@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseNumber, parseDateOnly } from "../values";
+import { parseNumber, parseDateOnly, isAmbiguousDate } from "../values";
 import { normalizeSymbol } from "../symbols";
 import { parseCsv, detectDelimiter, detectColumns } from "../csv";
 import { resolveResultaatPct, deriveOutcome, dealToImportRow } from "../mapToTrade";
@@ -67,6 +67,34 @@ describe("parseDateOnly", () => {
   it("returns null when there is no date", () => {
     expect(parseDateOnly("total")).toBeNull();
     expect(parseDateOnly("")).toBeNull();
+  });
+  it("follows the chosen date order for ambiguous dates (N9)", () => {
+    expect(parseDateOnly("03/04/2024")).toBe("2024-04-03"); // default day-first
+    expect(parseDateOnly("03/04/2024", "mdy")).toBe("2024-03-04");
+    expect(parseDateOnly("03/15/2024", "mdy")).toBe("2024-03-15");
+    expect(parseDateOnly("15/03/2024", "mdy")).toBe("2024-03-15"); // 15 can't be a month — order irrelevant
+    expect(parseDateOnly("2024-03-04", "mdy")).toBe("2024-03-04"); // year-first ignores the order
+  });
+  it("rejects impossible calendar dates instead of letting Date roll them over (N9)", () => {
+    expect(parseDateOnly("2024-02-30")).toBeNull();
+    expect(parseDateOnly("2023.02.29 10:00:00")).toBeNull(); // not a leap year
+    expect(parseDateOnly("2024.02.29 10:00:00")).toBe("2024-02-29"); // leap year is fine
+    expect(parseDateOnly("31/04/2024")).toBeNull(); // April has 30 days
+  });
+});
+
+describe("isAmbiguousDate", () => {
+  it("flags year-last dates where both groups could be a month", () => {
+    expect(isAmbiguousDate("03/04/2024")).toBe(true);
+    expect(isAmbiguousDate("03/04/2024 14:30")).toBe(true);
+  });
+  it("is false when the date self-disambiguates or reads the same either way", () => {
+    expect(isAmbiguousDate("15/03/2024")).toBe(false); // 15 can't be a month
+    expect(isAmbiguousDate("03/15/2024")).toBe(false);
+    expect(isAmbiguousDate("05/05/2024")).toBe(false); // same date under both orders
+    expect(isAmbiguousDate("2024-03-04")).toBe(false); // year-first
+    expect(isAmbiguousDate("")).toBe(false);
+    expect(isAmbiguousDate("total")).toBe(false);
   });
 });
 

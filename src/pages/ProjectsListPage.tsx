@@ -33,7 +33,7 @@ export default function ProjectsListPage() {
     let cancelled = false;
     supabase.rpc("get_project_trade_summaries").then(({ data, error: fetchError }) => {
       if (cancelled) return;
-      if (fetchError) setError(fetchError.message);
+      if (fetchError) setError(toErrorMessage(fetchError));
       else setSummaries((data as ProjectSummaryRow[]) ?? []);
     });
     return () => {

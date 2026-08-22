@@ -38,9 +38,11 @@ export interface ParsedDeal {
  * string so the dialog can render it in the user's language.
  *   - "skippedRows": rows without recognisable trade data (broker summary/junk lines)
  *   - "openTrades": trades without an exit at export time (TradingView) — nothing to import yet
+ *   - "ambiguousDates": deals whose date reads differently as dd/mm vs mm/dd (N9) —
+ *     the dialog shows a format choice and re-parses with the user's answer
  */
 export interface ParseWarning {
-  kind: "skippedRows" | "openTrades";
+  kind: "skippedRows" | "openTrades" | "ambiguousDates";
   count: number;
 }
 

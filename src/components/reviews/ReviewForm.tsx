@@ -2,7 +2,8 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
-import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
+import { isoWeekOf, isoWeekRange, weeksInIsoYear } from "@/lib/isoWeek";
+import { localTodayIso } from "@/lib/localDate";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -22,7 +23,7 @@ interface ReviewFormProps {
 }
 
 function defaultWeek() {
-  return isoWeekOf(new Date().toISOString().slice(0, 10));
+  return isoWeekOf(localTodayIso());
 }
 
 export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: ReviewFormProps) {
@@ -62,7 +63,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
   );
   // A trade added inline should default into the week under review: today if it falls in that
   // week (the common "I just spotted a missed trade" case), otherwise the week's first day.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayIso();
   const newTradeDate = today >= weekRange.start && today <= weekRange.end ? today : weekRange.start;
   const takenPreview = takenTrades(tradesInWeek);
   const missedPreview = missedTrades(tradesInWeek);
@@ -79,6 +80,13 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    // Week 53 only exists in some ISO years — an out-of-range week would silently
+    // shift the range into the next year (relink would then grab January trades).
+    const maxWeek = weeksInIsoYear(jaar);
+    if (!Number.isInteger(weekNummer) || weekNummer < 1 || weekNummer > maxWeek) {
+      setError(t("reviewForm.invalidWeek", { jaar, maxWeek }));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -115,7 +123,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
       <div className="grid grid-cols-3 gap-4">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.week")}</label>
-          <input type="number" min={1} max={53} className="input" value={weekNummer} onChange={(e) => handleWeekChange(Number(e.target.value))} />
+          <input type="number" min={1} max={weeksInIsoYear(jaar)} className="input" value={weekNummer} onChange={(e) => handleWeekChange(Number(e.target.value))} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.jaar")}</label>

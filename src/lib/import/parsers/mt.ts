@@ -1,5 +1,6 @@
 import { tableToDeals, parseFlatCsv } from "./table";
 import { extractLargestTable } from "./html";
+import type { DateOrder } from "../values";
 import type { ParseResult } from "../types";
 
 /** True when the text looks like a MetaTrader HTML statement rather than a CSV. */
@@ -15,11 +16,11 @@ function isHtml(text: string): boolean {
  * parseDateOnly), so the broker-server-vs-local/DST offset is a known caveat to
  * revisit against a real export.
  */
-export function parseMt(text: string): ParseResult {
+export function parseMt(text: string, dateOrder: DateOrder = "dmy"): ParseResult {
   if (isHtml(text)) {
     const { headers, rows } = extractLargestTable(text); // HTML picks the widest row as header
-    const { deals, warnings } = tableToDeals(headers, rows);
+    const { deals, warnings } = tableToDeals(headers, rows, dateOrder);
     return { broker: "mt", deals, warnings };
   }
-  return parseFlatCsv(text, "mt"); // CSV export may lead with banner rows
+  return parseFlatCsv(text, "mt", dateOrder); // CSV export may lead with banner rows
 }

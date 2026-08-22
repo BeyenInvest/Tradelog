@@ -6,6 +6,7 @@ import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
 import { dateLocale, monthName, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { rangeOfPeriod } from "@/lib/periodRanges";
+import { localTodayIso } from "@/lib/localDate";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
@@ -72,7 +73,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
     [trades, periodRange]
   );
   // A trade added inline defaults into the reviewed period: today if it falls inside it, else the period's first day.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayIso();
   const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
   const takenPreview = takenTrades(tradesInPeriod);
   const missedPreview = missedTrades(tradesInPeriod);

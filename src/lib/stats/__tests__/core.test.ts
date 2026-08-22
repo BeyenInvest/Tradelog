@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve, isOpen, closedTrades, takenTrades, computeOverviewKpis } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, computeRDistribution, computeExtremes, computeAvgRiskPct, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve, isOpen, closedTrades, takenTrades, computeOverviewKpis } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
 
 describe("round2", () => {
@@ -79,14 +79,125 @@ describe("computeMaxDrawdown", () => {
     expect(computeMaxDrawdown(trades).maxDrawdownPct).toBe(0);
   });
 
-  it("is zero for a single trade", () => {
+  it("measures an opening losing streak from the 0-baseline, not from its own first trade", () => {
+    const trades = makeSequence([
+      { outcome: "Loss", resultaat_pct: -2 },
+      { outcome: "Loss", resultaat_pct: -3 },
+    ]);
+    const result = computeMaxDrawdown(trades);
+    expect(result.maxDrawdownPct).toBe(5); // 0 -> -5, not -2 -> -5
+    expect(result.peakTradeId).toBeNull(); // the baseline is not a trade
+    expect(result.peakCum).toBe(0);
+    expect(result.troughCum).toBe(-5);
+    expect(result.troughTradeId).toBe(trades[1].id);
+  });
+
+  it("a single losing trade is a drawdown from the baseline", () => {
     const trades = makeSequence(["Loss"]);
-    expect(computeMaxDrawdown(trades).maxDrawdownPct).toBe(0);
+    expect(computeMaxDrawdown(trades).maxDrawdownPct).toBe(1);
+  });
+
+  it("returns the peak/trough pair of the max drawdown itself, not the overall high", () => {
+    // cum: 2, 1, 4, 0, 1, 0.5, 5.5 — max dd is 4 -> 0 (trades[2] -> trades[3]);
+    // the overall high (5.5) comes later and must not win.
+    const values = [2, -1, 3, -4, 1, -0.5, 5];
+    const trades = values.map((v, i) =>
+      makeTrade({ datum_open: `2026-01-${String(i + 1).padStart(2, "0")}`, resultaat_pct: v, outcome: v >= 0 ? "Win" : "Loss" })
+    );
+    const result = computeMaxDrawdown(trades);
+    expect(result.peakTradeId).toBe(trades[2].id);
+    expect(result.troughTradeId).toBe(trades[3].id);
+    expect(result.peakCum).toBe(4);
+    expect(result.troughCum).toBe(0);
   });
 
   it("does not throw on an empty array", () => {
     expect(() => computeMaxDrawdown([])).not.toThrow();
     expect(computeMaxDrawdown([]).maxDrawdownPct).toBe(0);
+  });
+});
+
+describe("computeRDistribution", () => {
+  it("is null/null with fewer than 2 trades", () => {
+    expect(computeRDistribution([])).toEqual({ stdDevR: null, sqn: null });
+    expect(computeRDistribution([makeTrade({ resultaat_pct: 2 })])).toEqual({ stdDevR: null, sqn: null });
+  });
+
+  it("matches a hand-computed sample std-dev and SQN on R-multiples", () => {
+    // R-multiples (risk null -> 1%): 2, -1, 3, -2 -> avg 0.5
+    // sample variance = ((1.5)^2 + (1.5)^2 + (2.5)^2 + (2.5)^2) / 3 = 17/3
+    const trades = [
+      makeTrade({ resultaat_pct: 2 }),
+      makeTrade({ resultaat_pct: -1 }),
+      makeTrade({ resultaat_pct: 3 }),
+      makeTrade({ resultaat_pct: -2 }),
+    ];
+    const result = computeRDistribution(trades);
+    const stdDev = Math.sqrt(17 / 3);
+    expect(result.stdDevR).toBe(Math.round(stdDev * 100) / 100);
+    expect(result.sqn).toBe(Math.round(((0.5 / stdDev) * 2) * 100) / 100);
+  });
+
+  it("normalizes by planned risk — same R-profile at different risk gives the same SQN", () => {
+    const oneP = [makeTrade({ resultaat_pct: 2, risk_pct: 1 }), makeTrade({ resultaat_pct: -1, risk_pct: 1 })];
+    const twoP = [makeTrade({ resultaat_pct: 4, risk_pct: 2 }), makeTrade({ resultaat_pct: -2, risk_pct: 2 })];
+    expect(computeRDistribution(oneP)).toEqual(computeRDistribution(twoP));
+  });
+
+  it("sqn is null (not Infinity) when every R is identical", () => {
+    const trades = [makeTrade({ resultaat_pct: 1 }), makeTrade({ resultaat_pct: 1 })];
+    expect(computeRDistribution(trades)).toEqual({ stdDevR: 0, sqn: null });
+  });
+});
+
+describe("computeExtremes", () => {
+  it("is all-null when empty or nothing decisive", () => {
+    expect(computeExtremes([]).largestWin).toBeNull();
+    const result = computeExtremes(makeSequence(["BE", "BE"]));
+    expect(result).toEqual({ largestWin: null, largestWinTradeId: null, largestLoss: null, largestLossTradeId: null });
+  });
+
+  it("picks the highest win and most negative loss with their trade ids", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 2 },
+      { outcome: "Loss", resultaat_pct: -4 },
+      { outcome: "Win", resultaat_pct: 5 },
+      { outcome: "Loss", resultaat_pct: -1 },
+    ]);
+    const result = computeExtremes(trades);
+    expect(result.largestWin).toBe(5);
+    expect(result.largestWinTradeId).toBe(trades[2].id);
+    expect(result.largestLoss).toBe(-4);
+    expect(result.largestLossTradeId).toBe(trades[1].id);
+  });
+
+  it("a 0% trade lands on neither side, whatever its outcome enum says", () => {
+    const result = computeExtremes([makeTrade({ resultaat_pct: 0, outcome: "Win" })]);
+    expect(result.largestWin).toBeNull();
+    expect(result.largestLoss).toBeNull();
+  });
+
+  it("ties keep the chronologically earliest trade", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 3 },
+      { outcome: "Win", resultaat_pct: 3 },
+    ]);
+    expect(computeExtremes(trades).largestWinTradeId).toBe(trades[0].id);
+  });
+});
+
+describe("computeAvgRiskPct", () => {
+  it("is null when empty", () => {
+    expect(computeAvgRiskPct([])).toBeNull();
+  });
+
+  it("averages through the riskPct fallback (null risk counts as the 1% default)", () => {
+    const trades = [
+      makeTrade({ risk_pct: 2 }),
+      makeTrade({ risk_pct: null }), // -> 1
+      makeTrade({ risk_pct: 0.5 }),
+    ];
+    expect(computeAvgRiskPct(trades)).toBe(round2((2 + 1 + 0.5) / 3));
   });
 });
 
@@ -366,5 +477,58 @@ describe("open (still-running) trades", () => {
       makeTrade({ id: "missed", trade_evaluation: "Missed trade", resultaat_pct: 5, outcome: "Win" }),
     ];
     expect(closedTrades(takenTrades(trades)).map((t) => t.id)).toEqual(["real"]);
+  });
+});
+
+describe("computeOverviewKpis (composition)", () => {
+  it("every KPI equals the underlying helper's output on the same mixed sequence", () => {
+    const trades = makeSequence([
+      { outcome: "Win", resultaat_pct: 2 },
+      { outcome: "Loss", resultaat_pct: -1 },
+      { outcome: "BE", resultaat_pct: 0 },
+      { outcome: "Win", resultaat_pct: 4 },
+      { outcome: "Loss", resultaat_pct: -3 },
+    ]);
+    const kpis = computeOverviewKpis(trades);
+    const counts = computeOutcomeCounts(trades);
+    const streaks = computeStreaks(trades);
+    const expectancy = computeExpectancy(trades);
+
+    expect(kpis.totalTrades).toBe(counts.n);
+    expect(kpis.totalResultaat).toBe(counts.resultaatTotal);
+    expect(kpis.winRate).toBe(counts.winRate);
+    expect(kpis.beRate).toBe(counts.beRate);
+    expect(kpis.lossRate).toBe(counts.lossRate);
+    expect({ wins: kpis.wins, losses: kpis.losses, be: kpis.be }).toEqual({ wins: 2, losses: 2, be: 1 });
+    expect(kpis.maxWinningStreak).toBe(streaks.maxWinningStreak);
+    expect(kpis.maxLosingStreak).toBe(streaks.maxLosingStreak);
+    expect(kpis.currentStreak).toEqual(streaks.currentStreak);
+    expect(kpis.avgWin).toBe(expectancy.avgWin);
+    expect(kpis.avgLoss).toBe(expectancy.avgLoss);
+    expect(kpis.winLossRatio).toBe(expectancy.winLossRatio);
+    expect(kpis.profitFactor).toBe(computeProfitFactor(trades).profitFactor);
+    expect(kpis.maxDrawdownPct).toBe(computeMaxDrawdown(trades).maxDrawdownPct);
+    expect(kpis.totalR).toBe(computeRStats(trades).totalR);
+    expect(kpis.avgR).toBe(computeRStats(trades).avgR);
+  });
+
+  it("winRateExclBe ignores BE trades: wins / (wins + losses)", () => {
+    const kpis = computeOverviewKpis(makeSequence(["Win", "BE", "Loss", "Win"]));
+    expect(kpis.winRateExclBe).toBeCloseTo(2 / 3);
+    expect(kpis.winRate).toBe(0.5);
+  });
+
+  it("winRateExclBe is null when only BE trades exist", () => {
+    expect(computeOverviewKpis(makeSequence(["BE", "BE"])).winRateExclBe).toBeNull();
+  });
+
+  it("empty input yields neutral KPIs, not NaN", () => {
+    const kpis = computeOverviewKpis([]);
+    expect(kpis.totalTrades).toBe(0);
+    expect(kpis.winRate).toBe(0);
+    expect(kpis.winRateExclBe).toBeNull();
+    expect(kpis.avgR).toBeNull();
+    expect(kpis.profitFactor).toBeNull();
+    expect(kpis.maxDrawdownPct).toBe(0);
   });
 });

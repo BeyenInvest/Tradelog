@@ -8,6 +8,8 @@ import type { Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useModalGuard } from "@/hooks/useModalGuard";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { localTodayIso } from "@/lib/localDate";
+import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screenshots";
 import { useMethodology } from "@/hooks/useMethodology";
 import { normalizeInstrument } from "@/lib/instruments";
 import { missingRequiredCustomFields } from "@/lib/methodologyFields";
@@ -26,44 +28,48 @@ interface TradeFormProps {
   initialDate?: string;
 }
 
-const EMPTY_DEFAULTS: TradeFormValues = {
-  fase: "Fase 1",
-  datum_open: new Date().toISOString().slice(0, 10),
-  datum_sluiting: null,
-  pair: "EURUSD",
-  instrument: null,
-  direction: null,
-  is_open: false,
-  outcome: "Win",
-  resultaat_pct: 0,
-  risk_pct: null,
-  trade_evaluation: null,
-  weekly_criteria: null,
-  weekly_kenmerk: null,
-  trade_concept: null,
-  entry: null,
-  cc: "11",
-  nieuws: false,
-  w_confirm: null,
-  d_confirm: null,
-  h4_confirm: null,
-  w_screenshot: null,
-  d_screenshot: null,
-  h4_screenshot: null,
-  h2_screenshot: null,
-  extra_d_conf: null,
-  notes: null,
-  fase1_daily_respecteert_zone: null,
-  fase1_spelers_verleden: null,
-  fase2_daily_respecteert_zone: null,
-  fase2_structuur: null,
-  fase3_zone_min_2_touches: null,
-  fase3_engulfing_candle: null,
-  fase3_structuur: null,
-  fase4_weekly_bevestigingscandle: null,
-  custom: {},
-  methodology_id: null,
-};
+// A function, not a module-level constant: "today" must be evaluated when the
+// form opens — a PWA tab can stay open for days (M2), and toISOString() is UTC.
+function emptyDefaults(): TradeFormValues {
+  return {
+    fase: "Fase 1",
+    datum_open: localTodayIso(),
+    datum_sluiting: null,
+    pair: "EURUSD",
+    instrument: null,
+    direction: null,
+    is_open: false,
+    outcome: "Win",
+    resultaat_pct: 0,
+    risk_pct: null,
+    trade_evaluation: null,
+    weekly_criteria: null,
+    weekly_kenmerk: null,
+    trade_concept: null,
+    entry: null,
+    cc: "11",
+    nieuws: false,
+    w_confirm: null,
+    d_confirm: null,
+    h4_confirm: null,
+    w_screenshot: null,
+    d_screenshot: null,
+    h4_screenshot: null,
+    h2_screenshot: null,
+    extra_d_conf: null,
+    notes: null,
+    fase1_daily_respecteert_zone: null,
+    fase1_spelers_verleden: null,
+    fase2_daily_respecteert_zone: null,
+    fase2_structuur: null,
+    fase3_zone_min_2_touches: null,
+    fase3_engulfing_candle: null,
+    fase3_structuur: null,
+    fase4_weekly_bevestigingscandle: null,
+    custom: {},
+    methodology_id: null,
+  };
+}
 
 function tradeToDefaults(trade: Trade): TradeFormValues {
   return {
@@ -125,8 +131,8 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
     defaultValues: trade
       ? tradeToDefaults(trade)
       : initialDate
-        ? { ...EMPTY_DEFAULTS, datum_open: initialDate }
-        : EMPTY_DEFAULTS,
+        ? { ...emptyDefaults(), datum_open: initialDate }
+        : emptyDefaults(),
   });
   const {
     handleSubmit,
@@ -137,7 +143,23 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
   // Seeded `true` when a close date already exists on load (editing a real trade), so an
   // open-date correction never clobbers a deliberately recorded close date.
   const closeDateTouchedRef = useRef(Boolean(trade?.datum_sluiting));
-  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(isDirty, onClose);
+  // N2-lifecycle: screenshot uploads happen immediately on file pick, so closing
+  // the form WITHOUT saving would orphan those files in the private bucket.
+  // Anything that is a storage path at close time but wasn't referenced by the
+  // row on open was uploaded in this session — safe to delete. Guarded by
+  // savedRef: after a successful save those same paths ARE referenced.
+  const savedRef = useRef(false);
+  function cleanupUnsavedUploads() {
+    if (savedRef.current) return;
+    const values = methods.getValues();
+    const preexisting = new Set(trade ? screenshotStoragePaths(trade) : []);
+    void removeScreenshots(screenshotStoragePaths(values).filter((p) => !preexisting.has(p)));
+  }
+  const closeAndCleanup = () => {
+    cleanupUnsavedUploads();
+    onClose();
+  };
+  const { requestClose, containerRef, discardDialog } = useModalGuard<HTMLDivElement>(isDirty, closeAndCleanup);
 
   async function handleFormSubmit(values: TradeFormValues) {
     setError(null);
@@ -192,6 +214,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         custom: pruneCustom(values.custom ?? {}),
       };
       await onSubmit(payload);
+      savedRef.current = true; // the uploaded paths are persisted now — don't clean them up
       onClose();
     } catch (err) {
       setError(toErrorMessage(err, t("tradeForm.saveFailed")));

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
@@ -37,8 +38,12 @@ export function useMethodologyEditor() {
   const [fields, setFields] = useState<MethodologyField[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Guard against a slow response from a previous journal landing after a newer
+  // load and overwriting its fields (M3 — same pattern as useTrades).
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async (id: string | null) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
 
@@ -52,6 +57,7 @@ export function useMethodologyEditor() {
         .maybeSingle();
       mid = (sys as { id: string } | null)?.id ?? null;
     }
+    if (requestId !== requestIdRef.current) return; // superseded by a newer load
     if (!mid) {
       setMethodology(null);
       setFields([]);
@@ -63,7 +69,14 @@ export function useMethodologyEditor() {
       supabase.from("methodologies").select("*").eq("id", mid).maybeSingle(),
       supabase.from("methodology_fields").select("*").eq("methodology_id", mid).order("sort_order"),
     ]);
-    if (m.error || fl.error) setError((m.error ?? fl.error)!.message);
+    if (requestId !== requestIdRef.current) return; // superseded by a newer load
+    if (m.error || fl.error) {
+      // Keep the previous state on a flaky fetch (M7) — the editor rows would
+      // otherwise vanish under the user's cursor.
+      setError(toErrorMessage(m.error ?? fl.error));
+      setLoading(false);
+      return;
+    }
     setMethodology((m.data as Methodology | null) ?? null);
     setFields((fl.data as MethodologyField[] | null) ?? []);
     setLoading(false);

@@ -17,6 +17,11 @@ export function isoWeekRange(jaar: number, weekNummer: number): { start: string;
   return { start: toIsoDate(start), end: toIsoDate(end) };
 }
 
+/** Number of ISO weeks in a year: 52 or 53. December 28 always falls in the year's last ISO week. */
+export function weeksInIsoYear(jaar: number): number {
+  return isoWeekOf(`${jaar}-12-28`).week_nummer;
+}
+
 /** ISO year/week for a given yyyy-mm-dd date string. */
 export function isoWeekOf(dateIso: string): { jaar: number; week_nummer: number } {
   const d = new Date(dateIso + "T00:00:00Z");

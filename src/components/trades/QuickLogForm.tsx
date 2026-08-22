@@ -9,6 +9,7 @@ import { useMethodology } from "@/hooks/useMethodology";
 import { normalizeInstrument } from "@/lib/instruments";
 import { deriveOutcome } from "@/lib/import/mapToTrade";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { localTodayIso } from "@/lib/localDate";
 import { PAIRS, DIRECTIONS } from "@/lib/constants";
 import { quickLogDefaults, QUICK_EVALUATIONS } from "@/lib/quickLog";
 import { Modal } from "@/components/ui/Modal";
@@ -32,7 +33,7 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
   const { methodology, isForexJournal, faseNames } = useMethodology();
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
-    defaultValues: quickLogDefaults(faseNames[0] ?? "Fase 1", new Date().toISOString().slice(0, 10)),
+    defaultValues: quickLogDefaults(faseNames[0] ?? "Fase 1", localTodayIso()),
   });
   const {
     register,

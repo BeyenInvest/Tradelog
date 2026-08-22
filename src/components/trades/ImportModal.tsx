@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Upload, X, FileText } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -14,6 +14,7 @@ import {
   detectBroker,
   parseFile,
   prepareImport,
+  type DateOrder,
   type ImportBroker,
   type ParsedDeal,
   type ParseWarning,
@@ -72,10 +73,17 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   const [rawText, setRawText] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [broker, setBroker] = useState<ImportBroker>("ctrader");
+  // How ambiguous "a/b/yyyy" dates are read (N9). Day-first default (EU brokers);
+  // the choice UI appears only when the file actually contains ambiguous dates.
+  const [dateOrder, setDateOrder] = useState<DateOrder>("dmy");
   const [deals, setDeals] = useState<ParsedDeal[]>([]);
   const [parseWarnings, setParseWarnings] = useState<ParseWarning[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
+  // The dedup set is load-bearing: with a failed fetch it would be silently empty,
+  // dedup would pass everything and the DB unique index would abort the whole
+  // batch insert (M8). Importing stays paused until this is "ready".
+  const [refsStatus, setRefsStatus] = useState<"loading" | "ready" | "error">("loading");
   const [pairMap, setPairMap] = useState<Record<string, Pair>>(loadStoredPairMap);
   const [symbolInput, setSymbolInput] = useState("");
   const [balanceInput, setBalanceInput] = useState("");
@@ -89,9 +97,11 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   // Paginated (H1): above 1000 imported trades a plain fetch would silently
   // miss refs and re-import old rows (the DB unique index would then abort the
   // whole batch insert).
-  useEffect(() => {
-    let cancelled = false;
-    void fetchAllPages<{ import_ref: string }>((from, to) =>
+  const refsRequestRef = useRef(0);
+  const loadExistingRefs = useCallback(async () => {
+    const requestId = ++refsRequestRef.current;
+    setRefsStatus("loading");
+    const { data, error } = await fetchAllPages<{ import_ref: string }>((from, to) =>
       supabase
         .from("trades")
         .select("import_ref")
@@ -99,14 +109,22 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
         .not("import_ref", "is", null)
         .order("id", { ascending: true })
         .range(from, to)
-    ).then(({ data }) => {
-      if (cancelled) return;
-      setExistingRefs(new Set((data ?? []).map((r) => r.import_ref)));
-    });
-    return () => {
-      cancelled = true;
-    };
+    );
+    if (requestId !== refsRequestRef.current) return; // superseded / modal closed
+    if (error) {
+      setRefsStatus("error");
+      return;
+    }
+    setExistingRefs(new Set((data ?? []).map((r) => r.import_ref)));
+    setRefsStatus("ready");
   }, [userId]);
+
+  useEffect(() => {
+    void loadExistingRefs();
+    return () => {
+      refsRequestRef.current += 1; // invalidate an in-flight fetch on unmount
+    };
+  }, [loadExistingRefs]);
 
   // A TradingView Strategy Tester export names no symbol (it's per-chart); the
   // user supplies one for the whole file, applied to every symbol-less deal here.
@@ -133,9 +151,9 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
     [effectiveDeals, broker, pairMap, accountBalance, existingRefs, isForexJournal, scope]
   );
 
-  function parseText(text: string, b: ImportBroker) {
+  function parseText(text: string, b: ImportBroker, order: DateOrder = dateOrder) {
     try {
-      const result = parseFile(text, b);
+      const result = parseFile(text, b, order);
       setDeals(result.deals);
       setParseWarnings(result.warnings);
       setParseError(result.deals.length === 0 ? t("import.noDeals") : null);
@@ -163,6 +181,13 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
     if (rawText != null) parseText(rawText, b);
   }
 
+  function changeDateOrder(order: DateOrder) {
+    setDateOrder(order);
+    if (rawText != null) parseText(rawText, broker, order);
+  }
+
+  const hasAmbiguousDates = parseWarnings.some((w) => w.kind === "ambiguousDates");
+
   function mapSymbol(symbol: string, pair: string) {
     setPairMap((prev) => {
       const next = { ...prev };
@@ -178,7 +203,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   }
 
   async function handleConfirm() {
-    if (prepared.rows.length === 0) return;
+    if (prepared.rows.length === 0 || refsStatus !== "ready") return;
     setImporting(true);
     setImportError(null);
     try {
@@ -283,13 +308,36 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
                   </p>
 
                   {/* Parser warnings (junk rows, still-open trades) — informative, not blocking */}
-                  {parseWarnings.map((w) => (
-                    <p key={w.kind} className="font-body text-xs text-muted">
-                      {t(w.kind === "openTrades" ? "import.warnOpenTrades" : "import.warnSkippedRows", {
-                        count: w.count,
-                      })}
-                    </p>
-                  ))}
+                  {parseWarnings
+                    .filter((w) => w.kind !== "ambiguousDates") // has its own choice UI below
+                    .map((w) => (
+                      <p key={w.kind} className="font-body text-xs text-muted">
+                        {t(w.kind === "openTrades" ? "import.warnOpenTrades" : "import.warnSkippedRows", {
+                          count: w.count,
+                        })}
+                      </p>
+                    ))}
+
+                  {/* Ambiguous dd/mm vs mm/dd dates (N9) — the user says which format the file uses */}
+                  {hasAmbiguousDates && (
+                    <div className="rounded-lg border border-gold/40 p-3 flex flex-col gap-2">
+                      <p className="font-body text-sm text-ink">{t("import.dateOrderTitle")}</p>
+                      <p className="font-body text-xs text-muted">{t("import.dateOrderHint")}</p>
+                      <div className="flex gap-4 mt-1">
+                        {(["dmy", "mdy"] as const).map((order) => (
+                          <label key={order} className="flex items-center gap-2 font-body text-xs text-ink cursor-pointer">
+                            <input
+                              type="radio"
+                              name="import-date-order"
+                              checked={dateOrder === order}
+                              onChange={() => changeDateOrder(order)}
+                            />
+                            {t(order === "dmy" ? "import.dateOrderDmy" : "import.dateOrderMdy")}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* File-wide symbol for symbol-less exports (TradingView Strategy Tester) */}
                   {hasSymbollessDeals && (
@@ -394,6 +442,15 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
                     </div>
                   )}
 
+                  {refsStatus === "error" && (
+                    <p className="text-sm text-loss">
+                      {t("import.dedupFailed")}{" "}
+                      <button onClick={() => void loadExistingRefs()} className="underline hover:text-ink">
+                        {t("import.dedupRetry")}
+                      </button>
+                    </p>
+                  )}
+
                   {importError && <p className="text-sm text-loss">{importError}</p>}
 
                   {/* Actions */}
@@ -403,7 +460,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
                     </button>
                     <button
                       onClick={() => void handleConfirm()}
-                      disabled={importing || prepared.rows.length === 0}
+                      disabled={importing || prepared.rows.length === 0 || refsStatus !== "ready"}
                       className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-50"
                     >
                       {importing

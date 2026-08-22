@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { Payout, PayoutInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { formatEUR } from "@/lib/format";
+import { localTodayIso } from "@/lib/localDate";
 
 interface PayoutListProps {
   accountId: string;
@@ -15,7 +16,7 @@ interface PayoutListProps {
 export function PayoutList({ accountId, payouts, onCreate, onDelete }: PayoutListProps) {
   const { t } = useTranslation();
   const [bedrag, setBedrag] = useState("");
-  const [datum, setDatum] = useState(new Date().toISOString().slice(0, 10));
+  const [datum, setDatum] = useState(localTodayIso);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

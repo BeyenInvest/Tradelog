@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { toErrorMessage } from "@/lib/errorMessage";
+import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screenshots";
 import { useAuth } from "@/hooks/useAuth";
 import type { BacktestProject, BacktestProjectInput } from "@/lib/types";
 
@@ -20,7 +22,7 @@ export function useBacktestProjects() {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (fetchError) {
-      setError(fetchError.message);
+      setError(toErrorMessage(fetchError));
     } else {
       setProjects(data as BacktestProject[]);
     }
@@ -52,8 +54,16 @@ export function useBacktestProjects() {
 
   /** Cascades: deletes the project's trades too (schema FK is ON DELETE CASCADE) — projects are isolated sandboxes. */
   async function deleteProject(id: string): Promise<void> {
+    // The DB cascade removes the trades but not their uploaded screenshots
+    // (N2-lifecycle) — collect those paths before the rows are gone. A failed
+    // lookup doesn't block the delete: the files then wait for account deletion.
+    const { data: rows } = await supabase
+      .from("trades")
+      .select("w_screenshot, d_screenshot, h4_screenshot, h2_screenshot")
+      .eq("backtest_project_id", id);
     const { error: deleteError } = await supabase.from("backtest_projects").delete().eq("id", id);
     if (deleteError) throw deleteError;
+    void removeScreenshots((rows ?? []).flatMap(screenshotStoragePaths));
     await refresh();
   }
 

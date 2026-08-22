@@ -2,9 +2,11 @@ import { parseMt } from "./parsers/mt";
 import { parseCtrader } from "./parsers/ctrader";
 import { parseTradingview } from "./parsers/tradingview";
 import { parseFlatCsv } from "./parsers/table";
+import type { DateOrder } from "./values";
 import type { ImportBroker, ParseResult } from "./types";
 
 export type { ImportBroker, ParsedDeal, ParseResult, ParseWarning, ImportTradeRow } from "./types";
+export type { DateOrder } from "./values";
 export { prepareImport, type PreparedImport, type PrepareOptions } from "./prepare";
 export { normalizeSymbol } from "./symbols";
 export { applyFileSymbol } from "./parsers/tradingview";
@@ -24,16 +26,16 @@ export function detectBroker(text: string, filename: string): ImportBroker {
   return "ctrader"; // plain CSV default
 }
 
-export function parseFile(text: string, broker: ImportBroker): ParseResult {
+export function parseFile(text: string, broker: ImportBroker, dateOrder: DateOrder = "dmy"): ParseResult {
   switch (broker) {
     case "mt":
-      return parseMt(text);
+      return parseMt(text, dateOrder);
     case "tradingview":
-      return parseTradingview(text);
+      return parseTradingview(text, dateOrder);
     case "generic":
       // Flat CSV through the shared column detector — no broker-specific handling at all.
-      return parseFlatCsv(text, "generic");
+      return parseFlatCsv(text, "generic", dateOrder);
     case "ctrader":
-      return parseCtrader(text);
+      return parseCtrader(text, dateOrder);
   }
 }

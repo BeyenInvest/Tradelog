@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAllPages } from "@/lib/fetchAll";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import { isoWeekRange } from "@/lib/isoWeek";
@@ -13,8 +14,12 @@ export function useWeeklyReviews() {
   const [reviews, setReviews] = useState<WeeklyReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Guard against a slow response from a previous journal landing after a newer
+  // request and overwriting its reviews (M3 — same pattern as useTrades).
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     // Paginated past the 1000-row cap (H1) with an id tie-breaker for a stable
@@ -30,8 +35,9 @@ export function useWeeklyReviews() {
         .order("id", { ascending: true })
         .range(from, to);
     });
+    if (requestId !== requestIdRef.current) return; // superseded by a newer request
     if (fetchError) {
-      setError(fetchError.message);
+      setError(toErrorMessage(fetchError));
     } else {
       setReviews(data as WeeklyReview[]);
     }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 
 /** One of the signed-in user's own journals (methodologies), for the switcher. */
@@ -54,7 +55,7 @@ export function useJournals() {
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
     if (err) {
-      setError(err.message);
+      setError(toErrorMessage(err));
       setLoading(false);
       return;
     }

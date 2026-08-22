@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import type { CustomOption } from "@/lib/types";
 
@@ -10,8 +11,12 @@ export function useCustomOptions(field: string) {
   const [options, setOptions] = useState<CustomOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Guard against a slow response for a previous `field` landing after a newer
+  // request and overwriting its options (M3 — same pattern as useTrades).
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     const { data, error: err } = await supabase
@@ -20,7 +25,8 @@ export function useCustomOptions(field: string) {
       .eq("user_id", userId)
       .eq("field", field)
       .order("created_at", { ascending: true });
-    if (err) setError(err.message);
+    if (requestId !== requestIdRef.current) return; // superseded by a newer request
+    if (err) setError(toErrorMessage(err));
     else setOptions(data as CustomOption[]);
     setLoading(false);
   }, [userId, field]);

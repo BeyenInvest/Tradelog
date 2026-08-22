@@ -5,6 +5,7 @@ import { Plus, RefreshCw } from "lucide-react";
 import type { Trade, WeeklyReview } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { isoWeekRange } from "@/lib/isoWeek";
+import { localTodayIso } from "@/lib/localDate";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades } from "@/lib/stats";
 import { TradeForm } from "@/components/trades/TradeForm";
@@ -29,7 +30,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
   const [addOpen, setAddOpen] = useState(false);
 
   const weekRange = isoWeekRange(review.jaar, review.week_nummer);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayIso();
   const newTradeDate = today >= weekRange.start && today <= weekRange.end ? today : weekRange.start;
 
   async function handleRelink() {

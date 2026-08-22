@@ -1,5 +1,5 @@
 import { cell, detectColumns, parseCsv } from "../csv";
-import { parseNumber, parseDateOnly } from "../values";
+import { parseNumber, parseDateOnly, isAmbiguousDate, type DateOrder } from "../values";
 import type { ImportBroker, ParsedDeal, ParseResult, ParseWarning } from "../types";
 
 /**
@@ -62,10 +62,10 @@ export function locateTable(allRows: string[][]): { headers: string[]; rows: str
  * parseCtrader, parseMt's CSV branch and parseGeneric — one place for future
  * banner/delimiter fixes instead of three drifting copies.
  */
-export function parseFlatCsv(text: string, broker: ImportBroker): ParseResult {
+export function parseFlatCsv(text: string, broker: ImportBroker, dateOrder: DateOrder = "dmy"): ParseResult {
   const { headers, rows } = parseCsv(text);
   const table = locateTable([headers, ...rows]);
-  const { deals, warnings } = tableToDeals(table.headers, table.rows);
+  const { deals, warnings } = tableToDeals(table.headers, table.rows, dateOrder);
   return { broker, deals, warnings };
 }
 
@@ -80,7 +80,11 @@ export function parseFlatCsv(text: string, broker: ImportBroker): ParseResult {
  * splits a deal's profit from its swap/commission, while cTrader tends to carry
  * a ready "Net" column.
  */
-export function tableToDeals(headers: string[], rows: string[][]): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
+export function tableToDeals(
+  headers: string[],
+  rows: string[][],
+  dateOrder: DateOrder = "dmy"
+): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
   const cols = detectColumns<Field>(headers, ALIASES as unknown as Record<Field, string[]>);
   const deals: ParsedDeal[] = [];
   const warnings: ParseWarning[] = [];
@@ -88,6 +92,7 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
   const fallbackSeen = new Map<string, number>();
   let skipped = 0;
   let openTrades = 0;
+  let ambiguousDates = 0;
 
   rows.forEach((row) => {
     const symbol = cell(row, cols.symbol).trim();
@@ -109,8 +114,11 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
     }
 
     const detectedTicket = cell(row, cols.ticket).trim();
-    const openTime = parseDateOnly(cell(row, cols.openTime));
-    const closeTime = parseDateOnly(cell(row, cols.closeTime));
+    const rawOpen = cell(row, cols.openTime);
+    const rawClose = cell(row, cols.closeTime);
+    if (isAmbiguousDate(rawOpen) || isAmbiguousDate(rawClose)) ambiguousDates++;
+    const openTime = parseDateOnly(rawOpen, dateOrder);
+    const closeTime = parseDateOnly(rawClose, dateOrder);
 
     // A row with an open time but no close time is a still-open position: a full
     // MetaTrader "Save as Report" statement carries its "Open Trades:" section in
@@ -153,5 +161,6 @@ export function tableToDeals(headers: string[], rows: string[][]): { deals: Pars
 
   if (skipped > 0) warnings.push({ kind: "skippedRows", count: skipped });
   if (openTrades > 0) warnings.push({ kind: "openTrades", count: openTrades });
+  if (ambiguousDates > 0) warnings.push({ kind: "ambiguousDates", count: ambiguousDates });
   return { deals, warnings };
 }

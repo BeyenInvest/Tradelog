@@ -17,6 +17,13 @@ export interface ProfitTargetStatus {
   reached: boolean;
 }
 
+/**
+ * Static drawdown only: consumption is measured from the starting balance
+ * (current_pnl_pct < 0), NOT from a trailing high-water mark — we don't store
+ * peak P&L. A trailing-drawdown account can breach earlier than this reports;
+ * the UI labels the bar "(from starting balance)" for that reason. Real
+ * trailing support needs peak tracking (S2).
+ */
 export interface DrawdownStatus {
   limitPct: number;
   /** Fraction of the loss buffer consumed, clamped to [0, 1]. 0 while in profit. */

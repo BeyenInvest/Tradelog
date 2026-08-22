@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAllPages } from "@/lib/fetchAll";
+import { toErrorMessage } from "@/lib/errorMessage";
+import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screenshots";
 import { useAuth } from "@/hooks/useAuth";
 import i18n from "@/i18n";
 import { TRADES_MIGRATED_EVENT } from "@/hooks/useMethodology";
@@ -72,7 +74,7 @@ export function useTrades(scope: TradeScope) {
     });
     if (requestId !== requestIdRef.current) return; // a newer request has since superseded this one
     if (fetchError) {
-      setError(fetchError.message);
+      setError(toErrorMessage(fetchError));
     } else {
       setTrades(data as Trade[]);
       loadedScopeRef.current = scopeKey;
@@ -122,15 +124,28 @@ export function useTrades(scope: TradeScope) {
   }
 
   async function updateTrade(id: string, input: Partial<TradeSubmitInput>): Promise<Trade> {
+    const before = trades.find((t) => t.id === id);
     const { data, error: updateError } = await supabase.from("trades").update(input).eq("id", id).select().single();
     if (updateError) throw updateError;
+    const updated = data as Trade;
+    // N2-lifecycle: an edit that replaced or cleared an uploaded screenshot
+    // leaves the old file orphaned in the bucket — remove what the row no
+    // longer references. Best-effort, after the save succeeded.
+    if (before) {
+      const kept = new Set(screenshotStoragePaths(updated));
+      void removeScreenshots(screenshotStoragePaths(before).filter((p) => !kept.has(p)));
+    }
     await refresh();
-    return data as Trade;
+    return updated;
   }
 
   async function deleteTrade(id: string): Promise<void> {
+    // Capture the row's uploaded screenshots before it goes — deleting the DB row
+    // does not cascade into Storage (N2-lifecycle).
+    const paths = screenshotStoragePaths(trades.find((t) => t.id === id) ?? {});
     const { error: deleteError } = await supabase.from("trades").delete().eq("id", id);
     if (deleteError) throw deleteError;
+    void removeScreenshots(paths);
     await refresh();
   }
 

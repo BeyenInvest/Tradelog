@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchAllPages } from "@/lib/fetchAll";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 
@@ -25,8 +26,12 @@ export function usePropAccounts() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Guard against a slow response from a previous journal landing after a newer
+  // request and overwriting its accounts (M3 — same pattern as useTrades).
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     // Paginated past the 1000-row cap (H1) with an id tie-breaker — see
@@ -40,8 +45,9 @@ export function usePropAccounts() {
       accountsQuery = activeJournalId ? accountsQuery.eq("methodology_id", activeJournalId) : accountsQuery.is("methodology_id", null);
       return accountsQuery.order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to);
     });
+    if (requestId !== requestIdRef.current) return; // superseded by a newer request
     if (accountsRes.error) {
-      setError(accountsRes.error.message);
+      setError(toErrorMessage(accountsRes.error));
       setLoading(false);
       return;
     }
@@ -63,7 +69,8 @@ export function usePropAccounts() {
         .order("id", { ascending: true })
         .range(from, to)
     );
-    if (payoutsRes.error) setError(payoutsRes.error.message);
+    if (requestId !== requestIdRef.current) return; // superseded by a newer request
+    if (payoutsRes.error) setError(toErrorMessage(payoutsRes.error));
     else setPayouts(payoutsRes.data as Payout[]);
     setLoading(false);
   }, [userId, activeJournalId]);

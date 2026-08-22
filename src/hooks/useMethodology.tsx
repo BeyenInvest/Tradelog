@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import { fetchAllPages } from "@/lib/fetchAll";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { FASES, WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { instrumentsOfConfig, normalizeInstrument } from "@/lib/instruments";
@@ -122,8 +122,13 @@ function useMethodologyState(): MethodologyData {
   const [fields, setFields] = useState<MethodologyField[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Same guard as useTrades: a slow response from a previous journal must not land
+  // after a newer request and overwrite its fields — the trade form would render
+  // the wrong journal's custom fields (M3).
+  const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
 
@@ -139,6 +144,7 @@ function useMethodologyState(): MethodologyData {
         .maybeSingle();
       id = (sys as { id: string } | null)?.id ?? null;
     }
+    if (requestId !== requestIdRef.current) return; // superseded by a newer refresh
 
     if (!id) {
       setMethodology(null);
@@ -151,9 +157,16 @@ function useMethodologyState(): MethodologyData {
       supabase.from("methodologies").select("*").eq("id", id).maybeSingle(),
       supabase.from("methodology_fields").select("*").eq("methodology_id", id).order("sort_order"),
     ]);
+    if (requestId !== requestIdRef.current) return; // superseded by a newer refresh
 
     const err = m.error ?? fl.error;
-    if (err) setError(err.message);
+    if (err) {
+      // Keep the previous methodology/fields on a flaky fetch (M7): wiping them
+      // would make the legacy fase block & custom fields vanish from an open form.
+      setError(toErrorMessage(err));
+      setLoading(false);
+      return;
+    }
 
     setMethodology((m.data as Methodology | null) ?? null);
     setFields((fl.data as MethodologyField[] | null) ?? []);
@@ -319,67 +332,30 @@ function useMethodologyState(): MethodologyData {
       );
       if (collides) throw new Error("option already exists");
 
-      // 1. The option list itself, position preserved.
-      const options = target.options.map((o) => (o === oldValue ? next : o));
-      const { error: optErr } = await supabase
-        .from("methodology_fields")
-        .update({ options })
-        .eq("id", fieldId);
-      if (optErr) throw optErr;
+      // One atomic RPC (M5 / migration 0045): option list + sibling show_when
+      // conditions + every affected trade's custom bag move together server-side —
+      // a mid-flight network failure can no longer leave a half-migrated journal.
+      const { data, error: rpcErr } = await supabase.rpc("rename_field_option", {
+        p_field_id: fieldId,
+        p_old_value: oldValue,
+        p_new_value: next,
+      });
+      if (rpcErr) throw rpcErr;
+      const migrated = (data as number | null) ?? 0;
 
-      // 2. Sibling fields whose show_when condition references the old value —
-      // without this, a rename would silently break conditional visibility.
+      // Mirror the server's rewrite in shared local state (the RPC returns only
+      // the migrated-trade count).
+      const options = target.options.map((o) => (o === oldValue ? next : o));
       const siblings = fields.filter(
         (f) => f.show_when_field_id === fieldId && f.show_when_values?.includes(oldValue)
       );
-      for (const s of siblings) {
-        const show_when_values = (s.show_when_values ?? []).map((v) => (v === oldValue ? next : v));
-        const { error: sibErr } = await supabase
-          .from("methodology_fields")
-          .update({ show_when_values })
-          .eq("id", s.id);
-        if (sibErr) throw sibErr;
-      }
-
-      // 3. Migrate stored answers: every trade of this journal holding the old
-      // value in its custom bag. RLS scopes this to the user's own rows; renames
-      // are rare and per-user trade counts modest, so per-row updates in small
-      // chunks beat introducing a dedicated SQL function for this.
-      const key = target.field_key;
-      // Paginated (H1): above 1000 matching trades a plain fetch would silently
-      // migrate only the first page and split the option's history in two.
-      const { data: rows, error: selErr } = await fetchAllPages<{ id: number; custom: Record<string, unknown> }>(
-        (from, to) =>
-          supabase
-            .from("trades")
-            .select("id, custom")
-            .eq("methodology_id", target.methodology_id)
-            .eq(`custom->>${key}`, oldValue)
-            .order("id", { ascending: true })
-            .range(from, to)
-      );
-      if (selErr) throw selErr;
-      const affected = (rows ?? []) as { id: number; custom: Record<string, unknown> }[];
-      const CHUNK = 20;
-      for (let i = 0; i < affected.length; i += CHUNK) {
-        const results = await Promise.all(
-          affected.slice(i, i + CHUNK).map((r) =>
-            supabase
-              .from("trades")
-              .update({ custom: { ...(r.custom ?? {}), [key]: next } })
-              .eq("id", r.id)
-          )
-        );
-        const failed = results.find((r) => r.error);
-        if (failed?.error) throw failed.error;
-      }
 
       // Any mounted trades view (Journal list/Analyse) holds pre-migration rows in
       // memory — tell useTrades to refetch so buckets rename immediately, not on
       // the next navigation. Window event: useMethodology has no TradesApi handle.
-      if (affected.length > 0) window.dispatchEvent(new CustomEvent(TRADES_MIGRATED_EVENT));
+      if (migrated > 0) window.dispatchEvent(new CustomEvent(TRADES_MIGRATED_EVENT));
 
-      // 4. Shared local state, so every open view re-renders with the new name.
+      // Shared local state, so every open view re-renders with the new name.
       setFields((fs) =>
         fs.map((f) => {
           if (f.id === fieldId) return { ...f, options };
@@ -392,7 +368,7 @@ function useMethodologyState(): MethodologyData {
           return f;
         })
       );
-      return { migrated: affected.length };
+      return { migrated };
     },
     [requireEditableField, fields]
   );

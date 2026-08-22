@@ -255,7 +255,13 @@
     "done_one": "{{count}} trade imported.",
     "done_other": "{{count}} trades imported.",
     "importFailed": "Import failed",
-    "nothingReady": "Nothing ready to import yet."
+    "nothingReady": "Nothing ready to import yet.",
+    "dedupFailed": "Could not check for previously imported trades — importing is paused to avoid duplicates.",
+    "dedupRetry": "Try again",
+    "dateOrderTitle": "Which date format does this file use?",
+    "dateOrderHint": "This file contains dates like 03/04/2024 that read differently as day-first vs month-first. Check the preview after choosing.",
+    "dateOrderDmy": "Day first — 03/04 = April 3 (EU)",
+    "dateOrderMdy": "Month first — 03/04 = March 4 (US)"
   },
   "filters": {
     "title": "Filters",
@@ -503,6 +509,7 @@
     "kwartaal": "Quarter",
     "tradesInWeek": "Trades in week ({{count}})",
     "tradesInPeriod": "Trades in period ({{count}})",
+    "invalidWeek": "{{jaar}} has {{maxWeek}} ISO weeks — pick a week between 1 and {{maxWeek}}",
     "saveFailed": "Saving the review failed"
   },
   "reviewContent": {
@@ -639,6 +646,8 @@
     "propFirmRules": "Prop-firm rules",
     "profitTarget": "Profit target",
     "maxDrawdown": "Max drawdown",
+    "maxDrawdownStatic": "Max drawdown (from starting balance)",
+    "maxDrawdownStaticHint": "Measured against the starting balance, not a trailing high-water mark. On a trailing-drawdown account the real limit can be hit sooner than this bar suggests.",
     "dailyLossLimit": "Daily loss limit",
     "targetReached": "reached",
     "limitBreached": "breached",

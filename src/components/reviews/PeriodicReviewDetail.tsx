@@ -8,6 +8,7 @@ import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
+import { localTodayIso } from "@/lib/localDate";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { closedTrades, computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
@@ -46,7 +47,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
   // No FK: a trade added inside the period's date range shows up automatically after the refresh.
   const periodeNummerForRange = review.period_type === "year" ? null : review.periode_nummer;
   const periodRange = rangeOfPeriod(review.period_type, review.jaar, periodeNummerForRange);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayIso();
   const newTradeDate = today >= periodRange.start && today <= periodRange.end ? today : periodRange.start;
 
   return (

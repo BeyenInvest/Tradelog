@@ -54,6 +54,33 @@ export async function uploadScreenshot(file: Blob, userId: string): Promise<stri
   return path;
 }
 
+/** The four trade columns that can hold a screenshot value. */
+export const SCREENSHOT_COLUMNS = ["w_screenshot", "d_screenshot", "h4_screenshot", "h2_screenshot"] as const;
+
+type ScreenshotFields = Partial<Record<(typeof SCREENSHOT_COLUMNS)[number], string | null>>;
+
+/** The private-bucket storage paths a trade row references (external URLs are not ours to delete). */
+export function screenshotStoragePaths(trade: ScreenshotFields): string[] {
+  return SCREENSHOT_COLUMNS.map((col) => (trade[col] ?? "").trim()).filter((v) => v !== "" && isStoragePath(v));
+}
+
+/**
+ * Best-effort removal of uploaded screenshot files (N2-lifecycle): called after
+ * a trade delete or after an edit replaced/cleared an uploaded screenshot, so
+ * files don't pile up as orphans in the private bucket. Deliberately never
+ * throws — the trade mutation already succeeded, and a failed cleanup must not
+ * surface as a failed save (account deletion (0044) erases the whole {uid}/
+ * folder anyway, so a missed file here is not permanent).
+ */
+export async function removeScreenshots(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  try {
+    await supabase.storage.from(BUCKET).remove(paths);
+  } catch {
+    // swallow — see above
+  }
+}
+
 /**
  * Turn a stored screenshot value into something an <img>/react-pdf <Image> can
  * load. External URLs pass through unchanged; bucket paths get a fresh signed

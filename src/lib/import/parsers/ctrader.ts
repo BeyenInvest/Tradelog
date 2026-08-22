@@ -1,4 +1,5 @@
 import { parseFlatCsv } from "./table";
+import type { DateOrder } from "../values";
 import type { ParseResult } from "../types";
 
 /**
@@ -12,6 +13,6 @@ import type { ParseResult } from "../types";
  * (currency), Commissions, Swap) all resolve, and the running Balance column
  * yields an exact per-trade %.
  */
-export function parseCtrader(text: string): ParseResult {
-  return parseFlatCsv(text, "ctrader");
+export function parseCtrader(text: string, dateOrder: DateOrder = "dmy"): ParseResult {
+  return parseFlatCsv(text, "ctrader", dateOrder);
 }

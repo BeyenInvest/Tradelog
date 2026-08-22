@@ -1,5 +1,5 @@
 import { parseCsv, detectColumns, cell } from "../csv";
-import { parseNumber, parseDateOnly } from "../values";
+import { parseNumber, parseDateOnly, isAmbiguousDate, type DateOrder } from "../values";
 import { tableToDeals, locateTable } from "./table";
 import type { ParseResult, ParsedDeal, ParseWarning } from "../types";
 
@@ -37,7 +37,7 @@ type Field = keyof typeof ALIASES;
  * The paired shape is detected per-file (a Trade-# column plus Entry/Exit type
  * values); anything else falls through to the flat path.
  */
-export function parseTradingview(text: string): ParseResult {
+export function parseTradingview(text: string, dateOrder: DateOrder = "dmy"): ParseResult {
   const { headers, rows } = parseCsv(text);
   const cols = detectColumns<Field>(headers, ALIASES as unknown as Record<Field, string[]>);
 
@@ -48,11 +48,11 @@ export function parseTradingview(text: string): ParseResult {
 
   if (!paired) {
     const table = locateTable([headers, ...rows]);
-    const { deals, warnings } = tableToDeals(table.headers, table.rows);
+    const { deals, warnings } = tableToDeals(table.headers, table.rows, dateOrder);
     return { broker: "tradingview", deals, warnings };
   }
 
-  return { broker: "tradingview", ...pairedRowsToDeals(headers, rows, cols) };
+  return { broker: "tradingview", ...pairedRowsToDeals(headers, rows, cols, dateOrder) };
 }
 
 /**
@@ -86,9 +86,11 @@ interface TradeGroup {
 function pairedRowsToDeals(
   headers: string[],
   rows: string[][],
-  cols: Record<Field, number>
+  cols: Record<Field, number>,
+  dateOrder: DateOrder = "dmy"
 ): { deals: ParsedDeal[]; warnings: ParseWarning[] } {
   const groups = new Map<string, TradeGroup>(); // Map preserves insertion order — output follows file order
+  let ambiguousDates = 0;
 
   for (const row of rows) {
     const tradeNo = cell(row, cols.tradeNo).trim();
@@ -111,7 +113,9 @@ function pairedRowsToDeals(
       groups.set(tradeNo, group);
     }
 
-    const date = parseDateOnly(cell(row, cols.dateTime));
+    const rawDate = cell(row, cols.dateTime);
+    if (isAmbiguousDate(rawDate)) ambiguousDates++;
+    const date = parseDateOnly(rawDate, dateOrder);
     if (/entry/i.test(type)) {
       // Pyramiding spreads entries over several rows; the trade opens at the
       // EARLIEST entry. Compare dates (ISO strings sort lexicographically) instead
@@ -163,5 +167,6 @@ function pairedRowsToDeals(
 
   const warnings: ParseWarning[] = [];
   if (openCount > 0) warnings.push({ kind: "openTrades", count: openCount });
+  if (ambiguousDates > 0) warnings.push({ kind: "ambiguousDates", count: ambiguousDates });
   return { deals, warnings };
 }

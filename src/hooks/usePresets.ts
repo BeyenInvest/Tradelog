@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
+import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 
 /** A ready-made journal template (is_system methodology) shown in the picker. */
@@ -38,7 +39,7 @@ export function usePresets() {
       .is("user_id", null)
       .order("naam");
     if (mErr) {
-      setError(mErr.message);
+      setError(toErrorMessage(mErr));
       setLoading(false);
       return;
     }
@@ -54,7 +55,7 @@ export function usePresets() {
         .in("methodology_id", ids)
         .order("sort_order");
       if (fErr) {
-        setError(fErr.message);
+        setError(toErrorMessage(fErr));
         setLoading(false);
         return;
       }

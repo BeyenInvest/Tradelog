@@ -120,9 +120,16 @@ export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
   return openTrades.length > 0 ? [openGroup, ...outcomeGroups] : outcomeGroups;
 }
 
-/** Free-text search across the fields a trader would actually search on. */
+/**
+ * Free-text search across the fields a trader would actually search on.
+ * `instrument` is what a non-forex journal trades under (pair is a placeholder
+ * there — M4), and the custom bag holds every own-methodology text/enum answer.
+ */
 export function matchesSearch(t: Trade, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [t.pair, t.fase, t.trade_concept, t.entry, t.notes].some((v) => v != null && v.toLowerCase().includes(q));
+  if ([t.pair, t.instrument, t.fase, t.trade_concept, t.entry, t.notes].some((v) => v != null && v.toLowerCase().includes(q))) {
+    return true;
+  }
+  return Object.values(t.custom ?? {}).some((v) => typeof v === "string" && v.toLowerCase().includes(q));
 }

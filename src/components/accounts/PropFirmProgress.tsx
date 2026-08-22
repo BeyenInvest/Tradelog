@@ -47,7 +47,9 @@ export function PropFirmProgress({ account }: { account: PropAccount }) {
       {account.max_drawdown_pct != null && (
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between font-mono text-xs">
-            <span className="text-muted">{t("accounts.maxDrawdown")}</span>
+            <span className="text-muted" title={t("accounts.maxDrawdownStaticHint")}>
+              {t("accounts.maxDrawdownStatic")}
+            </span>
             <span className={status.drawdown?.breached ? "text-loss" : "text-ink"}>
               {status.drawdown?.breached && `${t("accounts.limitBreached")} · `}
               {status.drawdown ? `${t("accounts.used", { pct: Math.round(status.drawdown.used * 100) })} · ` : ""}
