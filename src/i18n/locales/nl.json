@@ -189,6 +189,77 @@
     "disciplineTooltip": "Goede trades",
     "disciplineTradeLabel": "Trade #{{n}}"
   },
+  "blocks": {
+    "groups": {
+      "setup": "Setup & uitvoering",
+      "markt": "Markt",
+      "mindset": "Mindset & discipline"
+    },
+    "items": {
+      "setup": { "label": "Setup", "options": ["Breakout", "Pullback", "Reversal", "Range", "Trendcontinuatie"] },
+      "timeframe": { "label": "Timeframe", "options": ["1m", "3m", "5m", "15m", "1H", "4H", "Daily"] },
+      "market_condition": { "label": "Marktconditie", "options": ["Trending", "Ranging", "Volatiel/nieuws"] },
+      "quality": { "label": "Setup-kwaliteit", "options": ["A+", "B", "C", "Off-plan"] },
+      "direction_note": { "label": "Richting", "options": ["Long", "Short"] },
+      "session": { "label": "Sessie", "options": ["Azië", "Londen", "New York", "Overlap"] },
+      "news": { "label": "High-impact nieuws?" },
+      "sector": { "label": "Sector", "options": ["Tech", "Gezondheidszorg", "Financials", "Energie", "Consument", "Industrie", "Materialen", "Nuts", "Vastgoed", "Communicatie"] },
+      "market_cap": { "label": "Market cap", "options": ["Large", "Mid", "Small", "Micro"] },
+      "catalyst": { "label": "Katalysator", "options": ["Earnings", "FDA", "Up/downgrade", "Sectornieuws", "Gap", "Breakout", "M&A", "Geen"] },
+      "contracts": { "label": "Aantal contracten" },
+      "contract_type": { "label": "Contracttype", "options": ["Standaard", "Micro"] },
+      "hours": { "label": "Handelsuren", "options": ["RTH", "ETH"] },
+      "market_type": { "label": "Markttype", "options": ["Spot", "Perpetual", "Futures"] },
+      "leverage": { "label": "Hefboom (x)" },
+      "market_regime": { "label": "Marktregime", "options": ["Bull", "Bear", "Sideways"] },
+      "targets": { "label": "Targets (R)" },
+      "emotion": { "label": "Emotie", "options": ["Kalm/gedisciplineerd", "FOMO", "Angst", "Hebzucht", "Revenge"] },
+      "mistake": { "label": "Fout", "options": ["Geen", "FOMO", "Revenge", "Oversized", "Chased", "Te vroeg", "Te laat"] },
+      "followed_plan": { "label": "Volgde ik mijn plan?" }
+    }
+  },
+  "startsets": {
+    "assets": { "forex": "Forex", "futures": "Futures", "stock": "Aandelen", "crypto": "Crypto" },
+    "styles": { "scalp": "Scalp", "day": "Daytrade", "swing": "Swing" },
+    "styleHints": { "scalp": "seconden–minuten", "day": "binnen de dag", "swing": "dagen–weken" },
+    "desc": {
+      "forex_scalp": "Snelle in-en-uit trades; sessie, nieuws en emotie.",
+      "forex_day": "Intraday op 1–60m; setup-kwaliteit en discipline.",
+      "forex_swing": "Dagen tot weken; marktregime, targets en emotie.",
+      "futures_scalp": "Tick-scalps op ES/NQ; contract-info en emotie.",
+      "futures_day": "Intraday futures; setup-kwaliteit, contracten, discipline.",
+      "stock_day": "Momentum intraday; sector, catalyst en discipline.",
+      "stock_swing": "Dagen tot weken; sector, catalyst en marktregime.",
+      "crypto_scalp": "Snelle crypto-scalps; markttype, hefboom en emotie.",
+      "crypto_day": "Intraday crypto; setup-kwaliteit, hefboom, discipline.",
+      "crypto_swing": "Dagen tot weken; markttype, hefboom en marktregime."
+    }
+  },
+  "builder": {
+    "newJournal": "Nieuw journal",
+    "startsetStep": "Begin met een startset",
+    "startsetOptional": "optioneel, je kunt alles hierna wijzigen",
+    "blanco": "Blanco",
+    "or": "of",
+    "applied": "Startset {{name}} toegepast — {{count}} bouwstenen aangevinkt. Pas ze hieronder aan.",
+    "appliedBlank": "Blanco gestart — tik hieronder bouwstenen aan.",
+    "paletteStep": "Wat wil je bijhouden?",
+    "paletteHint": "tik aan om toe te voegen of te verwijderen",
+    "yourFields": "Jouw velden",
+    "yourFieldsEmpty": "Nog geen velden — kies een startset of tik hierboven bouwstenen aan.",
+    "removeField": "Verwijderen",
+    "advanced": "Eigen veld & geavanceerd",
+    "start": "Start dit journal",
+    "creating": "Aanmaken…",
+    "createFailed": "Journal aanmaken is mislukt",
+    "nameLabel": "Naam",
+    "namePlaceholder": "Bv. Futures — Daytrade",
+    "overviewTitle": "Startsets",
+    "overviewSubtitle": "Kies een startset per asset-class, of bouw zelf uit bouwstenen.",
+    "fieldCount_one": "{{count}} veld",
+    "fieldCount_other": "{{count}} velden",
+    "advancedTemplate": "Gevorderd sjabloon"
+  },
   "journalEmpty": {
     "title": "Je journal is nog leeg",
     "bodyTemplate": "Kies een kant-en-klaar sjabloon om je journal vorm te geven, of begin blanco. Log daarna je eerste trade — je statistieken, grafieken en kalender bouwen zich vanzelf op.",

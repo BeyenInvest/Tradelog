@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Plus, Upload, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { PresetChooser } from "@/components/settings/PresetPicker";
+import { JournalBuilder } from "@/components/settings/JournalBuilder";
 
 interface JournalEmptyStateProps {
   /**
@@ -75,11 +75,11 @@ export function JournalEmptyState({ hasFields, showPresetPicker, showImport, onN
       {showTemplateStep && (
         <Card className="flex flex-col gap-4">
           <div>
-            <h3 className="font-display text-lg text-ink">{t("presets.title")}</h3>
-            <p className="font-mono text-xs mt-1 text-muted">{t("presets.subtitle")}</p>
+            <h3 className="font-display text-lg text-ink">{t("builder.newJournal")}</h3>
+            <p className="font-mono text-xs mt-1 text-muted">{t("builder.overviewSubtitle")}</p>
           </div>
           <div className="border-t border-border-soft pt-4">
-            <PresetChooser />
+            <JournalBuilder reuseActiveIfEmpty />
           </div>
         </Card>
       )}

@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
-import { PresetPicker } from "@/components/settings/PresetPicker";
+import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, type ResultUnit } from "@/lib/constants";
 import { timezoneOptions } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -66,7 +66,7 @@ export default function SettingsPage() {
               title={t("methodology.title")}
               description={t("methodology.description")}
             />
-            <PresetPicker defaultOpen={openPresets} />
+            <NewJournalCard defaultOpen={openPresets} />
             <MethodologyEditor />
             <JournalInstruments />
           </section>

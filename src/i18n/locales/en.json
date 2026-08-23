@@ -189,6 +189,77 @@
     "disciplineTooltip": "Good trades",
     "disciplineTradeLabel": "Trade #{{n}}"
   },
+  "blocks": {
+    "groups": {
+      "setup": "Setup & execution",
+      "markt": "Market",
+      "mindset": "Mindset & discipline"
+    },
+    "items": {
+      "setup": { "label": "Setup", "options": ["Breakout", "Pullback", "Reversal", "Range", "Trend continuation"] },
+      "timeframe": { "label": "Timeframe", "options": ["1m", "3m", "5m", "15m", "1H", "4H", "Daily"] },
+      "market_condition": { "label": "Market condition", "options": ["Trending", "Ranging", "Volatile/news"] },
+      "quality": { "label": "Setup quality", "options": ["A+", "B", "C", "Off-plan"] },
+      "direction_note": { "label": "Direction", "options": ["Long", "Short"] },
+      "session": { "label": "Session", "options": ["Asia", "London", "New York", "Overlap"] },
+      "news": { "label": "High-impact news?" },
+      "sector": { "label": "Sector", "options": ["Tech", "Healthcare", "Financials", "Energy", "Consumer", "Industrials", "Materials", "Utilities", "Real Estate", "Communications"] },
+      "market_cap": { "label": "Market cap", "options": ["Large", "Mid", "Small", "Micro"] },
+      "catalyst": { "label": "Catalyst", "options": ["Earnings", "FDA", "Up/downgrade", "Sector news", "Gap", "Breakout", "M&A", "None"] },
+      "contracts": { "label": "Contracts" },
+      "contract_type": { "label": "Contract type", "options": ["Standard", "Micro"] },
+      "hours": { "label": "Trading hours", "options": ["RTH", "ETH"] },
+      "market_type": { "label": "Market type", "options": ["Spot", "Perpetual", "Futures"] },
+      "leverage": { "label": "Leverage (x)" },
+      "market_regime": { "label": "Market regime", "options": ["Bull", "Bear", "Sideways"] },
+      "targets": { "label": "Targets (R)" },
+      "emotion": { "label": "Emotion", "options": ["Calm/disciplined", "FOMO", "Fear", "Greed", "Revenge"] },
+      "mistake": { "label": "Mistake", "options": ["None", "FOMO", "Revenge", "Oversized", "Chased", "Too early", "Too late"] },
+      "followed_plan": { "label": "Did I follow my plan?" }
+    }
+  },
+  "startsets": {
+    "assets": { "forex": "Forex", "futures": "Futures", "stock": "Stocks", "crypto": "Crypto" },
+    "styles": { "scalp": "Scalp", "day": "Day trade", "swing": "Swing" },
+    "styleHints": { "scalp": "seconds–minutes", "day": "within the day", "swing": "days–weeks" },
+    "desc": {
+      "forex_scalp": "Fast in-and-out trades; session, news and emotion.",
+      "forex_day": "Intraday on 1–60m; setup quality and discipline.",
+      "forex_swing": "Days to weeks; market regime, targets and emotion.",
+      "futures_scalp": "Tick scalps on ES/NQ; contract info and emotion.",
+      "futures_day": "Intraday futures; setup quality, contracts, discipline.",
+      "stock_day": "Intraday momentum; sector, catalyst and discipline.",
+      "stock_swing": "Days to weeks; sector, catalyst and market regime.",
+      "crypto_scalp": "Fast crypto scalps; market type, leverage and emotion.",
+      "crypto_day": "Intraday crypto; setup quality, leverage, discipline.",
+      "crypto_swing": "Days to weeks; market type, leverage and market regime."
+    }
+  },
+  "builder": {
+    "newJournal": "New journal",
+    "startsetStep": "Start with a starter set",
+    "startsetOptional": "optional — you can change everything below",
+    "blanco": "Blank",
+    "or": "or",
+    "applied": "Starter set {{name}} applied — {{count}} building blocks ticked. Adjust them below.",
+    "appliedBlank": "Started blank — tick building blocks below.",
+    "paletteStep": "What do you want to track?",
+    "paletteHint": "tap to add or remove",
+    "yourFields": "Your fields",
+    "yourFieldsEmpty": "No fields yet — pick a starter set or tap building blocks above.",
+    "removeField": "Remove",
+    "advanced": "Custom field & advanced",
+    "start": "Start this journal",
+    "creating": "Creating…",
+    "createFailed": "Creating the journal failed",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Futures — Day trade",
+    "overviewTitle": "Starter sets",
+    "overviewSubtitle": "Pick a starter set per asset class, or build your own from blocks.",
+    "fieldCount_one": "{{count}} field",
+    "fieldCount_other": "{{count}} fields",
+    "advancedTemplate": "Advanced template"
+  },
   "journalEmpty": {
     "title": "Your journal is empty",
     "bodyTemplate": "Pick a ready-made template to shape your journal, or start blank. Then log your first trade — your stats, charts and calendar build themselves from there.",

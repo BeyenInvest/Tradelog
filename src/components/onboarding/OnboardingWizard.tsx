@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { LogoMark, Wordmark } from "@/components/ui/Logo";
-import { PresetChooser } from "@/components/settings/PresetPicker";
+import { JournalBuilder } from "@/components/settings/JournalBuilder";
 import { timezoneOptions, guessTimezone } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
 
@@ -163,9 +163,10 @@ function OnboardingWizardInner() {
                   <p className="font-body text-sm text-muted">{t("onboarding.journalBody")}</p>
                 </div>
 
-                {/* Reuse the preset grid; "blank" is the wizard's own action below,
-                    so the brand-new account keeps its existing empty journal. */}
-                <PresetChooser hideBlank onApplied={() => void complete()} />
+                {/* The unified builder: a starter set pre-ticks blocks the user tweaks,
+                    or "Blanco" for an empty journal. Filling the brand-new account's
+                    existing empty journal (reuseActiveIfEmpty), then stamping onboarded. */}
+                <JournalBuilder reuseActiveIfEmpty onDone={() => void complete()} />
 
                 {error && <p className="font-mono text-[11px] text-loss">{error}</p>}
 
@@ -182,9 +183,9 @@ function OnboardingWizardInner() {
                     type="button"
                     onClick={() => void complete()}
                     disabled={busy}
-                    className="px-4 py-2 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5 disabled:opacity-40"
+                    className="font-body text-sm text-muted hover:text-ink disabled:opacity-40"
                   >
-                    {busy ? t("common.submitting") : t("onboarding.startBlank")}
+                    {busy ? t("common.submitting") : t("onboarding.skip")}
                   </button>
                 </div>
               </>

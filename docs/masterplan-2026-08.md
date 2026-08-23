@@ -69,9 +69,9 @@ Volgorde van de recente/relevante migraties en hun status op prod. Eerstvolgend 
 | 0043 | `open_trades` | lopende trades (is_open) | ✅ gedraaid (2026-08-20) |
 | 0044 | `audit_hardening` | K1 kolom-grants + N1 ownership-trigger + N2 storage-delete | ✅ gedraaid |
 | 0045 | `rename_field_option` | transactionele option-rename-RPC (Fase R s1, M5) | ✅ gedraaid |
-| 0046 | `admin_methodology_select` | is_admin() SELECT op methodologies + methodology_fields (Fase R s2, H2) | ⏳ **moet nog draaien** |
+| 0046 | `admin_methodology_select` | is_admin() SELECT op methodologies + methodology_fields (Fase R s2, H2) | ✅ gedraaid (2026-08-22) |
 
-> **0046 is de enige openstaande.** Zonder 0046 valt de admin-analyse voor een user met een *eigen* (niet-systeem) journal stil terug op universele breakdowns (geen crash — RLS geeft leeg terug). `to authenticated` op de nieuwe policies is verplicht, anders 42501 voor anon (les van 0036).
+> **Alle migraties t/m 0046 zijn gedraaid op prod.** Fase R volledig af en gemerged naar main (`0bd0cb3`). Eerstvolgend vrij nummer: **0047**.
 
 ## Fase G-rest + launch-week (owner-ops + klein code)
 
