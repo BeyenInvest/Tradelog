@@ -55,7 +55,7 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase, betaFeatures } = useAuth();
+  const { hideFase: ownHideFase } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
@@ -296,8 +296,8 @@ export function BacktestingAnalysisView({
         </Card>
       </section>
 
-      {/* Regel-adherentie (Fase N2) — live-journal-only, beta-gated like every new feature */}
-      {showAdherence && betaFeatures && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
+      {/* Regel-adherentie (Fase N2) — live-journal-only (needs trade_evaluation) */}
+      {showAdherence && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
 
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">

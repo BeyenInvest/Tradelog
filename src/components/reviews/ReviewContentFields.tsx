@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/hooks/useAuth";
 import { LabeledTextarea, StringListField } from "./ReviewFieldInputs";
 
 export interface ReviewContentValue {
@@ -20,10 +19,10 @@ interface ReviewContentFieldsProps {
 /** Technisch/Mentaal/Acties/Takeaway/Overall-comment editor for the weekly review form. */
 export function ReviewContentFields({ value, onChange }: ReviewContentFieldsProps) {
   const { t } = useTranslation();
-  // Fase F is soft-launched behind beta_features: beta users get the neutral, generalized
-  // weekly review (one "Mentaal" field, neutral narrative label); everyone else keeps the
-  // original WPM structure (Verhalen + Mentaal Owner/Trader) until public launch.
-  const { betaFeatures } = useAuth();
+  // Fase F: the neutral, generalized weekly review (one "Mentaal" field, neutral
+  // narrative label). The legacy WPM two-voice layout (Verhalen + Mentaal
+  // Owner/Trader) is retired from the editor; mentaal_trader stays a legacy
+  // column, preserved on save and still shown for old reviews in the detail view.
   function set<K extends keyof ReviewContentValue>(key: K, v: ReviewContentValue[K]) {
     onChange({ ...value, [key]: v });
   }
@@ -31,8 +30,8 @@ export function ReviewContentFields({ value, onChange }: ReviewContentFieldsProp
   return (
     <>
       <LabeledTextarea
-        label={betaFeatures ? t("reviewContent.verhalenNeutral") : t("reviewContent.verhalen")}
-        hint={betaFeatures ? t("reviewContent.verhalenNeutralHint") : t("reviewContent.verhalenHint")}
+        label={t("reviewContent.verhalenNeutral")}
+        hint={t("reviewContent.verhalenNeutralHint")}
         rows={3}
         value={value.verhalen}
         onChange={(v) => set("verhalen", v)}
@@ -40,16 +39,9 @@ export function ReviewContentFields({ value, onChange }: ReviewContentFieldsProp
 
       <LabeledTextarea label={t("reviewContent.technisch")} rows={3} value={value.technisch} onChange={(v) => set("technisch", v)} />
 
-      {betaFeatures ? (
-        // Single mental field. Writes to mentaal_owner; mentaal_trader is a legacy column no
-        // longer edited here but preserved on save and still shown in the detail view.
-        <LabeledTextarea label={t("reviewContent.mentaal")} rows={4} value={value.mentaal_owner} onChange={(v) => set("mentaal_owner", v)} />
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          <LabeledTextarea label={t("reviewContent.mentaalOwner")} rows={4} value={value.mentaal_owner} onChange={(v) => set("mentaal_owner", v)} />
-          <LabeledTextarea label={t("reviewContent.mentaalTrader")} rows={4} value={value.mentaal_trader} onChange={(v) => set("mentaal_trader", v)} />
-        </div>
-      )}
+      {/* Single mental field. Writes to mentaal_owner; mentaal_trader is a legacy
+          column no longer edited here but preserved on save. */}
+      <LabeledTextarea label={t("reviewContent.mentaal")} rows={4} value={value.mentaal_owner} onChange={(v) => set("mentaal_owner", v)} />
 
       <StringListField
         label={t("reviewContent.acties")}

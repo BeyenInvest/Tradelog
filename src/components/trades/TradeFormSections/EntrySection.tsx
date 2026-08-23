@@ -23,7 +23,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
     setValue,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
-  const { hideFase, betaFeatures } = useAuth();
+  const { hideFase } = useAuth();
   const { t } = useTranslation();
   const { faseNames, isLegacyMethodology, isForexJournal, instruments, addInstrument } = useMethodology();
   // Entry & Trade concept are the two custom_options-backed fields (plain text
@@ -92,14 +92,12 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
             <input type="hidden" {...register("pair")} />
           </>
         )}
-        {/* Direction is universal core (Long/Short) — shown for every journal, legacy or
-            not. Soft-launch: beta-flagged users only (0033); the column is nullable, so
-            hiding the field simply leaves it null. */}
-        {betaFeatures && (
-          <Field label={t("tradeForm.direction")} error={errors.direction?.message}>
-            <EnumSelect options={DIRECTIONS} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
-          </Field>
-        )}
+        {/* Direction is universal core (Long/Short) — shown for every journal, legacy
+            or not. The column is nullable, so legacy trades logged before it existed
+            simply stay null. */}
+        <Field label={t("tradeForm.direction")} error={errors.direction?.message}>
+          <EnumSelect options={DIRECTIONS} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
+        </Field>
         {/* The rest of this section is the Weekly Phase Method's hardcoded legacy block
             (cc, concept, entry, weekly criteria/kenmerk, news). An own or empty journal only
             sees the universal core above + its own custom fields (CustomFieldsSection). cc stays

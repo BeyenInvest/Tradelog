@@ -34,9 +34,9 @@
 ### B. Rest van G-rest (masterplan §"Fase G-rest")
 | # | Item | Model | Notitie |
 |---|---|---|---|
-| B1 | **Beta-flip — selectief un-gaten** (goedgekeurde aanpak) | **Opus** | Launch-klare set uit de `beta_features`-gate (onboarding, builder, journal-switcher, neutrale reviews, instrument-curatie, richting-veld/-filter, profit-factor, result-unit, quick-log, PWA). **Gated houden:** import (nooit CSV-getest → Fase I), screenshot-upload (Storage-prereq), share (verificatie). Gate zit in `useAuth.betaFeatures` + de checks in de componenten (zie verkenning). |
-| B2 | **Support-/contactlink** vindbaar maken (sidebar/settings) | **Opus** | Bestaat nergens; klein. |
-| B3 | **Account-verwijder-entry-point** in Settings | **Opus** | RPC `delete_own_account` + `DeleteAccountModal` bestaan al, worden nergens aangeroepen — alleen nog een knop wiren. |
+| B1 | ✅ **Beta-flip — selectief un-gaten** (2026-08-23, uncommit op branch) | **Opus** | Un-gegate: onboarding, builder/preset-picker, journal-switcher, neutrale reviews (incl. PDF + share, gate helemaal verwijderd), instrument-curatie/methodiek-sectie, richting-veld + -filter, profit-factor (+KPI-grid altijd 3-koloms), result-unit, quick-log, PWA/service-worker, **regel-adherentie (N2)** + **current-streak-subregel** (owner-besluit 2026-08-23: óók un-gaten). **Gated gebleven** (`useAuth.betaFeatures`): import, screenshot-upload, share-knop. ⚠️ PWA-SW registreert nu voor iedereen (origin-wide, persistent) — check bij launch. |
+| B2 | ✅ **Support-/contactlink** (2026-08-23) | **Opus** | `SUPPORT_EMAIL = "info@beyen.app"` in `constants.ts`; support-kaart in Settings → sectie "Account" (mailto + adres als tekst). Terms/Privacy-placeholders nog NIET ingevuld (= B4, owner). |
+| B3 | ✅ **Account-verwijder-entry-point** in Settings (2026-08-23) | **Opus** | `DeleteAccountSettings`-kaart in Settings → "Account"-sectie roept `useAuth.deleteAccount()` (RPC 0006) via `DeleteAccountModal` aan. |
 | B4 | **Terms/Privacy** juridische tekst | **owner** (+ Opus voor inplakken) | Nu placeholder + rode concept-banner + `[contactadres — …]`. |
 | B5 | **Landing page** op `/` (goedgekeurde mockup → React) | **Opus** | **Geblokkeerd op designer-logo** + PWA-iconen. |
 | B6 | **Launch-week ops**: Turnstile → Supabase URL-config → e-mailtemplates + custom SMTP → Sentry-DSN + uptime + DB-backup → signup-toggle aan → smoke-test | **owner-ops** | Ná Turnstile: geen Browser-pane meer op prod zonder overleg. |

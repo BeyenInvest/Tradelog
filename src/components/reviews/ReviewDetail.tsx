@@ -27,7 +27,7 @@ interface ReviewDetailProps {
 
 export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
   const { t } = useTranslation();
-  const { profile, betaFeatures } = useAuth();
+  const { profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
@@ -53,7 +53,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
         <div className="flex items-center gap-1">
           <ShareReviewButton reviewRef={{ kind: "weekly", id: review.id }} />
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, betaFeatures, resultUnit, saldo })}
+            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo })}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />

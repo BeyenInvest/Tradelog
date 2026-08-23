@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/hooks/useAuth";
 import { ContentBlock, VoiceBlock, ActiesList, TakeawayQuote, OverallCommentBlock } from "./ReviewContentBlocks";
 
 interface ReviewContentDisplayProps {
@@ -10,32 +9,21 @@ interface ReviewContentDisplayProps {
   acties: string[];
   takeaway: string | null;
   overall_comment: string | null;
-  /** Anonymous share views pass the layout choice explicitly — the viewer has no profile, and the sharing owner (beta-gated share button) authored the review in the merged layout. */
-  betaFeaturesOverride?: boolean;
 }
 
 /** Read-only rendering of the technisch/mentaal/acties/takeaway/overall-comment fields, shared by weekly and periodic review detail views. */
-export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment, betaFeaturesOverride }: ReviewContentDisplayProps) {
+export function ReviewContentDisplay({ verhalen, technisch, mentaal_owner, mentaal_trader, acties, takeaway, overall_comment }: ReviewContentDisplayProps) {
   const { t } = useTranslation();
-  // Fase F soft-launch (beta_features): beta users see the merged, neutrally-labelled review;
-  // everyone else keeps the original two-voice WPM layout until public launch.
-  const { betaFeatures: ownBetaFeatures } = useAuth();
-  const betaFeatures = betaFeaturesOverride ?? ownBetaFeatures;
+  // Fase F: the merged, neutrally-labelled review. Legacy two-voice WPM reviews
+  // still render in full — mentaal_owner is the live field; any legacy
+  // mentaal_trader text is appended into the single mental block.
   return (
     <>
-      {verhalen && <ContentBlock label={betaFeatures ? t("reviewContent.verhalenNeutral") : t("reviewContent.verhalen")}>{verhalen}</ContentBlock>}
+      {verhalen && <ContentBlock label={t("reviewContent.verhalenNeutral")}>{verhalen}</ContentBlock>}
       {technisch && <ContentBlock label={t("reviewContent.technisch")}>{technisch}</ContentBlock>}
-      {(mentaal_owner || mentaal_trader) &&
-        (betaFeatures ? (
-          // One mental block: mentaal_owner is the live field; any legacy mentaal_trader text is
-          // appended so older two-voice reviews still render in full.
-          <VoiceBlock label={t("reviewContent.mentaal")}>{[mentaal_owner, mentaal_trader].filter(Boolean).join("\n\n")}</VoiceBlock>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {mentaal_owner && <VoiceBlock label={t("reviewContent.mentaalOwner")}>{mentaal_owner}</VoiceBlock>}
-            {mentaal_trader && <VoiceBlock label={t("reviewContent.mentaalTrader")}>{mentaal_trader}</VoiceBlock>}
-          </div>
-        ))}
+      {(mentaal_owner || mentaal_trader) && (
+        <VoiceBlock label={t("reviewContent.mentaal")}>{[mentaal_owner, mentaal_trader].filter(Boolean).join("\n\n")}</VoiceBlock>
+      )}
       <ActiesList label={t("reviewContent.acties")} items={acties} />
       {takeaway && <TakeawayQuote label={t("reviewContent.takeaway")}>{takeaway}</TakeawayQuote>}
       {overall_comment && <OverallCommentBlock>{overall_comment}</OverallCommentBlock>}

@@ -1,3 +1,7 @@
+/** Public support/contact address. Single source of truth — reused wherever we
+ *  surface a "contact us" link (Settings, and later Terms/Privacy). */
+export const SUPPORT_EMAIL = "info@beyen.app";
+
 export const FASES = ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] as const;
 export type Fase = (typeof FASES)[number];
 

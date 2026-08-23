@@ -98,8 +98,6 @@ export type ReviewPdfInput = (
       review: WeeklyReview;
       taken: ClosedTrade[];
       missed: ClosedTrade[];
-      /** Fase F soft-launch: beta users get the neutral one-Mentaal layout; others the WPM layout. */
-      betaFeatures?: boolean;
     }
   | { kind: "periodic"; review: PeriodicReview; taken: ClosedTrade[]; missed: ClosedTrade[] }
 ) & {
@@ -173,19 +171,8 @@ const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
   year: "reviewContent.kwartaaloverzicht",
 };
 
-function weeklySections(t: TFunction, r: WeeklyReview, beta: boolean): ReviewPdfSection[] {
-  if (!beta) {
-    // WPM layout (non-beta): separate narrative + two mental voices.
-    return [
-      section(t("reviewContent.verhalen"), r.verhalen, "text"),
-      section(t("reviewContent.technisch"), r.technisch, "text"),
-      section(t("reviewContent.mentaalOwner"), r.mentaal_owner, "voice"),
-      section(t("reviewContent.mentaalTrader"), r.mentaal_trader, "voice"),
-      section(t("reviewContent.takeaway"), r.takeaway, "takeaway"),
-      section(t("reviewContent.overallComment"), r.overall_comment, "overall"),
-    ].filter((s): s is ReviewPdfSection => s !== null);
-  }
-  // Neutral layout (Fase F, beta): one mental section = mentaal_owner plus any legacy mentaal_trader.
+function weeklySections(t: TFunction, r: WeeklyReview): ReviewPdfSection[] {
+  // Neutral layout (Fase F): one mental section = mentaal_owner plus any legacy mentaal_trader.
   const mentaal = [r.mentaal_owner, r.mentaal_trader]
     .map((v) => v?.trim())
     .filter(Boolean)
@@ -262,7 +249,7 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
       : periodLabel(input.review.period_type, input.review.jaar, input.review.periode_nummer, locale);
 
   const sections =
-    input.kind === "weekly" ? weeklySections(t, input.review, input.betaFeatures ?? false) : periodicSections(t, input.review);
+    input.kind === "weekly" ? weeklySections(t, input.review) : periodicSections(t, input.review);
   const actiesLabel = input.kind === "weekly" ? t("reviewContent.acties") : t("reviewContent.werkpunten");
 
   const l = labels(t);

@@ -10,14 +10,15 @@ import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
-import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, type ResultUnit } from "@/lib/constants";
+import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
+import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
 import { timezoneOptions } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const { hideFase, betaFeatures, updateProfile } = useAuth();
+  const { hideFase, updateProfile } = useAuth();
   const location = useLocation();
   // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
   // scroll to the preset picker, so that click completes its intent here.
@@ -53,24 +54,23 @@ export default function SettingsPage() {
 
           <LanguageSettings />
 
-          {/* Fase J (0037): resultaat-eenheid %/R/geld — beta tot de weergave-conversie af is. */}
-          {betaFeatures && <ResultUnitSettings />}
+          {/* Fase J (0037): resultaat-eenheid %/R/geld. De weergave-conversie
+              (R/geld in useResultDisplay) is af, dus dit staat voor iedereen aan. */}
+          <ResultUnitSettings />
         </section>
 
-        {/* Multi-journal configuration — soft-launch: beta-flagged users only (0033)
-            until the public launch. Above the legacy trading prefs: for a new trader
-            this is the section that matters, the WPM-era cards below are secondary. */}
-        {betaFeatures && (
-          <section className="flex flex-col gap-5">
-            <SettingsSectionHeader
-              title={t("methodology.title")}
-              description={t("methodology.description")}
-            />
-            <NewJournalCard defaultOpen={openPresets} />
-            <MethodologyEditor />
-            <JournalInstruments />
-          </section>
-        )}
+        {/* Multi-journal configuration. Above the legacy trading prefs: for a new
+            trader this is the section that matters, the WPM-era cards below are
+            secondary. */}
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("methodology.title")}
+            description={t("methodology.description")}
+          />
+          <NewJournalCard defaultOpen={openPresets} />
+          <MethodologyEditor />
+          <JournalInstruments />
+        </section>
 
         <section className="flex flex-col gap-5">
           <SettingsSectionHeader
@@ -106,8 +106,81 @@ export default function SettingsPage() {
             placeholderKey="settings.newConceptPlaceholder"
           />
         </section>
+
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("settings.sectionAccount")}
+            description={t("settings.sectionAccountDescription")}
+          />
+
+          <SupportSettings />
+
+          <DeleteAccountSettings />
+        </section>
       </div>
     </>
+  );
+}
+
+/**
+ * Support / contact — the app's only user-facing way to reach us (there is no
+ * in-app inbox yet). A plain mailto to the shared SUPPORT_EMAIL constant so the
+ * address stays in one place; the copy also shows it as text so it's usable when
+ * no mail client is configured.
+ */
+function SupportSettings() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("settings.support")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">
+            {t("settings.supportDescription")} <span className="text-ink">{SUPPORT_EMAIL}</span>
+          </p>
+        </div>
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="shrink-0 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold hover:opacity-90 transition-opacity"
+        >
+          {t("settings.supportCta")}
+        </a>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * Self-service account deletion (GDPR erasure) — the only irreversible action in
+ * Settings, so it lives in its own account section, styled as a danger zone, and
+ * routes through the typed-phrase DeleteAccountModal before anything happens.
+ * useAuth.deleteAccount() calls the delete_own_account RPC (0006) then signs out,
+ * which drops the user back to /login via the auth-state listener.
+ */
+function DeleteAccountSettings() {
+  const { t } = useTranslation();
+  const { deleteAccount } = useAuth();
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("deleteAccount.cardTitle")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{t("deleteAccount.cardDescription")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="shrink-0 px-4 py-2 rounded-lg font-body text-sm font-medium border border-loss/40 text-loss hover:bg-loss/10 transition-colors"
+        >
+          {t("deleteAccount.button")}
+        </button>
+      </div>
+      {showModal && (
+        <DeleteAccountModal onConfirm={deleteAccount} onClose={() => setShowModal(false)} />
+      )}
+    </Card>
   );
 }
 

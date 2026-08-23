@@ -54,16 +54,17 @@ describe("buildReviewPdfData", () => {
     expect(data.heading).toBe("W32 · 2026");
     expect(data.subtitle).toBe("Geduldige week");
     expect(data.labels.actiesLabel).toBe("reviewContent.acties");
-    // Default (non-beta) keeps the WPM layout: separate mentaal voices, empty mentaal_trader dropped
+    // Fase F: weekly is always the neutral layout — neutral narrative label + one merged
+    // mental section, never the retired two-voice WPM labels.
     const labels = data.sections.map((s) => s.label);
     expect(labels).toContain("reviewContent.technisch");
-    expect(labels).toContain("reviewContent.mentaalOwner");
+    expect(labels).toContain("reviewContent.mentaal");
+    expect(labels).not.toContain("reviewContent.mentaalOwner");
     expect(labels).not.toContain("reviewContent.mentaalTrader");
-    expect(labels).not.toContain("reviewContent.mentaal"); // neutral layout is beta-only
-    expect(labels).toContain("reviewContent.verhalen");
-    // verhalen is its own section, rendered above technisch
-    expect(labels.indexOf("reviewContent.verhalen")).toBeGreaterThanOrEqual(0);
-    expect(labels.indexOf("reviewContent.verhalen")).toBeLessThan(labels.indexOf("reviewContent.technisch"));
+    expect(labels).toContain("reviewContent.verhalenNeutral");
+    // the narrative is its own section, rendered above technisch
+    expect(labels.indexOf("reviewContent.verhalenNeutral")).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf("reviewContent.verhalenNeutral")).toBeLessThan(labels.indexOf("reviewContent.technisch"));
     expect(data.sections.find((s) => s.label === "reviewContent.technisch")?.body).toBe("Nette setups afgewacht.");
 
     expect(data.acties).toEqual([
@@ -73,9 +74,9 @@ describe("buildReviewPdfData", () => {
     ]);
   });
 
-  it("beta merges legacy mentaal_owner + mentaal_trader into one neutrally-labelled section", () => {
+  it("merges legacy mentaal_owner + mentaal_trader into one neutrally-labelled section", () => {
     const twoVoice: WeeklyReview = { ...baseWeekly, mentaal_owner: "Owner voice.", mentaal_trader: "Trader voice." };
-    const data = buildReviewPdfData(t, { kind: "weekly", review: twoVoice, taken: [], missed: [], betaFeatures: true });
+    const data = buildReviewPdfData(t, { kind: "weekly", review: twoVoice, taken: [], missed: [] });
     const labels = data.sections.map((s) => s.label);
     // neutral narrative label + single merged mental block, no WPM voices
     expect(labels).toContain("reviewContent.verhalenNeutral");

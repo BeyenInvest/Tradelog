@@ -189,9 +189,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
               </button>
             )}
             {/* Quick-log (Fase L): a trade in <30s, details later. Live journal
-                only (a backtest logs full sessions), beta until public launch.
-                Icon-only + tooltip so it stays a light accent next to the primary
-                "New trade" CTA rather than a competing full-size button. */}
+                only (a backtest logs full sessions). Icon-only + tooltip so it
+                stays a light accent next to the primary "New trade" CTA rather
+                than a competing full-size button. */}
             {/* Share-links (Fase M): read-only coach view via token-URL. Managing
                 links is beta-gated (gating-regel) and live-journal only — the
                 token view itself is per-token, not per-user. Same icon-button
@@ -206,7 +206,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 <Share2 size={16} />
               </button>
             )}
-            {betaFeatures && isLive && (
+            {isLive && (
               <button
                 onClick={() => setQuickOpen(true)}
                 title={t("quickLog.button")}
@@ -320,10 +320,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 </label>
               </div>
             )}
-            <div className={`grid grid-cols-2 ${betaFeatures ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-4`}>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard label={t("journal.statTotalTrades")} value={kpis.totalTrades} />
             <ResultStatCard kpis={kpis} unit={resultUnit} saldo={saldo} />
-            {betaFeatures && <ProfitFactorStatCard kpis={kpis} />}
+            <ProfitFactorStatCard kpis={kpis} />
             <AvgRStatCard kpis={kpis} />
             <MaxDrawdownStatCard kpis={kpis} />
             <Card className="flex items-center gap-3">
@@ -334,7 +334,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                   {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
                   <span className="text-win">{kpis.maxWinningStreak}</span>
                 </p>
-                {betaFeatures && (
                 <p className="font-mono text-xs mt-1 text-muted">
                   {t("journal.currentStreak")}:{" "}
                   {kpis.currentStreak.type === "none" ? (
@@ -354,7 +353,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                     </span>
                   )}
                 </p>
-                )}
               </div>
             </Card>
             </div>

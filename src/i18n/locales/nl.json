@@ -784,7 +784,12 @@
     "sectionDisplay": "Weergave & interface",
     "sectionDisplayDescription": "Hoe de app eruitziet en welke naam bovenaan je review-PDF komt.",
     "sectionTrading": "Trading & velden",
-    "sectionTradingDescription": "Instellingen die je trades en de keuzevelden in je trade-formulier beïnvloeden."
+    "sectionTradingDescription": "Instellingen die je trades en de keuzevelden in je trade-formulier beïnvloeden.",
+    "sectionAccount": "Account",
+    "sectionAccountDescription": "Beheer je account.",
+    "support": "Support & contact",
+    "supportDescription": "Vragen of feedback? Mail ons op",
+    "supportCta": "Mail ons"
   },
   "methodology": {
     "title": "Journal & velden",
@@ -921,7 +926,10 @@
     "typeToConfirmPost": " hieronder om te bevestigen.",
     "deleteFailed": "Verwijderen van account is mislukt",
     "deleting": "Bezig met verwijderen...",
-    "confirmDelete": "Definitief verwijderen"
+    "confirmDelete": "Definitief verwijderen",
+    "cardTitle": "Account verwijderen",
+    "cardDescription": "Verwijder je account en alle bijbehorende gegevens permanent. Dit kan niet ongedaan worden gemaakt.",
+    "button": "Account verwijderen"
   },
   "errors": {
     "generic": "Er ging iets mis",

@@ -30,9 +30,8 @@ const ResultDisplayContext = createContext<ResultDisplayValue | null>(null);
  * nergens op voor de trades van een ándere gebruiker).
  */
 export function ResultDisplayProvider({ children, override }: { children: ReactNode; override?: ResultDisplayValue }) {
-  const { profile, resultUnit, betaFeatures } = useAuth();
-  // Beta-gate (gating-regel): niet-beta-accounts zien altijd %, wat er ook in hun profiel staat.
-  const preferred: ResultUnit = betaFeatures ? resultUnit : "percent";
+  const { profile, resultUnit } = useAuth();
+  const preferred: ResultUnit = resultUnit;
   // Alleen id + journal als deps — het hele profile-object wisselt bij elke
   // settings-save en zou dan telkens een onnodige saldo-refetch triggeren.
   const profileId = profile?.id ?? null;

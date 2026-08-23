@@ -16,19 +16,19 @@ import { toErrorMessage } from "@/lib/errorMessage";
  * PresetChooser. Finishing or skipping stamps `profiles.onboarded_at`, so it
  * never shows again.
  *
- * Gated on betaFeatures (public signup is still closed) AND onboarded_at being
- * null. Mounted once as an overlay in the router's protected layout, above the
- * AppShell, so it is route-independent. Renders nothing when it shouldn't show —
- * the hook runs first, then the early return, so hook order stays stable.
+ * Shows once per account: gated only on onboarded_at being null. Mounted once as
+ * an overlay in the router's protected layout, above the AppShell, so it is
+ * route-independent. Renders nothing when it shouldn't show — the hook runs
+ * first, then the early return, so hook order stays stable.
  */
 export function OnboardingWizard() {
-  const { profile, betaFeatures } = useAuth();
+  const { profile } = useAuth();
   // Strictly `=== null`, not falsy: an ISO string means already onboarded, and
   // `undefined` means the 0041 column isn't on this DB yet. Deploy lands on prod
   // (via push) before the owner runs the migration by hand — during that window
   // the value is `undefined`, so we must stay inert rather than show an overlay
   // whose "done" write would fail against the missing column and trap the user.
-  if (!betaFeatures || !profile || profile.onboarded_at !== null) return null;
+  if (!profile || profile.onboarded_at !== null) return null;
   return <OnboardingWizardInner />;
 }
 

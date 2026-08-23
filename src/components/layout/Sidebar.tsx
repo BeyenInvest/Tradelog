@@ -8,10 +8,9 @@ import { LogoMark, Wordmark } from "@/components/ui/Logo";
 import { JournalSwitcher } from "@/components/layout/JournalSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
-// Account deletion (DeleteAccountModal + useAuth.deleteAccount) is built but
-// deliberately not exposed here yet — too easy to stumble into from the main
-// nav. Re-surface it from a dedicated profile/settings entry point once that
-// exists (e.g. alongside subscription management at public launch).
+// Account deletion (DeleteAccountModal + useAuth.deleteAccount) is intentionally
+// not in the main nav — too easy to stumble into. Its entry point lives in the
+// Settings "Account" section (SettingsPage → DeleteAccountSettings) instead.
 
 const NAV = [
   { to: "/journal", labelKey: "nav.journal", icon: BookOpen },
@@ -23,7 +22,7 @@ const NAV = [
 ];
 
 export function Sidebar() {
-  const { signOut, isAdmin, betaFeatures } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const { isForexJournal } = useMethodology();
   const { t } = useTranslation();
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -54,18 +53,13 @@ export function Sidebar() {
       </div>
 
       {/* Active-journal switcher (cyclus 3b). Full-width in the desktop column; a
-          compact variant in the mobile top bar so mobile can switch/create too.
-          Soft-launch: beta-flagged users only (0033) until the public launch. */}
-      {betaFeatures && (
-        <>
-          <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
-            <JournalSwitcher />
-          </div>
-          <div className="md:hidden shrink-0 min-w-0 max-w-[8.5rem]">
-            <JournalSwitcher compact />
-          </div>
-        </>
-      )}
+          compact variant in the mobile top bar so mobile can switch/create too. */}
+      <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
+        <JournalSwitcher />
+      </div>
+      <div className="md:hidden shrink-0 min-w-0 max-w-[8.5rem]">
+        <JournalSwitcher compact />
+      </div>
 
       {/* flex-1 + min-w-0 lets this item both absorb the row's remaining width AND shrink below its
           content size on mobile, so overflow-x-auto actually kicks in instead of the row silently

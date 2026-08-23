@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Check, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import type { TradeFormValues } from "@/lib/validation";
 import type { MethodologyField } from "@/lib/types";
-import { useAuth } from "@/hooks/useAuth";
 import { useMethodology, type InlineFieldInput } from "@/hooks/useMethodology";
 import {
   dynamicMethodologyFields,
@@ -44,7 +43,6 @@ function groupFields(fields: MethodologyField[]): { label: string | null; fields
  */
 export function CustomFieldsSection() {
   const { t } = useTranslation();
-  const { betaFeatures } = useAuth();
   const { fields, isOwnMethodology, addField, updateField, deleteField, renameFieldOption, loading } =
     useMethodology();
   const [managing, setManaging] = useState(false);
@@ -77,10 +75,9 @@ export function CustomFieldsSection() {
   }, [fase, JSON.stringify(customVals)]);
 
   // Inline field creation (add-while-logging): own journal only — a read-only
-  // template can't take fields — and beta-gated like the rest of the journal UI
-  // (soft-launch, 0033). Renders the section even with zero fields so a blank
-  // journal shows in the form itself that fields exist at all.
-  const canAddInline = betaFeatures && isOwnMethodology && !loading;
+  // template can't take fields. Renders the section even with zero fields so a
+  // blank journal shows in the form itself that fields exist at all.
+  const canAddInline = isOwnMethodology && !loading;
 
   const visibleFields = dynamicFields.filter(isVisible);
   if (visibleFields.length === 0 && !canAddInline) return null;

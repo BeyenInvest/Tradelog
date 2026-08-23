@@ -29,8 +29,8 @@ import type { SharedReview } from "@/lib/types";
  * review building blocks (ReviewStatsHeader/ReviewTradeGroups) show them as
  * their own badged group and keep them out of the real stats, exactly like the
  * owner's own review detail. The owner's display settings travel with the
- * payload: hide_fase via hideFaseOverride, and the merged (beta) review layout
- * via betaFeaturesOverride — the anonymous viewer has no profile of their own.
+ * payload: hide_fase via hideFaseOverride — the anonymous viewer has no profile
+ * of their own. The review layout is the neutral merged one for everyone (Fase F).
  */
 export default function ShareReviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -87,9 +87,6 @@ function SharedReviewView({ data }: { data: SharedReview }) {
 
           <section className="flex flex-col gap-4 border-t border-border pt-6">
             {data.kind === "weekly" ? (
-              // betaFeaturesOverride: the share button is beta-gated, so the sharing owner
-              // authored this in the merged layout — the coach must see the same layout,
-              // not the anon fallback (useAuth().betaFeatures = false).
               <ReviewContentDisplay
                 verhalen={data.review.verhalen}
                 technisch={data.review.technisch}
@@ -98,7 +95,6 @@ function SharedReviewView({ data }: { data: SharedReview }) {
                 acties={data.review.acties}
                 takeaway={data.review.takeaway}
                 overall_comment={data.review.overall_comment}
-                betaFeaturesOverride
               />
             ) : (
               <PeriodicReviewContentDisplay
