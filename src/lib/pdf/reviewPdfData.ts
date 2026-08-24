@@ -1,9 +1,10 @@
 import type { TFunction } from "i18next";
-import type { Outcome, PeriodType, ResultUnit } from "@/lib/constants";
-import type { PeriodicReview, WeeklyReview } from "@/lib/types";
+import type { Outcome, ResultUnit } from "@/lib/constants";
+import type { PeriodicReview, ReviewKind, WeeklyReview } from "@/lib/types";
 import { computeOverviewKpis, computeErrorCounts, sortChronological, round2, type ClosedTrade } from "@/lib/stats";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { periodLabel } from "@/lib/periodRanges";
+import { readSectionDisplayText, readSectionList, reviewSectionLabel, type ReviewSection } from "@/lib/reviewSections";
 
 /**
  * Pure adapter: turns a weekly or periodic review + its taken/missed trades into
@@ -101,6 +102,8 @@ export type ReviewPdfInput = (
     }
   | { kind: "periodic"; review: PeriodicReview; taken: ClosedTrade[]; missed: ClosedTrade[] }
 ) & {
+  /** This journal's resolved review sections (Fase N5) — drives the section list + acties label. */
+  sections: ReviewSection[];
   /** The signed-in trader's display name (profile.display_name), for the header. */
   traderName?: string | null;
   /**
@@ -161,41 +164,41 @@ function buildErrorLine(t: TFunction, taken: ClosedTrade[], missed: ClosedTrade[
   return parts.length > 0 ? parts.join("   ·   ") : null;
 }
 
-function section(label: string, body: string | null, kind: ReviewSectionKind): ReviewPdfSection | null {
-  const trimmed = body?.trim();
-  return trimmed ? { label, body: trimmed, kind } : null;
+/** Map a resolved section's display style to the PDF's section kind (list is handled separately). */
+function styleToKind(style: ReviewSection["style"]): ReviewSectionKind {
+  switch (style) {
+    case "voice":
+      return "voice";
+    case "takeaway":
+      return "takeaway";
+    case "overall":
+      return "overall";
+    default:
+      return "text";
+  }
 }
 
-const OVERZICHT_LABEL_KEY: Partial<Record<PeriodType, string>> = {
-  quarter: "reviewContent.maandoverzicht",
-  year: "reviewContent.kwartaaloverzicht",
-};
-
-function weeklySections(t: TFunction, r: WeeklyReview): ReviewPdfSection[] {
-  // Neutral layout (Fase F): one mental section = mentaal_owner plus any legacy mentaal_trader.
-  const mentaal = [r.mentaal_owner, r.mentaal_trader]
-    .map((v) => v?.trim())
-    .filter(Boolean)
-    .join("\n\n");
-  return [
-    section(t("reviewContent.verhalenNeutral"), r.verhalen, "text"),
-    section(t("reviewContent.technisch"), r.technisch, "text"),
-    section(t("reviewContent.mentaal"), mentaal || null, "voice"),
-    section(t("reviewContent.takeaway"), r.takeaway, "takeaway"),
-    section(t("reviewContent.overallComment"), r.overall_comment, "overall"),
-  ].filter((s): s is ReviewPdfSection => s !== null);
-}
-
-function periodicSections(t: TFunction, r: PeriodicReview): ReviewPdfSection[] {
-  const overzichtKey = OVERZICHT_LABEL_KEY[r.period_type];
-  return [
-    section(t("reviewContent.genomenTrades"), r.technisch, "text"),
-    section(t("reviewContent.genomenTradesErrors"), r.mentaal_owner, "text"),
-    section(t("reviewContent.gemisteTrades"), r.mentaal_trader, "text"),
-    section(t("reviewContent.conclusie"), r.takeaway, "takeaway"),
-    overzichtKey ? section(t(overzichtKey), r.periode_overzicht, "text") : null,
-    section(t("reviewContent.overallComment"), r.overall_comment, "overall"),
-  ].filter((s): s is ReviewPdfSection => s !== null);
+/**
+ * Build the PDF's prose sections from the journal's resolved sections (Fase N5).
+ * The built-in `acties` list is rendered separately as the checklist block
+ * (data.acties); any other list section becomes a bulleted text block. Empty
+ * sections are dropped. Reproduces the pre-N5 weekly/periodic order when the
+ * journal uses the defaults.
+ */
+function buildPdfSections(t: TFunction, kind: ReviewKind, review: WeeklyReview | PeriodicReview, sections: ReviewSection[]): ReviewPdfSection[] {
+  const out: ReviewPdfSection[] = [];
+  for (const s of sections) {
+    const label = reviewSectionLabel(t, s);
+    if (s.inputType === "list") {
+      if (s.builtin && s.key === "acties") continue; // rendered as the checklist block
+      const items = readSectionList(review, s).map((i) => i.trim()).filter(Boolean);
+      if (items.length) out.push({ label, body: items.map((i) => `• ${i}`).join("\n"), kind: "text" });
+      continue;
+    }
+    const body = readSectionDisplayText(kind, review, s).trim();
+    if (body) out.push({ label, body, kind: styleToKind(s.style) });
+  }
+  return out;
 }
 
 function labels(t: TFunction): ReviewPdfLabels {
@@ -248,9 +251,15 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
       ? `W${input.review.week_nummer} · ${input.review.jaar}`
       : periodLabel(input.review.period_type, input.review.jaar, input.review.periode_nummer, locale);
 
-  const sections =
-    input.kind === "weekly" ? weeklySections(t, input.review) : periodicSections(t, input.review);
-  const actiesLabel = input.kind === "weekly" ? t("reviewContent.acties") : t("reviewContent.werkpunten");
+  const sections = buildPdfSections(t, input.kind, input.review, input.sections);
+  // The action-items checklist follows the journal's `acties` list section: its
+  // label, and whether it appears at all (a journal can remove it). Its default
+  // label is Acties (weekly) / Werkpunten (periodic).
+  const actiesSection = input.sections.find((s) => s.inputType === "list" && s.builtin && s.key === "acties");
+  const actiesLabel = actiesSection
+    ? reviewSectionLabel(t, actiesSection)
+    : t(input.kind === "weekly" ? "reviewContent.acties" : "reviewContent.werkpunten");
+  const acties = actiesSection ? input.review.acties.map(parseActie) : [];
 
   const l = labels(t);
   l.actiesLabel = actiesLabel;
@@ -272,7 +281,7 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
     equity: equityCurve(taken),
     errorLine: buildErrorLine(t, taken, missed, resultUnit),
     sections,
-    acties: input.review.acties.map(parseActie),
+    acties,
     takenRows: sortChronological(taken).map((tr) => toRow(tr, false)),
     missedRows: sortChronological(missed).map((tr) => toRow(tr, true)),
     labels: l,

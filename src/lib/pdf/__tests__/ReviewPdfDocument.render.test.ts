@@ -5,6 +5,7 @@ import { createElement } from "react";
 import type { TFunction } from "i18next";
 import { renderToBuffer, Font } from "@react-pdf/renderer";
 import { buildReviewPdfData } from "../reviewPdfData";
+import { defaultReviewSections } from "@/lib/reviewSections";
 import { ReviewPdfDocument } from "../ReviewPdfDocument";
 import { makeTrade } from "@/lib/stats/__tests__/fixtures";
 import type { WeeklyReview } from "@/lib/types";
@@ -37,7 +38,7 @@ describe("ReviewPdfDocument render smoke", () => {
     ];
     const missed = [makeTrade({ datum_open: "2026-08-07", resultaat_pct: 3, trade_evaluation: "Missed trade" })];
 
-    const data = buildReviewPdfData(t, { kind: "weekly", review, taken, missed });
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: defaultReviewSections("weekly"), review, taken, missed });
     const el = createElement(ReviewPdfDocument, { data }) as unknown as Parameters<typeof renderToBuffer>[0];
     const buf = await renderToBuffer(el);
 

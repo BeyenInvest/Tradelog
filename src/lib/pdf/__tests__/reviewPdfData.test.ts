@@ -1,11 +1,16 @@
 import { describe, it, expect } from "vitest";
 import type { TFunction } from "i18next";
 import { buildReviewPdfData } from "../reviewPdfData";
+import { defaultReviewSections } from "@/lib/reviewSections";
 import { makeTrade } from "@/lib/stats/__tests__/fixtures";
 import type { PeriodicReview, WeeklyReview } from "@/lib/types";
 
 // Passthrough translator: returns the key so tests assert on structure, not copy.
 const t = ((key: string) => key) as unknown as TFunction;
+
+// Built-in default section sets — the journal-configurable input the PDF adapter now takes.
+const wSec = defaultReviewSections("weekly");
+const pSec = defaultReviewSections("periodic", "month");
 
 const baseWeekly: WeeklyReview = {
   id: "wr-1",
@@ -36,7 +41,7 @@ describe("buildReviewPdfData", () => {
       makeTrade({ datum_open: "2026-08-06", outcome: "Win", resultaat_pct: 5, trade_evaluation: "Missed trade" }),
     ];
 
-    const data = buildReviewPdfData(t, { kind: "weekly", review: baseWeekly, taken, missed });
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: wSec, review: baseWeekly, taken, missed });
 
     expect(data.kpis.trades).toBe(2);
     expect(data.kpis.resultaat).toBe(1); // 2 + (-1), the +5 missed is excluded
@@ -50,7 +55,7 @@ describe("buildReviewPdfData", () => {
   });
 
   it("uses weekly headings, labels and parses acties into a checklist", () => {
-    const data = buildReviewPdfData(t, { kind: "weekly", review: baseWeekly, taken: [], missed: [] });
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: wSec, review: baseWeekly, taken: [], missed: [] });
 
     expect(data.heading).toBe("W32 · 2026");
     expect(data.subtitle).toBe("Geduldige week");
@@ -77,7 +82,7 @@ describe("buildReviewPdfData", () => {
 
   it("merges legacy mentaal_owner + mentaal_trader into one neutrally-labelled section", () => {
     const twoVoice: WeeklyReview = { ...baseWeekly, mentaal_owner: "Owner voice.", mentaal_trader: "Trader voice." };
-    const data = buildReviewPdfData(t, { kind: "weekly", review: twoVoice, taken: [], missed: [] });
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: wSec, review: twoVoice, taken: [], missed: [] });
     const labels = data.sections.map((s) => s.label);
     // neutral narrative label + single merged mental block, no WPM voices
     expect(labels).toContain("reviewContent.verhalenNeutral");
@@ -109,11 +114,11 @@ describe("buildReviewPdfData", () => {
       updated_at: "2026-08-01T00:00:00Z",
     };
 
-    const data = buildReviewPdfData(t, { kind: "periodic", review: periodic, taken: [], missed: [] });
+    const data = buildReviewPdfData(t, { kind: "periodic", sections: pSec, review: periodic, taken: [], missed: [] });
 
     expect(data.heading).toBe("July 2026"); // default locale en-GB
     // Locale param localizes the period heading (NL).
-    const dataNl = buildReviewPdfData(t, { kind: "periodic", review: periodic, taken: [], missed: [] }, new Date(), "nl-BE");
+    const dataNl = buildReviewPdfData(t, { kind: "periodic", sections: pSec, review: periodic, taken: [], missed: [] }, new Date(), "nl-BE");
     expect(dataNl.heading).toBe("juli 2026");
     expect(data.labels.actiesLabel).toBe("reviewContent.werkpunten");
     const labels = data.sections.map((s) => s.label);
@@ -127,7 +132,7 @@ describe("buildReviewPdfData", () => {
   });
 
   it("formats generatedOn as dd-mm-yyyy", () => {
-    const data = buildReviewPdfData(t, { kind: "weekly", review: baseWeekly, taken: [], missed: [] }, new Date(2026, 7, 7));
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: wSec, review: baseWeekly, taken: [], missed: [] }, new Date(2026, 7, 7));
     expect(data.generatedOn).toBe("07-08-2026");
   });
 });
