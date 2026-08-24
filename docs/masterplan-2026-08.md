@@ -82,7 +82,7 @@ Zoals het oude plan, aangevuld vanuit de audit:
 1. **Beta-flip** (code): onboarding-wizard + de "iedereen moet dit"-set uit de gate, óf `beta_features` default aan — zonder dit landt elke nieuwkomer nog in het WPM-jargonformulier. Preset-catalogus meteen opschonen (WPM-preset als "gevorderd" labelen, groeperen per asset-class; wizard-"Overslaan" alleen stap 1).
 2. Support-contactlink + account-verwijdering vindbaar maken (code, klein).
 3. Terms/Privacy juridisch → teksten erin (owner + code).
-4. Landing page op `/` (goedgekeurde mockup → React) — ná designer-logo; PWA-iconen (owner/designer + code).
+4. Landing page op `/` (goedgekeurde mockup → React) — ná designer-logo; PWA-iconen (owner/designer + code). **Positionering t.o.v. Create Impacts verwerken** (zie §Concurrentie-besluiten): volwaardig journal gratis, meerdere journals, %/R/$-weergave, screenshot-upload, open trades.
 5. Launch-week owner-ops in volgorde: Turnstile → Supabase URL-config → e-mailtemplates + custom SMTP → Sentry-DSN + uptime-monitoring + DB-backupregeling → signup-toggle aan → smoke-test met vers account. *Na Turnstile: geen Browser-pane meer op prod zonder overleg.*
 
 **Klaar wanneer:** een vreemde meldt zich aan en overleeft de eerste 10 minuten — nu met de zekerheid dat Q/R eronder waterdicht zijn.
@@ -108,15 +108,30 @@ Zoals het oude plan, aangevuld vanuit de audit:
 9. **Backtest-projecten v2**: periode/markt-metadata, parameternotities, status + conclusieveld, projectvergelijkings-view (RPC levert cijfers al).
 10. **Multi-select-veldtype** + breakdown; **CSV-export**; share-scope-keuze (stats-only vs. incl. notes); offline-queue voor quick-log; lot-calc "gebruik in trade"-brug; econ. kalender asset-gaten; vrije screenshot-labels.
 
-## Fase I-praktijktest (bestaand, direct na launch mogelijk)
+## ✅ Fase I-praktijktest (AF — vastgesteld 2026-08-24, uitgevoerd 2026-08-18)
 
-Import met echte MetaTrader- én TradingView-CSV's testen → branch `fase-i-import`/`fase-2-scale-import` mergen (incl. het vastzittende `weekly-review-pdf-polish`-restje) → geparkeerde trader-verbeteringen A/B/C heropenen. N9 (datumformaat) landt hier als het niet al in R zat.
+MT4 gevalideerd op echte FTMO-statement + echt geïmporteerd (aparte journal), alles op main/prod (`1c34877`); N9 zat in R sessie 1; TV/cTrader gehard maar bewust zonder owner-validatiepad (owner exporteert alleen uit MetaTrader). Van de geparkeerde punten A/B/C rest alleen **B** (fictieve-R-markering bij imports zonder risk%) → meenemen in N3. Details: `docs/fase-G-rest-handoff.md` §D.
 
 ## Fase N-rest (bestaand)
 
 - **N-1** Meer presets (ICT/SMC, breakout, mean-reversion, opties-wheel).
-- **N-3** MAE/MFE — ná de I-praktijktest (bewuste afhankelijkheid). Bedient samen met `planned_rr` (klein veld, kan eerder mee in S2) de exit-analyse.
+- ✅ **N-3** MAE/MFE + `planned_rr` + exit-analyse (2026-08-24, Fable) — migratie **0049**; incl. geparkeerd punt B (fictieve-R-markering "~" bij aangenomen 1%-risico). Details: `docs/fase-G-rest-handoff.md` §E.
 - **N-5** Review-secties configureerbaar per journal.
+
+## Concurrentie-besluiten — audit Create Impacts (2026-08-24)
+
+Volledige audit: `docs/concurrentie-audit-createimpacts-2026-08.md` (createimpacts.eu, ex-Archer-client, Belgisch, commercieel live op €19/29 met AI-coach "Gauthier"; zelfde Supabase-fundament en Archer-DNA). Kernconclusie: **wij sterker op de engine, zij op productisering.** Owner-besluit ("ok", 2026-08-24): **beta-scope blijft ongewijzigd — tempo weegt zwaarder dan nieuwe features.** Wat wél verandert:
+
+1. **%→$-weergave: géén nieuw werk** — bestaat al (Fase J: opslag in %, weergave-toggle %/R/$ via `useResultDisplay` + saldo actieve prop-account, sinds beta-flip open). Actie beperkt zich tot zichtbaar maken op de landing/feature-lijst.
+2. **Direct ná beta-launch: weekly digest e-mail** — wekelijkse stats + focuspunten per mail; stats-motor bestaat al, nodig is alleen Supabase cron/edge + mailprovider. **Fable** (infra/cron) + Opus (inhoud/opmaak). Goedkoopste retentie-win; hun Weekly Edge Digest bewijst het concept.
+3. **Post-launch-register (S2/O-tijdvak, niet eerder):**
+   - **Discipline-pack als preset-veld-pack** (emotie vóór/na, gedrags-tags als Revenge/Overtrading/Broke rules, optionele pre-trade checklist) — configureerbaar in onze bouwsteen/startset-structuur, níet hardcoded zoals bij hen.
+   - **Trade-plan-builder/-koppeling** — meenemen bij toekomstig onboarding/preset-werk (onze condities/criteria zijn structureel al het halve werk).
+   - **AI-laag** — blijft post-launch; sterkste leen-idee: plan-PDF-extractie → regels → plan-compliance % per trade. Onze gestructureerde per-journal-data is een beter substraat dan hun vrije tekst.
+   - **Share-cards/streaks** — growth-mechanics, horen bij marketing/P-tijdvak.
+4. **Pricing-validatie:** €19/29 werkt in de Benelux; free tier gul houden ("volwaardig journal gratis") tegenover hun 20-trades-totaal-teaser.
+5. **Niet kopiëren:** verplichte plan-keuze vóór gebruik, trades-totaallimiet in free, URL-screenshots i.p.v. upload.
+6. **Waarschuwing bevestigd:** hun hernoemde-UI-op-legacy-kolommen-schuld = extra argument om cyclus 10 (WPM-kolommen droppen, Fase P) niet te laten verwateren.
 
 ## Fase O — Monetisatie (beslismoment owner, ongewijzigd)
 
@@ -130,7 +145,7 @@ Cyclus 10 (WPM-kolommen droppen); server-aggregatie pas bij echte >10k-users (sa
 
 ## Bewust nooit / nog niet (ongewijzigd)
 
-Geen replay/chart-engine, geen AI-laag (nog), geen community, geen live broker-integratie. Partials/scale-outs: bekende grens, niet bouwen tot import het afdwingt.
+Geen replay/chart-engine, geen AI-laag (nog — post-launch-kandidaat, zie §Concurrentie-besluiten punt 3), geen community, geen live broker-integratie. Partials/scale-outs: bekende grens, niet bouwen tot import het afdwingt.
 
 ## Direct volgende stap
 
