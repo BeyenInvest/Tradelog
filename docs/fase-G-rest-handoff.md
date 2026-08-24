@@ -52,7 +52,7 @@ Echte MetaTrader- én TradingView-CSV's testen → branches `fase-i-import`/`fas
 ### E. N-rest (IN beta-scope)
 - **N1** meer presets (ICT/SMC, breakout, mean-reversion, opties-wheel) — **Opus** (past nu in de nieuwe bouwsteen/startset-structuur i.p.v. DB-seeds).
 - **N3** MAE/MFE — **Fable** (ná de I-praktijktest, bewuste afhankelijkheid).
-- **N5** review-secties configureerbaar per journal — **Opus**.
+- ✅ **N5** review-secties configureerbaar per journal — **Opus** (branch `fase-n5-review-secties`, 6 deelstuk-commits, lint/test/build groen). Volledige sectie-builder gespiegeld op `methodology_fields`: nieuwe tabel `review_sections` + `content` jsonb-bag op weekly/periodic_reviews, resolver `src/lib/reviewSections.ts` (defaults reproduceren pre-N5 exact), editor in Settings (weekly/periodic-toggle, hernoemen/herordenen/toevoegen/verwijderen/reset), threading door formulier + weergave + PDF + publieke share (`get_shared_review`) + admin. **Migratie 0048** — owner draait 'm nog; get_shared_review is een SECURITY DEFINER-RPC-edit (mirror van 0042) die Fable desgewenst kan nachecken. NIET beta-gated (staat naast de al-un-gegate review/journal-config UI).
 
 ### F. Ná de beta (bewust uitgesteld)
 - **S2** verdieping (Fable: datetime-migratie/sessie-dimensie, prop v2, multi-select, offline-queue · Opus: histogram/kruistabel-views, underwater-chart, dag-laag, projectvergelijking, CSV-export, share-scope, missed-kaart).

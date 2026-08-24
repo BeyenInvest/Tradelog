@@ -867,7 +867,30 @@
     "type_number": "Number",
     "type_date": "Date",
     "legacyLocked": "Fixed Weekly Phase Method field — not editable yet (awaits the field migration)",
-    "duplicateKey": "A field with this key already exists — pick a different label."
+    "duplicateKey": "A field with this key already exists — pick a different label.",
+    "fieldCount_one": "{{count}} field",
+    "fieldCount_other": "{{count}} fields"
+  },
+  "reviewSections": {
+    "title": "Review sections",
+    "description": "Choose which sections your weekly and periodic reviews show for this journal.",
+    "kind_weekly": "Weekly",
+    "kind_periodic": "Periodic",
+    "usingDefaults": "This journal uses the default sections.",
+    "usingDefaultsShort": "Default sections",
+    "customCount_one": "{{count}} section (customized)",
+    "customCount_other": "{{count}} sections (customized)",
+    "customize": "Customize",
+    "reset": "Reset to defaults",
+    "addSection": "Add section",
+    "addRow": "Add row",
+    "sectionLabel": "Section label",
+    "labelPlaceholder": "e.g. Killzone discipline",
+    "sectionType": "Type",
+    "type_text": "Text",
+    "type_list": "List",
+    "duplicateKey": "A section with this key already exists — pick a different label.",
+    "saveFailed": "Save failed."
   },
   "presets": {
     "title": "Start from a template",

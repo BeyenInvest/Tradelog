@@ -8,7 +8,8 @@ import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/l
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
-import { ReviewContentFields, type ReviewContentValue } from "@/components/reviews/ReviewContentFields";
+import { ReviewSectionsFields } from "@/components/reviews/ReviewSectionsFields";
+import { initialReviewValues, buildWeeklyReviewContent, type ReviewSection, type ReviewValues } from "@/lib/reviewSections";
 import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
@@ -16,6 +17,8 @@ import { ReviewTradesPanel } from "@/components/reviews/ReviewTradesPanel";
 
 interface ReviewFormProps {
   review?: WeeklyReview;
+  /** This journal's resolved weekly review sections (Fase N5) — drives the editor fields + submit shape. */
+  sections: ReviewSection[];
   trades: Trade[];
   onSubmit: (input: WeeklyReviewInput) => Promise<void>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
@@ -26,21 +29,13 @@ function defaultWeek() {
   return isoWeekOf(localTodayIso());
 }
 
-export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: ReviewFormProps) {
+export function ReviewForm({ review, sections, trades, onSubmit, onAddTrade, onClose }: ReviewFormProps) {
   const { t } = useTranslation();
   const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
   const [jaar, setJaar] = useState(startWeek.jaar);
   const [weekNummer, setWeekNummer] = useState(startWeek.week_nummer);
   const [titel, setTitel] = useState(review?.titel ?? "");
-  const [content, setContent] = useState<ReviewContentValue>({
-    verhalen: review?.verhalen ?? "",
-    technisch: review?.technisch ?? "",
-    mentaal_owner: review?.mentaal_owner ?? "",
-    mentaal_trader: review?.mentaal_trader ?? "",
-    acties: review?.acties?.length ? review.acties : [""],
-    takeaway: review?.takeaway ?? "",
-    overall_comment: review?.overall_comment ?? "",
-  });
+  const [content, setContent] = useState<ReviewValues>(() => initialReviewValues(sections, review));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -94,13 +89,8 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
         jaar,
         week_nummer: weekNummer,
         titel: titel || null,
-        verhalen: content.verhalen || null,
-        technisch: content.technisch || null,
-        mentaal_owner: content.mentaal_owner || null,
-        mentaal_trader: content.mentaal_trader || null,
-        acties: content.acties.map((a) => a.trim()).filter(Boolean),
-        takeaway: content.takeaway || null,
-        overall_comment: content.overall_comment || null,
+        // Fold the section values into columns + the custom-section content bag (Fase N5).
+        ...buildWeeklyReviewContent(sections, content, review),
       });
       onClose();
     } catch (err) {
@@ -138,7 +128,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
       <ReviewStatsHeader taken={takenClosed} missed={missedClosed} />
       <ReviewErrorStats {...errorCounts} />
 
-      <ReviewContentFields value={content} onChange={handleContentChange} />
+      <ReviewSectionsFields kind="weekly" sections={sections} values={content} onChange={handleContentChange} />
 
       <ReviewTradesPanel
         label={t("reviewForm.tradesInWeek", { count: tradesInWeek.length })}

@@ -8,6 +8,7 @@ import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
+import { ReviewSectionsEditor } from "@/components/settings/ReviewSectionsEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
@@ -69,6 +70,7 @@ export default function SettingsPage() {
           />
           <NewJournalCard defaultOpen={openPresets} />
           <MethodologyEditor />
+          <ReviewSectionsEditor />
           <JournalInstruments />
         </section>
 

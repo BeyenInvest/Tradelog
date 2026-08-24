@@ -89,6 +89,10 @@ create table weekly_reviews (
   acties text[] not null default '{}',
   takeaway text,
   overall_comment text,
+  -- Values of this journal's *custom* review sections (Fase N5, 0048), keyed by
+  -- section_key — mirrors trades.custom. Built-in sections keep their own columns
+  -- above; only user-added sections land here. {} = the built-in default set.
+  content jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -114,6 +118,8 @@ create table periodic_reviews (
   acties text[] not null default '{}',
   takeaway text,
   overall_comment text,
+  -- Custom review-section values (Fase N5, 0048) — see weekly_reviews.content.
+  content jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -301,6 +307,29 @@ create table methodology_fields (
 
 create index idx_methodology_fases_methodology on methodology_fases(methodology_id);
 create index idx_methodology_fields_methodology on methodology_fields(methodology_id);
+
+-- ---------- CONFIGURABLE REVIEW SECTIONS (Fase N5 — see 0048) ----------
+-- Per-journal, per-review-kind (weekly/periodic) ordered list of review sections,
+-- the review-side counterpart of methodology_fields. No rows for a kind ⇒ the
+-- client falls back to the built-in default set (src/lib/reviewSections.ts); any
+-- rows fully replace the defaults. A built-in section_key (verhalen/technisch/…)
+-- reads/writes its own review column; any other key stores its value in the
+-- review's content jsonb bag.
+create table review_sections (
+  id uuid primary key default gen_random_uuid(),
+  methodology_id uuid not null references methodologies(id) on delete cascade,
+  review_kind text not null check (review_kind in ('weekly', 'periodic')),
+  section_key text not null,
+  label text not null,
+  label_key text,              -- catalogue key for render-time label translation (0047-style); null = custom section
+  input_type text not null check (input_type in ('text', 'list')),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (methodology_id, review_kind, section_key)
+);
+
+create index idx_review_sections_methodology on review_sections(methodology_id);
 
 -- Seed the built-in Weekly Phase Method template (the methodology currently hard-coded in
 -- constants.ts) BEFORE the profiles alter below — that alter's column default
@@ -793,6 +822,12 @@ begin
     and nf.methodology_id = new_id
     and nf.field_key = sf.field_key;
 
+  -- N5 (0048): take the configurable review sections along into the fork.
+  insert into review_sections
+    (methodology_id, review_kind, section_key, label, label_key, input_type, sort_order)
+  select new_id, review_kind, section_key, label, label_key, input_type, sort_order
+  from review_sections where methodology_id = source_id;
+
   return new_id;
 end;
 $$;
@@ -863,6 +898,7 @@ alter table custom_options enable row level security;
 alter table methodologies enable row level security;
 alter table methodology_fases enable row level security;
 alter table methodology_fields enable row level security;
+alter table review_sections enable row level security;
 
 -- No insert/delete policy for profiles: rows are created only by the
 -- handle_new_user() trigger above and removed via the auth.users FK cascade.
@@ -914,12 +950,25 @@ create policy "methodology_fields_write" on methodology_fields
   with check (exists (
     select 1 from methodologies m where m.id = methodology_fields.methodology_id and m.user_id = auth.uid()));
 
+-- Review sections follow their methodology's visibility, exactly like methodology_fields (Fase N5, 0048).
+create policy "review_sections_select" on review_sections
+  for select using (exists (
+    select 1 from methodologies m where m.id = review_sections.methodology_id
+      and (m.user_id = auth.uid() or (m.is_system and m.user_id is null))));
+create policy "review_sections_write" on review_sections
+  for all using (exists (
+    select 1 from methodologies m where m.id = review_sections.methodology_id and m.user_id = auth.uid()))
+  with check (exists (
+    select 1 from methodologies m where m.id = review_sections.methodology_id and m.user_id = auth.uid()));
+
 -- Read-only admin carve-out (0046, mirrors 0008) — the admin debug view needs the
 -- viewed user's own methodology + fields to render their journal-type breakdowns.
 -- `to authenticated` is required so anon never evaluates is_admin() (see 0036).
 create policy "methodologies_admin_select" on methodologies
   for select to authenticated using (is_admin());
 create policy "methodology_fields_admin_select" on methodology_fields
+  for select to authenticated using (is_admin());
+create policy "review_sections_admin_select" on review_sections
   for select to authenticated using (is_admin());
 
 create policy "trades_owner_all" on trades

@@ -14,7 +14,8 @@ import { closedTrades, computeErrorCounts } from "@/lib/stats";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ShareReviewButton } from "@/components/share/ShareReviewButton";
-import { PeriodicReviewContentDisplay } from "./PeriodicReviewContentDisplay";
+import type { ReviewSection } from "@/lib/reviewSections";
+import { ReviewSectionsDisplay } from "./ReviewSectionsDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
 import { ReviewTradeGroups, periodicExtraGroupModes } from "./ReviewTradeGroups";
@@ -22,6 +23,8 @@ import { DownloadReviewPdfButton } from "./DownloadReviewPdfButton";
 
 interface PeriodicReviewDetailProps {
   review: PeriodicReview;
+  /** This journal's resolved periodic review sections for this period type (Fase N5). */
+  sections: ReviewSection[];
   taken: Trade[];
   missed: Trade[];
   onEdit: () => void;
@@ -30,7 +33,7 @@ interface PeriodicReviewDetailProps {
 }
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
-export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
+export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
@@ -60,7 +63,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
         <div className="flex items-center gap-1">
           <ShareReviewButton reviewRef={{ kind: "periodic", id: review.id }} />
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "periodic", review, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
+            getData={() => buildReviewPdfData(t, { kind: "periodic", review, sections, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
@@ -76,16 +79,7 @@ export function PeriodicReviewDetail({ review, taken, missed, onEdit, onDelete, 
         <ReviewErrorStats {...errorCounts} />
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">
-          <PeriodicReviewContentDisplay
-            periodType={review.period_type}
-            technisch={review.technisch}
-            mentaal_owner={review.mentaal_owner}
-            mentaal_trader={review.mentaal_trader}
-            acties={review.acties}
-            takeaway={review.takeaway}
-            overall_comment={review.overall_comment}
-            periode_overzicht={review.periode_overzicht}
-          />
+          <ReviewSectionsDisplay kind="periodic" sections={sections} source={review} />
         </section>
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">

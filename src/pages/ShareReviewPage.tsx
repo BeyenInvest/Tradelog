@@ -5,9 +5,9 @@ import { FullScreenLoading } from "@/components/ui/FullScreenLoading";
 import { SharePageShell, ShareInvalidState } from "@/components/share/SharePageShell";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
-import { ReviewContentDisplay } from "@/components/reviews/ReviewContentDisplay";
-import { PeriodicReviewContentDisplay } from "@/components/reviews/PeriodicReviewContentDisplay";
+import { ReviewSectionsDisplay } from "@/components/reviews/ReviewSectionsDisplay";
 import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
+import { resolveSharedReviewSections } from "@/lib/reviewSections";
 import { ResultDisplayProvider } from "@/hooks/useResultDisplay";
 import { useNoIndexMeta } from "@/hooks/useNoIndexMeta";
 import { useSharedToken } from "@/hooks/useSharedToken";
@@ -87,25 +87,16 @@ function SharedReviewView({ data }: { data: SharedReview }) {
 
           <section className="flex flex-col gap-4 border-t border-border pt-6">
             {data.kind === "weekly" ? (
-              <ReviewContentDisplay
-                verhalen={data.review.verhalen}
-                technisch={data.review.technisch}
-                mentaal_owner={data.review.mentaal_owner}
-                mentaal_trader={data.review.mentaal_trader}
-                acties={data.review.acties}
-                takeaway={data.review.takeaway}
-                overall_comment={data.review.overall_comment}
+              <ReviewSectionsDisplay
+                kind="weekly"
+                sections={resolveSharedReviewSections("weekly", data.sections)}
+                source={data.review}
               />
             ) : (
-              <PeriodicReviewContentDisplay
-                periodType={data.review.period_type}
-                technisch={data.review.technisch}
-                mentaal_owner={data.review.mentaal_owner}
-                mentaal_trader={data.review.mentaal_trader}
-                acties={data.review.acties}
-                takeaway={data.review.takeaway}
-                overall_comment={data.review.overall_comment}
-                periode_overzicht={data.review.periode_overzicht}
+              <ReviewSectionsDisplay
+                kind="periodic"
+                sections={resolveSharedReviewSections("periodic", data.sections, data.review.period_type)}
+                source={data.review}
               />
             )}
           </section>

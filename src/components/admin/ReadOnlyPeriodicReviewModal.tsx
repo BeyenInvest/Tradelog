@@ -4,12 +4,14 @@ import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
-import { PeriodicReviewContentDisplay } from "@/components/reviews/PeriodicReviewContentDisplay";
+import { ReviewSectionsDisplay } from "@/components/reviews/ReviewSectionsDisplay";
 import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
+import { useReviewSectionsFor } from "@/hooks/useReviewSections";
+import { resolveReviewSections } from "@/lib/reviewSections";
 import type { PeriodicReview, Trade } from "@/lib/types";
 
 /** Read-only equivalent of PeriodicReviewDetail — no edit/delete, for the admin debug view. */
@@ -22,6 +24,8 @@ export function ReadOnlyPeriodicReviewModal({
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const sectionRows = useReviewSectionsFor(review.methodology_id);
+  const sections = useMemo(() => resolveReviewSections("periodic", sectionRows, review.period_type), [sectionRows, review.period_type]);
   const inPeriod = useMemo(() => {
     const { start, end } = rangeOfPeriod(review.period_type, review.jaar, review.periode_nummer);
     return trades.filter((t) => t.datum_open >= start && t.datum_open <= end);
@@ -56,16 +60,7 @@ export function ReadOnlyPeriodicReviewModal({
             <ReviewErrorStats {...errorCounts} />
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">
-              <PeriodicReviewContentDisplay
-                periodType={review.period_type}
-                technisch={review.technisch}
-                mentaal_owner={review.mentaal_owner}
-                mentaal_trader={review.mentaal_trader}
-                acties={review.acties}
-                takeaway={review.takeaway}
-                overall_comment={review.overall_comment}
-                periode_overzicht={review.periode_overzicht}
-              />
+              <ReviewSectionsDisplay kind="periodic" sections={sections} source={review} />
             </section>
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">

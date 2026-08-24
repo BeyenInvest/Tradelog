@@ -10,14 +10,17 @@ import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/l
 import { tradesInResultUnit } from "@/lib/format";
 import { buildReviewPdfData } from "@/lib/pdf/reviewPdfData";
 import { ShareReviewButton } from "@/components/share/ShareReviewButton";
+import type { ReviewSection } from "@/lib/reviewSections";
 import { LinkedTradesPanel } from "./LinkedTradesPanel";
-import { ReviewContentDisplay } from "./ReviewContentDisplay";
+import { ReviewSectionsDisplay } from "./ReviewSectionsDisplay";
 import { ReviewStatsHeader } from "./ReviewStatsHeader";
 import { ReviewErrorStats } from "./ReviewErrorStats";
 import { DownloadReviewPdfButton } from "./DownloadReviewPdfButton";
 
 interface ReviewDetailProps {
   review: WeeklyReview;
+  /** This journal's resolved weekly review sections (Fase N5). */
+  sections: ReviewSection[];
   trades: Trade[];
   onEdit: () => void;
   onDelete: () => void;
@@ -25,7 +28,7 @@ interface ReviewDetailProps {
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
 }
 
-export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
+export function ReviewDetail({ review, sections, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
@@ -53,7 +56,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
         <div className="flex items-center gap-1">
           <ShareReviewButton reviewRef={{ kind: "weekly", id: review.id }} />
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "weekly", review, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo })}
+            getData={() => buildReviewPdfData(t, { kind: "weekly", review, sections, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo })}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
@@ -69,15 +72,7 @@ export function ReviewDetail({ review, trades, onEdit, onDelete, onRelink, onAdd
         <ReviewErrorStats {...errorCounts} />
 
         <section className="flex flex-col gap-4 border-t border-border pt-6">
-          <ReviewContentDisplay
-            verhalen={review.verhalen}
-            technisch={review.technisch}
-            mentaal_owner={review.mentaal_owner}
-            mentaal_trader={review.mentaal_trader}
-            acties={review.acties}
-            takeaway={review.takeaway}
-            overall_comment={review.overall_comment}
-          />
+          <ReviewSectionsDisplay kind="weekly" sections={sections} source={review} />
         </section>
 
         <section className="border-t border-border pt-6">

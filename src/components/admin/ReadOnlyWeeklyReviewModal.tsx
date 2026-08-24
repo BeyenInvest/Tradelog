@@ -4,11 +4,13 @@ import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
-import { ReviewContentDisplay } from "@/components/reviews/ReviewContentDisplay";
+import { ReviewSectionsDisplay } from "@/components/reviews/ReviewSectionsDisplay";
 import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
+import { useReviewSectionsFor } from "@/hooks/useReviewSections";
+import { resolveReviewSections } from "@/lib/reviewSections";
 import type { Trade, WeeklyReview } from "@/lib/types";
 
 /** Read-only equivalent of ReviewDetail — no edit/delete/relink, for the admin debug view. */
@@ -20,6 +22,8 @@ export function ReadOnlyWeeklyReviewModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const sectionRows = useReviewSectionsFor(review.methodology_id);
+  const sections = useMemo(() => resolveReviewSections("weekly", sectionRows), [sectionRows]);
   const linked = useMemo(() => trades.filter((t) => t.weekly_review_id === review.id), [trades, review.id]);
   const taken = useMemo(() => takenTrades(linked), [linked]);
   const missed = useMemo(() => missedTrades(linked), [linked]);
@@ -51,15 +55,7 @@ export function ReadOnlyWeeklyReviewModal({
             <ReviewErrorStats {...errorCounts} />
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">
-              <ReviewContentDisplay
-                verhalen={review.verhalen}
-                technisch={review.technisch}
-                mentaal_owner={review.mentaal_owner}
-                mentaal_trader={review.mentaal_trader}
-                acties={review.acties}
-                takeaway={review.takeaway}
-                overall_comment={review.overall_comment}
-              />
+              <ReviewSectionsDisplay kind="weekly" sections={sections} source={review} />
             </section>
 
             <section className="border-t border-border pt-6">

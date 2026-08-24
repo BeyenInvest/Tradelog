@@ -107,6 +107,15 @@ export type TradeInput = Omit<
   | "weekly_review_id" | "import_ref"
 >;
 
+/**
+ * The value bag for a journal's *custom* review sections (Fase N5, 0048), keyed
+ * by section_key — mirrors trades.custom for trade fields. Built-in sections keep
+ * their own columns (verhalen/technisch/…); only user-added sections land here. A
+ * text section stores a string, a list section a string[]. Always an object (DB
+ * default '{}'), never null.
+ */
+export type ReviewContentBag = Record<string, string | string[]>;
+
 export interface WeeklyReview {
   id: string;
   user_id: string;
@@ -122,6 +131,8 @@ export interface WeeklyReview {
   acties: string[];
   takeaway: string | null;
   overall_comment: string | null;
+  /** Values of this journal's custom review sections (Fase N5, 0048); {} for the built-in section set. */
+  content: ReviewContentBag;
   created_at: string;
   updated_at: string;
 }
@@ -145,11 +156,53 @@ export interface PeriodicReview {
   takeaway: string | null;
   overall_comment: string | null;
   periode_overzicht: string | null;
+  /** Values of this journal's custom review sections (Fase N5, 0048); {} for the built-in section set. */
+  content: ReviewContentBag;
   created_at: string;
   updated_at: string;
 }
 
 export type PeriodicReviewInput = Omit<PeriodicReview, "id" | "user_id" | "methodology_id" | "created_at" | "updated_at">;
+
+/** Whether a review section holds a single block of prose or a growable list of rows (Fase N5). */
+export type ReviewSectionInputType = "text" | "list";
+
+/** Which review type a section configures. Weekly and periodic reviews keep separate section sets per journal. */
+export type ReviewKind = "weekly" | "periodic";
+
+/**
+ * One configurable review section of a journal (Fase N5, 0048) — the review-side
+ * counterpart of MethodologyField. When a journal has no rows for a given kind it
+ * falls back to the built-in default set (src/lib/reviewSections.ts); as soon as
+ * it has any, that ordered list fully replaces the defaults. A built-in section
+ * key (verhalen/technisch/…) reads/writes its own review column; any other key
+ * stores its value in the review's `content` bag.
+ */
+export interface ReviewSectionRow {
+  id: string;
+  methodology_id: string;
+  review_kind: ReviewKind;
+  /** Stable key: a built-in column name, or a slug into the review.content bag. */
+  section_key: string;
+  label: string;
+  /** Render-time translation key for the built-in defaults (0047-style); null for user-custom sections. */
+  label_key: string | null;
+  input_type: ReviewSectionInputType;
+  sort_order: number;
+}
+
+/**
+ * Display-only slice of a review-section row, shipped by get_shared_review (0048)
+ * so a shared review renders its journal's custom sections with the right labels
+ * and order. Mirrors SharedMethodologyField.
+ */
+export interface SharedReviewSection {
+  section_key: string;
+  label: string;
+  label_key: string | null;
+  input_type: ReviewSectionInputType;
+  sort_order: number;
+}
 
 export interface PropAccount {
   id: string;
@@ -377,6 +430,12 @@ export type SharedReview = {
   display_name: string | null;
   result_unit: ResultUnit;
   hide_fase: boolean;
+  /**
+   * The shared journal's custom review sections (Fase N5, 0048); [] when the
+   * journal uses the built-in default set — the share view then resolves the
+   * defaults client-side exactly like the owner's own view.
+   */
+  sections: SharedReviewSection[];
   trades: Trade[];
 } & (
   | { kind: "weekly"; review: SharedWeeklyReview }
