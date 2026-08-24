@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
-import { rMultiple } from "@/lib/stats";
+import { hasExplicitRisk, rMultiple } from "@/lib/stats";
 import { useResultUnit } from "@/hooks/useResultUnit";
 import type { Trade } from "@/lib/types";
 
@@ -41,7 +41,9 @@ export function ReadOnlyTradeTable({
           {trades.map((tr) => {
             // A still-running trade has no realized result yet — show a badge + "—".
             const closed = !tr.is_open;
-            const ctx = closed ? { rMultiple: rMultiple({ resultaat_pct: tr.resultaat_pct!, risk_pct: tr.risk_pct }) } : undefined;
+            const ctx = closed
+              ? { rMultiple: rMultiple({ resultaat_pct: tr.resultaat_pct!, risk_pct: tr.risk_pct }), rAssumed: !hasExplicitRisk(tr) }
+              : undefined;
             const shown = closed ? resultDisplayValue(tr.resultaat_pct!, resultUnit, ctx) : 0;
             return (
               <tr

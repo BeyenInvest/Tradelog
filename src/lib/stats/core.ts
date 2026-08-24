@@ -282,6 +282,17 @@ export function riskPct(trade: Pick<Trade, "risk_pct">): number {
 }
 
 /**
+ * Whether the trade carries a real, user-entered risk % — exactly the cases where
+ * riskPct() does NOT fall back to DEFAULT_RISK_PCT. When this is false the trade's
+ * R-multiple is an assumption (R ≡ resultaat_pct at the 1% default), not a
+ * measurement — e.g. broker imports, which never carry a risk % — and the UI marks
+ * such R values as approximate ("~", geparkeerd punt B van de Fase-I-praktijktest).
+ */
+export function hasExplicitRisk(trade: Pick<Trade, "risk_pct">): boolean {
+  return trade.risk_pct != null && trade.risk_pct > 0;
+}
+
+/**
  * R-multiple of a single trade: realised result relative to the planned risk it
  * was taken with (resultaat_pct / risk). Sign is preserved (a loss is negative
  * R). At the default 1% risk this is exactly resultaat_pct.
@@ -295,6 +306,8 @@ export interface RStats {
   totalR: number;
   /** Mean R per trade — expectancy expressed in R. null when there are no trades. */
   avgR: number | null;
+  /** How many trades fell back to the assumed DEFAULT_RISK_PCT (no explicit risk_pct) — when > 0 the R totals are partly assumption, and R-mode displays mark them "~". */
+  assumedRiskN: number;
 }
 
 /**
@@ -304,11 +317,12 @@ export interface RStats {
  */
 export function computeRStats(trades: Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]): RStats {
   const n = trades.length;
-  if (n === 0) return { totalR: 0, avgR: null };
+  if (n === 0) return { totalR: 0, avgR: null, assumedRiskN: 0 };
   // Sum the raw (unrounded) R-multiples, then round once — avoids compounding
   // per-trade rounding error into the total/average.
   const total = trades.reduce((s, t) => s + t.resultaat_pct / riskPct(t), 0);
-  return { totalR: round2(total), avgR: round2(total / n) };
+  const assumedRiskN = trades.filter((t) => !hasExplicitRisk(t)).length;
+  return { totalR: round2(total), avgR: round2(total / n), assumedRiskN };
 }
 
 export interface RDistributionStats {
@@ -423,6 +437,8 @@ export interface OverviewKpis {
   maxDrawdownPct: number;
   totalR: number;
   avgR: number | null;
+  /** See RStats.assumedRiskN — > 0 marks the R KPIs as partly assumed ("~" in R-mode). */
+  rAssumedN: number;
 }
 
 /**
@@ -457,6 +473,7 @@ export function computeOverviewKpis(trades: ClosedTrade[]): OverviewKpis {
     maxDrawdownPct: drawdown.maxDrawdownPct,
     totalR: rStats.totalR,
     avgR: rStats.avgR,
+    rAssumedN: rStats.assumedRiskN,
   };
 }
 
@@ -530,7 +547,8 @@ export function computeDisciplineCurve(trades: Trade[]): DisciplinePoint[] {
   });
 }
 
-function mean(values: number[]): number {
+/** Arithmetic mean; caller guarantees a non-empty list. */
+export function mean(values: number[]): number {
   return values.reduce((s, v) => s + v, 0) / values.length;
 }
 

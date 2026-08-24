@@ -168,6 +168,19 @@ create table trades (
   risk_pct numeric(7,2) check (risk_pct > 0),
   trade_evaluation trade_evaluation_enum,
 
+  -- Exit-analyse (Fase N3, 0049) — optional, hand-entered. MAE/MFE are POSITIVE
+  -- magnitudes in the same unit as resultaat_pct (% of account): the worst
+  -- unrealized drawdown resp. best unrealized profit the trade saw before close.
+  -- planned_rr is the reward:risk multiple planned at entry (e.g. 3 = 3R target).
+  mae_pct numeric(7,2) check (mae_pct >= 0),
+  mfe_pct numeric(7,2) check (mfe_pct >= 0),
+  planned_rr numeric(7,2) check (planned_rr > 0),
+  -- Final excursions only exist for a finished trade — mirror of trades_open_no_eval_chk.
+  -- (planned_rr may be set while open: it's the plan made at entry.)
+  constraint trades_open_no_excursion_chk check (
+    not is_open or (mae_pct is null and mfe_pct is null)
+  ),
+
   weekly_criteria weekly_criteria_enum,
   weekly_kenmerk weekly_kenmerk_enum,
   trade_concept text, -- fixed TRADE_CONCEPTS list + per-user custom_options, not a native enum (see custom_options below)

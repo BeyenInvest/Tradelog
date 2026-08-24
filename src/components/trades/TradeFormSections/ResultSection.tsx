@@ -7,6 +7,7 @@ import { OUTCOMES, SANITY_RESULT_PCT, TRADE_EVALUATIONS } from "@/lib/constants"
 import { deriveOutcome } from "@/lib/import/mapToTrade";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
+import { useAuth } from "@/hooks/useAuth";
 import { Field } from "./Field";
 
 function durationDays(open: string, close: string | null | undefined): number | null {
@@ -24,6 +25,8 @@ interface ResultSectionProps {
 
 export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultSectionProps) {
   const { t } = useTranslation();
+  // Exit-analyse (Fase N3) is nieuw → achter de beta-gate, zoals elke nieuwe feature.
+  const { betaFeatures } = useAuth();
   const {
     register,
     control,
@@ -59,6 +62,18 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
   // Non-blocking — just a hint next to the field, saving is never gated on it.
   const sanityWarning = !isOpen && hasResult && Math.abs(resultNum) > SANITY_RESULT_PCT;
 
+  // Soft consistency hints for the exit fields (never blocking — hand-measured
+  // excursions are approximations): the final result can't exceed the maximum
+  // favorable excursion, and a loss can't be deeper than the maximum adverse one.
+  const maeRaw = watch("mae_pct");
+  const mfeRaw = watch("mfe_pct");
+  const maeNum = Number(maeRaw);
+  const mfeNum = Number(mfeRaw);
+  const hasMae = maeRaw != null && String(maeRaw) !== "" && Number.isFinite(maeNum);
+  const hasMfe = mfeRaw != null && String(mfeRaw) !== "" && Number.isFinite(mfeNum);
+  const mfeBelowResult = !isOpen && hasResult && hasMfe && resultNum > 0 && mfeNum < resultNum;
+  const maeBelowLoss = !isOpen && hasResult && hasMae && resultNum < 0 && maeNum < Math.abs(resultNum);
+
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionResult")}</h3>
@@ -89,6 +104,13 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
           <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
             <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
           </Field>
+          {betaFeatures && (
+            // The plan made at entry — the one exit field that exists before the
+            // trade closes (MAE/MFE only exist once it's finished).
+            <Field label={t("tradeForm.plannedRr")} error={errors.planned_rr?.message} hint={t("tradeForm.plannedRrHint")}>
+              <input type="number" step="0.1" min="0" className="input" {...register("planned_rr")} />
+            </Field>
+          )}
         </div>
       ) : (
         // One grid so the fields reflow cleanly when "Trade evaluation" is hidden
@@ -125,6 +147,36 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
           <Field label={t("tradeForm.durationDerived")}>
             <input type="text" disabled value={duur ?? ""} className="input opacity-60" />
           </Field>
+        </div>
+      )}
+
+      {/* Exit-analyse (Fase N3, beta): optionele MAE/MFE + gepland R:R — voedt de
+          Exit-analyse-sectie in de Analyse-tab. Alleen voor een gesloten trade
+          (een lopende heeft nog geen definitieve excursies). */}
+      {betaFeatures && !isOpen && (
+        <div className="flex flex-col gap-2">
+          <p className="font-body text-xs uppercase tracking-wider text-muted">{t("tradeForm.exitSubheading")}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Field label={t("tradeForm.plannedRr")} error={errors.planned_rr?.message} hint={t("tradeForm.plannedRrHint")}>
+              <input type="number" step="0.1" min="0" className="input" {...register("planned_rr")} />
+            </Field>
+            <Field label={t("tradeForm.maePct")} error={errors.mae_pct?.message} hint={t("tradeForm.maeHint")}>
+              <input type="number" step="0.01" min="0" className="input" {...register("mae_pct")} />
+            </Field>
+            <Field label={t("tradeForm.mfePct")} error={errors.mfe_pct?.message} hint={t("tradeForm.mfeHint")}>
+              <input type="number" step="0.01" min="0" className="input" {...register("mfe_pct")} />
+            </Field>
+          </div>
+          {mfeBelowResult && (
+            <p className="flex items-center gap-1.5 text-xs text-gold">
+              <TriangleAlert size={13} /> {t("tradeForm.mfeBelowResultWarning")}
+            </p>
+          )}
+          {maeBelowLoss && (
+            <p className="flex items-center gap-1.5 text-xs text-gold">
+              <TriangleAlert size={13} /> {t("tradeForm.maeBelowLossWarning")}
+            </p>
+          )}
         </div>
       )}
 

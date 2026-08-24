@@ -7,6 +7,7 @@ import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
 import { AdherenceSection, type AdherenceDimension } from "@/components/backtesting/AdherenceSection";
+import { ExitAnalysisSection } from "@/components/backtesting/ExitAnalysisSection";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
@@ -55,7 +56,7 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase } = useAuth();
+  const { hideFase: ownHideFase, betaFeatures } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
@@ -196,6 +197,7 @@ export function BacktestingAnalysisView({
           label={t("backtestingAnalysis.result")}
           value={formatResult(kpis.totalResultaat, resultUnit, {
             rMultiple: kpis.totalR,
+            rAssumed: kpis.rAssumedN > 0,
             amount: pctToAmount(kpis.totalResultaat, saldo),
           })}
           tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
@@ -203,9 +205,15 @@ export function BacktestingAnalysisView({
         <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
         <StatCard
           label={t("backtestingAnalysis.avgR")}
-          value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+          value={kpis.avgR != null ? `${kpis.rAssumedN > 0 ? "~" : ""}${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
           tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
-          sub={kpis.avgR != null ? t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) }) : undefined}
+          sub={
+            kpis.avgR != null
+              ? kpis.rAssumedN > 0
+                ? `${t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })} · ${t("journal.assumedRiskShort", { count: kpis.rAssumedN })}`
+                : t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })
+              : undefined
+          }
         />
         <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
         <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
@@ -298,6 +306,11 @@ export function BacktestingAnalysisView({
 
       {/* Regel-adherentie (Fase N2) — live-journal-only (needs trade_evaluation) */}
       {showAdherence && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
+
+      {/* Exit-analyse (Fase N3, beta) — MAE/MFE/planned-R:R zijn universeel (ook in
+          backtest-projecten invulbaar), dus niet aan showAdherence gebonden; de
+          sectie verdwijnt vanzelf zolang geen enkele trade ze bijhoudt. */}
+      {betaFeatures && <ExitAnalysisSection trades={scopedTrades} />}
 
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">

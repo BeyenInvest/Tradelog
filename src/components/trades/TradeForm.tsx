@@ -45,6 +45,9 @@ function emptyDefaults(): TradeFormValues {
     resultaat_pct: 0,
     risk_pct: null,
     trade_evaluation: null,
+    mae_pct: null,
+    mfe_pct: null,
+    planned_rr: null,
     weekly_criteria: null,
     weekly_kenmerk: null,
     trade_concept: null,
@@ -86,6 +89,9 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     resultaat_pct: trade.resultaat_pct,
     risk_pct: trade.risk_pct,
     trade_evaluation: trade.trade_evaluation,
+    mae_pct: trade.mae_pct,
+    mfe_pct: trade.mfe_pct,
+    planned_rr: trade.planned_rr,
     weekly_criteria: trade.weekly_criteria,
     weekly_kenmerk: trade.weekly_kenmerk,
     trade_concept: trade.trade_concept,
@@ -218,7 +224,11 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         // fields null (belt-and-braces over the schema) so a leftover value — e.g.
         // after re-opening a previously closed trade — can't violate the DB check
         // (trades_open_result_chk) or slip into a stat.
-        ...(values.is_open ? { outcome: null, resultaat_pct: null, datum_sluiting: null, trade_evaluation: null } : {}),
+        // MAE/MFE describe the finished trade — forced null while open (DB check
+        // trades_open_no_excursion_chk); planned_rr survives, it's the entry plan.
+        ...(values.is_open
+          ? { outcome: null, resultaat_pct: null, datum_sluiting: null, trade_evaluation: null, mae_pct: null, mfe_pct: null }
+          : {}),
         // Record which journal this trade belongs to. Editing keeps the trade's
         // own methodology; a new trade takes the active one — but NEVER a system
         // template: useMethodology falls back to the WPM template when the

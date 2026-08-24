@@ -14,7 +14,7 @@ import type { ResultUnit } from "@/lib/constants";
 
 export function ResultStatCard({ kpis, unit, saldo = null }: { kpis: OverviewKpis; unit: ResultUnit; saldo?: number | null }) {
   const { t } = useTranslation();
-  const ctx = { rMultiple: kpis.totalR, amount: pctToAmount(kpis.totalResultaat, saldo) };
+  const ctx = { rMultiple: kpis.totalR, rAssumed: kpis.rAssumedN > 0, amount: pctToAmount(kpis.totalResultaat, saldo) };
   return (
     <StatCard
       label={t("journal.statResult")}
@@ -40,9 +40,15 @@ export function AvgRStatCard({ kpis }: { kpis: OverviewKpis }) {
   return (
     <StatCard
       label={t("journal.statAvgR")}
-      value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+      value={kpis.avgR != null ? `${kpis.rAssumedN > 0 ? "~" : ""}${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
       tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
-      sub={kpis.avgR != null ? t("journal.statTotalR", { total: kpis.totalR.toFixed(2) }) : undefined}
+      sub={
+        kpis.avgR != null
+          ? kpis.rAssumedN > 0
+            ? `${t("journal.statTotalR", { total: kpis.totalR.toFixed(2) })} · ${t("journal.assumedRiskShort", { count: kpis.rAssumedN })}`
+            : t("journal.statTotalR", { total: kpis.totalR.toFixed(2) })
+          : undefined
+      }
     />
   );
 }

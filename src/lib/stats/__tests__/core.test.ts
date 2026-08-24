@@ -309,16 +309,16 @@ describe("riskPct / rMultiple (non-intrusive R)", () => {
 
 describe("computeRStats", () => {
   it("returns totalR 0 and avgR null for no trades", () => {
-    expect(computeRStats([])).toEqual({ totalR: 0, avgR: null });
+    expect(computeRStats([])).toEqual({ totalR: 0, avgR: null, assumedRiskN: 0 });
   });
 
-  it("for legacy (all null risk) trades, totalR equals total resultaat_pct", () => {
+  it("for legacy (all null risk) trades, totalR equals total resultaat_pct — and every trade counts as assumed risk", () => {
     const trades = [
       makeTrade({ resultaat_pct: 3, risk_pct: null }),
       makeTrade({ resultaat_pct: -1, risk_pct: null }),
       makeTrade({ resultaat_pct: 2, risk_pct: null }),
     ];
-    expect(computeRStats(trades)).toEqual({ totalR: 4, avgR: round2(4 / 3) });
+    expect(computeRStats(trades)).toEqual({ totalR: 4, avgR: round2(4 / 3), assumedRiskN: 3 });
   });
 
   it("aggregates mixed variable-risk trades", () => {
@@ -327,7 +327,15 @@ describe("computeRStats", () => {
       makeTrade({ resultaat_pct: -3, risk_pct: 3 }), // -1R
       makeTrade({ resultaat_pct: 2, risk_pct: 2 }), // +1R
     ];
-    expect(computeRStats(trades)).toEqual({ totalR: 3, avgR: 1 });
+    expect(computeRStats(trades)).toEqual({ totalR: 3, avgR: 1, assumedRiskN: 0 });
+  });
+
+  it("counts a non-positive risk_pct as assumed too (it takes the same fallback riskPct does)", () => {
+    const trades = [
+      makeTrade({ resultaat_pct: 1, risk_pct: 0 }),
+      makeTrade({ resultaat_pct: 1, risk_pct: 2 }),
+    ];
+    expect(computeRStats(trades).assumedRiskN).toBe(1);
   });
 });
 

@@ -55,6 +55,11 @@ export const tradeSchema = z
     // checked in the superRefine below (null passes; any entered value must be > 0).
     risk_pct: nullableNumber.optional().default(null),
     trade_evaluation: nullableEnum(TRADE_EVALUATIONS).optional().default(null),
+    // Exit-analyse (Fase N3): optional MAE/MFE (positive magnitudes, % of account)
+    // + planned reward:risk. Sign/positivity checked in the superRefine below.
+    mae_pct: nullableNumber.optional().default(null),
+    mfe_pct: nullableNumber.optional().default(null),
+    planned_rr: nullableNumber.optional().default(null),
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
     // Deliberate exception to "one shared enum, no free text" above (same as `entry` below):
@@ -107,6 +112,18 @@ export const tradeSchema = z
     }
     if (data.risk_pct != null && data.risk_pct <= 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["risk_pct"], message: "tradeForm.riskMustBePositive" });
+    }
+    // MAE/MFE are magnitudes ("how far against/for you"), entered as positive
+    // numbers — a negative entry is the classic sign mistake, caught here rather
+    // than silently stored (the DB checks would reject it anyway).
+    if (data.mae_pct != null && data.mae_pct < 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mae_pct"], message: "tradeForm.excursionMustBePositive" });
+    }
+    if (data.mfe_pct != null && data.mfe_pct < 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mfe_pct"], message: "tradeForm.excursionMustBePositive" });
+    }
+    if (data.planned_rr != null && data.planned_rr <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["planned_rr"], message: "tradeForm.riskMustBePositive" });
     }
     // A still-running trade has no realized result yet; a closed one must carry both.
     if (!data.is_open) {

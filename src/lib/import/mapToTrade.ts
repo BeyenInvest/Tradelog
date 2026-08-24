@@ -71,6 +71,12 @@ export function dealToImportRow(
     resultaat_pct: resultaatPct,
     risk_pct: null,
     trade_evaluation: null,
+    // No broker export the app supports carries excursion data (MetaTrader — the
+    // one validated real-world source — certainly doesn't), so MAE/MFE/planned R:R
+    // stay hand-entered fields; imports leave them untracked.
+    mae_pct: null,
+    mfe_pct: null,
+    planned_rr: null,
     weekly_criteria: null,
     weekly_kenmerk: null,
     trade_concept: null,

@@ -16,7 +16,19 @@ export function formatEUR(n: number): string {
  * Currency without a concrete `amount` falls back to % (the honest fallback until
  * a geld-bron per trade bestaat — sub-slice 4/5); same for R without `rMultiple`.
  */
-export function resultDisplayValue(pct: number, unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): number {
+/**
+ * Weergave-ctx voor een resultaat: de al-berekende R/geld-waarden, plus of de R
+ * (deels) op het aangenomen 1%-default-risico rust (`rAssumed`, punt B van de
+ * Fase-I-praktijktest) — formatResult markeert zo'n R dan met een "~"-prefix.
+ */
+export interface ResultCtx {
+  rMultiple?: number;
+  amount?: number;
+  /** true wanneer (een deel van) de R via de riskPct()-fallback tot stand kwam — zie hasExplicitRisk()/RStats.assumedRiskN. */
+  rAssumed?: boolean;
+}
+
+export function resultDisplayValue(pct: number, unit: ResultUnit, ctx?: ResultCtx): number {
   const eff = effectiveUnit(unit, ctx);
   if (eff === "R") return ctx!.rMultiple!; // effectiveUnit garandeert aanwezigheid
   if (eff === "currency") return ctx!.amount!;
@@ -29,7 +41,7 @@ export function resultDisplayValue(pct: number, unit: ResultUnit, ctx?: { rMulti
  * plek voor die fallback-regels, zodat resultDisplayValue (de waarde, en dus de
  * win/loss-kleur) en formatResult (de string) nooit uiteen kunnen lopen.
  */
-function effectiveUnit(unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): ResultUnit {
+function effectiveUnit(unit: ResultUnit, ctx?: ResultCtx): ResultUnit {
   if (unit === "R" && ctx?.rMultiple != null) return "R";
   if (unit === "currency" && ctx?.amount != null) return "currency";
   return "percent";
@@ -71,8 +83,11 @@ export function groupResultCtx(
   totalPct: number,
   unit: ResultUnit,
   saldo: number | null
-): { rMultiple?: number; amount?: number } {
-  if (unit === "R") return { rMultiple: computeRStats(closedTrades(takenTrades(trades))).totalR };
+): ResultCtx {
+  if (unit === "R") {
+    const rStats = computeRStats(closedTrades(takenTrades(trades)));
+    return { rMultiple: rStats.totalR, rAssumed: rStats.assumedRiskN > 0 };
+  }
   if (unit === "currency") return { amount: pctToAmount(totalPct, saldo) };
   return {};
 }
@@ -130,10 +145,12 @@ export function formatAggregate(v: number, unit: ResultUnit, opts?: { decimals?:
  * gerekend. Waarde én fallback komen uit resultDisplayValue/effectiveUnit, zodat
  * de string altijd bij dezelfde waarde hoort als de win/loss-kleur van de caller.
  */
-export function formatResult(pct: number, unit: ResultUnit, ctx?: { rMultiple?: number; amount?: number }): string {
+export function formatResult(pct: number, unit: ResultUnit, ctx?: ResultCtx): string {
   const eff = effectiveUnit(unit, ctx);
   const v = resultDisplayValue(pct, unit, ctx);
-  if (eff === "R") return `${v > 0 ? "+" : ""}${v.toFixed(2)}R`;
+  // "~" markeert een (deels) fictieve R: het aangenomen 1%-default-risico zit in
+  // de waarde (rAssumed) — de kijker ziet zo dat dit géén gemeten R is.
+  if (eff === "R") return `${ctx?.rAssumed ? "~" : ""}${v > 0 ? "+" : ""}${v.toFixed(2)}R`;
   if (eff === "currency") return formatAggregate(v, "currency");
   return `${v > 0 ? "+" : ""}${v}%`;
 }

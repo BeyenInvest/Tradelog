@@ -98,7 +98,15 @@ describe("groupResultCtx", () => {
       makeTrade({ resultaat_pct: 5, outcome: "Win", trade_evaluation: "Missed trade" }),
       makeTrade({ is_open: true }),
     ];
-    expect(groupResultCtx(trades, 2, "R", null)).toEqual({ rMultiple: 2 });
+    expect(groupResultCtx(trades, 2, "R", null)).toEqual({ rMultiple: 2, rAssumed: false });
+  });
+
+  it("R mode: flags rAssumed when any counted trade misses an explicit risk (fictieve-R-markering)", () => {
+    const trades = [
+      makeTrade({ resultaat_pct: 2, risk_pct: 1 }),
+      makeTrade({ resultaat_pct: 1, risk_pct: null }), // e.g. a broker import
+    ];
+    expect(groupResultCtx(trades, 3, "R", null)).toEqual({ rMultiple: 3, rAssumed: true });
   });
 
   it("currency mode: amount from the total pct and saldo", () => {
@@ -142,6 +150,13 @@ describe("formatResult", () => {
   it("R: two decimals with suffix, falling back to % without an rMultiple", () => {
     expect(formatResult(3, "R", { rMultiple: 1.5 })).toBe("+1.50R");
     expect(formatResult(3, "R")).toBe("+3%");
+  });
+
+  it("R: rAssumed marks a (partly) fictitious R with ~, only in effective R mode", () => {
+    expect(formatResult(3, "R", { rMultiple: 1.5, rAssumed: true })).toBe("~+1.50R");
+    expect(formatResult(-3, "R", { rMultiple: -1.5, rAssumed: true })).toBe("~-1.50R");
+    expect(formatResult(3, "R", { rAssumed: true })).toBe("+3%"); // fallback to % → no marker
+    expect(formatResult(3, "percent", { rMultiple: 1.5, rAssumed: true })).toBe("+3%");
   });
 
   it("currency: EUR formatting, falling back to % without an amount", () => {

@@ -44,6 +44,19 @@ export interface Trade {
   risk_pct: number | null;
   trade_evaluation: TradeEvaluation | null;
 
+  /**
+   * Maximum Adverse Excursion (Fase N3, 0049) — the worst unrealized drawdown the
+   * trade saw before it closed, as a POSITIVE magnitude in the same unit as
+   * resultaat_pct (% of account). Optional, hand-entered; null = not tracked, the
+   * trade simply doesn't take part in the exit stats (src/lib/stats/exit.ts).
+   * Always null while is_open (DB check trades_open_no_excursion_chk).
+   */
+  mae_pct: number | null;
+  /** Maximum Favorable Excursion — best unrealized profit during the trade, positive magnitude, % of account. Same optionality/open-trade rules as mae_pct. */
+  mfe_pct: number | null;
+  /** Reward:risk multiple planned at entry (e.g. 3 = a 3R target). Optional; unlike MAE/MFE it may be set while the trade is still open (it's the plan, not the outcome). */
+  planned_rr: number | null;
+
   weekly_criteria: WeeklyCriteria | null;
   weekly_kenmerk: WeeklyKenmerk | null;
   /** TRADE_CONCEPTS (constants.ts) or one of this user's own custom_options rows for field='trade_concept' — see useCustomOptions. */

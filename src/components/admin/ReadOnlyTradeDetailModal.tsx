@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ImagePreviewModal } from "@/components/trades/TradeFormSections/UrlPreviewField";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
-import { rMultiple } from "@/lib/stats";
+import { hasExplicitRisk, rMultiple } from "@/lib/stats";
 import { resolveScreenshotUrl } from "@/lib/storage/screenshots";
 import { useResultUnit } from "@/hooks/useResultUnit";
 import { fieldLabel } from "@/lib/fieldBlocks";
@@ -108,7 +108,10 @@ export function ReadOnlyTradeDetailModal({
                         : "text-loss"
                     }`}
                   >
-                    {formatResult(trade.resultaat_pct!, resultUnit, { rMultiple: rMultiple({ resultaat_pct: trade.resultaat_pct!, risk_pct: trade.risk_pct }) })}
+                    {formatResult(trade.resultaat_pct!, resultUnit, {
+                      rMultiple: rMultiple({ resultaat_pct: trade.resultaat_pct!, risk_pct: trade.risk_pct }),
+                      rAssumed: !hasExplicitRisk(trade),
+                    })}
                   </span>
                 </>
               )}

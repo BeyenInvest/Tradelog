@@ -3,7 +3,7 @@ import { Pencil, Trash2, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Trade } from "@/lib/types";
 import type { TradeEvaluation } from "@/lib/constants";
-import { isMissed, isOpen, rMultiple } from "@/lib/stats";
+import { hasExplicitRisk, isMissed, isOpen, rMultiple } from "@/lib/stats";
 import { dateLocale, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import type { TradeColumnMode } from "./TradeListHeader";
@@ -50,7 +50,15 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const directionCell = <span className="text-muted font-body truncate">{trade.direction ?? "—"}</span>;
   const conceptCell = <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>;
   const entryCell = <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>;
-  const rCell = (value: string) => <span className="text-right text-muted">{value}</span>;
+  // Fictieve-R-markering (punt B, Fase-I-praktijktest): zonder ingevuld risico is
+  // R een aanname (1%-default, R ≡ %) — getoond met "~" en een uitleg-tooltip.
+  const rAssumed = !hasExplicitRisk(trade);
+  const rTitle = rAssumed ? t("list.assumedRiskTitle") : undefined;
+  const rCell = (value: string) => (
+    <span className="text-right text-muted" title={rTitle}>
+      {value}
+    </span>
+  );
 
   // A still-running trade has no realized result yet: it shows a "loopt" badge in
   // the outcome column and "—" in the result column, plus a prominent "Sluiten"
@@ -106,10 +114,11 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const resultaat_pct = trade.resultaat_pct!;
   const resultCtx = {
     rMultiple: rMultiple({ resultaat_pct, risk_pct: trade.risk_pct }),
+    rAssumed,
     amount: pctToAmount(resultaat_pct, saldo),
   };
   const shownResult = resultDisplayValue(resultaat_pct, resultUnit, resultCtx);
-  const rValue = `${resultCtx.rMultiple > 0 ? "+" : ""}${resultCtx.rMultiple.toFixed(2)}R`;
+  const rValue = `${rAssumed ? "~" : ""}${resultCtx.rMultiple > 0 ? "+" : ""}${resultCtx.rMultiple.toFixed(2)}R`;
   return (
     <div className={gridClass}>
       {dateCell}
@@ -139,6 +148,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
           "text-right",
           shownResult > 0 ? "text-win" : shownResult < 0 ? "text-loss" : "text-be"
         )}
+        title={resultUnit === "R" ? rTitle : undefined}
       >
         {formatResult(resultaat_pct, resultUnit, resultCtx)}
       </span>
