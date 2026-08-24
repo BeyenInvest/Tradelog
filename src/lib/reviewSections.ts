@@ -145,6 +145,16 @@ export function defaultReviewSections(kind: ReviewKind, periodType?: PeriodType)
 }
 
 /**
+ * The full built-in section set for a kind, unfiltered by period — used by the
+ * Settings editor to materialize the defaults into editable rows when a user first
+ * customizes a journal. Periodic includes periode_overzicht so its column mapping
+ * (and any existing content) is preserved once customized.
+ */
+export function allDefaultSections(kind: ReviewKind): ReviewSection[] {
+  return catalogueFor(kind).map((e) => entryToSection(e));
+}
+
+/**
  * Resolve a journal's review sections for one kind: its own ordered rows if it has
  * any, otherwise the built-in defaults. A custom row that reuses a built-in key
  * inherits that key's presentation (style/rows) from the catalogue; a genuinely
@@ -180,10 +190,18 @@ export function resolveReviewSections(
     });
 }
 
-/** The display label of a resolved section: the translated built-in key, or the user's own free text. */
-export function reviewSectionLabel(t: TFunction, section: Pick<ReviewSection, "label" | "labelKey">): string {
-  if (!section.labelKey) return section.label;
-  return t(section.labelKey, { defaultValue: section.label });
+/**
+ * The display label of a section: the translated built-in key, or the user's own
+ * free text. Accepts both the resolved shape (labelKey) and a raw DB row
+ * (label_key) so callers can pass either without converting first.
+ */
+export function reviewSectionLabel(
+  t: TFunction,
+  section: { label: string; labelKey?: string | null; label_key?: string | null }
+): string {
+  const key = section.labelKey ?? section.label_key ?? null;
+  if (!key) return section.label;
+  return t(key, { defaultValue: section.label });
 }
 
 // ---------------------------------------------------------------------------

@@ -869,6 +869,23 @@
     "legacyLocked": "Vast Weekly Phase Method-veld — nog niet aanpasbaar (wacht op de veldenmigratie)",
     "duplicateKey": "Er bestaat al een veld met deze sleutel — kies een ander label."
   },
+  "reviewSections": {
+    "title": "Review-secties",
+    "description": "Bepaal welke secties je week- en periodieke reviews tonen voor dit journal.",
+    "kind_weekly": "Wekelijks",
+    "kind_periodic": "Periodiek",
+    "usingDefaults": "Dit journal gebruikt de standaardsecties.",
+    "customize": "Aanpassen",
+    "reset": "Terug naar standaard",
+    "addSection": "Sectie toevoegen",
+    "sectionLabel": "Sectielabel",
+    "labelPlaceholder": "bv. Killzone-discipline",
+    "sectionType": "Type",
+    "type_text": "Tekst",
+    "type_list": "Lijst",
+    "duplicateKey": "Er bestaat al een sectie met deze sleutel — kies een ander label.",
+    "saveFailed": "Opslaan mislukt."
+  },
   "presets": {
     "title": "Start vanaf een sjabloon",
     "subtitle": "Kies een kant-en-klaar journal (asset × stijl) en pas het daarna vrij aan.",
