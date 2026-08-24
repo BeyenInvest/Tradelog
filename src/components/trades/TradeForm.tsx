@@ -13,6 +13,8 @@ import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screens
 import { useMethodology } from "@/hooks/useMethodology";
 import { normalizeInstrument } from "@/lib/instruments";
 import { missingRequiredCustomFields } from "@/lib/methodologyFields";
+import { getLastInstrument, getLastRisk, setLastInstrument, setLastRisk } from "@/lib/tradeMemory";
+import { PAIRS } from "@/lib/constants";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
@@ -126,13 +128,30 @@ function pruneCustom(raw: Record<string, unknown>): Record<string, string | numb
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const { t } = useTranslation();
   const { methodology, fields, isForexJournal } = useMethodology();
+  const methodologyId = methodology?.id ?? null;
+
+  // A new trade opens pre-filled with the instrument + risk last logged in this
+  // journal (Fase S1, tradeMemory) — a friction cut, both stay editable. Editing
+  // an existing trade never prefills (its own values win).
+  function newTradeDefaults(): TradeFormValues {
+    const base = emptyDefaults();
+    if (initialDate) base.datum_open = initialDate;
+    const lastRisk = getLastRisk(methodologyId);
+    const lastInstrument = getLastInstrument(methodologyId);
+    if (lastRisk != null) base.risk_pct = lastRisk;
+    if (lastInstrument) {
+      if (isForexJournal) {
+        if ((PAIRS as readonly string[]).includes(lastInstrument)) base.pair = lastInstrument as typeof base.pair;
+      } else {
+        base.instrument = lastInstrument;
+      }
+    }
+    return base;
+  }
+
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
-    defaultValues: trade
-      ? tradeToDefaults(trade)
-      : initialDate
-        ? { ...emptyDefaults(), datum_open: initialDate }
-        : emptyDefaults(),
+    defaultValues: trade ? tradeToDefaults(trade) : newTradeDefaults(),
   });
   const {
     handleSubmit,
@@ -215,6 +234,12 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
       };
       await onSubmit(payload);
       savedRef.current = true; // the uploaded paths are persisted now — don't clean them up
+      // Remember what a new trade was logged with, so the next new one prefills it
+      // (Fase S1). Only on create — editing an old trade must not reset the memory.
+      if (!trade) {
+        setLastInstrument(methodologyId, payload.instrument);
+        setLastRisk(methodologyId, payload.risk_pct);
+      }
       onClose();
     } catch (err) {
       setError(toErrorMessage(err, t("tradeForm.saveFailed")));

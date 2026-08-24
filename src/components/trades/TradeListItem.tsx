@@ -6,6 +6,7 @@ import type { TradeEvaluation } from "@/lib/constants";
 import { isMissed, isOpen, rMultiple } from "@/lib/stats";
 import { dateLocale, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
+import type { TradeColumnMode } from "./TradeListHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
@@ -22,9 +23,11 @@ interface TradeListItemProps {
   onDelete?: (trade: Trade) => void;
   /** Anonymous share views pass the owner's hide_fase instead of the viewer's (who has no profile) — same pattern as BacktestingAnalysisView. */
   hideFaseOverride?: boolean;
+  /** Which middle-column pair to render — see TradeColumnMode. Defaults to "legacy" (Concept/Entry). */
+  columnMode?: TradeColumnMode;
 }
 
-export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: TradeListItemProps) {
+export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, columnMode = "legacy" }: TradeListItemProps) {
   const { t, i18n } = useTranslation();
   const { hideFase: ownHideFase } = useAuth();
   const hideFase = hideFaseOverride ?? ownHideFase;
@@ -32,6 +35,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: Tra
   const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
   const open = isOpen(trade);
+  const modern = columnMode === "modern";
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
 
   const dateCell = (
@@ -40,6 +44,13 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: Tra
     </span>
   );
   const gridClass = `grid ${hideFase ? "grid-cols-7" : "grid-cols-8"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
+
+  // The two middle cells: universal Richting/R for a modern journal, the legacy
+  // WPM Concept/Entry otherwise. R is "—" for a still-running trade (no result).
+  const directionCell = <span className="text-muted font-body truncate">{trade.direction ?? "—"}</span>;
+  const conceptCell = <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>;
+  const entryCell = <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>;
+  const rCell = (value: string) => <span className="text-right text-muted">{value}</span>;
 
   // A still-running trade has no realized result yet: it shows a "loopt" badge in
   // the outcome column and "—" in the result column, plus a prominent "Sluiten"
@@ -55,8 +66,8 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: Tra
             <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
           </span>
         )}
-        <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
-        <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>
+        {modern ? directionCell : conceptCell}
+        {modern ? rCell("—") : entryCell}
         <span>
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-xs bg-gold/15 text-gold"
@@ -98,6 +109,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: Tra
     amount: pctToAmount(resultaat_pct, saldo),
   };
   const shownResult = resultDisplayValue(resultaat_pct, resultUnit, resultCtx);
+  const rValue = `${resultCtx.rMultiple > 0 ? "+" : ""}${resultCtx.rMultiple.toFixed(2)}R`;
   return (
     <div className={gridClass}>
       {dateCell}
@@ -107,8 +119,8 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride }: Tra
           <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
         </span>
       )}
-      <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>
-      <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>
+      {modern ? directionCell : conceptCell}
+      {modern ? rCell(rValue) : entryCell}
       <span className="flex items-center gap-1.5">
         <OutcomePill outcome={outcome} />
         {evalBadge && (

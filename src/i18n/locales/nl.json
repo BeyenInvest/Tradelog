@@ -150,6 +150,11 @@
     "statTotalR": "totaal {{total}}R",
     "statMaxDrawdown": "Max drawdown",
     "statProfitFactor": "Profit factor",
+    "statExtremes": "Grootste win / verlies",
+    "statExtremesSub": "beste en slechtste trade",
+    "statAvgRisk": "Gem. risico",
+    "statSqn": "SQN",
+    "statStdDev": "σ {{sd}}R",
     "statStreaks": "Streaks",
     "currentStreak": "Huidig",
     "streakType_Win": "winst",
@@ -374,6 +379,7 @@
     "lossMustBeNegative": "Een verlies kan geen positief resultaat zijn",
     "winMustBePositive": "Een winst kan geen negatief resultaat zijn",
     "resultSignHint": "Verlies negatief invullen (bv. -1.5)",
+    "sanityWarning": "Meer dan ±{{pct}}% — klopt dat? Controleer even de komma.",
     "sectionEntry": "Entry",
     "sectionResult": "Result",
     "sectionTechnical": "Technical analysis",
@@ -455,7 +461,12 @@
     "result": "Resultaat (%)",
     "evaluation": "Evaluatie",
     "evaluationNone": "Geen evaluatie",
-    "save": "Trade loggen"
+    "risk": "Risico (%)",
+    "date": "Datum",
+    "note": "Notitie",
+    "notePlaceholder": "korte notitie (optioneel)",
+    "save": "Trade loggen",
+    "saveAndNext": "Bewaar & volgende"
   },
   "share": {
     "button": "Delen",
@@ -515,14 +526,24 @@
     "colFase": "Fase",
     "colConcept": "Concept",
     "colEntry": "Entry",
+    "colDirection": "Richting",
+    "colR": "R",
     "colOutcome": "Outcome",
     "colResult": "Resultaat",
+    "sortDate": "Datum",
+    "sortResult": "Resultaat",
     "closeTrade": "Sluiten"
   },
   "calendar": {
     "addTradeOnDay": "Trade toevoegen op deze dag",
     "noTradesOnDay": "Geen trades op deze dag.",
-    "missedHypothetical": "Missed trade (hypothetisch)"
+    "missedHypothetical": "Missed trade (hypothetisch)",
+    "weekColHeader": "wk",
+    "weekNum": "w{{n}}",
+    "weekTotal": "Weektotaal",
+    "dayNet": "Netto",
+    "dayTrades": "Trades",
+    "dayWinRate": "Win rate"
   },
   "tradeBadge": {
     "missedTitle": "Hypothetisch — deze trade is niet genomen",

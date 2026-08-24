@@ -150,6 +150,11 @@
     "statTotalR": "total {{total}}R",
     "statMaxDrawdown": "Max drawdown",
     "statProfitFactor": "Profit factor",
+    "statExtremes": "Largest win / loss",
+    "statExtremesSub": "best and worst trade",
+    "statAvgRisk": "Avg. risk",
+    "statSqn": "SQN",
+    "statStdDev": "σ {{sd}}R",
     "statStreaks": "Streaks",
     "currentStreak": "Current",
     "streakType_Win": "win",
@@ -374,6 +379,7 @@
     "lossMustBeNegative": "A loss can't have a positive result",
     "winMustBePositive": "A win can't have a negative result",
     "resultSignHint": "Enter a loss as negative (e.g. -1.5)",
+    "sanityWarning": "More than ±{{pct}}% — is that right? Double-check the decimal.",
     "sectionEntry": "Entry",
     "sectionResult": "Result",
     "sectionTechnical": "Technical analysis",
@@ -455,7 +461,12 @@
     "result": "Result (%)",
     "evaluation": "Evaluation",
     "evaluationNone": "No evaluation",
-    "save": "Log trade"
+    "risk": "Risk (%)",
+    "date": "Date",
+    "note": "Note",
+    "notePlaceholder": "short note (optional)",
+    "save": "Log trade",
+    "saveAndNext": "Save & next"
   },
   "share": {
     "button": "Share",
@@ -515,14 +526,24 @@
     "colFase": "Phase",
     "colConcept": "Concept",
     "colEntry": "Entry",
+    "colDirection": "Direction",
+    "colR": "R",
     "colOutcome": "Outcome",
     "colResult": "Result",
+    "sortDate": "Date",
+    "sortResult": "Result",
     "closeTrade": "Close"
   },
   "calendar": {
     "addTradeOnDay": "Add trade on this day",
     "noTradesOnDay": "No trades on this day.",
-    "missedHypothetical": "Missed trade (hypothetical)"
+    "missedHypothetical": "Missed trade (hypothetical)",
+    "weekColHeader": "wk",
+    "weekNum": "w{{n}}",
+    "weekTotal": "Week total",
+    "dayNet": "Net",
+    "dayTrades": "Trades",
+    "dayWinRate": "Win rate"
   },
   "tradeBadge": {
     "missedTitle": "Hypothetical — this trade wasn't taken",

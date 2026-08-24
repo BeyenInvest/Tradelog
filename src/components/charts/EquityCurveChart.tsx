@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceDot } from "recharts";
 import { useTranslation } from "react-i18next";
-import { computeEquityCurve, type ClosedTrade } from "@/lib/stats";
+import { computeEquityCurve, computeMaxDrawdown, type ClosedTrade } from "@/lib/stats";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
@@ -10,11 +10,27 @@ import { useResultDisplay } from "@/hooks/useResultDisplay";
  * missed-decided trade list (Reviews plots missed rows here) and computes the curve
  * itself — callers always pass raw %-trades; de resultaat-eenheid-conversie (Fase J)
  * gebeurt hier intern, zodat elke plek met deze chart automatisch meeschakelt.
+ *
+ * Marks the max-drawdown peak → trough (Fase S1): both the drawdown and the curve
+ * are computed from the SAME unit-converted list, so their trade ids and cum
+ * values line up exactly. `showDrawdownMarkers` lets a caller suppress them.
  */
-export function EquityCurveChart({ trades }: { trades: ClosedTrade[] }) {
+export function EquityCurveChart({ trades, showDrawdownMarkers = true }: { trades: ClosedTrade[]; showDrawdownMarkers?: boolean }) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
-  const data = useMemo(() => computeEquityCurve(tradesInResultUnit(trades, resultUnit, saldo)), [trades, resultUnit, saldo]);
+  const converted = useMemo(() => tradesInResultUnit(trades, resultUnit, saldo), [trades, resultUnit, saldo]);
+  const data = useMemo(() => computeEquityCurve(converted), [converted]);
+  // Peak/trough of the deepest drawdown, positioned by matching the drawdown's
+  // trade ids back to their point in the (identically computed) curve.
+  const drawdownMarkers = useMemo(() => {
+    if (!showDrawdownMarkers) return null;
+    const dd = computeMaxDrawdown(converted);
+    if (dd.maxDrawdownPct <= 0 || dd.troughTradeId == null) return null;
+    const trough = data.find((p) => p.tradeId === dd.troughTradeId);
+    if (!trough) return null;
+    const peak = dd.peakTradeId != null ? data.find((p) => p.tradeId === dd.peakTradeId) ?? null : null;
+    return { peak, trough, depth: dd.maxDrawdownPct };
+  }, [showDrawdownMarkers, converted, data]);
 
   if (data.length === 0) {
     return (
@@ -75,6 +91,35 @@ export function EquityCurveChart({ trades }: { trades: ClosedTrade[] }) {
             labelFormatter={(l) => t("chart.equityTradeLabel", { n: l })}
           />
           <Area type="monotone" dataKey="cum" stroke="rgb(var(--color-gold))" strokeWidth={2} fill="url(#cumFill)" />
+          {drawdownMarkers?.peak && (
+            <ReferenceDot
+              x={drawdownMarkers.peak.idx}
+              y={drawdownMarkers.peak.cum}
+              r={4}
+              fill="rgb(var(--color-surface))"
+              stroke="rgb(var(--color-muted))"
+              strokeWidth={2}
+              isFront
+            />
+          )}
+          {drawdownMarkers && (
+            <ReferenceDot
+              x={drawdownMarkers.trough.idx}
+              y={drawdownMarkers.trough.cum}
+              r={4}
+              fill="rgb(var(--color-loss))"
+              stroke="rgb(var(--color-surface))"
+              strokeWidth={2}
+              isFront
+              label={{
+                value: formatAggregate(-drawdownMarkers.depth, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 }),
+                position: "bottom",
+                fill: "rgb(var(--color-loss))",
+                fontSize: 11,
+                fontFamily: "IBM Plex Mono",
+              }}
+            />
+          )}
         </AreaChart>
       </ResponsiveContainer>
     </div>

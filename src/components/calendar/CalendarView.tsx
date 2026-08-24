@@ -6,6 +6,7 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
+import { isoWeekOf } from "@/lib/isoWeek";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -15,6 +16,14 @@ interface PairChip {
 
 /** Same outcome→color mapping OutcomePill uses elsewhere, applied here to a small leading dot rather than the whole pill — a calmer look than a fully colored chip. */
 const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
+
+/** A leading week column (number + total) + 7 day columns, shared by the weekday header and every week row so each week's label + running total sit at the front of its row. */
+const GRID_TEMPLATE = { gridTemplateColumns: "minmax(3rem, auto) repeat(7, minmax(0, 1fr))" };
+
+/** Sign → text color token for a compact aggregate (day/week/month totals). */
+function totalColor(v: number): string {
+  return v > 0 ? "rgb(var(--color-win))" : v < 0 ? "rgb(var(--color-loss))" : "rgb(var(--color-muted))";
+}
 
 interface CalendarViewProps {
   /** Realized (closed) trades only — the calendar colors days by real result; still-running open trades carry none and are excluded by the caller (closedTrades). */
@@ -50,6 +59,23 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
     }
     return m;
   }, [trades, year, month]);
+
+  // Realized day total in the chosen unit, round2'd (CLAUDE.md-invariant so the
+  // win/loss cell color and the day/week/month aggregates never read -2.8e-17).
+  // The single source for the cell value, the week-row totals and the month total.
+  const realResultByDay = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const [day, dayTrades] of byDay) {
+      m.set(day, round2(dayTrades.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0)));
+    }
+    return m;
+  }, [byDay, resultUnit, saldo]);
+
+  const monthTotal = useMemo(() => {
+    let sum = 0;
+    for (const v of realResultByDay.values()) sum += v;
+    return round2(sum);
+  }, [realResultByDay]);
 
   /** Unique (pair, outcome) combos per day, in first-taken order — a pair traded twice with the same outcome shows once, but a pair that won once and lost once still shows both, since the outcome drives the chip's color. */
   const pairsByDay = useMemo(() => {
@@ -133,17 +159,164 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
     return m;
   }, [openTrades, year, month]);
 
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // Full weeks (each 7 cells, null = padding) so every row can carry a trailing
+  // week-total cell. Leading pad for the first weekday offset, trailing pad to
+  // complete the last week.
+  const weeks = useMemo(() => {
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    const out: (number | null)[][] = [];
+    for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7));
+    return out;
+  }, [startOffset, daysInMonth]);
 
   const monthLabel = monthDate.toLocaleDateString(dateLocale(i18n.language), { month: "long", year: "numeric" });
+
+  function renderDayCell(d: number | null, key: number) {
+    if (!d) return <div key={key} />;
+    const dayTrades = byDay.get(d);
+    const dayResult = realResultByDay.get(d) ?? null;
+    const missed = missedDayResult.get(d);
+    const missedResult = missed != null ? round2(missed) : null;
+    const openPairs = openPairsByDay.get(d);
+    const hasOpen = openPairs != null;
+
+    let bg = "rgb(var(--color-bg))";
+    let border = "rgb(var(--color-border-soft))";
+    let borderStyle: "solid" | "dashed" = "solid";
+    let displayValue = dayResult;
+    let displayColor = "rgb(var(--color-gold))";
+    let displayMissed = false;
+    let displayOpen = false;
+
+    if (dayResult != null) {
+      if (dayResult > 0) {
+        bg = "rgb(var(--color-win) / 0.12)";
+        border = "rgb(var(--color-win) / 0.4)";
+        displayColor = "rgb(var(--color-win))";
+      } else if (dayResult < 0) {
+        bg = "rgb(var(--color-loss) / 0.12)";
+        border = "rgb(var(--color-loss) / 0.4)";
+        displayColor = "rgb(var(--color-loss))";
+      } else {
+        bg = "rgb(var(--color-gold) / 0.12)";
+        border = "rgb(var(--color-gold) / 0.4)";
+        displayColor = "rgb(var(--color-gold))";
+      }
+      if (missedResult != null) {
+        // Real result stays the displayed value — the missed trade only flags via the dashed grey border. Deliberately neutral (muted), not the be/orange token — that now means an actual breakeven outcome, not "hypothetical".
+        border = "rgb(var(--color-muted) / 0.6)";
+        borderStyle = "dashed";
+      }
+    } else if (hasOpen) {
+      // A day whose only activity is a still-running trade — no realized result
+      // yet, so it reads neutral light-grey (solid, not the dashed grey of a
+      // hypothetical missed trade) and shows no value.
+      bg = "rgb(var(--color-muted) / 0.06)";
+      border = "rgb(var(--color-muted) / 0.35)";
+      borderStyle = "solid";
+      displayOpen = true;
+    } else if (missedResult != null) {
+      bg = "rgb(var(--color-muted) / 0.08)";
+      border = "rgb(var(--color-muted) / 0.5)";
+      borderStyle = "dashed";
+      displayValue = missedResult;
+      displayColor = "rgb(var(--color-muted))";
+      displayMissed = true;
+    }
+
+    const dateIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const errorTypes = errorDayTypes.get(d);
+    const dayPairs = dayTrades ? pairsByDay.get(d) : displayOpen ? openPairs : missedResult != null ? missedPairsByDay.get(d) : undefined;
+    const visiblePairs = dayPairs?.slice(0, 2) ?? [];
+    const extraPairCount = dayPairs ? dayPairs.length - visiblePairs.length : 0;
+
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => onDayClick?.(dateIso)}
+        className="relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left"
+        style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
+        title={
+          displayMissed
+            ? t("calendar.missedHypothetical")
+            : displayOpen
+              ? `${t("tradeBadge.open")} — ${dayPairs?.map((c) => c.pair).join(", ")}`
+              : errorTypes
+                ? Array.from(errorTypes).join(", ")
+                : dayPairs?.map((c) => c.pair).join(", ")
+        }
+      >
+        {errorTypes && <TriangleAlert size={11} strokeWidth={2.5} className="absolute top-1 right-1 text-gold" />}
+        <span className="flex items-center gap-1">
+          <span className="font-mono text-[11px] text-muted">{d}</span>
+          {/* Narrow cells (mobile, <640px viewport): no room for readable pair text — a dot per pair inline with the day number instead. Full names are always one tap away via the day modal. */}
+          {dayPairs && dayPairs.length > 0 && (
+            <span className="flex sm:hidden items-center gap-0.5">
+              {dayPairs.slice(0, 4).map((chip) => (
+                <span
+                  key={`${chip.pair}-${chip.outcome}`}
+                  className="w-[4px] h-[4px] rounded-full border"
+                  style={{
+                    borderColor: displayMissed || displayOpen
+                      ? "rgb(var(--color-muted) / 0.8)"
+                      : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / 0.9)`,
+                  }}
+                />
+              ))}
+            </span>
+          )}
+        </span>
+        {visiblePairs.length > 0 && (
+          <div className="hidden sm:flex sm:flex-col items-start gap-0.5 overflow-hidden">
+            {visiblePairs.map((chip) => (
+              <span
+                key={`${chip.pair}-${chip.outcome}`}
+                className={`inline-flex items-center gap-1 font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-muted whitespace-nowrap ${
+                  displayMissed ? "italic" : ""
+                }`}
+              >
+                <span
+                  className="w-[4px] h-[4px] rounded-full shrink-0"
+                  style={{
+                    background: displayMissed || displayOpen ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
+                  }}
+                />
+                {chip.pair}
+              </span>
+            ))}
+            {extraPairCount > 0 && (
+              <span className="font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-faint">
+                +{extraPairCount}
+              </span>
+            )}
+          </div>
+        )}
+        {displayValue != null && (
+          <span
+            className="font-mono text-[11px] font-medium self-end"
+            style={{ color: displayColor, fontStyle: displayMissed ? "italic" : "normal" }}
+          >
+            {/* Krappe cel: 1 decimaal voor %/R, hele euro's voor geld. */}
+            {formatAggregate(displayValue, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
+          </span>
+        )}
+      </button>
+    );
+  }
 
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-baseline gap-3 flex-wrap">
           <h3 className="font-display text-xl italic text-ink capitalize">{monthLabel}</h3>
+          {/* Maandtotaal (Fase S1): realized net over the visible month in the chosen unit. */}
+          <span className="font-mono text-sm" style={{ color: totalColor(monthTotal) }}>
+            {formatAggregate(monthTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -162,7 +335,8 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
       </div>
 
       <div className="max-w-2xl mx-auto w-full">
-      <div className="grid grid-cols-7 gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted">
+      <div className="grid gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted" style={GRID_TEMPLATE}>
+        <div className="text-center text-faint">{t("calendar.weekColHeader")}</div>
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-center">
             {t(`weekdays.${d}`)}
@@ -170,140 +344,30 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
-        {cells.map((d, i) => {
-          if (!d) return <div key={i} />;
-          const dayTrades = byDay.get(d);
-          // round2 op de rauwe som (CLAUDE.md-invariant): normaliseert -0/float-stof,
-          // zodat de win/loss-celkleur en het getal nooit op -2.8e-17 kunnen afgaan.
-          const dayResult = dayTrades ? round2(dayTrades.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0)) : null;
-          const missed = missedDayResult.get(d);
-          const missedResult = missed != null ? round2(missed) : null;
-          const openPairs = openPairsByDay.get(d);
-          const hasOpen = openPairs != null;
-
-          let bg = "rgb(var(--color-bg))";
-          let border = "rgb(var(--color-border-soft))";
-          let borderStyle: "solid" | "dashed" = "solid";
-          let displayValue = dayResult;
-          let displayColor = "rgb(var(--color-gold))";
-          let displayMissed = false;
-          let displayOpen = false;
-
-          if (dayResult != null) {
-            if (dayResult > 0) {
-              bg = "rgb(var(--color-win) / 0.12)";
-              border = "rgb(var(--color-win) / 0.4)";
-              displayColor = "rgb(var(--color-win))";
-            } else if (dayResult < 0) {
-              bg = "rgb(var(--color-loss) / 0.12)";
-              border = "rgb(var(--color-loss) / 0.4)";
-              displayColor = "rgb(var(--color-loss))";
-            } else {
-              bg = "rgb(var(--color-gold) / 0.12)";
-              border = "rgb(var(--color-gold) / 0.4)";
-              displayColor = "rgb(var(--color-gold))";
-            }
-            if (missedResult != null) {
-              // Real result stays the displayed value — the missed trade only flags via the dashed grey border. Deliberately neutral (muted), not the be/orange token — that now means an actual breakeven outcome, not "hypothetical".
-              border = "rgb(var(--color-muted) / 0.6)";
-              borderStyle = "dashed";
-            }
-          } else if (hasOpen) {
-            // A day whose only activity is a still-running trade — no realized result
-            // yet, so it reads neutral light-grey (solid, not the dashed grey of a
-            // hypothetical missed trade) and shows no value.
-            bg = "rgb(var(--color-muted) / 0.06)";
-            border = "rgb(var(--color-muted) / 0.35)";
-            borderStyle = "solid";
-            displayOpen = true;
-          } else if (missedResult != null) {
-            bg = "rgb(var(--color-muted) / 0.08)";
-            border = "rgb(var(--color-muted) / 0.5)";
-            borderStyle = "dashed";
-            displayValue = missedResult;
-            displayColor = "rgb(var(--color-muted))";
-            displayMissed = true;
-          }
-
-          const dateIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-          const errorTypes = errorDayTypes.get(d);
-          const dayPairs = dayTrades ? pairsByDay.get(d) : displayOpen ? openPairs : missedResult != null ? missedPairsByDay.get(d) : undefined;
-          const visiblePairs = dayPairs?.slice(0, 2) ?? [];
-          const extraPairCount = dayPairs ? dayPairs.length - visiblePairs.length : 0;
-
+      <div className="grid gap-1.5" style={GRID_TEMPLATE}>
+        {weeks.map((week, wi) => {
+          const weekTotal = round2(
+            week.reduce<number>((s, d) => s + (d != null ? realResultByDay.get(d) ?? 0 : 0), 0)
+          );
+          const hasResult = week.some((d) => d != null && realResultByDay.has(d));
+          // ISO week number of this row, read from its Monday (day-of-month
+          // 1 - startOffset + wi*7; may spill into the neighbouring month, which
+          // is exactly what the ISO week should reflect).
+          const monday = new Date(year, month, 1 - startOffset + wi * 7);
+          const mondayIso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+          const weekNum = isoWeekOf(mondayIso).week_nummer;
           return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onDayClick?.(dateIso)}
-              className="relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left"
-              style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
-              title={
-                displayMissed
-                  ? t("calendar.missedHypothetical")
-                  : displayOpen
-                    ? `${t("tradeBadge.open")} — ${dayPairs?.map((c) => c.pair).join(", ")}`
-                    : errorTypes
-                      ? Array.from(errorTypes).join(", ")
-                      : dayPairs?.map((c) => c.pair).join(", ")
-              }
-            >
-              {errorTypes && <TriangleAlert size={11} strokeWidth={2.5} className="absolute top-1 right-1 text-gold" />}
-              <span className="flex items-center gap-1">
-                <span className="font-mono text-[11px] text-muted">{d}</span>
-                {/* Narrow cells (mobile, <640px viewport): no room for readable pair text — a dot per pair inline with the day number instead. Full names are always one tap away via the day modal. */}
-                {dayPairs && dayPairs.length > 0 && (
-                  <span className="flex sm:hidden items-center gap-0.5">
-                    {dayPairs.slice(0, 4).map((chip) => (
-                      <span
-                        key={`${chip.pair}-${chip.outcome}`}
-                        className="w-[4px] h-[4px] rounded-full border"
-                        style={{
-                          borderColor: displayMissed || displayOpen
-                            ? "rgb(var(--color-muted) / 0.8)"
-                            : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / 0.9)`,
-                        }}
-                      />
-                    ))}
+            <div key={wi} className="contents">
+              <div className="flex flex-col items-center justify-center gap-0.5 leading-none" title={t("calendar.weekTotal")}>
+                <span className="font-mono text-[10px] text-faint">{t("calendar.weekNum", { n: weekNum })}</span>
+                {hasResult && (
+                  <span className="font-mono text-[11px]" style={{ color: totalColor(weekTotal) }}>
+                    {formatAggregate(weekTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
                   </span>
                 )}
-              </span>
-              {visiblePairs.length > 0 && (
-                <div className="hidden sm:flex sm:flex-col items-start gap-0.5 overflow-hidden">
-                  {visiblePairs.map((chip) => (
-                    <span
-                      key={`${chip.pair}-${chip.outcome}`}
-                      className={`inline-flex items-center gap-1 font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-muted whitespace-nowrap ${
-                        displayMissed ? "italic" : ""
-                      }`}
-                    >
-                      <span
-                        className="w-[4px] h-[4px] rounded-full shrink-0"
-                        style={{
-                          background: displayMissed || displayOpen ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
-                        }}
-                      />
-                      {chip.pair}
-                    </span>
-                  ))}
-                  {extraPairCount > 0 && (
-                    <span className="font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-faint">
-                      +{extraPairCount}
-                    </span>
-                  )}
-                </div>
-              )}
-              {displayValue != null && (
-                <span
-                  className="font-mono text-[11px] font-medium self-end"
-                  style={{ color: displayColor, fontStyle: displayMissed ? "italic" : "normal" }}
-                >
-                  {/* Krappe cel: 1 decimaal voor %/R, hele euro's voor geld. */}
-                  {formatAggregate(displayValue, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
-                </span>
-              )}
-            </button>
+              </div>
+              {week.map((d, di) => renderDayCell(d, wi * 7 + di))}
+            </div>
           );
         })}
       </div>

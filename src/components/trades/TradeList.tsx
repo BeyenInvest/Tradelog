@@ -3,11 +3,18 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
-import { dateLocale, formatResult, groupResultCtx, resultDisplayValue } from "@/lib/format";
+import { dateLocale, formatResult, groupResultCtx, resultDisplayValue, resultInUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
+import { useMethodology } from "@/hooks/useMethodology";
 import type { Trade } from "@/lib/types";
 import { TradeListItem } from "./TradeListItem";
 import { TradeListHeader } from "./TradeListHeader";
+
+/** Sort key for "sort by result": the trade's value in the active unit; still-running / unresolved trades sort last (null). */
+function resultSortKey(t: Trade, unit: Parameters<typeof resultInUnit>[1], saldo: number | null): number | null {
+  if (t.is_open || t.resultaat_pct == null) return null;
+  return resultInUnit({ resultaat_pct: t.resultaat_pct, risk_pct: t.risk_pct }, unit, saldo);
+}
 
 interface TradeListProps {
   trades: Trade[];
@@ -33,8 +40,13 @@ export function TradeList({
 }: TradeListProps) {
   const { t, i18n } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
+  const { isLegacyMethodology } = useMethodology();
+  // A modern (own/preset) journal never fills the Weekly Phase Method Concept/Entry
+  // columns — swap them for the universal Richting/R columns so they aren't dead space.
+  const columnMode = isLegacyMethodology ? "legacy" : "modern";
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>(fixedGroupBy ?? "week");
+  const [sortBy, setSortBy] = useState<"date" | "result">("date");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const sorted = useMemo(() => {
@@ -76,6 +88,27 @@ export function TradeList({
               placeholder={t("list.searchPlaceholder")}
               className="input pl-8 text-xs py-1.5 w-52"
             />
+          </div>
+          {/* Sort within each group: chronological (default) or by result size. */}
+          <div className="inline-flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setSortBy("date")}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                sortBy === "date" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              {t("list.sortDate")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy("result")}
+              className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                sortBy === "result" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              {t("list.sortResult")}
+            </button>
           </div>
           {!fixedGroupBy && (
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
@@ -130,6 +163,18 @@ export function TradeList({
             const isCollapsed = search ? false : collapsed.has(g.key);
             const groupCtx = groupResultCtx(g.trades, g.resultaatTotal, resultUnit, saldo);
             const groupTotal = resultDisplayValue(g.resultaatTotal, resultUnit, groupCtx);
+            // Sort within the group by result size when asked; unresolved (open) trades
+            // sink to the bottom. Default keeps the incoming chronological order.
+            const rows =
+              sortBy === "result"
+                ? [...g.trades].sort((a, b) => {
+                    const ka = resultSortKey(a, resultUnit, saldo);
+                    const kb = resultSortKey(b, resultUnit, saldo);
+                    if (ka == null) return kb == null ? 0 : 1;
+                    if (kb == null) return -1;
+                    return kb - ka;
+                  })
+                : g.trades;
             return (
               <div key={g.key} className="rounded-lg border border-border-soft overflow-hidden">
                 <button
@@ -156,9 +201,9 @@ export function TradeList({
                 </button>
                 {!isCollapsed && (
                   <div className="px-3 pb-1 pt-2">
-                    <TradeListHeader />
-                    {g.trades.map((t) => (
-                      <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
+                    <TradeListHeader columnMode={columnMode} />
+                    {rows.map((t) => (
+                      <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} columnMode={columnMode} />
                     ))}
                   </div>
                 )}
