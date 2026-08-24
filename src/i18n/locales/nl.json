@@ -374,6 +374,7 @@
     "lossMustBeNegative": "Een verlies kan geen positief resultaat zijn",
     "winMustBePositive": "Een winst kan geen negatief resultaat zijn",
     "resultSignHint": "Verlies negatief invullen (bv. -1.5)",
+    "sanityWarning": "Meer dan ±{{pct}}% — klopt dat? Controleer even de komma.",
     "sectionEntry": "Entry",
     "sectionResult": "Result",
     "sectionTechnical": "Technical analysis",
@@ -455,7 +456,12 @@
     "result": "Resultaat (%)",
     "evaluation": "Evaluatie",
     "evaluationNone": "Geen evaluatie",
-    "save": "Trade loggen"
+    "risk": "Risico (%)",
+    "date": "Datum",
+    "note": "Notitie",
+    "notePlaceholder": "korte notitie (optioneel)",
+    "save": "Trade loggen",
+    "saveAndNext": "Bewaar & volgende"
   },
   "share": {
     "button": "Delen",

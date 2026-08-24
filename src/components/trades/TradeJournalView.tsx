@@ -206,14 +206,15 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 <Share2 size={16} />
               </button>
             )}
+            {/* Quick-log promoted to a visible, labelled button (Fase S1) — the
+                fast post-session path deserves to be findable, not an icon riddle,
+                while "New trade" stays the gold primary for a full entry. */}
             {isLive && (
               <button
                 onClick={() => setQuickOpen(true)}
-                title={t("quickLog.button")}
-                aria-label={t("quickLog.button")}
-                className="flex items-center justify-center h-9 px-3 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
+                className="flex items-center gap-2 h-9 px-4 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5 transition-colors"
               >
-                <Zap size={16} />
+                <Zap size={15} /> {t("quickLog.button")}
               </button>
             )}
             <button

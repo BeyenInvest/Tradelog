@@ -170,6 +170,14 @@ export const MIN_SAMPLE_SIZE = 15;
 export const DEFAULT_RISK_PCT = 1;
 
 /**
+ * Above this absolute % result a single trade is almost always a fat-fingered
+ * decimal (e.g. 250 instead of 2.5) — the trade form shows a soft, non-blocking
+ * "did you mean...?" warning past it. Deliberately generous so a genuine big
+ * win/loss doesn't nag; it never blocks saving (a real +30% must still go in).
+ */
+export const SANITY_RESULT_PCT = 20;
+
+/**
  * Fase-specifieke kenmerken (spec tabel 3.2), config-driven zodat de Backtesting
  * pagina elke fase-kenmerk-breakdown via één .map() rendert i.p.v. losse blokken.
  */
