@@ -49,6 +49,10 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   // — Market —
   { key: "session", group: "markt", field_type: "enum", hasOptions: true },
   { key: "htf_bias", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "killzone", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "liquidity_target", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "smt_divergence", group: "markt", field_type: "boolean", hasOptions: false },
+  { key: "displacement", group: "markt", field_type: "boolean", hasOptions: false },
   { key: "news", group: "markt", field_type: "boolean", hasOptions: false },
   { key: "sector", group: "markt", field_type: "enum", hasOptions: true },
   { key: "market_cap", group: "markt", field_type: "enum", hasOptions: true },
@@ -183,7 +187,7 @@ export interface StrategyStartset {
 export const STRATEGY_STARTSETS: StrategyStartset[] = [
   {
     key: "ict_smc",
-    blockKeys: ["htf_bias", "market_structure", "ict_setup", "entry_model", "pd_array", "timeframe", "session", "emotion"],
+    blockKeys: ["htf_bias", "market_structure", "ict_setup", "entry_model", "pd_array", "killzone", "timeframe", "emotion"],
   },
 ];
 
