@@ -226,15 +226,17 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 <Share2 size={16} />
               </button>
             )}
-            {/* Quick-log promoted to a visible, labelled button (Fase S1) — the
-                fast post-session path deserves to be findable, not an icon riddle,
-                while "New trade" stays the gold primary for a full entry. */}
+            {/* Quick-log (Fase L): a trade in <30s, details later. Live journal
+                only. Icon-only + tooltip so it stays a light accent next to the
+                primary "New trade" CTA rather than a competing full-size button. */}
             {isLive && (
               <button
                 onClick={() => setQuickOpen(true)}
-                className="flex items-center gap-2 h-9 px-4 rounded-lg font-body text-sm font-medium bg-surface-2 text-ink hover:bg-ink/5 transition-colors"
+                title={t("quickLog.button")}
+                aria-label={t("quickLog.button")}
+                className="flex items-center justify-center h-9 px-3 rounded-lg bg-surface-2 text-muted hover:text-ink hover:bg-ink/5 transition-colors"
               >
-                <Zap size={15} /> {t("quickLog.button")}
+                <Zap size={16} />
               </button>
             )}
             <button

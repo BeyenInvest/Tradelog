@@ -16,8 +16,8 @@ interface PairChip {
 /** Same outcome→color mapping OutcomePill uses elsewhere, applied here to a small leading dot rather than the whole pill — a calmer look than a fully colored chip. */
 const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
 
-/** 7 day columns + a trailing auto-width week-total column, shared by the weekday header and every week row so the totals line up under one Σ header. */
-const GRID_TEMPLATE = { gridTemplateColumns: "repeat(7, minmax(0, 1fr)) minmax(2.75rem, auto)" };
+/** A leading auto-width week-total column + 7 day columns, shared by the weekday header and every week row so each week's running total sits at the front of its row. */
+const GRID_TEMPLATE = { gridTemplateColumns: "minmax(2.5rem, auto) repeat(7, minmax(0, 1fr))" };
 
 /** Sign → text color token for a compact aggregate (day/week/month totals). */
 function totalColor(v: number): string {
@@ -335,12 +335,12 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
       <div className="max-w-2xl mx-auto w-full">
       <div className="grid gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted" style={GRID_TEMPLATE}>
+        <div className="text-center text-faint">{t("calendar.weekTotalHeader")}</div>
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-center">
             {t(`weekdays.${d}`)}
           </div>
         ))}
-        <div className="text-center text-faint">{t("calendar.weekTotalHeader")}</div>
       </div>
 
       <div className="grid gap-1.5" style={GRID_TEMPLATE}>
@@ -351,16 +351,16 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
           const hasResult = week.some((d) => d != null && realResultByDay.has(d));
           return (
             <div key={wi} className="contents">
-              {week.map((d, di) => renderDayCell(d, wi * 7 + di))}
               <div
-                className="flex items-center justify-end pr-0.5 font-mono text-[11px] font-medium"
+                className="flex items-center justify-center font-mono text-[11px]"
                 title={t("calendar.weekTotal")}
-                style={{ color: hasResult ? totalColor(weekTotal) : "rgb(var(--color-faint))" }}
+                style={{ color: hasResult ? totalColor(weekTotal) : "transparent" }}
               >
                 {hasResult
                   ? formatAggregate(weekTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })
-                  : "·"}
+                  : ""}
               </div>
+              {week.map((d, di) => renderDayCell(d, wi * 7 + di))}
             </div>
           );
         })}
