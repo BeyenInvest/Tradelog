@@ -867,7 +867,9 @@
     "type_number": "Getal",
     "type_date": "Datum",
     "legacyLocked": "Vast Weekly Phase Method-veld — nog niet aanpasbaar (wacht op de veldenmigratie)",
-    "duplicateKey": "Er bestaat al een veld met deze sleutel — kies een ander label."
+    "duplicateKey": "Er bestaat al een veld met deze sleutel — kies een ander label.",
+    "fieldCount_one": "{{count}} veld",
+    "fieldCount_other": "{{count}} velden"
   },
   "reviewSections": {
     "title": "Review-secties",

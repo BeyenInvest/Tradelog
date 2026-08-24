@@ -21,6 +21,9 @@ export function MethodologyEditor() {
   const { t } = useTranslation();
   const { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField } =
     useMethodologyEditor();
+  // Collapsed by default, same as the review-sections editor below it — the field
+  // list is long and, once set up, rarely retouched.
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -51,9 +54,16 @@ export function MethodologyEditor() {
     );
   }
 
+  const summary = t("methodology.fieldCount", { count: fields.length });
+
   return (
     <Card>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 text-left"
+      >
         <div className="min-w-0">
           <p className="font-body text-sm text-ink">
             {methodology.naam}
@@ -64,51 +74,57 @@ export function MethodologyEditor() {
             )}
           </p>
           <p className="font-mono text-xs mt-1 text-muted">
-            {isOwn ? t("methodology.ownDescription") : t("methodology.templateDescription")}
+            {open ? (isOwn ? t("methodology.ownDescription") : t("methodology.templateDescription")) : summary}
           </p>
         </div>
-        {!isOwn && (
-          <button
-            type="button"
-            onClick={() => void run(fork, "methodology.forkFailed")}
-            disabled={busy}
-            className="shrink-0 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
-          >
-            {t("methodology.makeEditable")}
-          </button>
-        )}
-      </div>
+        <ChevronDown size={16} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
-      {actionError && <p className="font-mono text-[11px] mt-3 text-loss">{actionError}</p>}
-      {error && !actionError && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
+      {open && (
+        <div className="mt-4 pt-4 border-t border-border-soft">
+          {!isOwn && (
+            <button
+              type="button"
+              onClick={() => void run(fork, "methodology.forkFailed")}
+              disabled={busy}
+              className="mb-4 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
+            >
+              {t("methodology.makeEditable")}
+            </button>
+          )}
 
-      <div className="flex flex-col divide-y divide-border-soft mt-4 border-t border-border-soft">
-        {fields.length === 0 && <p className="font-mono text-xs text-muted py-4">{t("methodology.empty")}</p>}
-        {fields.map((f, i) => (
-          <FieldRow
-            key={f.id}
-            field={f}
-            allFields={fields}
-            editable={isOwn && !busy}
-            // Seeded WPM fields stay column-backed (`fase` even enum-backed in the
-            // DB — editing its options would break every trade save) → locked
-            // until the cyclus-10 migration. useMethodologyEditor backstops this.
-            locked={isLockedLegacyField(f, fields)}
-            isFirst={i === 0}
-            isLast={i === fields.length - 1}
-            onMove={(dir) => void run(() => moveField(f.id, dir), "methodology.saveFailed")}
-            onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
-            onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
-          />
-        ))}
-      </div>
+          {actionError && <p className="font-mono text-[11px] mb-3 text-loss">{actionError}</p>}
+          {error && !actionError && <p className="font-mono text-[11px] mb-3 text-loss">{error}</p>}
 
-      {isOwn && (
-        <AddFieldForm
-          busy={busy}
-          allFields={fields}
-          onAdd={(input) => run(() => addField(input), "methodology.saveFailed")}
-        />
+          <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+            {fields.length === 0 && <p className="font-mono text-xs text-muted py-4">{t("methodology.empty")}</p>}
+            {fields.map((f, i) => (
+              <FieldRow
+                key={f.id}
+                field={f}
+                allFields={fields}
+                editable={isOwn && !busy}
+                // Seeded WPM fields stay column-backed (`fase` even enum-backed in the
+                // DB — editing its options would break every trade save) → locked
+                // until the cyclus-10 migration. useMethodologyEditor backstops this.
+                locked={isLockedLegacyField(f, fields)}
+                isFirst={i === 0}
+                isLast={i === fields.length - 1}
+                onMove={(dir) => void run(() => moveField(f.id, dir), "methodology.saveFailed")}
+                onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
+                onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
+              />
+            ))}
+          </div>
+
+          {isOwn && (
+            <AddFieldForm
+              busy={busy}
+              allFields={fields}
+              onAdd={(input) => run(() => addField(input), "methodology.saveFailed")}
+            />
+          )}
+        </div>
       )}
     </Card>
   );

@@ -867,7 +867,9 @@
     "type_number": "Number",
     "type_date": "Date",
     "legacyLocked": "Fixed Weekly Phase Method field — not editable yet (awaits the field migration)",
-    "duplicateKey": "A field with this key already exists — pick a different label."
+    "duplicateKey": "A field with this key already exists — pick a different label.",
+    "fieldCount_one": "{{count}} field",
+    "fieldCount_other": "{{count}} fields"
   },
   "reviewSections": {
     "title": "Review sections",
