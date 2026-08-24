@@ -878,6 +878,7 @@
     "customize": "Aanpassen",
     "reset": "Terug naar standaard",
     "addSection": "Sectie toevoegen",
+    "addRow": "Regel toevoegen",
     "sectionLabel": "Sectielabel",
     "labelPlaceholder": "bv. Killzone-discipline",
     "sectionType": "Type",

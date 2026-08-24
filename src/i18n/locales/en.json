@@ -878,6 +878,7 @@
     "customize": "Customize",
     "reset": "Reset to defaults",
     "addSection": "Add section",
+    "addRow": "Add row",
     "sectionLabel": "Section label",
     "labelPlaceholder": "e.g. Killzone discipline",
     "sectionType": "Type",

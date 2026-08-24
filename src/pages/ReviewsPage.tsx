@@ -5,6 +5,8 @@ import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import { usePeriodicReviews } from "@/hooks/usePeriodicReviews";
+import { useReviewSections } from "@/hooks/useReviewSections";
+import { resolveReviewSections } from "@/lib/reviewSections";
 import { useTrades, type TradeSubmitInput } from "@/hooks/useTrades";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { ReviewDetail } from "@/components/reviews/ReviewDetail";
@@ -81,6 +83,9 @@ function WeeklyReviewsTab({
   const { t } = useTranslation();
   const { confirm, confirmDialog } = useConfirm();
   const { reviews, loading, createReview, updateReview, deleteReview, linkTradesToReview } = useWeeklyReviews();
+  // This journal's configurable weekly review sections (Fase N5) — defaults when unconfigured.
+  const { rows: sectionRows } = useReviewSections();
+  const sections = useMemo(() => resolveReviewSections("weekly", sectionRows), [sectionRows]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<WeeklyReview | undefined>(undefined);
@@ -205,6 +210,7 @@ function WeeklyReviewsTab({
           {selected ? (
             <ReviewDetail
               review={selected}
+              sections={sections}
               trades={trades}
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
@@ -220,6 +226,7 @@ function WeeklyReviewsTab({
       {formOpen && (
         <ReviewForm
           review={editingReview}
+          sections={sections}
           trades={trades}
           onSubmit={handleSubmit}
           onAddTrade={onAddTrade}
@@ -247,6 +254,9 @@ function PeriodicReviewsTab({
   const { t, i18n } = useTranslation();
   const { confirm, confirmDialog } = useConfirm();
   const { reviews, loading, createReview, updateReview, deleteReview } = usePeriodicReviews(periodType);
+  // Periodic sections depend on the period type (periode_overzicht is quarter/year only).
+  const { rows: sectionRows } = useReviewSections();
+  const sections = useMemo(() => resolveReviewSections("periodic", sectionRows, periodType), [sectionRows, periodType]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<PeriodicReview | undefined>(undefined);
@@ -355,6 +365,7 @@ function PeriodicReviewsTab({
           {selected ? (
             <PeriodicReviewDetail
               review={selected}
+              sections={sections}
               taken={takenTradesOf(selected)}
               missed={missedTradesOf(selected)}
               onEdit={() => openEdit(selected)}
@@ -371,6 +382,7 @@ function PeriodicReviewsTab({
         <PeriodicReviewForm
           periodType={periodType}
           review={editingReview}
+          sections={sections}
           trades={trades}
           onSubmit={handleSubmit}
           onAddTrade={onAddTrade}

@@ -12,13 +12,16 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { ReviewFormModal } from "@/components/reviews/ReviewFormModal";
 import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
-import { PeriodicReviewContentFields, type PeriodicReviewContentValue } from "@/components/reviews/PeriodicReviewContentFields";
+import { ReviewSectionsFields } from "@/components/reviews/ReviewSectionsFields";
+import { initialReviewValues, buildPeriodicReviewContent, type ReviewSection, type ReviewValues } from "@/lib/reviewSections";
 import { periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
 import { ReviewTradesPanel } from "@/components/reviews/ReviewTradesPanel";
 
 interface PeriodicReviewFormProps {
   periodType: PeriodType;
   review?: PeriodicReview;
+  /** This journal's resolved periodic review sections for this period type (Fase N5). */
+  sections: ReviewSection[];
   trades: Trade[];
   onSubmit: (input: PeriodicReviewInput) => Promise<void>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
@@ -30,24 +33,14 @@ function defaultPeriodeNummer(periodType: PeriodType, now: Date): number {
   return Math.floor(now.getMonth() / 3) + 1;
 }
 
-export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAddTrade, onClose }: PeriodicReviewFormProps) {
+export function PeriodicReviewForm({ periodType, review, sections, trades, onSubmit, onAddTrade, onClose }: PeriodicReviewFormProps) {
   const { t, i18n } = useTranslation();
   const now = new Date();
   const monthOptions = Array.from({ length: 12 }, (_, i) => monthName(i, dateLocale(i18n.language)));
   const [jaar, setJaar] = useState(review?.jaar ?? now.getFullYear());
   const [periodeNummer, setPeriodeNummer] = useState(review?.periode_nummer ?? defaultPeriodeNummer(periodType, now));
   const [titel, setTitel] = useState(review?.titel ?? "");
-  const [content, setContent] = useState<PeriodicReviewContentValue>({
-    // Weekly-only field; carried to satisfy the shared content shape but never rendered or saved for periodic reviews.
-    verhalen: "",
-    technisch: review?.technisch ?? "",
-    mentaal_owner: review?.mentaal_owner ?? "",
-    mentaal_trader: review?.mentaal_trader ?? "",
-    acties: review?.acties?.length ? review.acties : [""],
-    takeaway: review?.takeaway ?? "",
-    overall_comment: review?.overall_comment ?? "",
-    periode_overzicht: review?.periode_overzicht ?? "",
-  });
+  const [content, setContent] = useState<ReviewValues>(() => initialReviewValues(sections, review));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -98,14 +91,8 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
         jaar,
         periode_nummer: periodType === "year" ? null : periodeNummer,
         titel: titel || null,
-        technisch: content.technisch || null,
-        mentaal_owner: content.mentaal_owner || null,
-        mentaal_trader: content.mentaal_trader || null,
-        acties: content.acties.map((a) => a.trim()).filter(Boolean),
-        takeaway: content.takeaway || null,
-        overall_comment: content.overall_comment || null,
-        periode_overzicht: content.periode_overzicht || null,
-        content: {}, // N5: custom-section values wired in once the form is config-driven
+        // Fold the section values into columns + the custom-section content bag (Fase N5).
+        ...buildPeriodicReviewContent(sections, content, review),
       });
       onClose();
     } catch (err) {
@@ -164,7 +151,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
         <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
       </div>
 
-      <PeriodicReviewContentFields periodType={periodType} value={content} onChange={handleContentChange} />
+      <ReviewSectionsFields kind="periodic" sections={sections} values={content} onChange={handleContentChange} />
 
       <ReviewTradesPanel
         label={t("reviewForm.tradesInPeriod", { count: tradesInPeriod.length })}

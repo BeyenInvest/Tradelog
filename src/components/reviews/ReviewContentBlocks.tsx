@@ -67,11 +67,11 @@ export function TakeawayQuote({ label, children }: { label: string; children: Re
 }
 
 /** The review's final word — given real visual weight (bordered card, clear label, ink-toned text) since it's the closing conclusion, not an afterthought. */
-export function OverallCommentBlock({ children }: { children: ReactNode }) {
+export function OverallCommentBlock({ children, label }: { children: ReactNode; label?: string }) {
   const { t } = useTranslation();
   return (
     <div className="rounded-xl p-5 border border-gold/25 bg-gold/[0.04]">
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold mb-2">{t("reviewContent.overallComment")}</p>
+      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold mb-2">{label ?? t("reviewContent.overallComment")}</p>
       <p className="font-body text-base leading-relaxed text-ink whitespace-pre-wrap">{children}</p>
     </div>
   );
