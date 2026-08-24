@@ -262,7 +262,13 @@ export function readSectionText(source: ReviewValueSource, section: Pick<ReviewS
 
 /** Read a list section's items (the built-in `acties` column, or a custom list in the content bag). */
 export function readSectionList(source: ReviewValueSource, section: Pick<ReviewSection, "key" | "builtin">): string[] {
-  if (section.builtin && section.key === "acties") return source.acties ?? [];
+  if (section.builtin) {
+    if (section.key === "acties") return source.acties ?? [];
+    // A built-in text column shown as a list (the editor locks this, but stay
+    // consistent with applyValues if it ever happens): split stored lines.
+    const v = (source as Record<string, unknown>)[section.key];
+    return typeof v === "string" && v ? v.split("\n") : [];
+  }
   const v = source.content?.[section.key];
   return Array.isArray(v) ? v : [];
 }

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { useReviewSectionsEditor, type ReviewSectionInput } from "@/hooks/useReviewSectionsEditor";
-import { allDefaultSections, reviewSectionLabel, slugifySectionKey } from "@/lib/reviewSections";
+import { allDefaultSections, builtinKeysFor, reviewSectionLabel, slugifySectionKey } from "@/lib/reviewSections";
 import type { ReviewKind, ReviewSectionInputType, ReviewSectionRow } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
@@ -107,6 +107,10 @@ export function ReviewSectionsEditor() {
                 key={s.id}
                 section={s}
                 editable={isOwn && !busy}
+                // A built-in section (verhalen/acties/…) keeps its intrinsic type —
+                // its value lives in a fixed column, so flipping text↔list would
+                // desync read from write. Custom sections choose freely.
+                typeLocked={builtinKeysFor(kind).has(s.section_key)}
                 isFirst={i === 0}
                 isLast={i === ownRows.length - 1}
                 onMove={(dir) => void run(() => editor.moveSection(s.id, dir))}
@@ -173,6 +177,7 @@ function DefaultPreview({ kind, canCustomize, onCustomize }: { kind: ReviewKind;
 function SectionRow({
   section,
   editable,
+  typeLocked,
   isFirst,
   isLast,
   onMove,
@@ -181,6 +186,7 @@ function SectionRow({
 }: {
   section: ReviewSectionRow;
   editable: boolean;
+  typeLocked: boolean;
   isFirst: boolean;
   isLast: boolean;
   onMove: (dir: "up" | "down") => void;
@@ -194,6 +200,7 @@ function SectionRow({
     return (
       <SectionForm
         initial={section}
+        typeLocked={typeLocked}
         submitLabel={t("methodology.save")}
         onCancel={() => setEditing(false)}
         onSubmit={async (input) => {
@@ -290,12 +297,14 @@ function AddSectionForm({ busy, usedKeys, onAdd }: { busy: boolean; usedKeys: Se
 function SectionForm({
   initial,
   usedKeys,
+  typeLocked,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial?: ReviewSectionRow;
   usedKeys?: Set<string>;
+  typeLocked?: boolean;
   submitLabel: string;
   onSubmit: (input: ReviewSectionInput) => Promise<void>;
   onCancel: () => void;
@@ -345,7 +354,8 @@ function SectionForm({
         <select
           value={inputType}
           onChange={(e) => setInputType(e.target.value as ReviewSectionInputType)}
-          className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold self-start"
+          disabled={typeLocked}
+          className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold self-start disabled:opacity-50"
         >
           {INPUT_TYPES.map((it) => (
             <option key={it} value={it}>
