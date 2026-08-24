@@ -526,8 +526,12 @@
     "colFase": "Fase",
     "colConcept": "Concept",
     "colEntry": "Entry",
+    "colDirection": "Richting",
+    "colR": "R",
     "colOutcome": "Outcome",
     "colResult": "Resultaat",
+    "sortDate": "Datum",
+    "sortResult": "Resultaat",
     "closeTrade": "Sluiten"
   },
   "calendar": {
