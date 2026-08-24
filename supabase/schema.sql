@@ -286,10 +286,12 @@ create table methodology_fields (
   fase_id uuid references methodology_fases(id) on delete cascade, -- legacy/transitional; fase is now a field (see 0023), null on the new flat model
   field_key text not null,             -- stable key inside the trades.custom jsonb bag
   label text not null,
+  label_key text,                      -- catalogue block key for render-time label translation; null = custom field (see 0047)
   field_type text not null check (field_type in ('boolean', 'enum', 'text', 'number', 'date')),
   options jsonb,                       -- enum: ordered allowed values, e.g. '["Inner","Outer"]'
   is_computed boolean not null default false, -- e.g. Fase 3 "Beide?" — derived, never stored in the bag
   group_label text,                    -- form section header (see 0022)
+  group_key text,                      -- catalogue group key, group_label's counterpart of label_key (see 0047)
   required boolean not null default false,    -- mandatory on input (see 0022)
   show_when_field_id uuid references methodology_fields(id) on delete set null, -- conditional visibility (see 0022)
   show_when_values jsonb,              -- values of show_when_field_id that reveal this field
@@ -558,6 +560,30 @@ create trigger trg_profiles_updated_at before update on profiles
 create trigger trg_methodologies_updated_at before update on methodologies
   for each row execute function set_updated_at();
 
+-- ---------- render-time label translation: renaming un-freezes (see 0047) ----------
+-- Rewriting the free text without explicitly supplying a new key clears the key,
+-- so the user's own wording wins over the catalogue translation from then on.
+create or replace function methodology_fields_clear_stale_keys()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.label is distinct from old.label
+     and new.label_key is not distinct from old.label_key then
+    new.label_key := null;
+  end if;
+  if new.group_label is distinct from old.group_label
+     and new.group_key is not distinct from old.group_key then
+    new.group_key := null;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_methodology_fields_clear_stale_keys
+  before update on methodology_fields
+  for each row execute function methodology_fields_clear_stale_keys();
+
 -- ---------- timezone-aware trading session mapping (see 0019) ----------
 -- (cc, date, tz) -> session, anchored to the reference zone the methodology was
 -- authored in (Europe/Brussels). STABLE (depends on the tz database), so it can't
@@ -752,10 +778,10 @@ begin
   end if;
 
   insert into methodology_fields
-    (methodology_id, fase_id, field_key, label, field_type, options, is_computed,
-     group_label, required, show_when_values, sort_order)
-  select new_id, null, field_key, label, field_type, options, is_computed,
-         group_label, required, show_when_values, sort_order
+    (methodology_id, fase_id, field_key, label, label_key, field_type, options, is_computed,
+     group_label, group_key, required, show_when_values, sort_order)
+  select new_id, null, field_key, label, label_key, field_type, options, is_computed,
+         group_label, group_key, required, show_when_values, sort_order
   from methodology_fields where methodology_id = source_id;
 
   update methodology_fields nf

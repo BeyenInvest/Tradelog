@@ -3,6 +3,7 @@ import type { MethodologyField, Trade } from "./types";
 import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 import { dynamicMethodologyFields } from "./methodologyFields";
+import { fieldLabel } from "./fieldBlocks";
 import { numberBucketer } from "./numberBuckets";
 
 export interface DimensionConfig {
@@ -82,13 +83,16 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
  * cyclus 10; on any other journal the same keys are ordinary user fields (see
  * dynamicMethodologyFields) and do get a breakdown.
  */
-export function customFieldDimensions(fields: MethodologyField[], trades: Trade[] = []): DimensionConfig[] {
+export function customFieldDimensions(fields: MethodologyField[], trades: Trade[] = [], t?: TFunction): DimensionConfig[] {
   const dims: DimensionConfig[] = [];
+  // UI callers pass `t` so a catalogue-backed field's title follows the UI
+  // language (0047); without it the stored (creation-language) label is used.
+  const labelOf = (f: MethodologyField) => (t ? fieldLabel(t, f) : f.label);
   for (const f of dynamicMethodologyFields(fields)) {
     if (f.field_type === "enum" || f.field_type === "boolean") {
       dims.push({
         id: `custom:${f.field_key}`,
-        label: f.label,
+        label: labelOf(f),
         sortOrder: f.field_type === "enum" ? f.options ?? undefined : undefined,
         labelFn: f.field_type === "boolean" ? boolLabel : undefined,
         keyFn: (t: Trade) => {
@@ -106,7 +110,7 @@ export function customFieldDimensions(fields: MethodologyField[], trades: Trade[
       if (!bucketer) continue; // no numeric data yet → no dimension to show
       dims.push({
         id: `custom:${f.field_key}`,
-        label: f.label,
+        label: labelOf(f),
         sortOrder: bucketer.order,
         keyFn: (t: Trade) => {
           const raw = t.custom?.[f.field_key];

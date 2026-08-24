@@ -314,10 +314,12 @@ function CustomFieldAdd({ existingKeys, onAdd, onClose }: {
     onAdd({
       field_key: key,
       label: label.trim(),
+      label_key: null, // custom field — the free-text label is the only source (no render-time translation)
       field_type: type,
       options: type === "enum" ? parseFieldOptions(optionsRaw) : null,
       required: false,
       group_label: null,
+      group_key: null,
       show_when_field_id: null,
       show_when_values: null,
     });

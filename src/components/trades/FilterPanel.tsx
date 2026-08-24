@@ -6,6 +6,7 @@ import { EnumSelect } from "@/components/ui/EnumSelect";
 import { PAIRS, DIRECTIONS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/constants";
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { dynamicMethodologyFields } from "@/lib/methodologyFields";
+import { fieldLabel } from "@/lib/fieldBlocks";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 
@@ -163,7 +164,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
               const current = value.custom?.[f.field_key];
               if (f.field_type === "boolean") {
                 return (
-                  <Field key={f.id} label={f.label}>
+                  <Field key={f.id} label={fieldLabel(t, f)}>
                     <EnumSelect
                       options={NIEUWS_OPTIONS}
                       value={current === undefined ? "" : current ? "Ja" : "Nee"}
@@ -176,7 +177,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 );
               }
               return (
-                <Field key={f.id} label={f.label}>
+                <Field key={f.id} label={fieldLabel(t, f)}>
                   <EnumSelect
                     options={f.options ?? []}
                     value={typeof current === "string" ? current : ""}

@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { ChevronUp, ChevronDown, Lock, Pencil, Trash2, X, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
 import { isLockedLegacyField, parseFieldOptions, slugifyFieldKey } from "@/lib/methodologyFields";
+import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
@@ -116,10 +118,10 @@ function typeLabel(t: (k: string) => string, type: MethodologyField["field_type"
   return t(`methodology.type_${type}`);
 }
 
-function conditionSummary(t: (k: string) => string, f: MethodologyField, allFields: MethodologyField[]): string {
+function conditionSummary(t: TFunction, f: MethodologyField, allFields: MethodologyField[]): string {
   if (!f.show_when_field_id || !f.show_when_values || f.show_when_values.length === 0) return t("methodology.always");
   const parent = allFields.find((p) => p.id === f.show_when_field_id);
-  const parentLabel = parent?.label ?? "?";
+  const parentLabel = parent ? fieldLabel(t, parent) : "?";
   return `${parentLabel} = ${f.show_when_values.join(", ")}`;
 }
 
@@ -156,12 +158,18 @@ function FieldRow({
         onCancel={() => setEditing(false)}
         onSubmit={async (input) => {
           // field_key is immutable on an existing field (it keys trades.custom) — omit it from the patch.
+          // label/group_label go in only when they actually changed vs what the user
+          // sees: the form edits the *translated* text (0047), and writing it back
+          // unchanged would re-freeze the translation (the DB trigger clears
+          // label_key/group_key on any rewrite of the free text).
+          const displayLabel = fieldLabel(t, field);
+          const displayGroup = fieldGroupLabel(t, field);
           await onSave({
-            label: input.label,
+            ...(input.label !== displayLabel ? { label: input.label } : {}),
             field_type: input.field_type,
             options: input.options,
             required: input.required,
-            group_label: input.group_label,
+            ...((input.group_label ?? null) !== displayGroup ? { group_label: input.group_label } : {}),
             show_when_field_id: input.show_when_field_id,
             show_when_values: input.show_when_values,
           });
@@ -175,7 +183,7 @@ function FieldRow({
     <div className="flex items-center gap-3 py-2.5">
       <div className="min-w-0 flex-1">
         <p className="font-body text-sm text-ink truncate">
-          {field.label}
+          {fieldLabel(t, field)}
           {field.required && <span className="ml-1.5 text-loss">*</span>}
           {field.is_computed && (
             <span className="ml-2 font-mono text-[10px] uppercase tracking-wide text-muted">
@@ -300,11 +308,14 @@ function FieldForm({
 }) {
   const { t } = useTranslation();
   const isNew = !initial;
-  const [label, setLabel] = useState(initial?.label ?? "");
+  // Edit the translated display text (0047), not the frozen stored text — the
+  // caller (FieldRow) compares against the same display values and only persists
+  // a real change, so the translation never gets re-frozen by a no-op save.
+  const [label, setLabel] = useState(initial ? fieldLabel(t, initial) : "");
   const [fieldType, setFieldType] = useState<MethodologyField["field_type"]>(initial?.field_type ?? "boolean");
   const [optionsRaw, setOptionsRaw] = useState((initial?.options ?? []).join(", "));
   const [required, setRequired] = useState(initial?.required ?? false);
-  const [group, setGroup] = useState(initial?.group_label ?? "");
+  const [group, setGroup] = useState(initial ? fieldGroupLabel(t, initial) ?? "" : "");
   const [showWhenFieldId, setShowWhenFieldId] = useState<string | null>(initial?.show_when_field_id ?? null);
   const [showWhenValues, setShowWhenValues] = useState<string[]>(initial?.show_when_values ?? []);
   const [saving, setSaving] = useState(false);
@@ -339,10 +350,12 @@ function FieldForm({
       await onSubmit({
         field_key: initial?.field_key ?? slugifyFieldKey(label),
         label: label.trim(),
+        label_key: null, // hand-made/edited here — free text is the source; edits keep keys via the FieldRow patch, the DB trigger clears them on a real rename
         field_type: fieldType,
         options: fieldType === "enum" ? parseFieldOptions(optionsRaw) : null,
         required,
         group_label: group.trim() || null,
+        group_key: null,
         show_when_field_id: showWhenFieldId,
         show_when_values: showWhenFieldId ? showWhenValues : null,
       });
@@ -434,14 +447,14 @@ function FieldForm({
               <option value="">{t("methodology.conditionAlways")}</option>
               {parentCandidates.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {t("methodology.conditionWhen", { field: f.label })}
+                  {t("methodology.conditionWhen", { field: fieldLabel(t, f) })}
                 </option>
               ))}
             </select>
             {parent && (
               <div className="flex flex-col gap-1.5 mt-1">
                 <span className="font-mono text-[10px] text-muted">
-                  {t("methodology.conditionValues", { field: parent.label })}
+                  {t("methodology.conditionValues", { field: fieldLabel(t, parent) })}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {(parent.options ?? []).map((opt) => {

@@ -276,6 +276,14 @@ export interface MethodologyField {
   /** Stable key used inside the trades.custom jsonb bag. */
   field_key: string;
   label: string;
+  /**
+   * Catalogue block key (fieldBlocks.ts) this field was created from — drives
+   * render-time label translation via t(`blocks.items.${label_key}.label`), so the
+   * label follows the UI language instead of freezing in its creation language
+   * (Fase G-rest A3, 0047). Null for custom fields; a DB trigger clears it when
+   * the free-text label is renamed, so the user's own wording always wins.
+   */
+  label_key: string | null;
   field_type: "boolean" | "enum" | "text" | "number" | "date";
   /** Ordered allowed values for an enum field; null for the other types. */
   options: string[] | null;
@@ -283,6 +291,8 @@ export interface MethodologyField {
   is_computed: boolean;
   /** Form section header this field groups under; null = ungrouped. See 0022. */
   group_label: string | null;
+  /** Catalogue group key ('setup' | 'markt' | 'mindset') for render-time translation of the group header — same mechanics and trigger as label_key (0047). */
+  group_key: string | null;
   /** Mandatory on input. See 0022. */
   required: boolean;
   /** Conditional visibility: show this field only when the referenced field's value is in show_when_values. null = always shown. See 0022. */
@@ -322,9 +332,12 @@ export interface ShareLink {
 export interface SharedMethodologyField {
   field_key: string;
   label: string;
+  /** Render-time translation key (0047) — undefined at runtime until the owner's DB ran that migration; the fieldLabel() fallback covers both. */
+  label_key: string | null;
   field_type: MethodologyField["field_type"];
   options: string[] | null;
   group_label: string | null;
+  group_key: string | null;
   is_computed: boolean;
   sort_order: number;
 }

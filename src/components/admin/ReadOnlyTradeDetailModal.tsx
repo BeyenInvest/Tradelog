@@ -8,6 +8,7 @@ import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
 import { rMultiple } from "@/lib/stats";
 import { resolveScreenshotUrl } from "@/lib/storage/screenshots";
 import { useResultUnit } from "@/hooks/useResultUnit";
+import { fieldLabel } from "@/lib/fieldBlocks";
 import type { SharedMethodologyField, Trade } from "@/lib/types";
 
 const SCREENSHOT_FIELDS: { key: keyof Pick<Trade, "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot">; label: string }[] = [
@@ -68,7 +69,8 @@ export function ReadOnlyTradeDetailModal({
         value = new Date(String(raw) + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "numeric" });
       else value = String(raw);
       // field_key is the unique key (labels are free owner text and may repeat).
-      return { key: f.field_key, label: f.label, value };
+      // fieldLabel: catalogue-backed labels follow the VIEWER's language (0047).
+      return { key: f.field_key, label: fieldLabel(t, f), value };
     });
 
   // A screenshot value is either an external URL or a private-bucket path (Fase K);

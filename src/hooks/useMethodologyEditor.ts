@@ -11,10 +11,14 @@ import type { Methodology, MethodologyField } from "@/lib/types";
 export interface FieldInput {
   field_key: string;
   label: string;
+  /** Catalogue block key for render-time label translation (0047) — set by blockToFieldInput, null for custom fields. */
+  label_key: string | null;
   field_type: MethodologyField["field_type"];
   options: string[] | null;
   required: boolean;
   group_label: string | null;
+  /** Catalogue group key, the group_label counterpart of label_key (0047). */
+  group_key: string | null;
   /** Show this field only when show_when_field_id's value is in show_when_values; null = always. */
   show_when_field_id: string | null;
   show_when_values: string[] | null;

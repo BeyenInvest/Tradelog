@@ -93,13 +93,41 @@ export function blockToFieldInput(t: TFunction, block: FieldBlock): FieldInput {
   return {
     field_key: block.key,
     label: blockLabel(t, block.key),
+    label_key: block.key,
     field_type: block.field_type,
     options: block.hasOptions ? blockOptions(t, block) : null,
     required: false,
     group_label: blockGroupLabel(t, block.group),
+    group_key: block.group,
     show_when_field_id: null,
     show_when_values: null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Render-time labels for STORED fields (Fase G-rest A3, migration 0047).
+// ---------------------------------------------------------------------------
+
+/**
+ * Display label of a stored field. A field created from a catalogue block carries
+ * `label_key` and re-translates on every render, so its label follows the UI
+ * language instead of staying frozen in whatever language it was created in. A
+ * custom field (label_key null) — or a key that later left the catalogue/i18n —
+ * falls back to the free-text `label`. Renaming a field clears label_key in the
+ * DB (trigger, 0047), so a user's own wording always wins over the translation.
+ */
+export function fieldLabel(t: TFunction, f: Pick<MethodologyField, "label" | "label_key">): string {
+  if (!f.label_key) return f.label;
+  return t(`blocks.items.${f.label_key}.label`, { defaultValue: f.label });
+}
+
+/** Display group header of a stored field — the group_label counterpart of fieldLabel(). */
+export function fieldGroupLabel(
+  t: TFunction,
+  f: Pick<MethodologyField, "group_label" | "group_key">
+): string | null {
+  if (!f.group_key) return f.group_label;
+  return t(`blocks.groups.${f.group_key}`, { defaultValue: f.group_label ?? "" }) || null;
 }
 
 // ---------------------------------------------------------------------------

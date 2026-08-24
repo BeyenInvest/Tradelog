@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Check, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import type { TradeFormValues } from "@/lib/validation";
 import type { MethodologyField } from "@/lib/types";
@@ -11,6 +12,7 @@ import {
   parseFieldOptions,
   slugifyFieldKey,
 } from "@/lib/methodologyFields";
+import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
@@ -18,11 +20,11 @@ import { Field } from "./Field";
 
 const FIELD_TYPES: MethodologyField["field_type"][] = ["boolean", "enum", "text", "number", "date"];
 
-/** Consecutive fields sharing a group_label render under one subheading (fields come sort-ordered). */
-function groupFields(fields: MethodologyField[]): { label: string | null; fields: MethodologyField[] }[] {
+/** Consecutive fields sharing a group header render under one subheading (fields come sort-ordered; header translated at render time, 0047). */
+function groupFields(fields: MethodologyField[], t: TFunction): { label: string | null; fields: MethodologyField[] }[] {
   const groups: { label: string | null; fields: MethodologyField[] }[] = [];
   for (const f of fields) {
-    const g = f.group_label ?? null;
+    const g = fieldGroupLabel(t, f);
     const last = groups.at(-1);
     if (last && last.label === g) last.fields.push(f);
     else groups.push({ label: g, fields: [f] });
@@ -137,7 +139,7 @@ export function CustomFieldsSection() {
           onRenameOption={handleRenameOption}
         />
       )}
-      {groupFields(visibleFields).map((group, gi) => (
+      {groupFields(visibleFields, t).map((group, gi) => (
         <div key={group.label ?? `g${gi}`} className="flex flex-col gap-2">
           {group.label && (
             <p className="font-mono text-[11px] uppercase tracking-wide text-muted">{group.label}</p>
@@ -146,7 +148,7 @@ export function CustomFieldsSection() {
             {group.fields.map((f) => (
               <Field
                 key={f.id}
-                label={f.label}
+                label={fieldLabel(t, f)}
                 required={f.required}
                 error={(errors.custom as Record<string, { message?: string }> | undefined)?.[f.field_key]?.message}
               >
@@ -202,7 +204,11 @@ function ManagerRow({
 }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"idle" | "edit" | "confirmDelete">("idle");
-  const [label, setLabel] = useState(field.label);
+  // Edit the label the user actually sees (translated for a catalogue field, 0047),
+  // not the frozen stored text — and only persist it when it really changed, or a
+  // no-op save would re-freeze the translation in the current language.
+  const displayLabel = fieldLabel(t, field);
+  const [label, setLabel] = useState(displayLabel);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -211,7 +217,7 @@ function ManagerRow({
 
   function toIdle() {
     setMode("idle");
-    setLabel(field.label);
+    setLabel(displayLabel);
     setError(null);
     setNotice(null);
   }
@@ -259,7 +265,7 @@ function ManagerRow({
             disabled={label.trim().length === 0 || busy}
             onClick={() =>
               void run(async () => {
-                if (label.trim() !== field.label) await onUpdate(field, { label: label.trim() });
+                if (label.trim() !== displayLabel) await onUpdate(field, { label: label.trim() });
                 setMode("idle");
                 setNotice(null);
               })
@@ -288,7 +294,7 @@ function ManagerRow({
   return (
     <div className="flex items-center gap-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="font-body text-sm text-ink truncate">{field.label}</p>
+        <p className="font-body text-sm text-ink truncate">{displayLabel}</p>
         <p className="font-mono text-[11px] mt-0.5 text-muted truncate">
           {field.field_key} · {t(`methodology.type_${field.field_type}`)}
           {isEnum && field.options?.length ? ` (${field.options.join(", ")})` : ""}
@@ -299,7 +305,10 @@ function ManagerRow({
           type="button"
           aria-label={t("methodology.edit")}
           title={t("methodology.edit")}
-          onClick={() => setMode("edit")}
+          onClick={() => {
+            setLabel(displayLabel); // re-seed: the display label may have re-translated since mount
+            setMode("edit");
+          }}
           className="p-1.5 rounded-md hover:bg-ink/5 hover:text-ink"
         >
           <Pencil size={14} />
@@ -525,7 +534,7 @@ function ConfirmDeleteRow({
   return (
     <div className="flex flex-col gap-2 py-2.5">
       <p className="font-body text-sm text-ink">
-        {t("tradeForm.deleteFieldConfirm", { label: field.label })}
+        {t("tradeForm.deleteFieldConfirm", { label: fieldLabel(t, field) })}
       </p>
       <p className="font-mono text-[11px] text-muted">{t("tradeForm.deleteFieldNote")}</p>
       {error && <p className="font-mono text-[11px] text-loss">{error}</p>}

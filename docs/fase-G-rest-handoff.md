@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | A1 | **Branch committen** (`fase-g-preset-builder`) | git (elk) | nee | Owner moet 't vragen; daarna evt. mergen naar main bij launch. |
 | A2 | **Opties reviseren + finetunen** — startset-samenstelling, bouwsteen-catalogus, enum-optiewaarden (`blocks.items.*.options`) | **Opus** | nee | Content-pass, owner-verzoek expliciet. Puur i18n/data in `fieldBlocks.ts` + locales. |
-| A3 | **Echte label-vertaalbaarheid** — `label_key`-kolom op `methodology_fields` + render-time-vertaling (fallback naar vrije `label` voor custom velden) | **Fable** | **ja (0047)** | Lost NL-lek in EN-UI structureel op; nu frozen-at-creation. |
+| A3 | ✅ **Echte label-vertaalbaarheid** (2026-08-23, uncommit op branch) | **Fable** | **ja (0047)** | `label_key` + `group_key` op `methodology_fields`; render-time `fieldLabel()`/`fieldGroupLabel()` (fieldBlocks.ts) op álle renderplekken incl. share-view/admin; DB-trigger wist de key bij hernoemen (vrije tekst wint); backfill voor oude preset-forks; fork_methodology + shared_methodology_fields kopiëren/exposen de keys mee. 0047 GEDRAAID op prod + read-only geverifieerd (2026-08-24: kolommen+trigger aanwezig, 141/206 velden label_key, 147 group_key, restant = legacy-WPM/niet-catalogus zoals bedoeld, functies bijgewerkt). |
 | A4 | **Gegroepeerd overzicht** (mockup-scherm 02) als aparte "wissel journal"-view | **Opus** | nee | Nog niet gebouwd; nice-to-have. |
 
 ### B. Rest van G-rest (masterplan §"Fase G-rest")
