@@ -101,6 +101,7 @@ export function ReviewForm({ review, trades, onSubmit, onAddTrade, onClose }: Re
         acties: content.acties.map((a) => a.trim()).filter(Boolean),
         takeaway: content.takeaway || null,
         overall_comment: content.overall_comment || null,
+        content: {}, // N5: custom-section values wired in once the form is config-driven
       });
       onClose();
     } catch (err) {

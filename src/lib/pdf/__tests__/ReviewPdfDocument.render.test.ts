@@ -27,7 +27,7 @@ describe("ReviewPdfDocument render smoke", () => {
       id: "wr", user_id: "u", methodology_id: null, week_nummer: 32, jaar: 2026, titel: "Test",
       verhalen: "Narratief", technisch: "Tekst", mentaal_owner: "Owner voice", mentaal_trader: "Trader voice",
       acties: ["Backtesting: ok", "Journaling: niet ok", "Doel: sneller"],
-      takeaway: "Geduld loont", overall_comment: "Slot",
+      takeaway: "Geduld loont", overall_comment: "Slot", content: {},
       created_at: "2026-08-01T00:00:00Z", updated_at: "2026-08-01T00:00:00Z",
     };
     const taken = [

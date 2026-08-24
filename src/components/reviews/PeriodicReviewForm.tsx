@@ -105,6 +105,7 @@ export function PeriodicReviewForm({ periodType, review, trades, onSubmit, onAdd
         takeaway: content.takeaway || null,
         overall_comment: content.overall_comment || null,
         periode_overzicht: content.periode_overzicht || null,
+        content: {}, // N5: custom-section values wired in once the form is config-driven
       });
       onClose();
     } catch (err) {

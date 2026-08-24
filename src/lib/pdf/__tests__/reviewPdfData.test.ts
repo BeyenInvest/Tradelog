@@ -21,6 +21,7 @@ const baseWeekly: WeeklyReview = {
   acties: ["Backtesting: ok", "Journaling: niet ok", "Focus op A-setups"],
   takeaway: "Geduld loont.",
   overall_comment: null,
+  content: {},
   created_at: "2026-08-01T00:00:00Z",
   updated_at: "2026-08-01T00:00:00Z",
 };
@@ -103,6 +104,7 @@ describe("buildReviewPdfData", () => {
       takeaway: "Conclusie tekst.",
       overall_comment: "Slotwoord.",
       periode_overzicht: null,
+      content: {},
       created_at: "2026-08-01T00:00:00Z",
       updated_at: "2026-08-01T00:00:00Z",
     };
