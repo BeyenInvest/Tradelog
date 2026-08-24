@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { TriangleAlert } from "lucide-react";
 import type { TradeFormValues } from "@/lib/validation";
-import { OUTCOMES, TRADE_EVALUATIONS } from "@/lib/constants";
+import { OUTCOMES, SANITY_RESULT_PCT, TRADE_EVALUATIONS } from "@/lib/constants";
+import { deriveOutcome } from "@/lib/import/mapToTrade";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { Field } from "./Field";
@@ -25,6 +28,7 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
     register,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
   const datumOpen = watch("datum_open");
@@ -33,6 +37,27 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
   // A still-running trade is a live-Journal concept only (a backtest logs history,
   // which is by definition already closed) — gated on the same flag as "Missed trade".
   const isOpen = allowMissedTrade && watch("is_open");
+
+  const outcome = watch("outcome");
+  const resultRaw = watch("resultaat_pct");
+  const resultNum = Number(resultRaw);
+  const hasResult = resultRaw != null && String(resultRaw) !== "" && Number.isFinite(resultNum);
+
+  // Invoerfrictie (Fase S1): let the outcome follow the sign of the result — the
+  // same pattern quick-log uses. Deliberately non-fighting: it only fixes an
+  // outright contradiction (a Loss typed as +, a Win typed as −) or fills an
+  // empty outcome, and never overrides a deliberate BE. This removes the two
+  // sign-guard validation errors before they can ever fire.
+  useEffect(() => {
+    if (isOpen || !hasResult) return;
+    if (outcome === "Loss" && resultNum > 0) setValue("outcome", "Win", { shouldValidate: true });
+    else if (outcome === "Win" && resultNum < 0) setValue("outcome", "Loss", { shouldValidate: true });
+    else if (outcome == null) setValue("outcome", deriveOutcome(resultNum), { shouldValidate: true });
+  }, [isOpen, hasResult, outcome, resultNum, setValue]);
+
+  // Soft sanity check: a result past ±20% is almost always a mis-typed decimal.
+  // Non-blocking — just a hint next to the field, saving is never gated on it.
+  const sanityWarning = !isOpen && hasResult && Math.abs(resultNum) > SANITY_RESULT_PCT;
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,6 +126,12 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
             <input type="text" disabled value={duur ?? ""} className="input opacity-60" />
           </Field>
         </div>
+      )}
+
+      {sanityWarning && (
+        <p className="flex items-center gap-1.5 text-xs text-gold -mt-1">
+          <TriangleAlert size={13} /> {t("tradeForm.sanityWarning", { pct: SANITY_RESULT_PCT })}
+        </p>
       )}
     </div>
   );
