@@ -38,7 +38,8 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   { key: "timeframe", group: "setup", field_type: "enum", hasOptions: true },
   { key: "market_condition", group: "setup", field_type: "enum", hasOptions: true },
   { key: "quality", group: "setup", field_type: "enum", hasOptions: true },
-  { key: "direction_note", group: "setup", field_type: "enum", hasOptions: true },
+  // NB: no "direction" block — Long/Short is a universal core field (trades.direction,
+  //   direction_enum) with its own filter; a custom block would split direction data.
   // — ICT / SMC (smart-money concepts) — a distinct vocabulary the generic setup
   //   blocks don't capture; pre-ticked by the ict_smc strategy startset, but each
   //   block is also free to add to any journal by hand.
@@ -160,15 +161,15 @@ export interface Startset {
 /** Ordered for the grouped overview: grouped by asset, then scalp→day→swing. */
 export const STARTSETS: Startset[] = [
   { key: "forex_scalp", asset: "forex", style: "scalp", blockKeys: ["setup", "timeframe", "session", "news", "emotion"] },
-  { key: "forex_day", asset: "forex", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "session", "news", "mistake", "emotion"] },
-  { key: "forex_swing", asset: "forex", style: "swing", blockKeys: ["setup", "timeframe", "session", "market_regime", "targets", "emotion"] },
+  { key: "forex_day", asset: "forex", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "session", "news", "mistake", "emotion", "followed_plan"] },
+  { key: "forex_swing", asset: "forex", style: "swing", blockKeys: ["setup", "timeframe", "session", "market_regime", "targets", "emotion", "followed_plan"] },
   { key: "futures_scalp", asset: "futures", style: "scalp", blockKeys: ["setup", "timeframe", "contracts", "contract_type", "hours", "emotion"] },
-  { key: "futures_day", asset: "futures", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "contracts", "contract_type", "hours", "session", "mistake", "emotion"] },
-  { key: "stock_day", asset: "stock", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "sector", "market_cap", "catalyst", "mistake", "emotion"] },
-  { key: "stock_swing", asset: "stock", style: "swing", blockKeys: ["setup", "timeframe", "sector", "market_cap", "catalyst", "market_regime", "targets", "emotion"] },
+  { key: "futures_day", asset: "futures", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "contracts", "contract_type", "hours", "session", "mistake", "emotion", "followed_plan"] },
+  { key: "stock_day", asset: "stock", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "sector", "market_cap", "catalyst", "mistake", "emotion", "followed_plan"] },
+  { key: "stock_swing", asset: "stock", style: "swing", blockKeys: ["setup", "timeframe", "sector", "market_cap", "catalyst", "market_regime", "targets", "emotion", "followed_plan"] },
   { key: "crypto_scalp", asset: "crypto", style: "scalp", blockKeys: ["setup", "timeframe", "market_type", "leverage", "emotion"] },
-  { key: "crypto_day", asset: "crypto", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "market_type", "leverage", "mistake", "emotion"] },
-  { key: "crypto_swing", asset: "crypto", style: "swing", blockKeys: ["setup", "timeframe", "market_type", "leverage", "market_regime", "targets", "emotion"] },
+  { key: "crypto_day", asset: "crypto", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "market_type", "leverage", "mistake", "emotion", "followed_plan"] },
+  { key: "crypto_swing", asset: "crypto", style: "swing", blockKeys: ["setup", "timeframe", "market_type", "leverage", "market_regime", "targets", "emotion", "followed_plan"] },
 ];
 
 /**
@@ -187,7 +188,7 @@ export interface StrategyStartset {
 export const STRATEGY_STARTSETS: StrategyStartset[] = [
   {
     key: "ict_smc",
-    blockKeys: ["htf_bias", "market_structure", "ict_setup", "entry_model", "pd_array", "killzone", "timeframe", "emotion"],
+    blockKeys: ["htf_bias", "market_structure", "liquidity_target", "ict_setup", "entry_model", "pd_array", "displacement", "killzone", "timeframe", "emotion", "followed_plan"],
   },
 ];
 
