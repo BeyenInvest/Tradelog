@@ -39,8 +39,16 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   { key: "market_condition", group: "setup", field_type: "enum", hasOptions: true },
   { key: "quality", group: "setup", field_type: "enum", hasOptions: true },
   { key: "direction_note", group: "setup", field_type: "enum", hasOptions: true },
+  // — ICT / SMC (smart-money concepts) — a distinct vocabulary the generic setup
+  //   blocks don't capture; pre-ticked by the ict_smc strategy startset, but each
+  //   block is also free to add to any journal by hand.
+  { key: "ict_setup", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "market_structure", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "pd_array", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "entry_model", group: "setup", field_type: "enum", hasOptions: true },
   // — Market —
   { key: "session", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "htf_bias", group: "markt", field_type: "enum", hasOptions: true },
   { key: "news", group: "markt", field_type: "boolean", hasOptions: false },
   { key: "sector", group: "markt", field_type: "enum", hasOptions: true },
   { key: "market_cap", group: "markt", field_type: "enum", hasOptions: true },
@@ -158,6 +166,39 @@ export const STARTSETS: Startset[] = [
   { key: "crypto_day", asset: "crypto", style: "day", blockKeys: ["setup", "timeframe", "market_condition", "quality", "market_type", "leverage", "mistake", "emotion"] },
   { key: "crypto_swing", asset: "crypto", style: "swing", blockKeys: ["setup", "timeframe", "market_type", "leverage", "market_regime", "targets", "emotion"] },
 ];
+
+/**
+ * Strategy startsets — a methodology axis that cuts across asset × style (an ICT/SMC
+ * trader runs the same concepts on forex, futures or crypto). Picked as a single
+ * chip in the builder, independent of the asset grid; a strategy journal is created
+ * without an asset_class (the user curates its own instruments). Kept as its own
+ * list + type so the asset×style grid stays a clean 2-D thing.
+ */
+export interface StrategyStartset {
+  /** Stable key, also the i18n key stem under startsets.strategies / .strategyHints. */
+  key: string;
+  blockKeys: string[];
+}
+
+export const STRATEGY_STARTSETS: StrategyStartset[] = [
+  {
+    key: "ict_smc",
+    blockKeys: ["htf_bias", "market_structure", "ict_setup", "entry_model", "pd_array", "timeframe", "session", "emotion"],
+  },
+];
+
+export const STRATEGY_ORDER: string[] = STRATEGY_STARTSETS.map((s) => s.key);
+
+export function findStrategyStartset(key: string): StrategyStartset | undefined {
+  return STRATEGY_STARTSETS.find((s) => s.key === key);
+}
+
+export function strategyLabel(t: TFunction, key: string): string {
+  return t(`startsets.strategies.${key}`);
+}
+export function strategyHint(t: TFunction, key: string): string {
+  return t(`startsets.strategyHints.${key}`);
+}
 
 export const ASSET_ORDER: AssetClass[] = ["forex", "futures", "stock", "crypto"];
 export const STYLE_ORDER: TradingStyle[] = ["scalp", "day", "swing"];

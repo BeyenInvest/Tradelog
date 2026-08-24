@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, ChevronUp, LayoutTemplate, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import {
-  ASSET_ORDER, STYLE_ORDER, STARTSETS,
+  ASSET_ORDER, STYLE_ORDER, STARTSETS, STRATEGY_ORDER,
   blocksInGroup, blockGroupLabel, blockLabel, blockToFieldInput,
-  getBlock, findStartset, assetLabel, styleLabel, styleHint, assetInstrumentConfig,
+  getBlock, findStartset, findStrategyStartset, assetLabel, styleLabel, styleHint,
+  strategyLabel, strategyHint, assetInstrumentConfig,
   BLOCK_GROUP_ORDER, type AssetClass, type TradingStyle,
 } from "@/lib/fieldBlocks";
 import { slugifyFieldKey, parseFieldOptions } from "@/lib/methodologyFields";
@@ -34,6 +35,7 @@ export function JournalBuilder({
 
   const [asset, setAsset] = useState<AssetClass | null>(null);
   const [style, setStyle] = useState<TradingStyle | null>(null);
+  const [strategy, setStrategy] = useState<string | null>(null);
   const [blank, setBlank] = useState(false);
   const [fields, setFields] = useState<FieldInput[]>([]);
   const [name, setName] = useState("");
@@ -41,27 +43,44 @@ export function JournalBuilder({
 
   const addedKeys = useMemo(() => new Set(fields.map((f) => f.field_key)), [fields]);
 
+  function stageBlocks(blockKeys: string[]) {
+    setFields(blockKeys.map((k) => getBlock(k)!).filter(Boolean).map((b) => blockToFieldInput(t, b)));
+  }
+
   /** Apply a starter set: replace staged fields with its blocks, set name + asset. */
   function applyStartset(a: AssetClass, s: TradingStyle) {
     const set = findStartset(a, s);
     if (!set) return;
     setBlank(false);
+    setStrategy(null);
     setAsset(a);
     setStyle(s);
-    setFields(set.blockKeys.map((k) => getBlock(k)!).filter(Boolean).map((b) => blockToFieldInput(t, b)));
+    stageBlocks(set.blockKeys);
     setName(`${assetLabel(t, a)} — ${styleLabel(t, s)}`);
+  }
+
+  /** Apply a strategy starter set (ICT/SMC): cuts across asset × style, so it clears them. */
+  function chooseStrategy(key: string) {
+    const set = findStrategyStartset(key);
+    if (!set) return;
+    setBlank(false);
+    setAsset(null);
+    setStyle(null);
+    setStrategy(key);
+    stageBlocks(set.blockKeys);
+    setName(strategyLabel(t, key));
   }
 
   function chooseAsset(a: AssetClass) {
     if (style) applyStartset(a, style);
-    else { setAsset(a); setBlank(false); }
+    else { setAsset(a); setStrategy(null); setBlank(false); }
   }
   function chooseStyle(s: TradingStyle) {
     if (asset) applyStartset(asset, s);
-    else { setStyle(s); setBlank(false); }
+    else { setStyle(s); setStrategy(null); setBlank(false); }
   }
   function chooseBlank() {
-    setBlank(true); setAsset(null); setStyle(null); setFields([]);
+    setBlank(true); setAsset(null); setStyle(null); setStrategy(null); setFields([]);
     setName(t("presets.blankJournalName"));
   }
 
@@ -90,8 +109,12 @@ export function JournalBuilder({
     setFields((prev) => [...prev, input]);
   }
 
-  const started = blank || asset !== null || style !== null || fields.length > 0;
-  const startsetName = asset && style ? `${assetLabel(t, asset)} — ${styleLabel(t, style)}` : null;
+  const started = blank || asset !== null || style !== null || strategy !== null || fields.length > 0;
+  const appliedName = strategy
+    ? strategyLabel(t, strategy)
+    : asset && style
+      ? `${assetLabel(t, asset)} — ${styleLabel(t, style)}`
+      : null;
   const canStart = name.trim().length > 0 && !busy;
 
   async function start() {
@@ -133,9 +156,18 @@ export function JournalBuilder({
             ))}
           </div>
         )}
-        {startsetName && (
+        {/* Strategy startsets (ICT/SMC …) — a methodology axis across asset × style. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs text-faint px-1">{t("builder.orStrategy")}</span>
+          {STRATEGY_ORDER.map((k) => (
+            <Chip key={k} selected={strategy === k} onClick={() => chooseStrategy(k)}>
+              {strategyLabel(t, k)} <span className="text-muted text-xs">{strategyHint(t, k)}</span>
+            </Chip>
+          ))}
+        </div>
+        {appliedName && (
           <p className="font-mono text-xs rounded-lg px-3 py-2 bg-gold/10 border border-gold/25 text-ink">
-            {t("builder.applied", { name: startsetName, count: fields.length })}
+            {t("builder.applied", { name: appliedName, count: fields.length })}
           </p>
         )}
         {blank && (

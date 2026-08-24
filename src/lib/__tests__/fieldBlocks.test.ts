@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { TFunction } from "i18next";
 import {
-  FIELD_BLOCKS, STARTSETS, getBlock, ASSET_ORDER, STYLE_ORDER,
+  FIELD_BLOCKS, STARTSETS, STRATEGY_STARTSETS, getBlock, ASSET_ORDER, STYLE_ORDER,
   blockToFieldInput, fieldLabel, fieldGroupLabel,
 } from "../fieldBlocks";
 import nl from "@/i18n/locales/nl.json";
@@ -106,5 +106,28 @@ describe("startsets", () => {
     }
     for (const a of ASSET_ORDER) expect(st.assets[a], `asset ${a} missing in ${lang}`).toBeTruthy();
     for (const sty of STYLE_ORDER) expect(st.styles[sty], `style ${sty} missing in ${lang}`).toBeTruthy();
+  });
+});
+
+describe("strategy startsets (N1 — ICT/SMC)", () => {
+  it("every strategy set references only real blocks and has a unique key", () => {
+    const keys = STRATEGY_STARTSETS.map((s) => s.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const s of STRATEGY_STARTSETS) {
+      expect(s.blockKeys.length).toBeGreaterThan(0);
+      for (const k of s.blockKeys) {
+        expect(getBlock(k), `strategy ${s.key} references unknown block ${k}`).toBeDefined();
+      }
+    }
+  });
+
+  it.each(Object.keys(LOCALES))("every strategy set has a name + hint in %s", (lang) => {
+    const st = LOCALES[lang].startsets as {
+      strategies: Record<string, string>; strategyHints: Record<string, string>;
+    };
+    for (const s of STRATEGY_STARTSETS) {
+      expect(st.strategies[s.key], `startsets.strategies.${s.key} missing in ${lang}`).toBeTruthy();
+      expect(st.strategyHints[s.key], `startsets.strategyHints.${s.key} missing in ${lang}`).toBeTruthy();
+    }
   });
 });
