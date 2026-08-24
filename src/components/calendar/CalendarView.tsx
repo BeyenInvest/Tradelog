@@ -6,6 +6,7 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
+import { isoWeekOf } from "@/lib/isoWeek";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -16,8 +17,8 @@ interface PairChip {
 /** Same outcome→color mapping OutcomePill uses elsewhere, applied here to a small leading dot rather than the whole pill — a calmer look than a fully colored chip. */
 const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
 
-/** A leading auto-width week-total column + 7 day columns, shared by the weekday header and every week row so each week's running total sits at the front of its row. */
-const GRID_TEMPLATE = { gridTemplateColumns: "minmax(2.5rem, auto) repeat(7, minmax(0, 1fr))" };
+/** A leading week column (number + total) + 7 day columns, shared by the weekday header and every week row so each week's label + running total sit at the front of its row. */
+const GRID_TEMPLATE = { gridTemplateColumns: "minmax(3rem, auto) repeat(7, minmax(0, 1fr))" };
 
 /** Sign → text color token for a compact aggregate (day/week/month totals). */
 function totalColor(v: number): string {
@@ -335,7 +336,7 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
       <div className="max-w-2xl mx-auto w-full">
       <div className="grid gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted" style={GRID_TEMPLATE}>
-        <div className="text-center text-faint">{t("calendar.weekTotalHeader")}</div>
+        <div className="text-center text-faint">{t("calendar.weekColHeader")}</div>
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-center">
             {t(`weekdays.${d}`)}
@@ -349,16 +350,21 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
             week.reduce<number>((s, d) => s + (d != null ? realResultByDay.get(d) ?? 0 : 0), 0)
           );
           const hasResult = week.some((d) => d != null && realResultByDay.has(d));
+          // ISO week number of this row, read from its Monday (day-of-month
+          // 1 - startOffset + wi*7; may spill into the neighbouring month, which
+          // is exactly what the ISO week should reflect).
+          const monday = new Date(year, month, 1 - startOffset + wi * 7);
+          const mondayIso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+          const weekNum = isoWeekOf(mondayIso).week_nummer;
           return (
             <div key={wi} className="contents">
-              <div
-                className="flex items-center justify-center font-mono text-[11px]"
-                title={t("calendar.weekTotal")}
-                style={{ color: hasResult ? totalColor(weekTotal) : "transparent" }}
-              >
-                {hasResult
-                  ? formatAggregate(weekTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })
-                  : ""}
+              <div className="flex flex-col items-center justify-center gap-0.5 leading-none" title={t("calendar.weekTotal")}>
+                <span className="font-mono text-[10px] text-faint">{t("calendar.weekNum", { n: weekNum })}</span>
+                {hasResult && (
+                  <span className="font-mono text-[11px]" style={{ color: totalColor(weekTotal) }}>
+                    {formatAggregate(weekTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
+                  </span>
+                )}
               </div>
               {week.map((d, di) => renderDayCell(d, wi * 7 + di))}
             </div>
