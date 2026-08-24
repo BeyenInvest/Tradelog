@@ -167,11 +167,23 @@ export function resolveReviewSections(
 ): ReviewSection[] {
   const own = (rows ?? []).filter((r) => r.review_kind === kind);
   if (own.length === 0) return defaultReviewSections(kind, periodType);
+  return mapSourcesToSections(kind, own);
+}
 
+/** The fields any section source needs — satisfied by both a DB row and a share-payload section. */
+export interface ReviewSectionSource {
+  section_key: string;
+  label: string;
+  label_key: string | null;
+  input_type: ReviewSectionInputType;
+  sort_order: number;
+}
+
+/** Map already-kind-scoped section sources onto resolved sections (shared by the DB and share paths). */
+function mapSourcesToSections(kind: ReviewKind, sources: ReviewSectionSource[]): ReviewSection[] {
   const builtins = builtinKeysFor(kind);
   const catalogueByKey = new Map(catalogueFor(kind).map((e) => [e.key, e] as const));
-
-  return [...own]
+  return [...sources]
     .sort((a, b) => a.sort_order - b.sort_order || a.section_key.localeCompare(b.section_key))
     .map((r) => {
       const builtin = builtins.has(r.section_key);
@@ -188,6 +200,21 @@ export function resolveReviewSections(
         builtin,
       } satisfies ReviewSection;
     });
+}
+
+/**
+ * Resolve sections from a share payload (Fase N5) — the RPC already filtered by
+ * kind, so an empty list means "use the built-in defaults", exactly like the
+ * owner's own unconfigured journal.
+ */
+export function resolveSharedReviewSections(
+  kind: ReviewKind,
+  sources: ReviewSectionSource[] | null | undefined,
+  periodType?: PeriodType
+): ReviewSection[] {
+  const list = sources ?? [];
+  if (list.length === 0) return defaultReviewSections(kind, periodType);
+  return mapSourcesToSections(kind, list);
 }
 
 /**

@@ -54,3 +54,32 @@ export function useReviewSections() {
 
   return { rows, loading, error, refresh };
 }
+
+/**
+ * The review-section rows of a specific journal, regardless of which journal is
+ * active (Fase N5) — used by the admin read-only review modals, which view
+ * another user's review and read its sections through the admin SELECT policy
+ * (0048). null methodology (legacy/unassigned journal) → no rows → defaults.
+ */
+export function useReviewSectionsFor(methodologyId: string | null) {
+  const [rows, setRows] = useState<ReviewSectionRow[]>([]);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const requestId = ++requestIdRef.current;
+    if (!methodologyId) {
+      setRows([]);
+      return;
+    }
+    void (async () => {
+      const { data } = await supabase
+        .from("review_sections")
+        .select("*")
+        .eq("methodology_id", methodologyId)
+        .order("sort_order", { ascending: true });
+      if (requestId === requestIdRef.current) setRows((data as ReviewSectionRow[]) ?? []);
+    })();
+  }, [methodologyId]);
+
+  return rows;
+}
