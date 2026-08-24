@@ -21,6 +21,9 @@ export function ReviewSectionsEditor() {
   const editor = useReviewSectionsEditor();
   const { methodology, isOwn, loading, error, fork } = editor;
   const [kind, setKind] = useState<ReviewKind>("weekly");
+  // Collapsed by default — this sits under an already-long journal-config section,
+  // and most users rarely retune their review sections.
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -54,90 +57,104 @@ export function ReviewSectionsEditor() {
   const ownRows = editor.sectionsOf(kind);
   const customized = ownRows.length > 0;
 
+  // A one-line hint of what's inside while collapsed: the active section count.
+  const summary = customized ? t("reviewSections.customCount", { count: ownRows.length }) : t("reviewSections.usingDefaultsShort");
+
   return (
     <Card>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 text-left"
+      >
         <div className="min-w-0">
           <p className="font-body text-sm text-ink">{t("reviewSections.title")}</p>
-          <p className="font-mono text-xs mt-1 text-muted">{t("reviewSections.description")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{open ? t("reviewSections.description") : summary}</p>
         </div>
-        {!isOwn && (
-          <button
-            type="button"
-            onClick={() => void run(fork)}
-            disabled={busy}
-            className="shrink-0 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
-          >
-            {t("methodology.makeEditable")}
-          </button>
-        )}
-      </div>
+        <ChevronDown size={16} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
-      {/* Weekly / periodic switch — each keeps its own section set. */}
-      <div className="inline-flex mt-4 rounded-lg border border-border divide-x divide-border overflow-hidden">
-        {KINDS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setKind(k)}
-            aria-pressed={kind === k}
-            className={`px-3 py-1.5 text-xs font-body transition-colors ${
-              kind === k ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
-            }`}
-          >
-            {t(`reviewSections.kind_${k}`)}
-          </button>
-        ))}
-      </div>
+      {open && (
+        <div className="mt-4 pt-4 border-t border-border-soft">
+          {!isOwn && (
+            <button
+              type="button"
+              onClick={() => void run(fork)}
+              disabled={busy}
+              className="mb-4 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
+            >
+              {t("methodology.makeEditable")}
+            </button>
+          )}
 
-      {actionError && <p className="font-mono text-[11px] mt-3 text-loss">{actionError}</p>}
-      {error && !actionError && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
-
-      {!customized ? (
-        <DefaultPreview
-          kind={kind}
-          canCustomize={isOwn && !busy}
-          onCustomize={() => void run(() => editor.customize(kind))}
-        />
-      ) : (
-        <>
-          <div className="flex flex-col divide-y divide-border-soft mt-4 border-t border-border-soft">
-            {ownRows.map((s, i) => (
-              <SectionRow
-                key={s.id}
-                section={s}
-                editable={isOwn && !busy}
-                // A built-in section (verhalen/acties/…) keeps its intrinsic type —
-                // its value lives in a fixed column, so flipping text↔list would
-                // desync read from write. Custom sections choose freely.
-                typeLocked={builtinKeysFor(kind).has(s.section_key)}
-                isFirst={i === 0}
-                isLast={i === ownRows.length - 1}
-                onMove={(dir) => void run(() => editor.moveSection(s.id, dir))}
-                onDelete={() => void run(() => editor.deleteSection(s.id))}
-                onSave={(patch) => run(() => editor.updateSection(s.id, patch))}
-              />
+          {/* Weekly / periodic switch — each keeps its own section set. */}
+          <div className="inline-flex rounded-lg border border-border divide-x divide-border overflow-hidden">
+            {KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                aria-pressed={kind === k}
+                className={`px-3 py-1.5 text-xs font-body transition-colors ${
+                  kind === k ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
+                }`}
+              >
+                {t(`reviewSections.kind_${k}`)}
+              </button>
             ))}
           </div>
 
-          {isOwn && (
-            <div className="flex items-center gap-3 flex-wrap mt-4">
-              <AddSectionForm
-                busy={busy}
-                usedKeys={editor.usedKeys(kind)}
-                onAdd={(input) => run(() => editor.addSection(kind, input))}
-              />
-              <button
-                type="button"
-                onClick={() => void run(() => editor.resetToDefaults(kind))}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 text-xs font-body text-muted hover:text-loss disabled:opacity-40"
-              >
-                <RotateCcw size={13} /> {t("reviewSections.reset")}
-              </button>
-            </div>
+          {actionError && <p className="font-mono text-[11px] mt-3 text-loss">{actionError}</p>}
+          {error && !actionError && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
+
+          {!customized ? (
+            <DefaultPreview
+              kind={kind}
+              canCustomize={isOwn && !busy}
+              onCustomize={() => void run(() => editor.customize(kind))}
+            />
+          ) : (
+            <>
+              <div className="flex flex-col divide-y divide-border-soft mt-4 border-t border-border-soft">
+                {ownRows.map((s, i) => (
+                  <SectionRow
+                    key={s.id}
+                    section={s}
+                    editable={isOwn && !busy}
+                    // A built-in section (verhalen/acties/…) keeps its intrinsic type —
+                    // its value lives in a fixed column, so flipping text↔list would
+                    // desync read from write. Custom sections choose freely.
+                    typeLocked={builtinKeysFor(kind).has(s.section_key)}
+                    isFirst={i === 0}
+                    isLast={i === ownRows.length - 1}
+                    onMove={(dir) => void run(() => editor.moveSection(s.id, dir))}
+                    onDelete={() => void run(() => editor.deleteSection(s.id))}
+                    onSave={(patch) => run(() => editor.updateSection(s.id, patch))}
+                  />
+                ))}
+              </div>
+
+              {isOwn && (
+                <div className="flex items-center gap-3 flex-wrap mt-4">
+                  <AddSectionForm
+                    busy={busy}
+                    usedKeys={editor.usedKeys(kind)}
+                    onAdd={(input) => run(() => editor.addSection(kind, input))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void run(() => editor.resetToDefaults(kind))}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 text-xs font-body text-muted hover:text-loss disabled:opacity-40"
+                  >
+                    <RotateCcw size={13} /> {t("reviewSections.reset")}
+                  </button>
+                </div>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </Card>
   );
