@@ -70,8 +70,10 @@ Volgorde van de recente/relevante migraties en hun status op prod. Eerstvolgend 
 | 0044 | `audit_hardening` | K1 kolom-grants + N1 ownership-trigger + N2 storage-delete | ✅ gedraaid |
 | 0045 | `rename_field_option` | transactionele option-rename-RPC (Fase R s1, M5) | ✅ gedraaid |
 | 0046 | `admin_methodology_select` | is_admin() SELECT op methodologies + methodology_fields (Fase R s2, H2) | ✅ gedraaid (2026-08-22) |
+| 0047 | `field_label_keys` | label_key/group_key op methodology_fields + render-time-vertaling (Fase G-rest A3) | ✅ gedraaid (2026-08-24) |
+| 0048 | `review_sections` | configureerbare review-secties per journal + content jsonb-bag + get_shared_review-uitbreiding (Fase N5) | ⏳ owner draait nog (branch `fase-n5-review-secties`) |
 
-> **Alle migraties t/m 0046 zijn gedraaid op prod.** Fase R volledig af en gemerged naar main (`0bd0cb3`). Eerstvolgend vrij nummer: **0047**.
+> Eerstvolgend vrij nummer na 0048: **0049**.
 
 ## Fase G-rest + launch-week (owner-ops + klein code)
 
