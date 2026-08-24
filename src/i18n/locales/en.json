@@ -522,7 +522,12 @@
   "calendar": {
     "addTradeOnDay": "Add trade on this day",
     "noTradesOnDay": "No trades on this day.",
-    "missedHypothetical": "Missed trade (hypothetical)"
+    "missedHypothetical": "Missed trade (hypothetical)",
+    "weekTotalHeader": "Σ",
+    "weekTotal": "Week total",
+    "dayNet": "Net",
+    "dayTrades": "Trades",
+    "dayWinRate": "Win rate"
   },
   "tradeBadge": {
     "missedTitle": "Hypothetical — this trade wasn't taken",

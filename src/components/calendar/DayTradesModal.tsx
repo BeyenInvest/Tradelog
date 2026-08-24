@@ -1,10 +1,12 @@
 import { Plus, X } from "lucide-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "@/components/ui/Modal";
-import { isMissed } from "@/lib/stats";
-import { dateLocale } from "@/lib/format";
+import { closedTrades, computeOutcomeCounts, isMissed, round2, takenTrades } from "@/lib/stats";
+import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { OUTCOMES } from "@/lib/constants";
 import type { Trade } from "@/lib/types";
+import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { TradeListHeader } from "@/components/trades/TradeListHeader";
 import { TradeListItem } from "@/components/trades/TradeListItem";
 
@@ -30,6 +32,7 @@ function sortDayTrades(trades: Trade[]): Trade[] {
 
 export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onAddTrade }: DayTradesModalProps) {
   const { t, i18n } = useTranslation();
+  const { unit: resultUnit, saldo } = useResultDisplay();
   const sorted = sortDayTrades(trades);
   const label = new Date(dateIso + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), {
     weekday: "long",
@@ -37,6 +40,21 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
     month: "long",
     year: "numeric",
   });
+
+  // Day KPI header (Fase S1): realized snapshot of this single day. Missed
+  // (hypothetical) and still-running open trades are excluded — same real-
+  // performance contract as everywhere else.
+  const realDay = useMemo(() => closedTrades(takenTrades(trades)), [trades]);
+  const dayStats = useMemo(() => {
+    const counts = computeOutcomeCounts(realDay);
+    const net = round2(realDay.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0));
+    // Win rate excluding BE (wins / decisive) — the honest day read; null when
+    // the day has no decided trade yet.
+    const decisive = counts.wins + counts.losses;
+    const winRate = decisive > 0 ? Math.round((counts.wins / decisive) * 100) : null;
+    return { counts, net, winRate };
+  }, [realDay, resultUnit, saldo]);
+  const netTone = dayStats.net > 0 ? "text-win" : dayStats.net < 0 ? "text-loss" : "text-be";
 
   return (
     <Modal labelledBy="day-trades-title" maxWidthClass="max-w-2xl" onClose={onClose}>
@@ -50,6 +68,32 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
               <X size={18} />
             </button>
           </div>
+
+          {realDay.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="rounded-lg border border-border-soft bg-surface-2/40 px-3 py-2">
+                <p className="font-body text-[11px] uppercase tracking-wider text-muted">{t("calendar.dayNet")}</p>
+                <p className={`font-mono text-lg mt-0.5 ${netTone}`}>
+                  {formatAggregate(dayStats.net, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border-soft bg-surface-2/40 px-3 py-2">
+                <p className="font-body text-[11px] uppercase tracking-wider text-muted">{t("calendar.dayTrades")}</p>
+                <p className="font-mono text-lg mt-0.5 text-ink">{dayStats.counts.n}</p>
+                <p className="font-mono text-[11px] text-muted">
+                  <span className="text-win">{dayStats.counts.wins}W</span> ·{" "}
+                  <span className="text-be">{dayStats.counts.be}BE</span> ·{" "}
+                  <span className="text-loss">{dayStats.counts.losses}L</span>
+                </p>
+              </div>
+              <div className="rounded-lg border border-border-soft bg-surface-2/40 px-3 py-2">
+                <p className="font-body text-[11px] uppercase tracking-wider text-muted">{t("calendar.dayWinRate")}</p>
+                <p className="font-mono text-lg mt-0.5 text-ink">
+                  {dayStats.winRate != null ? `${dayStats.winRate}%` : "—"}
+                </p>
+              </div>
+            </div>
+          )}
 
           {sorted.length === 0 ? (
             <p className="text-sm text-muted py-4">{t("calendar.noTradesOnDay")}</p>
