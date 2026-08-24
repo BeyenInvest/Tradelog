@@ -19,7 +19,7 @@ import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const { hideFase, updateProfile } = useAuth();
+  const { hideFase, betaFeatures, updateProfile } = useAuth();
   const location = useLocation();
   // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
   // scroll to the preset picker, so that click completes its intent here.
@@ -70,7 +70,10 @@ export default function SettingsPage() {
           />
           <NewJournalCard defaultOpen={openPresets} />
           <MethodologyEditor />
-          <ReviewSectionsEditor />
+          {/* N5 review-secties: nieuw, dus achter de beta-gate tot de launch-flip.
+              Zonder de editor kan een niet-beta-gebruiker geen eigen secties maken →
+              die ziet altijd de defaults, identiek aan vóór N5. */}
+          {betaFeatures && <ReviewSectionsEditor />}
           <JournalInstruments />
         </section>
 
