@@ -307,6 +307,12 @@ export interface Methodology {
   asset_class: string | null;
   /** Instrument universe + sizing tools per asset. Populated in cyclus 7; null until then. */
   instrument_config: Record<string, unknown> | null;
+  /**
+   * Per-journal opt-in for the advanced-analysis layer (0050): the planned R:R +
+   * MAE/MFE fields in the trade form, the exit-analysis view, and the SQN KPI card.
+   * Default false — the trader activates it per journal in the builder / editor.
+   */
+  track_exit: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -323,6 +329,8 @@ export interface MethodologyView {
   fields: MethodologyField[];
   isLegacyMethodology: boolean;
   isForexJournal: boolean;
+  /** Whether the viewed journal has the advanced-analysis layer on (0050) — gates the exit-analysis section. */
+  trackExit: boolean;
 }
 
 /** One fase within a methodology (replaces the fixed FASES enum). */

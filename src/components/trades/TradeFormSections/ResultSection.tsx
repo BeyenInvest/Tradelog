@@ -7,7 +7,7 @@ import { OUTCOMES, SANITY_RESULT_PCT, TRADE_EVALUATIONS } from "@/lib/constants"
 import { deriveOutcome } from "@/lib/import/mapToTrade";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 
 function durationDays(open: string, close: string | null | undefined): number | null {
@@ -25,8 +25,9 @@ interface ResultSectionProps {
 
 export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultSectionProps) {
   const { t } = useTranslation();
-  // Exit-analyse (Fase N3) is nieuw → achter de beta-gate, zoals elke nieuwe feature.
-  const { betaFeatures } = useAuth();
+  // Exit-analyse (Fase N3) is een opt-in per journal (0050): planned R:R + MAE/MFE
+  // verschijnen alleen als de actieve journal de geavanceerde-analyse-laag aan heeft.
+  const { trackExit } = useMethodology();
   const {
     register,
     control,
@@ -104,7 +105,7 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
           <Field label={t("tradeForm.plannedRisk")} error={errors.risk_pct?.message}>
             <input type="number" step="0.01" min="0" placeholder="1" className="input" {...register("risk_pct")} />
           </Field>
-          {betaFeatures && (
+          {trackExit && (
             // The plan made at entry — the one exit field that exists before the
             // trade closes (MAE/MFE only exist once it's finished).
             <Field label={t("tradeForm.plannedRr")} error={errors.planned_rr?.message} hint={t("tradeForm.plannedRrHint")}>
@@ -150,10 +151,11 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
         </div>
       )}
 
-      {/* Exit-analyse (Fase N3, beta): optionele MAE/MFE + gepland R:R — voedt de
-          Exit-analyse-sectie in de Analyse-tab. Alleen voor een gesloten trade
-          (een lopende heeft nog geen definitieve excursies). */}
-      {betaFeatures && !isOpen && (
+      {/* Exit-analyse (Fase N3): optionele MAE/MFE + gepland R:R — voedt de
+          Exit-analyse-sectie in de Analyse-tab. Alleen als de journal de laag aan
+          heeft (0050) én voor een gesloten trade (een lopende heeft nog geen
+          definitieve excursies). */}
+      {trackExit && !isOpen && (
         <div className="flex flex-col gap-2">
           <p className="font-body text-xs uppercase tracking-wider text-muted">{t("tradeForm.exitSubheading")}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

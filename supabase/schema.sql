@@ -287,6 +287,10 @@ create table methodologies (
   is_system boolean not null default false,
   asset_class text,                    -- forex | futures | stock | crypto | custom (free text, no CHECK — new presets need no migration); see 0022
   instrument_config jsonb,             -- instrument universe + sizing tools per asset — populated in cyclus 7
+  -- Per-journal opt-in for the advanced-analysis layer (0050): planned R:R + MAE/MFE
+  -- form fields, the exit-analysis view and the SQN KPI. Default off; toggled in the
+  -- journal builder / methodology editor. Keeps the default form + KPI row clean.
+  track_exit boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

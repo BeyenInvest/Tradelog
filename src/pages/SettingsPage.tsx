@@ -12,6 +12,7 @@ import { ReviewSectionsEditor } from "@/components/settings/ReviewSectionsEditor
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { JournalOverview } from "@/components/settings/JournalOverview";
+import { AdvancedAnalysisSettings } from "@/components/settings/AdvancedAnalysisSettings";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
 import { timezoneOptions } from "@/lib/timezones";
@@ -76,6 +77,7 @@ export default function SettingsPage() {
               Zonder de editor kan een niet-beta-gebruiker geen eigen secties maken →
               die ziet altijd de defaults, identiek aan vóór N5. */}
           {betaFeatures && <ReviewSectionsEditor />}
+          <AdvancedAnalysisSettings />
           <JournalInstruments />
         </section>
 

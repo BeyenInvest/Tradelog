@@ -287,7 +287,12 @@
     "overviewSubtitle": "Pick a starter set per asset class, or build your own from blocks.",
     "fieldCount_one": "{{count}} field",
     "fieldCount_other": "{{count}} fields",
-    "advancedTemplate": "Advanced template"
+    "advancedTemplate": "Advanced template",
+    "advancedAnalysis": "Advanced analysis",
+    "advancedAnalysisHint": "Track planned R:R, MAE/MFE (how far each trade ran against and in your favour) and system quality (SQN). Off by default — turn on to sharpen your exits."
+  },
+  "advancedAnalysis": {
+    "description": "Adds planned R:R, MAE/MFE fields, the exit-analysis view and the SQN card to this journal."
   },
   "journalEmpty": {
     "title": "Your journal is empty",

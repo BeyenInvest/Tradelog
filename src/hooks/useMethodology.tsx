@@ -57,6 +57,19 @@ export interface MethodologyData {
    */
   isOwnMethodology: boolean;
   /**
+   * Whether the active journal has the advanced-analysis layer on (0050): the
+   * planned R:R + MAE/MFE fields in the trade form, the exit-analysis view, and the
+   * SQN KPI card. Default false while loading and for a journal that hasn't opted
+   * in, so the advanced fields never flash in on open.
+   */
+  trackExit: boolean;
+  /**
+   * Turns the advanced-analysis layer on/off for the active own journal. Optimistic
+   * (shared state updates immediately, so the form/KPIs react without a refetch).
+   * No-op on a read-only template.
+   */
+  setTrackExit: (value: boolean) => Promise<void>;
+  /**
    * The journal's curated instrument universe (cyclus D), read from
    * `instrument_config`. Normalized/sorted. Drives the trade-form instrument select
    * and the Settings instrument editor. Empty for a forex journal (it uses the pair
@@ -202,6 +215,23 @@ function useMethodologyState(): MethodologyData {
 
   const isOwnMethodology = useMemo(
     () => methodology != null && !methodology.is_system && methodology.user_id != null,
+    [methodology]
+  );
+
+  // Default off (incl. while loading) so the advanced fields/KPIs never flash in on
+  // open — they appear only once an opted-in journal has loaded.
+  const trackExit = useMemo(() => methodology?.track_exit === true, [methodology]);
+
+  const setTrackExit = useCallback(
+    async (value: boolean): Promise<void> => {
+      if (!methodology || methodology.is_system || methodology.user_id == null) return;
+      const { error: err } = await supabase
+        .from("methodologies")
+        .update({ track_exit: value })
+        .eq("id", methodology.id);
+      if (err) throw err;
+      setMethodology((m) => (m ? { ...m, track_exit: value } : m));
+    },
     [methodology]
   );
 
@@ -380,6 +410,8 @@ function useMethodologyState(): MethodologyData {
     isLegacyMethodology,
     isForexJournal,
     isOwnMethodology,
+    trackExit,
+    setTrackExit,
     instruments,
     addInstrument,
     removeInstrument,

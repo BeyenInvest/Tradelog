@@ -56,11 +56,11 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase, betaFeatures } = useAuth();
+  const { hideFase: ownHideFase } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
-  const { fields, isLegacyMethodology, isForexJournal } = methodologyOverride ?? ownMethodology;
+  const { fields, isLegacyMethodology, isForexJournal, trackExit } = methodologyOverride ?? ownMethodology;
   const hideFase = hideFaseOverride ?? ownHideFase;
   // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
   // per-fase cards + fase-kenmerken + WPM-only breakdowns would be all-empty. Gate that whole
@@ -307,10 +307,11 @@ export function BacktestingAnalysisView({
       {/* Regel-adherentie (Fase N2) — live-journal-only (needs trade_evaluation) */}
       {showAdherence && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
 
-      {/* Exit-analyse (Fase N3, beta) — MAE/MFE/planned-R:R zijn universeel (ook in
-          backtest-projecten invulbaar), dus niet aan showAdherence gebonden; de
-          sectie verdwijnt vanzelf zolang geen enkele trade ze bijhoudt. */}
-      {betaFeatures && <ExitAnalysisSection trades={scopedTrades} />}
+      {/* Exit-analyse (Fase N3) — opt-in per journal (0050, trackExit): MAE/MFE/
+          planned-R:R zijn universeel (ook in backtest-projecten invulbaar), dus niet
+          aan showAdherence gebonden; de sectie verdwijnt bovendien vanzelf zolang
+          geen enkele trade ze bijhoudt. */}
+      {trackExit && <ExitAnalysisSection trades={scopedTrades} />}
 
       {/* Uitsplitsingen */}
       <section className="flex flex-col gap-4">

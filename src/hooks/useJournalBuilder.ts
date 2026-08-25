@@ -21,6 +21,8 @@ export interface CommitArgs {
   fields: FieldInput[];
   assetClass: string | null;
   instrumentConfig: Record<string, unknown> | null;
+  /** Opt-in for the advanced-analysis layer (0050): planned R:R + MAE/MFE + SQN. Default off. */
+  trackExit: boolean;
   reuseActiveIfEmpty: boolean;
 }
 
@@ -31,7 +33,7 @@ export function useJournalBuilder() {
   const [error, setError] = useState<string | null>(null);
 
   const commit = useCallback(
-    async ({ name, fields, assetClass, instrumentConfig, reuseActiveIfEmpty }: CommitArgs): Promise<string> => {
+    async ({ name, fields, assetClass, instrumentConfig, trackExit, reuseActiveIfEmpty }: CommitArgs): Promise<string> => {
       if (!profile) throw new Error("no profile");
       setError(null);
       setBusy(true);
@@ -58,13 +60,13 @@ export function useJournalBuilder() {
         if (targetId) {
           const { error: uErr } = await supabase
             .from("methodologies")
-            .update({ naam: name, asset_class: assetClass, instrument_config: instrumentConfig })
+            .update({ naam: name, asset_class: assetClass, instrument_config: instrumentConfig, track_exit: trackExit })
             .eq("id", targetId);
           if (uErr) throw uErr;
         } else {
           const { data, error: cErr } = await supabase
             .from("methodologies")
-            .insert({ user_id: profile.id, naam: name, is_system: false, asset_class: assetClass, instrument_config: instrumentConfig })
+            .insert({ user_id: profile.id, naam: name, is_system: false, asset_class: assetClass, instrument_config: instrumentConfig, track_exit: trackExit })
             .select("id")
             .single();
           if (cErr) throw cErr;

@@ -62,7 +62,7 @@ export async function getMethodologyViewForUser(methodologyId: string | null): P
       .maybeSingle();
     id = (sys as { id: string } | null)?.id ?? null;
   }
-  if (!id) return { fields: [], isLegacyMethodology: false, isForexJournal: false };
+  if (!id) return { fields: [], isLegacyMethodology: false, isForexJournal: false, trackExit: false };
 
   const [m, fl] = await Promise.all([
     supabase.from("methodologies").select("*").eq("id", id).maybeSingle(),
@@ -77,6 +77,7 @@ export async function getMethodologyViewForUser(methodologyId: string | null): P
     fields,
     isLegacyMethodology: fields.some((f) => f.field_key === "fase"),
     isForexJournal: methodology?.asset_class === "forex",
+    trackExit: methodology?.track_exit === true,
   };
 }
 

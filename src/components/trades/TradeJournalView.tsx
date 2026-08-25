@@ -20,6 +20,7 @@ import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import {
   computeOverviewKpis,
   computeDisciplineCurve,
@@ -76,6 +77,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   // Soft-launch gate: Fase-E additions (profit factor, current-streak line) stay hidden
   // from the live users until public launch — only owner/beta accounts see them.
   const { betaFeatures, profile } = useAuth();
+  const { trackExit } = useMethodology();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
@@ -400,13 +402,16 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             />
 
             {/* System Quality Number + spread of the R-distribution (always R-based,
-                the metric is defined on R-multiples). */}
-            <StatCard
-              label={t("journal.statSqn")}
-              value={rDist.sqn != null ? rDist.sqn.toFixed(2) : "—"}
-              tone={rDist.sqn != null ? (rDist.sqn >= 2 ? "up" : rDist.sqn < 1 ? "down" : "neutral") : "neutral"}
-              sub={rDist.stdDevR != null ? t("journal.statStdDev", { sd: rDist.stdDevR.toFixed(2) }) : undefined}
-            />
+                the metric is defined on R-multiples). Part of the advanced-analysis
+                opt-in (0050) — hidden unless the journal turned the layer on. */}
+            {trackExit && (
+              <StatCard
+                label={t("journal.statSqn")}
+                value={rDist.sqn != null ? rDist.sqn.toFixed(2) : "—"}
+                tone={rDist.sqn != null ? (rDist.sqn >= 2 ? "up" : rDist.sqn < 1 ? "down" : "neutral") : "neutral"}
+                sub={rDist.stdDevR != null ? t("journal.statStdDev", { sd: rDist.stdDevR.toFixed(2) }) : undefined}
+              />
+            )}
             </div>
           </div>
 

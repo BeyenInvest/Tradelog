@@ -287,7 +287,12 @@
     "overviewSubtitle": "Kies een startset per asset-class, of bouw zelf uit bouwstenen.",
     "fieldCount_one": "{{count}} veld",
     "fieldCount_other": "{{count}} velden",
-    "advancedTemplate": "Gevorderd sjabloon"
+    "advancedTemplate": "Gevorderd sjabloon",
+    "advancedAnalysis": "Geavanceerde analyse",
+    "advancedAnalysisHint": "Houd geplande R:R, MAE/MFE (hoe ver een trade tegen en met je mee liep) en systeemkwaliteit (SQN) bij. Standaard uit — zet aan als je je exits wilt verfijnen."
+  },
+  "advancedAnalysis": {
+    "description": "Voegt geplande R:R, MAE/MFE-velden, de exit-analyse en de SQN-kaart toe aan dit journal."
   },
   "journalEmpty": {
     "title": "Je journal is nog leeg",
