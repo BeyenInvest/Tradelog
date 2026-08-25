@@ -396,7 +396,7 @@ function CustomFieldAdd({ existingKeys, onAdd, onClose }: {
   );
 }
 
-function AssetIcon({ asset }: { asset: AssetClass }) {
+export function AssetIcon({ asset }: { asset: AssetClass }) {
   const p = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 } as const;
   switch (asset) {
     case "forex":

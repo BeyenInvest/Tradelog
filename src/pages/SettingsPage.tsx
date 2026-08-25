@@ -11,6 +11,7 @@ import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { ReviewSectionsEditor } from "@/components/settings/ReviewSectionsEditor";
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
+import { JournalOverview } from "@/components/settings/JournalOverview";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
 import { timezoneOptions } from "@/lib/timezones";
@@ -68,6 +69,7 @@ export default function SettingsPage() {
             title={t("methodology.title")}
             description={t("methodology.description")}
           />
+          <JournalOverview />
           <NewJournalCard defaultOpen={openPresets} />
           <MethodologyEditor />
           {/* N5 review-secties: nieuw, dus achter de beta-gate tot de launch-flip.

@@ -61,6 +61,17 @@
     "countAccounts": "{{count}} accounts",
     "shareLinksWarning": "Heads up: {{count}} active share link(s) for this journal will stop working."
   },
+  "journalOverview": {
+    "title": "Your journals",
+    "subtitle": "Switch between your journals or rename them.",
+    "otherGroup": "Other",
+    "active": "Active",
+    "switchTo": "Switch to {{name}}",
+    "fieldCount_one": "{{count}} field",
+    "fieldCount_other": "{{count}} fields",
+    "tradeCount_one": "{{count}} trade",
+    "tradeCount_other": "{{count}} trades"
+  },
   "auth": {
     "name": "Name",
     "email": "Email",
