@@ -112,11 +112,13 @@ export type CC = (typeof CCS)[number];
 export const SESSIES = ["Asia", "London", "Overlap", "New York"] as const;
 export type Sessie = (typeof SESSIES)[number];
 
-// The cc -> sessie mapping is no longer a static table: it's timezone-aware and
-// computed in the DB (compute_sessie(), see migration 0019). A candle-close slot
-// is interpreted in the user's profiles.timezone and bucketed against the
-// reference zone, so `trades.sessie` is read straight from the DB, never derived
-// client-side.
+// Sessie is timezone-aware and computed in the DB, never derived client-side.
+// The real open time (trades.tijd_open, 0051) wins when present — interpreted in
+// the user's profiles.timezone and bucketed against the reference zone
+// (compute_sessie_at); without it the legacy cc candle-close slot is bucketed the
+// same way (compute_sessie, 0019). On non-WPM journals cc sits on a hidden
+// default, so there sessie is only meaningful for trades that carry tijd_open —
+// breakdownDimensionsFor() encodes that client-side nuance.
 
 export const STRUCTUREN = ["Inner", "Outer"] as const;
 export type Structuur = (typeof STRUCTUREN)[number];

@@ -14,7 +14,7 @@ import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
   computeDurationByOutcome, groupIntoSeries, takenTrades, closedTrades,
 } from "@/lib/stats";
-import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "@/lib/breakdownDimensions";
+import { breakdownDimensionsFor, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
@@ -90,26 +90,29 @@ export function BacktestingAnalysisView({
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(displayTrades, 5), [displayTrades]);
 
+  // Journal-type-aware dimension list (0051): identical to the static list for the
+  // legacy WPM journal; other journals get the time-based "Per Sessie" swapped in.
+  const dimensions = breakdownDimensionsFor(isLegacyMethodology);
   // Per-dimension row-label translator: the breakdown key stays a stable id, the
   // label follows the UI language (weekday abbreviations, Yes/No). Omitted → key shown as-is.
-  const labelFnFor = (d: (typeof BREAKDOWN_DIMENSIONS)[number]) =>
+  const labelFnFor = (d: DimensionConfig) =>
     d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined;
   const dimensionRows = useMemo(
-    () => BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownBy(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+    () => dimensions.map((d) => ({ dim: d, rows: breakdownBy(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayTrades, t]
+    [displayTrades, isLegacyMethodology, t]
   );
   const dimensionGridRows = useMemo(
     () =>
-      BREAKDOWN_DIMENSIONS.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
+      dimensions.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayTrades, t]
+    [displayTrades, isLegacyMethodology, t]
   );
   // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
   // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
   // Falls back to splitting after the first dimension if "weekly_kenmerk" is ever renamed/removed, rather
   // than silently collapsing this whole section to 0 rows (findIndex returning -1 would do that).
-  const weeklyKenmerkIdx = BREAKDOWN_DIMENSIONS.findIndex((d) => d.id === "weekly_kenmerk");
+  const weeklyKenmerkIdx = dimensions.findIndex((d) => d.id === "weekly_kenmerk");
   const kenmerkenSplit = weeklyKenmerkIdx === -1 ? 1 : weeklyKenmerkIdx + 1;
 
   // The per-fase split is Weekly-Phase-Method-specific; force "totaal" when the fase block is
@@ -169,8 +172,8 @@ export function BacktestingAnalysisView({
   const adherenceDims = useMemo<AdherenceDimension[]>(
     () =>
       [
-        ...(isLegacyMethodology ? BREAKDOWN_DIMENSIONS.slice(0, kenmerkenSplit) : []),
-        ...BREAKDOWN_DIMENSIONS.slice(kenmerkenSplit).filter((d) => showTimingDim(d) && !d.dateDerived),
+        ...(isLegacyMethodology ? dimensions.slice(0, kenmerkenSplit) : []),
+        ...dimensions.slice(kenmerkenSplit).filter((d) => showTimingDim(d) && !d.dateDerived),
         ...customDims,
       ].map((d) => ({
         id: d.id,

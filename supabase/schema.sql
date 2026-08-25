@@ -140,6 +140,11 @@ create table trades (
 
   fase fase_enum not null,
   datum_open date not null,
+  -- Real open time next to the date (Fase S2, 0051) — wall-clock in the owner's
+  -- own profiles.timezone, exactly as typed (naive on purpose, like datum_open
+  -- and cc). Nullable: null = time unknown (pre-0051 rows, quick-log, imports),
+  -- the trade then sits out the time-based session/hour breakdowns.
+  tijd_open time,
   datum_sluiting date,
   duur_dagen integer generated always as (datum_sluiting - datum_open) stored,
 
@@ -187,9 +192,10 @@ create table trades (
   entry text, -- fixed ENTRIES list + per-user custom_options, not a native enum (see custom_options below)
 
   cc cc_enum not null,
-  -- Timezone-aware trading session, derived from cc + datum_open + the owner's
-  -- profiles.timezone. Maintained by trg_trades_set_sessie (not a generated
-  -- column: the tz conversion isn't IMMUTABLE). See compute_sessie() and 0019.
+  -- Timezone-aware trading session, derived from the owner's profiles.timezone
+  -- plus the real open time (tijd_open, 0051) when present, else the legacy cc
+  -- slot (0019). Maintained by trg_trades_set_sessie (not a generated column:
+  -- the tz conversion isn't IMMUTABLE). See compute_sessie()/compute_sessie_at().
   sessie sessie_enum not null,
 
   nieuws boolean not null default false,
@@ -630,7 +636,7 @@ create trigger trg_methodology_fields_clear_stale_keys
   before update on methodology_fields
   for each row execute function methodology_fields_clear_stale_keys();
 
--- ---------- timezone-aware trading session mapping (see 0019) ----------
+-- ---------- timezone-aware trading session mapping (see 0019 + 0051) ----------
 -- (cc, date, tz) -> session, anchored to the reference zone the methodology was
 -- authored in (Europe/Brussels). STABLE (depends on the tz database), so it can't
 -- live in a generated column — a trigger maintains trades.sessie instead.
@@ -662,27 +668,64 @@ begin
 end;
 $$;
 
+-- Time-based sibling (0051): (date, real open time, tz) -> session, same
+-- Brussels-anchored buckets. Used when trades.tijd_open is filled in.
+create or replace function compute_sessie_at(p_datum date, p_tijd time, p_tz text)
+returns sessie_enum
+language plpgsql
+stable
+as $$
+declare
+  brussels_hour int;
+begin
+  if p_datum is null or p_tijd is null then
+    return null;
+  end if;
+
+  brussels_hour := extract(
+    hour from
+      ((p_datum + p_tijd)
+        at time zone coalesce(p_tz, 'Europe/Brussels'))
+        at time zone 'Europe/Brussels'
+  )::int;
+
+  return case
+    when brussels_hour between 0 and 7  then 'Asia'::sessie_enum
+    when brussels_hour between 8 and 15 then 'London'::sessie_enum
+    when brussels_hour between 16 and 19 then 'Overlap'::sessie_enum
+    else 'New York'::sessie_enum
+  end;
+end;
+$$;
+
 create or replace function trades_set_sessie() returns trigger
 language plpgsql as $$
 declare
   v_tz text;
 begin
   select timezone into v_tz from profiles where id = new.user_id;
-  new.sessie := compute_sessie(new.cc, new.datum_open, coalesce(v_tz, 'Europe/Brussels'));
+  if new.tijd_open is not null then
+    new.sessie := compute_sessie_at(new.datum_open, new.tijd_open, coalesce(v_tz, 'Europe/Brussels'));
+  else
+    new.sessie := compute_sessie(new.cc, new.datum_open, coalesce(v_tz, 'Europe/Brussels'));
+  end if;
   return new;
 end;
 $$;
 
 create trigger trg_trades_set_sessie
-  before insert or update of cc, datum_open on trades
+  before insert or update of cc, datum_open, tijd_open on trades
   for each row execute function trades_set_sessie();
 
--- Re-bucket a user's trades when they change their timezone.
+-- Re-bucket a user's trades when they change their timezone (time-aware, 0051).
 create or replace function profiles_recompute_sessie() returns trigger
 language plpgsql as $$
 begin
   if new.timezone is distinct from old.timezone then
-    update trades set sessie = compute_sessie(cc, datum_open, new.timezone)
+    update trades set sessie = case
+      when tijd_open is not null then compute_sessie_at(datum_open, tijd_open, new.timezone)
+      else compute_sessie(cc, datum_open, new.timezone)
+    end
     where user_id = new.id;
   end if;
   return new;

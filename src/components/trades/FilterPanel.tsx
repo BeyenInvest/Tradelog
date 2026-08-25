@@ -124,7 +124,10 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            {/* sessie is derived from cc, a legacy WPM field — only meaningful on a legacy journal. */}
+            {/* sessie filter stays legacy-only: on other journals sessie is only real for
+                trades with tijd_open (0051) — a plain equality filter would wrongly match
+                every time-less trade via its hidden-cc-default sessie. Opening this up
+                needs the time-aware nuance (S2 follow-up, with the kruistabel views). */}
             {isLegacyMethodology && (
               <Field label={t("filters.sessie")}>
                 <EnumSelect

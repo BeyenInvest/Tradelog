@@ -12,6 +12,7 @@ export function makeTrade(overrides: Partial<ClosedTrade> = {}): ClosedTrade {
     user_id: "user-1",
     fase: "Fase 1",
     datum_open: "2026-01-01",
+    tijd_open: null,
     datum_sluiting: null,
     duur_dagen: null,
     pair: "EURUSD",

@@ -15,6 +15,15 @@ export interface Trade {
    */
   fase: string;
   datum_open: string; // ISO date (yyyy-mm-dd)
+  /**
+   * Real open time next to datum_open (Fase S2, 0051) — wall-clock "HH:MM:SS"
+   * in the user's own profiles.timezone, exactly as typed (the DB stores a naive
+   * `time`, the form writes "HH:MM"). null = time unknown (pre-0051 trades,
+   * quick-log, imports): the trade then sits out the time-based session/hour
+   * breakdowns. When set, the DB trigger derives `sessie` from this instead of
+   * the legacy cc slot (compute_sessie_at, 0051).
+   */
+  tijd_open: string | null;
   datum_sluiting: string | null;
   duur_dagen: number | null; // DB-generated, read-only
 

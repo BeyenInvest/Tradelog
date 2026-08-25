@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, computeRDistribution, computeExtremes, computeAvgRiskPct, lastNChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve, isOpen, closedTrades, takenTrades, computeOverviewKpis } from "../core";
+import { computeStreaks, computeMaxDrawdown, computeExpectancy, computeProfitFactor, computeOutcomeCounts, round2, riskPct, rMultiple, computeRStats, computeRDistribution, computeExtremes, computeAvgRiskPct, lastNChronological, sortChronological, computeDisciplineStats, computeDisciplineCurve, computeEquityCurve, isOpen, closedTrades, takenTrades, computeOverviewKpis } from "../core";
 import { makeSequence, makeTrade } from "./fixtures";
 
 describe("round2", () => {
@@ -336,6 +336,22 @@ describe("computeRStats", () => {
       makeTrade({ resultaat_pct: 1, risk_pct: 2 }),
     ];
     expect(computeRStats(trades).assumedRiskN).toBe(1);
+  });
+});
+
+describe("sortChronological (tijd_open refinement, 0051)", () => {
+  it("orders same-day trades by tijd_open, a time-less trade first (start of day), then by id", () => {
+    const a = makeTrade({ id: "a", datum_open: "2026-01-05", tijd_open: "14:30:00" });
+    const b = makeTrade({ id: "b", datum_open: "2026-01-05", tijd_open: "09:15:00" });
+    const c = makeTrade({ id: "c", datum_open: "2026-01-05", tijd_open: null });
+    const d = makeTrade({ id: "d", datum_open: "2026-01-04", tijd_open: "23:59:00" });
+    expect(sortChronological([a, b, c, d]).map((t) => t.id)).toEqual(["d", "c", "b", "a"]);
+  });
+
+  it("keeps the pre-0051 id tie-break when no trade carries a time", () => {
+    const a = makeTrade({ id: "a", datum_open: "2026-01-05" });
+    const b = makeTrade({ id: "b", datum_open: "2026-01-05" });
+    expect(sortChronological([b, a]).map((t) => t.id)).toEqual(["a", "b"]);
   });
 });
 

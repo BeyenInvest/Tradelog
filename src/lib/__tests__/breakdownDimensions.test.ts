@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { customFieldDimensions } from "../breakdownDimensions";
+import { BREAKDOWN_DIMENSIONS, breakdownDimensionsFor, customFieldDimensions } from "../breakdownDimensions";
 import { makeTrade } from "../stats/__tests__/fixtures";
 import type { MethodologyField } from "../types";
 
@@ -23,6 +23,40 @@ function field(overrides: Partial<MethodologyField>): MethodologyField {
     ...overrides,
   };
 }
+
+describe("uur dimension (0051 — hour of tijd_open)", () => {
+  const uur = BREAKDOWN_DIMENSIONS.find((d) => d.id === "uur")!;
+
+  it("buckets on the wall-clock hour and drops trades without a time", () => {
+    expect(uur.keyFn(makeTrade({ tijd_open: "09:45:00" }))).toBe("09");
+    expect(uur.keyFn(makeTrade({ tijd_open: "14:05" }))).toBe("14");
+    expect(uur.keyFn(makeTrade({ tijd_open: null }))).toBeNull();
+  });
+
+  it("is universal and calendar-derived (shown everywhere, skipped by adherence)", () => {
+    expect(uur.universal).toBe(true);
+    expect(uur.dateDerived).toBe(true);
+  });
+});
+
+describe("breakdownDimensionsFor (0051 — journal-type-aware sessie)", () => {
+  it("keeps the cc-based sessie untouched on the legacy WPM journal", () => {
+    const sessie = breakdownDimensionsFor(true).find((d) => d.id === "sessie")!;
+    // cc-based: every trade has a valid sessie, time or no time.
+    expect(sessie.keyFn(makeTrade({ tijd_open: null, sessie: "New York" }))).toBe("New York");
+    expect(sessie.universal).toBeUndefined();
+  });
+
+  it("swaps in the time-based sessie for any other journal, in the same list position", () => {
+    const dims = breakdownDimensionsFor(false);
+    expect(dims.map((d) => d.id)).toEqual(BREAKDOWN_DIMENSIONS.map((d) => d.id));
+    const sessie = dims.find((d) => d.id === "sessie")!;
+    // Without tijd_open the stored sessie comes from the hidden cc default → must drop out.
+    expect(sessie.keyFn(makeTrade({ tijd_open: null, sessie: "London" }))).toBeNull();
+    expect(sessie.keyFn(makeTrade({ tijd_open: "22:10:00", sessie: "New York" }))).toBe("New York");
+    expect(sessie.universal).toBe(true);
+  });
+});
 
 describe("customFieldDimensions", () => {
   it("keeps only analysable custom fields, dropping legacy, computed, text, date, and number-without-data", () => {

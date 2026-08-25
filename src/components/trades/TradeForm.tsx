@@ -36,6 +36,7 @@ function emptyDefaults(): TradeFormValues {
   return {
     fase: "Fase 1",
     datum_open: localTodayIso(),
+    tijd_open: null,
     datum_sluiting: null,
     pair: "EURUSD",
     instrument: null,
@@ -80,6 +81,8 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
   return {
     fase: trade.fase,
     datum_open: trade.datum_open,
+    // DB returns "HH:MM:SS"; <input type="time"> wants "HH:MM".
+    tijd_open: trade.tijd_open ? trade.tijd_open.slice(0, 5) : null,
     datum_sluiting: trade.datum_sluiting,
     pair: trade.pair,
     instrument: trade.instrument,

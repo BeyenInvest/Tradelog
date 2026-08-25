@@ -41,6 +41,8 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const dateCell = (
     <span className="text-muted">
       {new Date(trade.datum_open + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), { day: "2-digit", month: "2-digit", year: "2-digit" })}
+      {/* Real open time (0051) when logged — the wall-clock string as typed, no Date round-trip. */}
+      {trade.tijd_open ? ` ${trade.tijd_open.slice(0, 5)}` : ""}
     </span>
   );
   const gridClass = `grid ${hideFase ? "grid-cols-7" : "grid-cols-8"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;

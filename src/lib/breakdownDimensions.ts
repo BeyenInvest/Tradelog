@@ -40,6 +40,8 @@ export interface DimensionConfig {
 
 /** Localized weekday label — keys are the fixed WEEKDAYS abbreviations (Ma..Zo). */
 const weekdayLabel = (k: string, t: TFunction) => t(`weekdays.${k}`);
+/** Fixed hour-of-day keys "00".."23" — the wall-clock hour of trades.tijd_open (0051). */
+const UREN = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 /** Localized Yes/No for boolean dimensions — keys stay the stable "Ja"/"Nee". */
 const boolLabel = (k: string, t: TFunction) => t(k === "Ja" ? "common.yes" : "common.no");
 
@@ -60,6 +62,11 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
   { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true, dateDerived: true, labelFn: weekdayLabel },
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true, dateDerived: true },
+  // Hour-of-day on the real time axis (Fase S2, 0051) — the trade's own wall-clock
+  // open hour, so no tz conversion needed. Trades without tijd_open drop out (null),
+  // and the whole card stays hidden until any trade carries a time (rows.length
+  // filter in the view) — which only beta users can enter, so this is data-gated.
+  { id: "uur", keyFn: (t) => (t.tijd_open ? t.tijd_open.slice(0, 2) : null), sortOrder: UREN, universal: true, dateDerived: true, labelFn: (k) => `${k}:00` },
   // Instrument is the universal "what did you trade" (cyclus 7) — on a forex
   // journal instrument mirrors pair on every write path, so a separate "Per Pair"
   // dimension would render the identical table twice. Currency stays: that split
@@ -70,6 +77,31 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee"), labelFn: boolLabel },
 ];
+
+/**
+ * Time-based "Per Sessie" for non-WPM journals (Fase S2, 0051). On such a journal
+ * `cc` sits on its hidden default, so the stored `sessie` is only real when the
+ * DB derived it from tijd_open — trades without a time must drop out (null)
+ * instead of all landing in the default-cc bucket. On the legacy WPM journal the
+ * cc-based sessie IS valid for every trade, so there this swap must NOT happen.
+ */
+const SESSIE_TIME_DIMENSION: DimensionConfig = {
+  id: "sessie",
+  keyFn: (t) => (t.tijd_open ? t.sessie : null),
+  sortOrder: SESSIES,
+  universal: true,
+};
+
+/**
+ * The breakdown-dimension list for the active journal's type: the static list
+ * as-is for the legacy WPM journal (cc-based sessie untouched), with the sessie
+ * entry swapped for its time-based universal variant on every other journal —
+ * same list position, so the view's split/ordering logic is unaffected.
+ */
+export function breakdownDimensionsFor(isLegacyMethodology: boolean): DimensionConfig[] {
+  if (isLegacyMethodology) return BREAKDOWN_DIMENSIONS;
+  return BREAKDOWN_DIMENSIONS.map((d) => (d.id === "sessie" ? SESSIE_TIME_DIMENSION : d));
+}
 
 /**
  * Config-driven breakdown dimensions for a methodology's own custom fields

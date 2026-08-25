@@ -61,6 +61,9 @@ export function dealToImportRow(
   return {
     fase: "Fase 1",
     datum_open: datumOpen,
+    // The parsers currently truncate broker datetimes to a date (parseDateOnly),
+    // so there's no time to carry yet — wiring it through is S2 follow-up work.
+    tijd_open: null,
     datum_sluiting: deal.closeTime ?? null,
     pair,
     instrument,

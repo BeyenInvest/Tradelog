@@ -39,6 +39,13 @@ export const tradeSchema = z
     // fed by useMethodology, is still the only way to set it from the UI.
     fase: z.string().min(1, "tradeForm.required"),
     datum_open: z.string().min(1, "tradeForm.required"),
+    // Optional real open time (Fase S2, 0051). An empty <input type="time">
+    // submits "" -> null; a filled one submits "HH:MM" (the DB reads that fine,
+    // and returns "HH:MM:SS" — both pass, editing re-truncates to HH:MM).
+    tijd_open: z.preprocess(
+      (val) => (val === "" || val == null ? null : val),
+      z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "tradeForm.required").nullable()
+    ).optional().default(null),
     datum_sluiting: nullableDateString.optional().default(null),
     pair: z.enum(PAIRS),
     // Free instrument symbol (cyclus 7). Forex journals mirror pair into this on

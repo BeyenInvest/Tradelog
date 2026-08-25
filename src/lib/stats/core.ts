@@ -66,11 +66,22 @@ export function isGradedError(trade: Pick<Trade, "trade_evaluation">): boolean {
   return isGraded(trade) && trade.trade_evaluation !== "Good trade";
 }
 
-/** Sorts chronologically by datum_open, tie-broken by id for deterministic output. Generic so a narrowed list (e.g. ClosedTrade[]) keeps its type through the sort. */
-export function sortChronological<T extends Pick<Trade, "id" | "datum_open">>(trades: T[]): T[] {
+/**
+ * Sorts chronologically by datum_open, refined by tijd_open within a day (0051 —
+ * a trade without a time sorts as start-of-day, matching its pre-0051 position),
+ * tie-broken by id for deterministic output. `tijd_open` is optional on the
+ * constraint so date-only fixtures/tests keep working unchanged. Generic so a
+ * narrowed list (e.g. ClosedTrade[]) keeps its type through the sort.
+ */
+export function sortChronological<T extends Pick<Trade, "id" | "datum_open"> & Partial<Pick<Trade, "tijd_open">>>(
+  trades: T[]
+): T[] {
   return [...trades].sort((a, b) => {
     const d = a.datum_open.localeCompare(b.datum_open);
     if (d !== 0) return d;
+    // "HH:MM" and "HH:MM:SS" compare correctly as strings; null/undefined -> "".
+    const t = (a.tijd_open ?? "").localeCompare(b.tijd_open ?? "");
+    if (t !== 0) return t;
     return a.id.localeCompare(b.id);
   });
 }
