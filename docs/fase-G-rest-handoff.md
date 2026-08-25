@@ -27,9 +27,9 @@
 | # | Item | Model | Migratie? | Notitie |
 |---|---|---|---|---|
 | A1 | **Branch committen** (`fase-g-preset-builder`) | git (elk) | nee | Owner moet 't vragen; daarna evt. mergen naar main bij launch. |
-| A2 | **Opties reviseren + finetunen** — startset-samenstelling, bouwsteen-catalogus, enum-optiewaarden (`blocks.items.*.options`) | **Opus** | nee | Content-pass, owner-verzoek expliciet. Puur i18n/data in `fieldBlocks.ts` + locales. |
+| A2 | ✅ **Opties reviseren + finetunen** (2026-08-25, commit `330699b`, prod-live) | **Opus** | nee | Content-pass in `fieldBlocks.ts` + locales. `direction_note`-blok weg (dupliceerde native `trades.direction`); orphan-blokken `followed_plan`/`liquidity_target`/`displacement` geactiveerd in startsets/ICT; enum-opties opgepoetst (quality A+/A/B/C, timeframe +30m/+1W, catalyst Breakout→Guidance, emotion +Overmoed/+Verveling, mistake → zuivere uitvoeringsfouten). Alleen nieuwe journals geraakt. |
 | A3 | ✅ **Echte label-vertaalbaarheid** (2026-08-23, uncommit op branch) | **Fable** | **ja (0047)** | `label_key` + `group_key` op `methodology_fields`; render-time `fieldLabel()`/`fieldGroupLabel()` (fieldBlocks.ts) op álle renderplekken incl. share-view/admin; DB-trigger wist de key bij hernoemen (vrije tekst wint); backfill voor oude preset-forks; fork_methodology + shared_methodology_fields kopiëren/exposen de keys mee. 0047 GEDRAAID op prod + read-only geverifieerd (2026-08-24: kolommen+trigger aanwezig, 141/206 velden label_key, 147 group_key, restant = legacy-WPM/niet-catalogus zoals bedoeld, functies bijgewerkt). |
-| A4 | **Gegroepeerd overzicht** (mockup-scherm 02) als aparte "wissel journal"-view | **Opus** | nee | Nog niet gebouwd; nice-to-have. |
+| A4 | ✅ **Gegroepeerd overzicht** (mockup-scherm 02) als "wissel journal"-view (2026-08-25, commit `83e4914`, prod-live) | **Opus** | nee | `JournalOverview` in Settings: eigen journals per asset-class, N velden · N trades, klik=wisselen, inline hernoemen. Alleen bij ≥2 journals; delete blijft in de sidebar-switcher. Visuele multi-journal-check nog door owner. |
 
 ### B. Rest van G-rest (masterplan §"Fase G-rest")
 | # | Item | Model | Notitie |
