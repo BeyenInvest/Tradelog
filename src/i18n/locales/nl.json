@@ -795,6 +795,36 @@
     "noData": "Geen data.",
     "perFaseSuffix": "per fase"
   },
+  "rDistribution": {
+    "heading": "R-distributie",
+    "chartTitle": "Aantal trades per R-multiple",
+    "chartIntro": "Elke balk = het aantal trades met een resultaat rond die R-waarde. Verlies links (rood), winst rechts (groen); 0R = break-even.",
+    "tradesTooltip": "trades",
+    "binLabel": "Rond {{bin}}",
+    "empty": "Nog geen trades om te verdelen.",
+    "sqn": "SQN",
+    "sqnHint": "System Quality Number — verwachting gedeeld door spreiding. Hoger = gladdere edge.",
+    "stdDev": "Std.dev. R",
+    "stdDevHint": "Spreiding van je R-multiples per trade."
+  },
+  "crossTable": {
+    "heading": "Kruistabel",
+    "rowDimension": "Rij-dimensie",
+    "colDimension": "Kolom-dimensie",
+    "total": "Totaal",
+    "empty": "Nog geen trades voor deze combinatie.",
+    "metric_resultaat": "Resultaat",
+    "metric_winRate": "Win%",
+    "metric_trades": "Trades"
+  },
+  "analyseLayout": {
+    "section_kpis": "Overzicht",
+    "section_performance": "Resultaatverloop",
+    "reset": "Standaardvolgorde herstellen",
+    "drag": "Sleep om te herordenen",
+    "expand": "Sectie uitklappen",
+    "collapse": "Sectie inklappen"
+  },
   "accounts": {
     "subtitle": "Prop firm-accounts en payouts — handmatig, geen live koppeling",
     "newAccount": "Nieuw account",

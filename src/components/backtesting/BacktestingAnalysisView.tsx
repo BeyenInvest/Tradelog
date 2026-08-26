@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { RDistributionChart } from "@/components/charts/RDistributionChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
+import { CrossTable, type CrossDim } from "@/components/breakdown/CrossTable";
+import { SectionShell } from "@/components/analyse/SectionShell";
 import { AdherenceSection, type AdherenceDimension } from "@/components/backtesting/AdherenceSection";
 import { ExitAnalysisSection } from "@/components/backtesting/ExitAnalysisSection";
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
@@ -13,7 +16,9 @@ import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
   computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
   computeDurationByOutcome, groupIntoSeries, takenTrades, closedTrades,
+  computeRHistogram, computeRDistribution, computeEvaluationImpact, computeConditionGaps,
 } from "@/lib/stats";
+import { useAnalyseLayout } from "@/hooks/useAnalyseLayout";
 import { breakdownDimensionsFor, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
@@ -56,7 +61,7 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase } = useAuth();
+  const { hideFase: ownHideFase, betaFeatures, profile } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
@@ -80,6 +85,11 @@ export function BacktestingAnalysisView({
   );
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
+  // R-distributie (Fase S2, beta): fixed 1R-bin histogram + spread/quality (stdDev,
+  // SQN), both on the real %-trades — R is inherently R-unit, so the %/R/$ toggle
+  // doesn't apply.
+  const rHistogram = useMemo(() => computeRHistogram(scopedTrades), [scopedTrades]);
+  const rDist = useMemo(() => computeRDistribution(scopedTrades), [scopedTrades]);
   // Weergavelaag-conversie (Fase J): alle som-gebaseerde uitsplitsingen hieronder
   // rekenen op deze lijst, waarin resultaat_pct in R-modus de R-ratio is. De KPI's
   // hierboven blijven op de echte %-trades (Resultaat converteert via kpis.totalR;
@@ -185,108 +195,190 @@ export function BacktestingAnalysisView({
     [isLegacyMethodology, isForexJournal, customDims, t]
   );
 
-  return (
-    <div className="flex flex-col gap-8">
-      {/* Period + filter toolbar — scopes every KPI, chart and breakdown below */}
-      <div className="flex flex-wrap items-center gap-2">
-        <PeriodPicker value={period} onChange={setPeriod} />
-        <FilterPanel value={filters} onChange={setFilters} />
-      </div>
+  // Kruistabel-dimensies (Fase S2, beta): exactly the dimensions whose plain
+  // breakdowns render for this journal type — the legacy setup dims (WPM only), the
+  // applicable timing/instrument dims, and the journal's own custom fields. Consumes
+  // the same DimensionConfig list, pre-resolving each title + row-label translator so
+  // CrossTable stays free of dimension/i18n knowledge (unlike adherence, this keeps
+  // the calendar-derived splits — Setup × Uur is a genuine cross-tab).
+  const crossDims = useMemo<CrossDim[]>(
+    () =>
+      [
+        ...(isLegacyMethodology ? dimensions.slice(0, kenmerkenSplit) : []),
+        ...dimensions.slice(kenmerkenSplit).filter(showTimingDim),
+        ...customDims,
+      ].map((d) => ({
+        id: d.id,
+        title: d.label ?? timingDimTitle(d.id),
+        keyFn: d.keyFn,
+        sortOrder: d.sortOrder,
+        labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isLegacyMethodology, isForexJournal, customDims, t]
+  );
 
-      {/* Overview KPIs */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={t("backtestingAnalysis.totalTrades")} value={kpis.totalTrades} />
-        <StatCard
-          label={t("backtestingAnalysis.result")}
-          value={formatResult(kpis.totalResultaat, resultUnit, {
-            rMultiple: kpis.totalR,
-            rAssumed: kpis.rAssumedN > 0,
-            amount: pctToAmount(kpis.totalResultaat, saldo),
-          })}
-          tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
-        />
-        <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
-        <StatCard
-          label={t("backtestingAnalysis.avgR")}
-          value={kpis.avgR != null ? `${kpis.rAssumedN > 0 ? "~" : ""}${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
-          tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
-          sub={
-            kpis.avgR != null
-              ? kpis.rAssumedN > 0
-                ? `${t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })} · ${t("journal.assumedRiskShort", { count: kpis.rAssumedN })}`
-                : t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })
-              : undefined
-          }
-        />
-        <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
-        <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
-        <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
-        <StatCard
-          label={t("backtestingAnalysis.currentStreak")}
-          value={
-            kpis.currentStreak.type === "none"
-              ? "—"
-              : `${kpis.currentStreak.count} ${t(`journal.streakType_${kpis.currentStreak.type}`)}`
-          }
-        />
-        <StatCard
-          label={t("backtestingAnalysis.winLossRatio")}
-          value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}
-          sub={kpis.avgWin != null && kpis.avgLoss != null ? t("backtestingAnalysis.avgWinLoss", { win: kpis.avgWin, loss: kpis.avgLoss }) : undefined}
-        />
-        <StatCard
-          label={t("backtestingAnalysis.profitFactor")}
-          value={formatProfitFactor(kpis.profitFactor)}
-          tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
-        />
-      </section>
+  // Visibility of the two self-hiding sections, computed here so the layout system
+  // (which owns the section order) knows whether to render a titled shell at all —
+  // mirrors each component's own null-guard exactly.
+  const exitVisible = trackExit && scopedTrades.some((tr) => tr.mae_pct != null || tr.mfe_pct != null || tr.planned_rr != null);
+  const adherenceVisible = useMemo(() => {
+    if (!showAdherence) return false;
+    if (computeEvaluationImpact(scopedTrades).graded > 0) return true;
+    return computeConditionGaps(scopedTrades, adherenceDims).length > 0;
+  }, [showAdherence, scopedTrades, adherenceDims]);
 
-      {/* Per Fase KPI cards + bar chart */}
-      <section className="flex flex-col gap-4">
-        {showFase && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {byFase.map((f) => (
-              <Card key={f.key}>
-                <p className="font-display text-2xl italic text-gold">{f.label}</p>
-                <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
-                  {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
-                </p>
-                <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
-                  {formatAggregate(f.resultaatTotal, resultUnit)}
-                </p>
-                <p className="font-body text-xs mt-1 text-muted">
-                  <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
-                  {" · "}
-                  <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
-                </p>
-                <p className="font-mono text-[11px] mt-1 text-muted">
-                  <span className="text-win">{f.wins}W</span>
-                  {" / "}
-                  <span className="text-be">{f.be}BE</span>
-                  {" / "}
-                  <span className="text-loss">{f.losses}L</span>
-                </p>
-              </Card>
-            ))}
-          </div>
-        )}
-        <div className={`grid grid-cols-1 gap-5 ${showFase ? "lg:grid-cols-2" : ""}`}>
-          <Card>
-            <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
-            <EquityCurveChart trades={scopedTrades} />
-          </Card>
-          {showFase && (
-            <Card>
-              <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
-              <FaseBarChart data={byFase} />
-            </Card>
-          )}
+  // Per-user Analyse layout (Fase S2, beta): collapse + drag-to-reorder of the
+  // sections below, remembered in localStorage per account. Beta-only chrome —
+  // non-beta users get the same sections in the fixed default order, no controls.
+  const interactive = betaFeatures;
+  const { orderedIds, move, toggleCollapse, isCollapsed, reset, isCustomized } = useAnalyseLayout(profile?.id ?? null);
+
+  // Every Analyse block as a reorderable/collapsible section (Fase S2, beta). Order
+  // here is the default; the layout hook permutes it per user. Conditional/beta-only
+  // sections carry their own `visible` flag so they drop out cleanly (and the layout
+  // never tries to order a section that isn't on screen).
+  const sectionDefs: { id: string; title: string; action?: ReactNode; visible: boolean; body: ReactNode }[] = [
+    {
+      id: "kpis",
+      title: t("analyseLayout.section_kpis"),
+      visible: true,
+      body: (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label={t("backtestingAnalysis.totalTrades")} value={kpis.totalTrades} />
+          <StatCard
+            label={t("backtestingAnalysis.result")}
+            value={formatResult(kpis.totalResultaat, resultUnit, {
+              rMultiple: kpis.totalR,
+              rAssumed: kpis.rAssumedN > 0,
+              amount: pctToAmount(kpis.totalResultaat, saldo),
+            })}
+            tone={resultDisplayValue(kpis.totalResultaat, resultUnit, { rMultiple: kpis.totalR }) >= 0 ? "up" : "down"}
+          />
+          <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
+          <StatCard
+            label={t("backtestingAnalysis.avgR")}
+            value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+            tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
+            sub={
+              kpis.avgR != null
+                ? kpis.rAssumedN > 0
+                  ? `${t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })} · ${t("journal.assumedRiskShort", { count: kpis.rAssumedN })}`
+                  : t("backtestingAnalysis.totalR", { total: kpis.totalR.toFixed(2) })
+                : undefined
+            }
+          />
+          <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
+          <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
+          <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
+          <StatCard
+            label={t("backtestingAnalysis.currentStreak")}
+            value={
+              kpis.currentStreak.type === "none"
+                ? "—"
+                : `${kpis.currentStreak.count} ${t(`journal.streakType_${kpis.currentStreak.type}`)}`
+            }
+          />
+          <StatCard
+            label={t("backtestingAnalysis.winLossRatio")}
+            value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}
+            sub={kpis.avgWin != null && kpis.avgLoss != null ? t("backtestingAnalysis.avgWinLoss", { win: kpis.avgWin, loss: kpis.avgLoss }) : undefined}
+          />
+          <StatCard
+            label={t("backtestingAnalysis.profitFactor")}
+            value={formatProfitFactor(kpis.profitFactor)}
+            tone={kpis.profitFactor == null ? "neutral" : kpis.profitFactor >= 1 ? "up" : "down"}
+          />
         </div>
-      </section>
-
-      {/* Series of 5 */}
-      <section>
-        <h2 className="font-display text-xl italic mb-3 text-ink">{t("backtestingAnalysis.seriesHeading")}</h2>
+      ),
+    },
+    {
+      id: "performance",
+      title: t("analyseLayout.section_performance"),
+      visible: true,
+      body: (
+        <>
+          {showFase && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {byFase.map((f) => (
+                <Card key={f.key}>
+                  <p className="font-display text-2xl italic text-gold">{f.label}</p>
+                  <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
+                    {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
+                  </p>
+                  <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
+                    {formatAggregate(f.resultaatTotal, resultUnit)}
+                  </p>
+                  <p className="font-body text-xs mt-1 text-muted">
+                    <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
+                    {" · "}
+                    <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
+                  </p>
+                  <p className="font-mono text-[11px] mt-1 text-muted">
+                    <span className="text-win">{f.wins}W</span>
+                    {" / "}
+                    <span className="text-be">{f.be}BE</span>
+                    {" / "}
+                    <span className="text-loss">{f.losses}L</span>
+                  </p>
+                </Card>
+              ))}
+            </div>
+          )}
+          <div className={`grid grid-cols-1 gap-5 ${showFase ? "lg:grid-cols-2" : ""}`}>
+            <Card>
+              <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
+              <EquityCurveChart trades={scopedTrades} />
+            </Card>
+            {showFase && (
+              <Card>
+                <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
+                <FaseBarChart data={byFase} />
+              </Card>
+            )}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "rdist",
+      title: t("rDistribution.heading"),
+      visible: betaFeatures && rHistogram.length > 0,
+      body: (
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 mb-3">
+            <div className="min-w-0">
+              <h3 className="font-display text-lg italic text-ink">{t("rDistribution.chartTitle")}</h3>
+              <p className="font-body text-xs text-muted mt-0.5">{t("rDistribution.chartIntro")}</p>
+            </div>
+            <div className="flex gap-5 shrink-0">
+              <div className="text-right" title={t("rDistribution.sqnHint")}>
+                <p className="font-body text-[10px] uppercase tracking-wider text-muted">{t("rDistribution.sqn")}</p>
+                <p
+                  className={`font-mono text-xl leading-tight ${
+                    rDist.sqn == null ? "text-ink" : rDist.sqn >= 2 ? "text-win" : rDist.sqn < 1 ? "text-loss" : "text-ink"
+                  }`}
+                >
+                  {rDist.sqn != null ? rDist.sqn.toFixed(2) : "—"}
+                </p>
+              </div>
+              <div className="text-right" title={t("rDistribution.stdDevHint")}>
+                <p className="font-body text-[10px] uppercase tracking-wider text-muted">{t("rDistribution.stdDev")}</p>
+                <p className="font-mono text-xl leading-tight text-ink">
+                  {rDist.stdDevR != null ? `${rDist.stdDevR.toFixed(2)}R` : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <RDistributionChart bins={rHistogram} />
+        </Card>
+      ),
+    },
+    {
+      id: "series",
+      title: t("backtestingAnalysis.seriesHeading"),
+      visible: true,
+      body: (
         <Card>
           <div className="flex flex-wrap gap-2">
             {series.map((s) => (
@@ -305,98 +397,112 @@ export function BacktestingAnalysisView({
             {series.length === 0 && <p className="text-sm text-muted">{t("backtestingAnalysis.noTrades")}</p>}
           </div>
         </Card>
-      </section>
-
-      {/* Regel-adherentie (Fase N2) — live-journal-only (needs trade_evaluation) */}
-      {showAdherence && <AdherenceSection trades={scopedTrades} dims={adherenceDims} />}
-
-      {/* Exit-analyse (Fase N3) — opt-in per journal (0050, trackExit): MAE/MFE/
-          planned-R:R zijn universeel (ook in backtest-projecten invulbaar), dus niet
-          aan showAdherence gebonden; de sectie verdwijnt bovendien vanzelf zolang
-          geen enkele trade ze bijhoudt. */}
-      {trackExit && <ExitAnalysisSection trades={scopedTrades} />}
-
-      {/* Uitsplitsingen */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl italic text-ink">{t("backtestingAnalysis.breakdownsHeading")}</h2>
-          {showFase && (
-            <div className="inline-flex rounded-lg border border-border overflow-hidden">
-              <button
-                onClick={() => setViewMode("totaal")}
-                className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-              >
-                {t("backtestingAnalysis.total")}
-              </button>
-              <button
-                onClick={() => setViewMode("per-fase")}
-                className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-              >
-                {t("backtestingAnalysis.perFase")}
-              </button>
+      ),
+    },
+    {
+      id: "adherence",
+      title: t("adherence.heading"),
+      visible: adherenceVisible,
+      body: <AdherenceSection trades={scopedTrades} dims={adherenceDims} hideHeading />,
+    },
+    {
+      id: "exit",
+      title: t("exitAnalysis.heading"),
+      visible: exitVisible,
+      body: <ExitAnalysisSection trades={scopedTrades} hideHeading />,
+    },
+    {
+      // Kruistabel als aanloop naar de uitsplitsingen: net onder Overzicht/Series,
+      // vlak vóór waar de analysekolommen beginnen (owner-verzoek).
+      id: "crosstable",
+      title: t("crossTable.heading"),
+      visible: betaFeatures && crossDims.length >= 2,
+      body: <CrossTable trades={displayTrades} dims={crossDims} />,
+    },
+    {
+      id: "breakdowns",
+      title: t("backtestingAnalysis.breakdownsHeading"),
+      visible: true,
+      action: showFase ? (
+        <div className="inline-flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setViewMode("totaal")}
+            className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+          >
+            {t("backtestingAnalysis.total")}
+          </button>
+          <button
+            onClick={() => setViewMode("per-fase")}
+            className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
+          >
+            {t("backtestingAnalysis.perFase")}
+          </button>
+        </div>
+      ) : undefined,
+      body: (
+        <>
+          {/* Setup & weekly — entirely legacy WPM columns, so only for the legacy journal. */}
+          {isLegacyMethodology && (
+            <div className="flex flex-col gap-3">
+              <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {effectiveViewMode === "totaal"
+                  ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
+                  : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Setup & weekly — entirely legacy WPM columns, so only for the legacy journal. */}
-        {isLegacyMethodology && (
+          {/* Fase-kenmerken */}
+          {showFase && (
+            <div className="flex flex-col gap-4">
+              <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
+              {FASES.map((fase) => {
+                const configs = kenmerkRows.filter((k) => k.config.fase === fase);
+                if (configs.length === 0) return null;
+                return (
+                  <div key={fase} className="flex flex-col gap-3">
+                    <h4 className="font-body text-sm text-muted">{fase}</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                      {configs.map(({ config, rows }) => (
+                        <BreakdownTable key={config.field} title={t(`faseKenmerken.${config.field}`)} rows={rows} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex flex-col gap-3">
-            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
+            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {effectiveViewMode === "totaal"
-                ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
-                : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
+                ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)
+                : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)}
             </div>
           </div>
-        )}
 
-        {/* Fase-kenmerken */}
-        {showFase && (
-          <div className="flex flex-col gap-4">
-            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
-            {FASES.map((fase) => {
-              const configs = kenmerkRows.filter((k) => k.config.fase === fase);
-              if (configs.length === 0) return null;
-              return (
-                <div key={fase} className="flex flex-col gap-3">
-                  <h4 className="font-body text-sm text-muted">{fase}</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {configs.map(({ config, rows }) => (
-                      <BreakdownTable key={config.field} title={t(`faseKenmerken.${config.field}`)} rows={rows} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3">
-          <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {effectiveViewMode === "totaal"
-              ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)
-              : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)}
-          </div>
-        </div>
-
-        {/* Config-driven: the active journal's own custom fields (cyclus 4). Only the
-            "total" split — a per-fase split is inherently Weekly-Phase-Method-specific. */}
-        {customDimRows.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.customBreakdownHeading")}</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {customDimRows.map(({ dim, rows }) => (
-                <BreakdownTable key={dim.id} title={dim.label ?? dim.id} rows={rows} />
-              ))}
+          {/* Config-driven: the active journal's own custom fields (cyclus 4). Only the
+              "total" split — a per-fase split is inherently Weekly-Phase-Method-specific. */}
+          {customDimRows.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.customBreakdownHeading")}</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {customDimRows.map(({ dim, rows }) => (
+                  <BreakdownTable key={dim.id} title={dim.label ?? dim.id} rows={rows} />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </section>
-
-      {/* Duration per outcome — supplementary numbers, so compact and last, not competing with the real KPIs at top */}
-      <section className="flex flex-col gap-3">
-        <h3 className="font-body text-sm uppercase tracking-wider text-muted">{t("backtestingAnalysis.durationHeading")}</h3>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "duration",
+      title: t("backtestingAnalysis.durationHeading"),
+      visible: true,
+      body: (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {OUTCOMES.map((o) => (
             <StatCard
@@ -407,7 +513,46 @@ export function BacktestingAnalysisView({
             />
           ))}
         </div>
-      </section>
+      ),
+    },
+  ];
+
+  const visibleSections = sectionDefs.filter((s) => s.visible);
+  const visibleIds = visibleSections.map((s) => s.id);
+  const orderedSections = orderedIds(visibleIds)
+    .map((id) => visibleSections.find((s) => s.id === id))
+    .filter((s): s is (typeof sectionDefs)[number] => s != null);
+
+  return (
+    <div className="flex flex-col gap-8">
+      {/* Period + filter toolbar — scopes every KPI, chart and breakdown below */}
+      <div className="flex flex-wrap items-center gap-2">
+        <PeriodPicker value={period} onChange={setPeriod} />
+        <FilterPanel value={filters} onChange={setFilters} />
+        {interactive && isCustomized && (
+          <button
+            onClick={reset}
+            className="ml-auto font-body text-xs text-muted hover:text-ink underline underline-offset-2"
+          >
+            {t("analyseLayout.reset")}
+          </button>
+        )}
+      </div>
+
+      {orderedSections.map((s) => (
+        <SectionShell
+          key={s.id}
+          id={s.id}
+          title={s.title}
+          action={s.action}
+          interactive={interactive}
+          collapsed={interactive && isCollapsed(s.id)}
+          onToggle={() => toggleCollapse(s.id)}
+          onReorder={(from, to) => move(visibleIds, from, to)}
+        >
+          {s.body}
+        </SectionShell>
+      ))}
     </div>
   );
 }

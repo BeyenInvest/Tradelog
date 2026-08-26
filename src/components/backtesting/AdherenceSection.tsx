@@ -34,7 +34,7 @@ const signClass = (v: number) => (v > 0 ? "text-win" : v < 0 ? "text-loss" : "te
  * (e.g. a backtest project, where trade_evaluation isn't selectable, with too
  * few trades per value for a gap).
  */
-export function AdherenceSection({ trades, dims }: { trades: ClosedTrade[]; dims: AdherenceDimension[] }) {
+export function AdherenceSection({ trades, dims, hideHeading = false }: { trades: ClosedTrade[]; dims: AdherenceDimension[]; hideHeading?: boolean }) {
   const { t } = useTranslation();
   const impact = useMemo(() => computeEvaluationImpact(trades), [trades]);
   const gaps = useMemo(() => computeConditionGaps(trades, dims).slice(0, MAX_GAPS), [trades, dims]);
@@ -49,7 +49,7 @@ export function AdherenceSection({ trades, dims }: { trades: ClosedTrade[]; dims
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-display text-xl italic text-ink">{t("adherence.heading")}</h2>
+      {!hideHeading && <h2 className="font-display text-xl italic text-ink">{t("adherence.heading")}</h2>}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         {impact.graded > 0 && (
           <Card>

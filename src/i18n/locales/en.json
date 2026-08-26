@@ -795,6 +795,36 @@
     "noData": "No data.",
     "perFaseSuffix": "per phase"
   },
+  "rDistribution": {
+    "heading": "R distribution",
+    "chartTitle": "Number of trades per R-multiple",
+    "chartIntro": "Each bar = how many trades returned around that many R. Losses on the left (red), wins on the right (green); 0R = break-even.",
+    "tradesTooltip": "trades",
+    "binLabel": "Around {{bin}}",
+    "empty": "No trades to distribute yet.",
+    "sqn": "SQN",
+    "sqnHint": "System Quality Number — expectancy divided by spread. Higher = a smoother edge.",
+    "stdDev": "Std. dev. R",
+    "stdDevHint": "Spread of your per-trade R-multiples."
+  },
+  "crossTable": {
+    "heading": "Cross-table",
+    "rowDimension": "Row dimension",
+    "colDimension": "Column dimension",
+    "total": "Total",
+    "empty": "No trades for this combination yet.",
+    "metric_resultaat": "Result",
+    "metric_winRate": "Win%",
+    "metric_trades": "Trades"
+  },
+  "analyseLayout": {
+    "section_kpis": "Overview",
+    "section_performance": "Performance",
+    "reset": "Reset to default order",
+    "drag": "Drag to reorder",
+    "expand": "Expand section",
+    "collapse": "Collapse section"
+  },
   "accounts": {
     "subtitle": "Prop firm accounts and payouts — manual, no live connection",
     "newAccount": "New account",

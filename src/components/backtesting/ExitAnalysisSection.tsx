@@ -30,7 +30,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * the caller. Caller passes the same missed-excluded closed list every other
  * realized stat reads.
  */
-export function ExitAnalysisSection({ trades }: { trades: ExitTrade[] }) {
+export function ExitAnalysisSection({ trades, hideHeading = false }: { trades: ExitTrade[]; hideHeading?: boolean }) {
   const { t } = useTranslation();
   const stats = useMemo(() => computeExitStats(trades), [trades]);
 
@@ -39,7 +39,7 @@ export function ExitAnalysisSection({ trades }: { trades: ExitTrade[] }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-xl italic text-ink">{t("exitAnalysis.heading")}</h2>
+        {!hideHeading && <h2 className="font-display text-xl italic text-ink">{t("exitAnalysis.heading")}</h2>}
         <p className="font-body text-xs text-muted">
           {t("exitAnalysis.intro")}
           {stats.assumedRiskN > 0 && <> {t("exitAnalysis.assumedRiskNote", { count: stats.assumedRiskN })}</>}
