@@ -228,10 +228,11 @@ export function BacktestingAnalysisView({
     return computeConditionGaps(scopedTrades, adherenceDims).length > 0;
   }, [showAdherence, scopedTrades, adherenceDims]);
 
-  // Per-user Analyse layout (Fase S2, beta): collapse + drag-to-reorder of the
-  // sections below, remembered in localStorage per account. Beta-only chrome —
-  // non-beta users get the same sections in the fixed default order, no controls.
-  const interactive = betaFeatures;
+  // Per-user Analyse layout (Fase S2): collapse + drag-to-reorder of the sections
+  // below, remembered in localStorage per account. Owner-besluit 2026-08-26: een
+  // neutrale UX-verbetering, dus bewust voor ALLE gebruikers aan (niet achter beta) —
+  // anders dan de nieuwe R-distributie/kruistabel-secties, die wél beta-gated blijven.
+  const interactive = true;
   const { orderedIds, move, toggleCollapse, isCollapsed, reset, isCustomized } = useAnalyseLayout(profile?.id ?? null);
 
   // Every Analyse block as a reorderable/collapsible section (Fase S2, beta). Order
