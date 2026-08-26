@@ -45,7 +45,9 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
       {trade.tijd_open ? ` ${trade.tijd_open.slice(0, 5)}` : ""}
     </span>
   );
-  const gridClass = `grid ${hideFase ? "grid-cols-7" : "grid-cols-8"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
+  // Last column is wider than the rest so the open-trade actions (pencil + "Sluiten")
+  // fit fully to the right of RESULTAAT instead of spilling left over its value.
+  const gridClass = `grid ${hideFase ? "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
 
   // The two middle cells: universal Richting/R for a modern journal, the legacy
   // WPM Concept/Entry otherwise. R is "—" for a still-running trade (no result).
@@ -63,9 +65,11 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   );
 
   // A still-running trade has no realized result yet: it shows a "loopt" badge in
-  // the outcome column and "—" in the result column, plus a prominent "Sluiten"
-  // action that reopens the form to enter its outcome. It's counted in no stat
-  // (closedTrades() excludes it), so nothing here formats a % or R.
+  // the outcome column and "—" in the result column. Its action column carries both
+  // a pencil (edit any field) and a prominent "Sluiten" — both open the same form,
+  // but the pencil makes it discoverable that an open trade is editable, not only
+  // closable (tester feedback). It's counted in no stat (closedTrades() excludes
+  // it), so nothing here formats a % or R.
   if (open) {
     return (
       <div className={gridClass}>
@@ -90,12 +94,22 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
         {!readOnly && (
           <span className="flex justify-end items-center gap-2">
             {onEdit && (
-              <button
-                onClick={() => onEdit(trade)}
-                className="font-body text-[11px] px-2 py-0.5 rounded border border-gold/50 text-gold hover:bg-gold/10 transition-colors"
-              >
-                {t("list.closeTrade")}
-              </button>
+              <>
+                <button
+                  onClick={() => onEdit(trade)}
+                  title={t("list.editTrade")}
+                  aria-label={t("list.editTrade")}
+                  className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={() => onEdit(trade)}
+                  className="font-body text-[11px] px-2 py-0.5 rounded border border-gold/50 text-gold hover:bg-gold/10 transition-colors"
+                >
+                  {t("list.closeTrade")}
+                </button>
+              </>
             )}
             {onDelete && (
               <button
@@ -157,7 +171,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
       {!readOnly && (
         <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {onEdit && (
-            <button onClick={() => onEdit(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
+            <button onClick={() => onEdit(trade)} title={t("list.editTrade")} aria-label={t("list.editTrade")} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
               <Pencil size={13} />
             </button>
           )}

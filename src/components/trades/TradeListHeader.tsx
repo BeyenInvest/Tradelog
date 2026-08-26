@@ -14,7 +14,7 @@ export function TradeListHeader({
   const hideFase = hideFaseOverride ?? ownHideFase;
   const modern = columnMode === "modern";
   return (
-    <div className={`grid ${hideFase ? "grid-cols-7" : "grid-cols-8"} gap-3 font-body text-[11px] uppercase tracking-wide pb-2 mb-1 text-muted border-b border-border`}>
+    <div className={`grid ${hideFase ? "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]"} gap-3 font-body text-[11px] uppercase tracking-wide pb-2 mb-1 text-muted border-b border-border`}>
       <span>{t("list.colDate")}</span>
       <span>{t("list.colPair")}</span>
       {!hideFase && <span>{t("list.colFase")}</span>}

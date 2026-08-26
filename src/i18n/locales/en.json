@@ -573,6 +573,7 @@
     "sortDate": "Date",
     "sortResult": "Result",
     "closeTrade": "Close",
+    "editTrade": "Edit",
     "assumedRiskTitle": "R at assumed 1% risk — this trade has no risk % entered"
   },
   "calendar": {
