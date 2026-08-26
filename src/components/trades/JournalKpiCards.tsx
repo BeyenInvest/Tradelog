@@ -40,7 +40,7 @@ export function AvgRStatCard({ kpis }: { kpis: OverviewKpis }) {
   return (
     <StatCard
       label={t("journal.statAvgR")}
-      value={kpis.avgR != null ? `${kpis.rAssumedN > 0 ? "~" : ""}${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+      value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
       tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
       sub={
         kpis.avgR != null
