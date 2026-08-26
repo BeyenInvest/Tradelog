@@ -61,7 +61,7 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase, betaFeatures, profile } = useAuth();
+  const { hideFase: ownHideFase, profile } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
@@ -85,9 +85,8 @@ export function BacktestingAnalysisView({
   );
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
-  // R-distributie (Fase S2, beta): fixed 1R-bin histogram + spread/quality (stdDev,
-  // SQN), both on the real %-trades — R is inherently R-unit, so the %/R/$ toggle
-  // doesn't apply.
+  // R-distributie (Fase S2): fixed 1R-bin histogram + spread/quality (stdDev, SQN),
+  // both on the real %-trades — R is inherently R-unit, so the %/R/$ toggle doesn't apply.
   const rHistogram = useMemo(() => computeRHistogram(scopedTrades), [scopedTrades]);
   const rDist = useMemo(() => computeRDistribution(scopedTrades), [scopedTrades]);
   // Weergavelaag-conversie (Fase J): alle som-gebaseerde uitsplitsingen hieronder
@@ -344,7 +343,8 @@ export function BacktestingAnalysisView({
     {
       id: "rdist",
       title: t("rDistribution.heading"),
-      visible: betaFeatures && rHistogram.length > 0,
+      // Live voor iedereen (owner 2026-08-26), enkel data-gated.
+      visible: rHistogram.length > 0,
       body: (
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 mb-3">
@@ -414,10 +414,11 @@ export function BacktestingAnalysisView({
     },
     {
       // Kruistabel als aanloop naar de uitsplitsingen: net onder Overzicht/Series,
-      // vlak vóór waar de analysekolommen beginnen (owner-verzoek).
+      // vlak vóór waar de analysekolommen beginnen (owner-verzoek). Live voor iedereen
+      // (owner 2026-08-26), enkel data-gated: verschijnt zodra er ≥2 kruisbare dimensies zijn.
       id: "crosstable",
       title: t("crossTable.heading"),
-      visible: betaFeatures && crossDims.length >= 2,
+      visible: crossDims.length >= 2,
       body: <CrossTable trades={displayTrades} dims={crossDims} />,
     },
     {
