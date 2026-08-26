@@ -35,7 +35,7 @@ const SharePage = lazy(() => import("@/pages/SharePage"));
 const ShareReviewPage = lazy(() => import("@/pages/ShareReviewPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, profile, loading, passwordRecovery } = useAuth();
+  const { session, profile, profileError, loading, passwordRecovery } = useAuth();
 
   if (loading) return <FullScreenLoading />;
 
@@ -44,10 +44,15 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   // fires a plain SIGNED_IN for invites — see useAuth). Route through the same "set a password"
   // gate as an in-progress recovery before letting either into the app.
   if (passwordRecovery) return <Navigate to="/reset-password" replace />;
-  // A profile that never loaded is FATAL, not something to render past (audit
+  // A profile that FAILED to load is FATAL, not something to render past (audit
   // blocker N1): without it the active journal is unknowable and new trades
   // would silently land in the `null`-journal. Retry or sign out — nothing else.
-  if (!profile) return <ProfileErrorScreen />;
+  if (profileError) return <ProfileErrorScreen />;
+  // Signed in but the profile fetch is still in flight: on an in-app sign-in the
+  // onAuthStateChange handler kicks off loadProfile without awaiting (loading is
+  // already false by then), so `profile` is briefly null with no error yet. Show
+  // the loading state, not the fatal error screen — otherwise it flashes for a frame.
+  if (!profile) return <FullScreenLoading />;
   return <>{children}</>;
 }
 
