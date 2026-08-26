@@ -208,7 +208,7 @@ export function BacktestingAnalysisView({
         <StatCard label={t("backtestingAnalysis.winBeLossRate")} value={`${(kpis.winRate * 100).toFixed(0)}/${(kpis.beRate * 100).toFixed(0)}/${(kpis.lossRate * 100).toFixed(0)}%`} />
         <StatCard
           label={t("backtestingAnalysis.avgR")}
-          value={kpis.avgR != null ? `${kpis.rAssumedN > 0 ? "~" : ""}${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
+          value={kpis.avgR != null ? `${kpis.avgR > 0 ? "+" : ""}${kpis.avgR.toFixed(2)}R` : "—"}
           tone={kpis.avgR != null ? (kpis.avgR >= 0 ? "up" : "down") : "neutral"}
           sub={
             kpis.avgR != null
