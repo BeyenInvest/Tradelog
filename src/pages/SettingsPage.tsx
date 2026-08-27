@@ -62,24 +62,24 @@ export default function SettingsPage() {
           <ResultUnitSettings />
         </section>
 
-        {/* Multi-journal configuration. Above the legacy trading prefs: for a new
-            trader this is the section that matters, the WPM-era cards below are
-            secondary. */}
-        <section className="flex flex-col gap-5">
-          <SettingsSectionHeader
-            title={t("methodology.title")}
-            description={t("methodology.description")}
-          />
-          <JournalOverview />
-          <NewJournalCard defaultOpen={openPresets} />
-          <MethodologyEditor />
-          {/* N5 review-secties: nieuw, dus achter de beta-gate tot de launch-flip.
-              Zonder de editor kan een niet-beta-gebruiker geen eigen secties maken →
-              die ziet altijd de defaults, identiek aan vóór N5. */}
-          {betaFeatures && <ReviewSectionsEditor />}
-          <AdvancedAnalysisSettings />
-          <JournalInstruments />
-        </section>
+        {/* Multi-journal configuration (verschillende journals + builder) —
+            soft-launch: beta-flagged users only (0033) until the public launch.
+            Above the legacy trading prefs: for a new trader this is the section
+            that matters, the WPM-era cards below are secondary. */}
+        {betaFeatures && (
+          <section className="flex flex-col gap-5">
+            <SettingsSectionHeader
+              title={t("methodology.title")}
+              description={t("methodology.description")}
+            />
+            <JournalOverview />
+            <NewJournalCard defaultOpen={openPresets} />
+            <MethodologyEditor />
+            <ReviewSectionsEditor />
+            <AdvancedAnalysisSettings />
+            <JournalInstruments />
+          </section>
+        )}
 
         <section className="flex flex-col gap-5">
           <SettingsSectionHeader

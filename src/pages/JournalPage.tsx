@@ -10,7 +10,7 @@ import { takenTrades } from "@/lib/stats";
 /** Live market trades only — backtest project trades never appear here. */
 export default function JournalPage() {
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, betaFeatures } = useAuth();
   const { fields, loading: methLoading } = useMethodology();
   const [tab, setTab] = useState<"journal" | "analyse">("journal");
   // Remount the views on a journal switch so local view state (filters, period, view
@@ -24,10 +24,10 @@ export default function JournalPage() {
 
   // First-run empty-state config (fase C). Treat the journal as "configured" while
   // the methodology is still loading so we never flash the big preset picker before
-  // we know the field count.
+  // we know the field count. The picker itself is beta-gated, matching Settings.
   const onboarding = useMemo(
-    () => ({ hasFields: methLoading || fields.length > 0, showPresetPicker: true }),
-    [methLoading, fields.length]
+    () => ({ hasFields: methLoading || fields.length > 0, showPresetPicker: betaFeatures }),
+    [methLoading, fields.length, betaFeatures]
   );
 
   return (
@@ -53,7 +53,9 @@ export default function JournalPage() {
           scope={{ type: "live" }}
           tradesApi={tradesApi}
           title={t("journal.title")}
-          onboarding={onboarding}
+          // Soft-launch: the Fase-C onboarding empty-state (preset picker) ships to
+          // owner/beta accounts only; live users keep the pre-launch behaviour.
+          onboarding={betaFeatures ? onboarding : undefined}
         />
       ) : (
         <BacktestingAnalysisView key={journalKey} trades={realTrades} showAdherence />
