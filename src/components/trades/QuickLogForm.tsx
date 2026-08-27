@@ -101,7 +101,11 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
       await onSubmit({
         ...values,
         outcome: deriveOutcome(Number(values.resultaat_pct) || 0),
-        methodology_id: methodologyId,
+        // Same system-template guard as TradeForm: useMethodology falls back to
+        // the shared WPM template when the profile has no journal, and stamping
+        // that id gets rejected by trg_trades_journal_ownership — which made
+        // every quick-log save fail for a fresh account that skipped onboarding.
+        methodology_id: methodology && !methodology.is_system ? methodology.id : null,
         instrument,
         // Quick-log never collects custom fields — always the empty bag (also
         // narrows TradeFormValues' Record<string, unknown> to the submit shape).

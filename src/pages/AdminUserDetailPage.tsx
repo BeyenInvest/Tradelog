@@ -120,7 +120,16 @@ function AdminUserDetailPageInner() {
 
   // Same "live Journal only" scope as JournalPage — backtest-project trades get their own
   // isolated view, and missed trades stay separate from real performance (see CLAUDE.md).
-  const liveTrades = useMemo(() => trades.filter((t) => t.backtest_project_id === null), [trades]);
+  // Also scoped to the viewed user's ACTIVE journal (H2/B1) — the same filter
+  // useTrades applies for the user themselves; without it the admin Analyse,
+  // calendar and review-badges mix every journal of the viewed user into one pot.
+  const liveTrades = useMemo(
+    () =>
+      trades.filter(
+        (t) => t.backtest_project_id === null && t.methodology_id === (profile?.methodology_id ?? null)
+      ),
+    [trades, profile]
+  );
   const taken = useMemo(() => takenTrades(liveTrades), [liveTrades]);
 
   const tradesByWeeklyReview = useMemo(() => {

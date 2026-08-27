@@ -34,7 +34,7 @@ import {
   closedTrades,
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
-import { formatAggregate, resultInUnit } from "@/lib/format";
+import { formatAggregate, resultInUnit, tradesInResultUnit } from "@/lib/format";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
 import { AvgRStatCard, MaxDrawdownStatCard, ProfitFactorStatCard, ResultStatCard } from "@/components/trades/JournalKpiCards";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -132,7 +132,13 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const kpis = useMemo(() => computeOverviewKpis(windowedTrades), [windowedTrades]);
   // Extra KPI-cards (Fase S1) — computed from the same windowed set as the KPI row,
   // straight from the R-fase stats-motor (no new math here, only wiring).
-  const extremes = useMemo(() => computeExtremes(windowedTrades), [windowedTrades]);
+  // In R-modus selecteren de extremen op R-basis: per-trade risk verschilt, dus
+  // de grootste %-trade is niet per se de grootste R-trade (audit B2). % en €
+  // delen dezelfde ordening (lineaire schaal), daar blijft de %-selectie correct.
+  const extremes = useMemo(
+    () => computeExtremes(resultUnit === "R" ? tradesInResultUnit(windowedTrades, "R") : windowedTrades),
+    [windowedTrades, resultUnit]
+  );
   const rDist = useMemo(() => computeRDistribution(windowedTrades), [windowedTrades]);
   const avgRiskPct = useMemo(() => computeAvgRiskPct(windowedTrades), [windowedTrades]);
   // Largest win/loss shown in the chosen result-eenheid: the extreme is a single

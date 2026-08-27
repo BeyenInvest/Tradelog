@@ -6,7 +6,7 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
-import { isoWeekOf } from "@/lib/isoWeek";
+import { dayTotalsInUnit, monthTotalOf, monthWeeks, rowWeekNumber, tradesByDayOfMonth, weekTotalOf } from "@/lib/calendarTotals";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -42,40 +42,12 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
   const [monthDate, setMonthDate] = useState(() => new Date());
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday-first
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const byDay = useMemo(() => {
-    const m = new Map<number, ClosedTrade[]>();
-    for (const t of trades) {
-      const d = new Date(t.datum_open + "T00:00:00");
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        const bucket = m.get(day) ?? [];
-        bucket.push(t);
-        m.set(day, bucket);
-      }
-    }
-    return m;
-  }, [trades, year, month]);
-
-  // Realized day total in the chosen unit, round2'd (CLAUDE.md-invariant so the
-  // win/loss cell color and the day/week/month aggregates never read -2.8e-17).
-  // The single source for the cell value, the week-row totals and the month total.
-  const realResultByDay = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const [day, dayTrades] of byDay) {
-      m.set(day, round2(dayTrades.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0)));
-    }
-    return m;
-  }, [byDay, resultUnit, saldo]);
-
-  const monthTotal = useMemo(() => {
-    let sum = 0;
-    for (const v of realResultByDay.values()) sum += v;
-    return round2(sum);
-  }, [realResultByDay]);
+  // Bucketing + dag-/maandtotalen: pure functies in src/lib/calendarTotals.ts
+  // (audit T1 — de totaallogica is daar getest, hier alleen nog wiring).
+  const byDay = useMemo(() => tradesByDayOfMonth(trades, year, month), [trades, year, month]);
+  const realResultByDay = useMemo(() => dayTotalsInUnit(byDay, resultUnit, saldo), [byDay, resultUnit, saldo]);
+  const monthTotal = useMemo(() => monthTotalOf(realResultByDay), [realResultByDay]);
 
   /** Unique (pair, outcome) combos per day, in first-taken order — a pair traded twice with the same outcome shows once, but a pair that won once and lost once still shows both, since the outcome drives the chip's color. */
   const pairsByDay = useMemo(() => {
@@ -159,18 +131,9 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
     return m;
   }, [openTrades, year, month]);
 
-  // Full weeks (each 7 cells, null = padding) so every row can carry a trailing
-  // week-total cell. Leading pad for the first weekday offset, trailing pad to
-  // complete the last week.
-  const weeks = useMemo(() => {
-    const cells: (number | null)[] = [];
-    for (let i = 0; i < startOffset; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-    while (cells.length % 7 !== 0) cells.push(null);
-    const out: (number | null)[][] = [];
-    for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7));
-    return out;
-  }, [startOffset, daysInMonth]);
+  // Full weeks (each 7 cells, null = padding) so every row can carry a leading
+  // week-total cell — construction lives in calendarTotals.ts.
+  const weeks = useMemo(() => monthWeeks(year, month), [year, month]);
 
   const monthLabel = monthDate.toLocaleDateString(dateLocale(i18n.language), { month: "long", year: "numeric" });
 
@@ -346,16 +309,8 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
       <div className="grid gap-1.5" style={GRID_TEMPLATE}>
         {weeks.map((week, wi) => {
-          const weekTotal = round2(
-            week.reduce<number>((s, d) => s + (d != null ? realResultByDay.get(d) ?? 0 : 0), 0)
-          );
-          const hasResult = week.some((d) => d != null && realResultByDay.has(d));
-          // ISO week number of this row, read from its Monday (day-of-month
-          // 1 - startOffset + wi*7; may spill into the neighbouring month, which
-          // is exactly what the ISO week should reflect).
-          const monday = new Date(year, month, 1 - startOffset + wi * 7);
-          const mondayIso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
-          const weekNum = isoWeekOf(mondayIso).week_nummer;
+          const { total: weekTotal, hasResult } = weekTotalOf(week, realResultByDay);
+          const weekNum = rowWeekNumber(year, month, wi);
           return (
             <div key={wi} className="contents">
               <div className="flex flex-col items-center justify-center gap-0.5 leading-none" title={t("calendar.weekTotal")}>

@@ -53,6 +53,17 @@ describe("parseNumber", () => {
     expect(parseNumber("$1,000.00")).toBe(1000);
     expect(parseNumber("12.34 USD")).toBe(12.34);
   });
+  it("reads scientific notation exactly instead of stripping the exponent (P-exp)", () => {
+    expect(parseNumber("1e5")).toBe(100000); // was silently 15
+    expect(parseNumber("2E-4")).toBe(0.0002); // was silently -24
+    expect(parseNumber("-1.5e2")).toBe(-150);
+    expect(parseNumber("2,5e3")).toBe(2500); // decimal-comma mantissa
+    expect(parseNumber("(1e2)")).toBe(-100); // parenthesised negative still applies
+  });
+  it("rejects exponent-shaped strings it can't read exactly, rather than corrupting them", () => {
+    expect(parseNumber("$1e5")).toBeNull();
+    expect(parseNumber("1e5 USD")).toBeNull();
+  });
 });
 
 describe("parseDateOnly", () => {
@@ -200,6 +211,16 @@ describe("dealToImportRow", () => {
     const row = dealToImportRow(deal({ openTime: null, closeTime: "2024-05-01" }), "EURUSD", "EURUSD", -1, "mt");
     expect(row.datum_open).toBe("2024-05-01");
     expect(row.outcome).toBe("Loss");
+  });
+  it("drops a close date that lies before the open date (B4 — corrupt broker row)", () => {
+    const row = dealToImportRow(deal({ openTime: "2024-05-10", closeTime: "2024-05-01" }), "EURUSD", "EURUSD", 1, "mt");
+    expect(row.datum_open).toBe("2024-05-10");
+    expect(row.datum_sluiting).toBeNull(); // never a negative duur_dagen
+    expect(row.is_open).toBe(false); // still a closed, realized trade
+  });
+  it("keeps a same-day close (open = close is legitimate for a day trade)", () => {
+    const row = dealToImportRow(deal({ openTime: "2024-05-10", closeTime: "2024-05-10" }), "EURUSD", "EURUSD", 1, "mt");
+    expect(row.datum_sluiting).toBe("2024-05-10");
   });
   it("keeps pair and instrument as given (forex mirrors, non-forex carries the raw symbol)", () => {
     const forex = dealToImportRow(deal({ symbol: "GBPUSD.r" }), "GBPUSD", "GBPUSD", 1, "ctrader");

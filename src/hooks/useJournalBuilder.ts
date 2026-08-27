@@ -7,14 +7,15 @@ import type { FieldInput } from "@/hooks/useMethodologyEditor";
 
 /**
  * Commit for the unified journal builder (Fase G — preset redesign). Turns a
- * staged set of fields into a real own journal in one write, then activates it.
+ * staged set of fields into a real own journal and activates it, in ONE
+ * transaction: the create_journal RPC (0052) does journal + fields + profile
+ * activation server-side, so a network failure can no longer leave an orphan
+ * half-journal in the switcher, and a retry can't duplicate it (audit M4-a).
  *
  * `reuseActiveIfEmpty` handles the onboarding / empty-state case: a brand-new
  * account already owns an empty default journal, so instead of leaving that
- * orphan behind we rename it and fill it. Settings ("+ new journal") passes it
- * false and always gets a fresh journal. Either way the fields are inserted in a
- * single batch (sort_order = palette order), so partial half-built journals can't
- * appear on a flaky connection the way one-insert-per-field would allow.
+ * orphan behind the RPC renames and fills it. Settings ("+ new journal") passes
+ * it false and always gets a fresh journal.
  */
 export interface CommitArgs {
   name: string;
@@ -27,7 +28,7 @@ export interface CommitArgs {
 }
 
 export function useJournalBuilder() {
-  const { profile, updateProfile } = useAuth();
+  const { profile, retryProfile } = useAuth();
   const { refresh: refreshShared } = useMethodology();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,50 +39,21 @@ export function useJournalBuilder() {
       setError(null);
       setBusy(true);
       try {
-        let targetId: string | null = null;
-
-        // Reuse the active journal only if it is the user's own and still empty.
-        if (reuseActiveIfEmpty && profile.methodology_id) {
-          const { data: m } = await supabase
-            .from("methodologies")
-            .select("id, user_id, is_system")
-            .eq("id", profile.methodology_id)
-            .maybeSingle();
-          const row = m as { id: string; user_id: string | null; is_system: boolean } | null;
-          if (row && row.user_id === profile.id && !row.is_system) {
-            const { count } = await supabase
-              .from("methodology_fields")
-              .select("id", { count: "exact", head: true })
-              .eq("methodology_id", row.id);
-            if ((count ?? 0) === 0) targetId = row.id;
-          }
-        }
-
-        if (targetId) {
-          const { error: uErr } = await supabase
-            .from("methodologies")
-            .update({ naam: name, asset_class: assetClass, instrument_config: instrumentConfig, track_exit: trackExit })
-            .eq("id", targetId);
-          if (uErr) throw uErr;
-        } else {
-          const { data, error: cErr } = await supabase
-            .from("methodologies")
-            .insert({ user_id: profile.id, naam: name, is_system: false, asset_class: assetClass, instrument_config: instrumentConfig, track_exit: trackExit })
-            .select("id")
-            .single();
-          if (cErr) throw cErr;
-          targetId = (data as { id: string }).id;
-        }
-
-        if (fields.length > 0) {
-          const rows = fields.map((f, i) => ({ methodology_id: targetId, ...f, sort_order: i + 1 }));
-          const { error: fErr } = await supabase.from("methodology_fields").insert(rows);
-          if (fErr) throw fErr;
-        }
-
-        if (profile.methodology_id !== targetId) {
-          await updateProfile({ methodology_id: targetId });
-        }
+        // One transaction server-side (reuse-or-create + fields + activation) —
+        // see 0052 for the reuse rule and the RLS reasoning.
+        const { data, error: rpcErr } = await supabase.rpc("create_journal", {
+          p_name: name,
+          p_fields: fields,
+          p_asset_class: assetClass,
+          p_instrument_config: instrumentConfig,
+          p_track_exit: trackExit,
+          p_reuse_active_if_empty: reuseActiveIfEmpty,
+        });
+        if (rpcErr) throw rpcErr;
+        const targetId = data as string;
+        // The RPC already flipped profiles.methodology_id — refetch so the local
+        // auth state (active journal) catches up before callers navigate on.
+        await retryProfile();
         void refreshShared();
         return targetId;
       } catch (err) {
@@ -91,7 +63,7 @@ export function useJournalBuilder() {
         setBusy(false);
       }
     },
-    [profile, updateProfile, refreshShared]
+    [profile, retryProfile, refreshShared]
   );
 
   return { commit, busy, error };

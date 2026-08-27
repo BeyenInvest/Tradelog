@@ -44,9 +44,11 @@ export function useTrades(scope: TradeScope) {
   const refresh = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     // `loading` gates a full-screen "Laden..." that unmounts the whole view. Raise
-    // it only until this scope has data on screen — a refetch after create/update/
-    // delete swaps the data in place instead, so component state survives (e.g. the
-    // month you scrolled the calendar to, which would otherwise snap back to today).
+    // it only until this scope has data on screen — a later refetch (e.g. the
+    // option-rename event below) swaps the data in place instead, so component
+    // state survives (e.g. the month you scrolled the calendar to, which would
+    // otherwise snap back to today). Mutations don't come through here at all
+    // anymore — they patch the local list directly (P1).
     if (loadedScopeRef.current !== scopeKey) setLoading(true);
     setError(null);
     // Paginated past PostgREST's silent 1000-row cap (audit blocker H1) — a fresh
@@ -107,6 +109,12 @@ export function useTrades(scope: TradeScope) {
     if (!profile) throw new Error(i18n.t("auth.profileUnavailable"));
   }
 
+  /** Exactly the fetch's ordering (datum_open asc, id asc) so a locally patched
+   * list can never disagree with what the next full refetch would return. */
+  function byFetchOrder(a: Trade, b: Trade): number {
+    return a.datum_open.localeCompare(b.datum_open) || a.id.localeCompare(b.id);
+  }
+
   async function createTrade(input: TradeSubmitInput): Promise<Trade> {
     requireProfile();
     const backtest_project_id = scope.type === "live" ? null : scope.projectId;
@@ -119,8 +127,14 @@ export function useTrades(scope: TradeScope) {
       .select()
       .single();
     if (insertError) throw insertError;
-    await refresh();
-    return data as Trade;
+    // Patch locally instead of refetching the whole paginated set (audit P1):
+    // at 1k+ trades the full refetch made every save seconds-slow, and a failed
+    // refetch after a successful insert left the new trade invisible — inviting
+    // a duplicate re-entry (C4). The returned row is post-trigger (sessie,
+    // weekly-review-link), so it's authoritative as-is.
+    const created = data as Trade;
+    setTrades((cur) => [...cur, created].sort(byFetchOrder));
+    return created;
   }
 
   async function updateTrade(id: string, input: Partial<TradeSubmitInput>): Promise<Trade> {
@@ -135,7 +149,9 @@ export function useTrades(scope: TradeScope) {
       const kept = new Set(screenshotStoragePaths(updated));
       void removeScreenshots(screenshotStoragePaths(before).filter((p) => !kept.has(p)));
     }
-    await refresh();
+    // Local patch (P1) — re-sort because datum_open may have moved. The returned
+    // row carries any trigger changes (sessie recompute, M1-a review-relink).
+    setTrades((cur) => cur.map((t) => (t.id === id ? updated : t)).sort(byFetchOrder));
     return updated;
   }
 
@@ -146,7 +162,7 @@ export function useTrades(scope: TradeScope) {
     const { error: deleteError } = await supabase.from("trades").delete().eq("id", id);
     if (deleteError) throw deleteError;
     void removeScreenshots(paths);
-    await refresh();
+    setTrades((cur) => cur.filter((t) => t.id !== id)); // local patch (P1)
   }
 
   /**

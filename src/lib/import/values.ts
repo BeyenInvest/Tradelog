@@ -24,6 +24,21 @@ export function parseNumber(raw: string): number | null {
     negative = true;
     s = s.slice(1, -1);
   }
+  // Scientific notation before any sign/letter surgery: Number() reads it
+  // natively, while the generic letter-stripping below would silently corrupt it
+  // ("1e5" → 15, "2E-4" → −24). A clean exponent parses exactly; anything else
+  // exponent-shaped is rejected (null → the row is flagged unparseable, never
+  // imported corrupted). The `negative` flag here only carries a parenthesised
+  // negative — the mantissa/exponent signs travel through Number() itself.
+  const compact = s.replace(/\s/g, "");
+  const sci = compact.match(/^([+-]?\d+(?:[.,]\d+)?)[eE]([+-]?\d+)$/);
+  if (sci) {
+    const n = Number(sci[1].replace(",", ".") + "e" + sci[2]);
+    if (!Number.isFinite(n)) return null;
+    return negative && n > 0 ? -n : n;
+  }
+  if (/\d[eE][+-]?\d/.test(compact)) return null;
+
   if (s.includes("-")) negative = true;
 
   // Drop everything that isn't a digit or a separator (currency symbols, spaces, +/- signs, letters).

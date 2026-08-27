@@ -47,7 +47,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   // A profile that FAILED to load is FATAL, not something to render past (audit
   // blocker N1): without it the active journal is unknowable and new trades
   // would silently land in the `null`-journal. Retry or sign out — nothing else.
-  if (profileError) return <ProfileErrorScreen />;
+  // Only fatal when NO profile ever loaded (audit C1): a failed refetch during a
+  // routine token refresh keeps the loaded profile in state — rendering on with
+  // that is safe, while unmounting the app here would destroy open form input.
+  if (profileError && !profile) return <ProfileErrorScreen />;
   // Signed in but the profile fetch is still in flight: on an in-app sign-in the
   // onAuthStateChange handler kicks off loadProfile without awaiting (loading is
   // already false by then), so `profile` is briefly null with no error yet. Show

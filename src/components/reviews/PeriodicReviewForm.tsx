@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
@@ -44,6 +44,15 @@ export function PeriodicReviewForm({ periodType, review, sections, trades, onSub
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  // Sections can arrive AFTER mount (the journal's custom rows are still
+  // fetching when the form opens — audit M1-b): merge-seed the late keys so a
+  // shown section is never valueless — saving one would wipe its stored text.
+  // Existing state wins: it holds the review-seeded values plus anything typed.
+  useEffect(() => {
+    setContent((cur) => ({ ...initialReviewValues(sections, review), ...cur }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
 
   function withDirty<T>(setter: (v: T) => void) {
     return (v: T) => {

@@ -58,13 +58,17 @@ export function dealToImportRow(
   broker: ImportBroker
 ): ImportTradeRow {
   const datumOpen = deal.openTime ?? deal.closeTime!; // caller guarantees at least one date
+  // A close date before the open date is broker-export garbage (mis-parsed
+  // column order, corrupt row): store no close date rather than a negative
+  // duration — duur_dagen is a DB-generated column off this pair (audit B4).
+  const datumSluiting = deal.closeTime != null && deal.closeTime >= datumOpen ? deal.closeTime : null;
   return {
     fase: "Fase 1",
     datum_open: datumOpen,
     // The parsers currently truncate broker datetimes to a date (parseDateOnly),
     // so there's no time to carry yet — wiring it through is S2 follow-up work.
     tijd_open: null,
-    datum_sluiting: deal.closeTime ?? null,
+    datum_sluiting: datumSluiting,
     pair,
     instrument,
     direction: deal.direction === "buy" ? "Long" : deal.direction === "sell" ? "Short" : null,
