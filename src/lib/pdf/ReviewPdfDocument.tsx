@@ -131,13 +131,13 @@ const styles = StyleSheet.create({
   section: { marginBottom: 15 },
   sectionBody: { fontSize: T.body, lineHeight: 1.6, color: C.ink },
 
-  // The takeaway is the document's single moment of emphasis: a gold rule and the
-  // brand serif (the same face as the masthead), set larger. One deliberate accent
-  // reads as hierarchy, not as another competing box.
+  // The takeaway keeps a slim gold rule as its only accent, but the text itself is
+  // the same upright sans body as every other section — no serif, no italic, no
+  // larger size — so the whole document reads as one uniform type system.
   quote: { flexDirection: "row", marginTop: 2, marginBottom: 20 },
   quoteBar: { width: 2.5, borderRadius: 2, backgroundColor: C.gold, marginRight: 14 },
   quoteContent: { flex: 1 },
-  quoteBody: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.title, lineHeight: 1.4, color: C.ink, marginTop: 3 },
+  quoteBody: { fontFamily: SANS, fontSize: T.body, lineHeight: 1.6, color: C.ink, marginTop: 3 },
 
   actie: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 4 },
   actieText: { fontSize: T.body, color: C.ink },
