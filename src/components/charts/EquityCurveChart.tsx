@@ -40,9 +40,12 @@ export function EquityCurveChart({ trades, showDrawdownMarkers = true }: { trade
     );
   }
 
-  // A single point has nothing to draw a line between — Recharts just renders a dot.
-  // Prepend a synthetic zero-baseline point so it reads as a line from start to result.
-  const chartData = data.length === 1 ? [{ ...data[0], idx: 0, cum: 0 }, data[0]] : data;
+  // Anchor the curve on a synthetic trade-0 zero-baseline point, so the first
+  // trade reads as a line rising from 0 instead of the curve "starting high" at
+  // its already-accumulated value (which looked misleadingly flat with few
+  // trades). Display-only: computeEquityCurve stays pure, and the drawdown
+  // markers match on tradeId against `data`, so idx 0 never collides.
+  const chartData = [{ ...data[0], idx: 0, cum: 0 }, ...data];
 
   // Pin the Y-axis to the actual curve (always including the 0 breakeven line),
   // instead of letting Recharts' auto nice-ticks tack on an empty band below it.
