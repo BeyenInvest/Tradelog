@@ -102,8 +102,8 @@ function SharedReviewView({ data }: { data: SharedReview }) {
           </section>
 
           <section className="border-t border-border pt-6">
-            <p className="font-body text-xs uppercase tracking-wider text-muted mb-4">
-              {t("reviews.linkedTrades", { count: taken.length + missed.length })}
+            <p className="font-body text-xs uppercase tracking-wider text-gold mb-4">
+              {t(data.kind === "weekly" ? "reviews.linkedTrades" : "reviews.tradesInPeriod", { count: taken.length + missed.length })}
             </p>
             <ReviewTradeGroups
               hideFaseOverride={data.hide_fase}

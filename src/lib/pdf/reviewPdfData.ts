@@ -16,12 +16,14 @@ import { readSectionDisplayText, readSectionList, reviewSectionLabel, type Revie
  * labelled list + error line, exactly like the on-screen review.
  */
 
-export type ReviewSectionKind = "text" | "voice" | "takeaway" | "overall";
+export type ReviewSectionKind = "text" | "voice" | "takeaway" | "overall" | "acties";
 
 export interface ReviewPdfSection {
   label: string;
   body: string;
   kind: ReviewSectionKind;
+  /** Only for kind === "acties": the parsed checklist items, rendered inline at this section's configured position. */
+  acties?: ReviewPdfActie[];
 }
 
 export interface ReviewPdfActie {
@@ -179,20 +181,25 @@ function styleToKind(style: ReviewSection["style"]): ReviewSectionKind {
 }
 
 /**
- * Build the PDF's prose sections from the journal's resolved sections (Fase N5).
- * The built-in `acties` list is rendered separately as the checklist block
- * (data.acties); any other list section becomes a bulleted text block. Empty
- * sections are dropped. Reproduces the pre-N5 weekly/periodic order when the
- * journal uses the defaults.
+ * Build the PDF's content sections from the journal's resolved sections (Fase N5).
+ * The built-in `acties` list is emitted as a dedicated checklist node *at its
+ * configured position* (so the PDF matches the on-screen section order instead
+ * of forcing the checklist to the end); any other list section becomes a
+ * bulleted text block. Empty sections are dropped. Reproduces the pre-N5
+ * weekly/periodic order when the journal uses the defaults.
  */
 function buildPdfSections(t: TFunction, kind: ReviewKind, review: WeeklyReview | PeriodicReview, sections: ReviewSection[]): ReviewPdfSection[] {
   const out: ReviewPdfSection[] = [];
   for (const s of sections) {
     const label = reviewSectionLabel(t, s);
     if (s.inputType === "list") {
-      if (s.builtin && s.key === "acties") continue; // rendered as the checklist block
       const items = readSectionList(review, s).map((i) => i.trim()).filter(Boolean);
-      if (items.length) out.push({ label, body: items.map((i) => `• ${i}`).join("\n"), kind: "text" });
+      if (!items.length) continue;
+      if (s.builtin && s.key === "acties") {
+        out.push({ label, body: "", kind: "acties", acties: items.map(parseActie) });
+      } else {
+        out.push({ label, body: items.map((i) => `• ${i}`).join("\n"), kind: "text" });
+      }
       continue;
     }
     const body = readSectionDisplayText(kind, review, s).trim();
@@ -243,8 +250,10 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
   const taken = tradesInResultUnit(input.taken, resultUnit, input.saldo);
   const missed = tradesInResultUnit(input.missed, resultUnit, input.saldo);
   const kpis = computeOverviewKpis(taken);
-  const decisive = kpis.wins + kpis.losses;
-  const avgRR = decisive > 0 ? round2(kpis.totalResultaat / decisive) : 0;
+  // Gem. resultaat/trade deelt door álle genomen trades (een BE-trade is een echte
+  // genomen trade met 0% en hoort in de noemer) — zo spreken de "trades"-kaart en
+  // het gemiddelde elkaar niet tegen. Spiegelt ReviewStatsHeader op het scherm.
+  const avgRR = kpis.totalTrades > 0 ? round2(kpis.totalResultaat / kpis.totalTrades) : 0;
 
   const heading =
     input.kind === "weekly"

@@ -47,7 +47,7 @@ describe("buildReviewPdfData", () => {
     expect(data.kpis.resultaat).toBe(1); // 2 + (-1), the +5 missed is excluded
     expect(data.kpis.wins).toBe(1);
     expect(data.kpis.losses).toBe(1);
-    expect(data.kpis.avgRR).toBe(0.5); // 1 / 2 decisive
+    expect(data.kpis.avgRR).toBe(0.5); // 1 / 2 trades
     expect(data.equity).toEqual([2, 1]); // cumulative over taken, no missed point
     expect(data.takenRows).toHaveLength(2);
     expect(data.missedRows).toHaveLength(1);
@@ -122,13 +122,19 @@ describe("buildReviewPdfData", () => {
     expect(dataNl.heading).toBe("juli 2026");
     expect(data.labels.actiesLabel).toBe("reviewContent.werkpunten");
     const labels = data.sections.map((s) => s.label);
+    // The werkpunten checklist now renders inline at its configured position
+    // (before the conclusie), matching the on-screen section order.
     expect(labels).toEqual([
       "reviewContent.genomenTrades",
       "reviewContent.genomenTradesErrors",
       "reviewContent.gemisteTrades",
+      "reviewContent.werkpunten",
       "reviewContent.conclusie",
       "reviewContent.overallComment",
     ]);
+    const werkpunten = data.sections.find((s) => s.label === "reviewContent.werkpunten");
+    expect(werkpunten?.kind).toBe("acties");
+    expect(werkpunten?.acties).toEqual([{ label: "Werkpunt een", status: null, value: null }]);
   });
 
   it("formats generatedOn as dd-mm-yyyy", () => {

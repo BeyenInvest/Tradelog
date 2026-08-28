@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { PeriodicReview, PeriodicReviewInput, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
-import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
+import { type PeriodType } from "@/lib/constants";
 import { dateLocale, monthName, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { rangeOfPeriod } from "@/lib/periodRanges";
@@ -113,7 +113,7 @@ export function PeriodicReviewForm({ periodType, review, sections, trades, onSub
 
   return (
     <ReviewFormModal
-      title={review ? t("reviewForm.editTitle") : t("reviewForm.newPeriodic", { type: PERIOD_TYPE_LABELS[periodType].toLowerCase() })}
+      title={review ? t("reviewForm.editTitle") : t("reviewForm.newPeriodic", { type: t(`reviews.periodAdjective.${periodType}`) })}
       titleId="periodic-review-form-title"
       isDirty={dirty}
       onClose={onClose}

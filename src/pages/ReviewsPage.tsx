@@ -14,7 +14,7 @@ import { ReviewForm } from "@/components/reviews/ReviewForm";
 import { PeriodicReviewList } from "@/components/reviews/PeriodicReviewList";
 import { PeriodicReviewDetail } from "@/components/reviews/PeriodicReviewDetail";
 import { PeriodicReviewForm } from "@/components/reviews/PeriodicReviewForm";
-import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
+import { type PeriodType } from "@/lib/constants";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -323,7 +323,7 @@ function PeriodicReviewsTab({
     const ok = await confirm({
       title: t("common.deleteTitle"),
       message: t("reviews.deletePeriodicConfirm", {
-        type: PERIOD_TYPE_LABELS[periodType],
+        type: t(`reviews.periodAdjective.${periodType}`),
         label: periodLabel(review.period_type, review.jaar, review.periode_nummer, dateLocale(i18n.language)),
       }),
       tone: "danger",
@@ -344,7 +344,7 @@ function PeriodicReviewsTab({
       {confirmDialog}
       <div className="flex justify-end mb-4">
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold">
-          <Plus size={15} /> {t("reviews.newPeriodicReview", { type: PERIOD_TYPE_LABELS[periodType].toLowerCase() })}
+          <Plus size={15} /> {t("reviews.newPeriodicReview", { type: t(`reviews.periodAdjective.${periodType}`) })}
         </button>
       </div>
 

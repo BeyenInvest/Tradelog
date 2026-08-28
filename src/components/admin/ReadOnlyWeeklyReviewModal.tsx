@@ -60,7 +60,7 @@ export function ReadOnlyWeeklyReviewModal({
             </section>
 
             <section className="border-t border-border pt-6">
-              <p className="font-body text-xs uppercase tracking-wider text-muted mb-4">{t("reviews.linkedTrades", { count: linked.length })}</p>
+              <p className="font-body text-xs uppercase tracking-wider text-gold mb-4">{t("reviews.linkedTrades", { count: linked.length })}</p>
               <ReviewTradeGroups taken={taken} missed={missed} columnMode={columnModeForTrades(linked)} />
             </section>
           </div>

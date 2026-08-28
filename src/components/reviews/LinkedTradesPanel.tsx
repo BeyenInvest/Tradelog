@@ -59,7 +59,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-body text-xs uppercase tracking-wider text-muted">{t("reviews.linkedTrades", { count: linked.length })}</p>
+        <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.linkedTrades", { count: linked.length })}</p>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setAddOpen(true)}

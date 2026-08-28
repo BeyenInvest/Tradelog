@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import type { PeriodicReview } from "@/lib/types";
-import { PERIOD_TYPE_LABELS, type PeriodType } from "@/lib/constants";
+import { type PeriodType } from "@/lib/constants";
 import { periodLabel } from "@/lib/periodRanges";
 import { dateLocale, formatAggregate } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
@@ -22,7 +22,7 @@ export function PeriodicReviewList({ periodType, reviews, selectedId, onSelect, 
   const resultUnit = useResultUnit();
   return (
     <Card className="flex flex-col gap-2">
-      <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{PERIOD_TYPE_LABELS[periodType]} reviews</h3>
+      <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{t(`reviews.${periodType === "month" ? "monthly" : periodType === "quarter" ? "quarterly" : "yearly"}ReviewsHeading`)}</h3>
       {reviews.length === 0 && <p className="text-sm text-muted px-1">{t("reviews.noReviews")}</p>}
       {reviews.map((rv) => {
         const resultaat = resultaatOf(rv);

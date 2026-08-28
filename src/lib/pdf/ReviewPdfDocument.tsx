@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
   donutWrap: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
   donutCenter: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   donutPct: { fontFamily: SANS_BOLD, fontSize: T.lead, color: C.ink, lineHeight: 1, textAlign: "center" },
+  donutCaption: { fontSize: T.micro, color: C.muted, letterSpacing: 0.6, textTransform: "uppercase", marginTop: 2, textAlign: "center" },
   chartBody: { flexGrow: 1, justifyContent: "center" },
   wlLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginTop: 10 },
   wlLegendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
@@ -182,7 +183,7 @@ function Kpi({ label, value, color }: { label: string; value: string; color?: st
   );
 }
 
-function WinLossDonut({ wins, be, losses, labels }: { wins: number; be: number; losses: number; labels: string[] }) {
+function WinLossDonut({ wins, be, losses, labels, caption }: { wins: number; be: number; losses: number; labels: string[]; caption: string }) {
   const total = wins + be + losses;
   const size = 80;
   const cx = size / 2;
@@ -239,6 +240,7 @@ function WinLossDonut({ wins, be, losses, labels }: { wins: number; be: number; 
         {/* Center label overlaid via flexbox — reliable centering, unlike SVG text anchoring. */}
         <View style={styles.donutCenter}>
           <Text style={styles.donutPct}>{total > 0 ? `${winPct}%` : "—"}</Text>
+          <Text style={styles.donutCaption}>{caption}</Text>
         </View>
       </View>
       <View style={styles.wlLegend}>
@@ -290,8 +292,30 @@ function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: s
   const coords = series.map((v, i) => ({ x: xOf(i), y: yOf(v) }));
   const points = coords.map((p) => `${p.x},${p.y}`).join(" ");
   const zeroY = yOf(0);
-  const up = equity[equity.length - 1] >= 0;
-  const line = up ? C.win : C.loss;
+  // The cumulative-result curve uses the brand gold on every surface (matching the
+  // on-screen EquityCurveChart), not a green/red sign-based color.
+  const line = C.gold;
+
+  // Deepest drawdown (peak → trough) over the baseline-anchored series, so the PDF
+  // annotates the same max-drawdown the on-screen chart marks with peak/trough dots.
+  let ddPeakVal = series[0];
+  let ddPeakIdx = 0;
+  let ddDepth = 0;
+  let ddMarkPeakIdx = -1;
+  let ddMarkTroughIdx = -1;
+  for (let i = 0; i < series.length; i++) {
+    if (series[i] > ddPeakVal) {
+      ddPeakVal = series[i];
+      ddPeakIdx = i;
+    }
+    const drop = ddPeakVal - series[i];
+    if (drop > ddDepth) {
+      ddDepth = drop;
+      ddMarkPeakIdx = ddPeakIdx;
+      ddMarkTroughIdx = i;
+    }
+  }
+  const hasDrawdown = ddDepth > 0 && ddMarkTroughIdx >= 0;
   // Faint area between the curve and the zero line, so the trend reads as a shape.
   const areaPoints = `${coords[0].x},${zeroY} ${points} ${coords[coords.length - 1].x},${zeroY}`;
 
@@ -323,6 +347,25 @@ function EquitySparkline({ equity, xLabel, unit }: { equity: number[]; xLabel: s
           <Circle key={i} cx={p.x} cy={p.y} r={last ? 2.8 : 1.9} fill={i === 0 ? C.faint : line} stroke={C.paper} strokeWidth={0.6} />
         );
       })}
+      {/* deepest-drawdown markers: hollow peak dot (skipped when the peak is the
+          synthetic baseline), filled trough dot, and a signed depth label. */}
+      {hasDrawdown && ddMarkPeakIdx > 0 ? (
+        <Circle cx={coords[ddMarkPeakIdx].x} cy={coords[ddMarkPeakIdx].y} r={3} fill={C.paper} stroke={C.muted} strokeWidth={1.2} />
+      ) : null}
+      {hasDrawdown ? (
+        <Circle cx={coords[ddMarkTroughIdx].x} cy={coords[ddMarkTroughIdx].y} r={3} fill={C.loss} stroke={C.paper} strokeWidth={1} />
+      ) : null}
+      {hasDrawdown ? (
+        <Text
+          x={coords[ddMarkTroughIdx].x}
+          y={coords[ddMarkTroughIdx].y - 4}
+          textAnchor="middle"
+          fill={C.loss}
+          style={{ fontSize: T.chart, fontFamily: SANS }}
+        >
+          {formatAggregate(-ddDepth, unit, { decimals: unit === "currency" ? 0 : 1 })}
+        </Text>
+      ) : null}
       {/* x-axis (trade count) labels */}
       {xTicks.map((i) => (
         <Text key={`x${i}`} x={xOf(i)} y={plotB + 8} textAnchor="middle" fill={C.muted} style={{ fontSize: T.chart, fontFamily: SANS }}>
@@ -358,6 +401,22 @@ function Section({ s }: { s: ReviewPdfSection }) {
           <Text style={styles.sectionLabel}>{s.label}</Text>
           <Text style={styles.quoteBody}>&ldquo;{s.body}&rdquo;</Text>
         </View>
+      </View>
+    );
+  }
+  // The acties/werkpunten checklist renders inline at its configured position
+  // (mirrors the on-screen section order), not forced to the end of the document.
+  if (s.kind === "acties") {
+    return (
+      <View style={styles.section} wrap={false}>
+        <Text style={styles.sectionLabel}>{s.label}</Text>
+        {(s.acties ?? []).map((a, i) => (
+          <View style={styles.actie} key={i}>
+            <StatusMarker status={a.status} />
+            <Text style={styles.actieText}>{a.label}</Text>
+            {a.value ? <Text style={styles.actieValue}>— {a.value}</Text> : null}
+          </View>
+        ))}
       </View>
     );
   }
@@ -451,7 +510,7 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
             <View style={styles.chartsRow}>
               <View style={[styles.chartBox, { width: "34%" }]}>
                 <Text style={styles.chartLabel}>{labels.winRate}</Text>
-                <WinLossDonut wins={kpis.wins} be={kpis.be} losses={kpis.losses} labels={wlLabels} />
+                <WinLossDonut wins={kpis.wins} be={kpis.be} losses={kpis.losses} labels={wlLabels} caption={labels.winRate} />
               </View>
               <View style={[styles.chartBox, { flex: 1 }]}>
                 <Text style={styles.chartLabel}>{labels.cumulative}</Text>
@@ -467,19 +526,6 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
           {data.sections.map((s, i) => (
             <Section key={i} s={s} />
           ))}
-
-          {data.acties.length > 0 ? (
-            <View style={styles.section} wrap={false}>
-              <Text style={styles.sectionLabel}>{labels.actiesLabel}</Text>
-              {data.acties.map((a, i) => (
-                <View style={styles.actie} key={i}>
-                  <StatusMarker status={a.status} />
-                  <Text style={styles.actieText}>{a.label}</Text>
-                  {a.value ? <Text style={styles.actieValue}>— {a.value}</Text> : null}
-                </View>
-              ))}
-            </View>
-          ) : null}
 
           {data.takenRows.length > 0 ? (
             <TradeSection heading={labels.takenHeading} rows={data.takenRows} labels={labels} unit={data.unit} />
