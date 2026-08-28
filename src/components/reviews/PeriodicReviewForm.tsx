@@ -121,7 +121,10 @@ export function PeriodicReviewForm({ periodType, review, sections, trades, onSub
       submitting={submitting}
       error={error}
     >
-      <div className="grid grid-cols-2 gap-4">
+      {/* Titel hoort in dezelfde kop-rij als bij de weekly review (boven de
+          grafiek), niet als losse regel eronder. Maand/kwartaal hebben 2
+          periode-velden → 3 kolommen; het jaaroverzicht heeft er 1 → 2 kolommen. */}
+      <div className={`grid ${periodType === "year" ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
         {periodType === "month" && (
           <div className="flex flex-col gap-1.5">
             <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.maand")}</label>
@@ -150,15 +153,14 @@ export function PeriodicReviewForm({ periodType, review, sections, trades, onSub
           <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.jaar")}</label>
           <input type="number" className="input" value={jaar} onChange={(e) => handleJaarChange(Number(e.target.value))} />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.titel")}</label>
+          <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
+        </div>
       </div>
 
       <ReviewStatsHeader taken={takenClosed} missed={missedClosed} />
       <ReviewErrorStats {...errorCounts} />
-
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs uppercase tracking-wider text-muted">{t("reviewForm.titel")}</label>
-        <input type="text" className="input" value={titel} onChange={(e) => handleTitelChange(e.target.value)} />
-      </div>
 
       <ReviewSectionsFields kind="periodic" sections={sections} values={content} onChange={handleContentChange} />
 
