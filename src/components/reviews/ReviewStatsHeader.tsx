@@ -15,7 +15,9 @@ type View = "taken" | "missed";
  * toggle. There is no combined "Beide" view — missed trades are hypothetical
  * and must never be blended into real performance numbers (resultaat,
  * win-rate, streaks, equity curve), so each tab is computed in isolation.
- * Avg RR = total result / decisive trades (wins + losses, BE excluded).
+ * Avg result/trade = total result / all taken trades (a BE trade is a real
+ * taken trade contributing 0%, so it belongs in the denominator — otherwise
+ * the "trades" count and the per-trade average would contradict each other).
  */
 export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; missed: ClosedTrade[] }) {
   const { t } = useTranslation();
@@ -27,7 +29,6 @@ export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; mis
 
   const rows = view === "taken" ? taken : missed;
   const kpis = computeOverviewKpis(rows);
-  const decisive = kpis.wins + kpis.losses;
   // Totaal + Ø RR in de gekozen eenheid, via de gedeelde fallback-regels: R
   // gebruikt kpis.totalR (zelfde som-dan-afronden als computeRStats), geld
   // pctToAmount, % het bestaande totaal. round2 is idempotent op de al-gerondde
@@ -38,7 +39,7 @@ export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; mis
       amount: pctToAmount(kpis.totalResultaat, saldo),
     })
   );
-  const avgRR = decisive > 0 ? round2(shownTotal / decisive) : 0;
+  const avgRR = kpis.totalTrades > 0 ? round2(shownTotal / kpis.totalTrades) : 0;
   const signed = (n: number) => formatAggregate(n, resultUnit);
 
   const options: { key: View; label: string }[] = [
