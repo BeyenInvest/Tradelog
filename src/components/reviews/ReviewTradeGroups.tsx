@@ -8,7 +8,7 @@ import { formatResult, groupResultCtx, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
 import { TradeListItem } from "@/components/trades/TradeListItem";
-import { TradeListHeader } from "@/components/trades/TradeListHeader";
+import { TradeListHeader, type TradeColumnMode } from "@/components/trades/TradeListHeader";
 
 export type GroupMode = "outcome" | "week" | "month" | "quarter";
 
@@ -24,7 +24,7 @@ function sortDesc(trades: Trade[]): Trade[] {
   return sortChronological(trades).reverse();
 }
 
-function TradeGroupList({ groups, defaultOpenKey, hideFaseOverride }: { groups: TradeGroup[]; defaultOpenKey: string | null; hideFaseOverride?: boolean }) {
+function TradeGroupList({ groups, defaultOpenKey, hideFaseOverride, columnMode }: { groups: TradeGroup[]; defaultOpenKey: string | null; hideFaseOverride?: boolean; columnMode: TradeColumnMode }) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -81,9 +81,9 @@ function TradeGroupList({ groups, defaultOpenKey, hideFaseOverride }: { groups: 
               ) : (
                 <div className="px-3 pb-1 pt-2 overflow-x-auto">
                   <div className="min-w-[640px]">
-                    <TradeListHeader hideFaseOverride={hideFaseOverride} />
+                    <TradeListHeader hideFaseOverride={hideFaseOverride} columnMode={columnMode} />
                     {g.trades.map((t) => (
-                      <TradeListItem key={t.id} trade={t} hideFaseOverride={hideFaseOverride} />
+                      <TradeListItem key={t.id} trade={t} hideFaseOverride={hideFaseOverride} columnMode={columnMode} />
                     ))}
                   </div>
                 </div>
@@ -101,12 +101,14 @@ function ReviewTradeSection({
   emptyLabel,
   groupMode,
   hideFaseOverride,
+  columnMode,
 }: {
   label: string;
   trades: Trade[];
   emptyLabel: string;
   groupMode: GroupMode;
   hideFaseOverride?: boolean;
+  columnMode: TradeColumnMode;
 }) {
   const groups = useMemo(() => {
     const sorted = sortDesc(trades);
@@ -125,7 +127,7 @@ function ReviewTradeSection({
       {trades.length === 0 ? (
         <p className="text-xs text-muted">{emptyLabel}</p>
       ) : (
-        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} hideFaseOverride={hideFaseOverride} />
+        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} hideFaseOverride={hideFaseOverride} columnMode={columnMode} />
       )}
     </div>
   );
@@ -145,10 +147,17 @@ interface ReviewTradeGroupsProps {
   extraGroupModes?: GroupMode[];
   /** Anonymous share views pass the owner's hide_fase instead of the viewer's (who has no profile) — threaded through to the trade rows/header. */
   hideFaseOverride?: boolean;
+  /**
+   * Which middle-column pair the trade rows show (UX-B). In-app callers pass
+   * `useMethodology().isLegacyMethodology ? "legacy" : "modern"` so a modern
+   * journal doesn't show dead WPM Concept/Entry + fase columns; anonymous
+   * share / admin views derive it from the payload. Defaults to "legacy".
+   */
+  columnMode?: TradeColumnMode;
 }
 
 /** Collapsible Win/BE/Loss (or, for periodic reviews, per-week/month/quarter) trade groups for a review — read-only, replaces the old flat TradeRows. */
-export function ReviewTradeGroups({ taken, missed, extraGroupModes = [], hideFaseOverride }: ReviewTradeGroupsProps) {
+export function ReviewTradeGroups({ taken, missed, extraGroupModes = [], hideFaseOverride, columnMode = "legacy" }: ReviewTradeGroupsProps) {
   const { t } = useTranslation();
   const modes: GroupMode[] = ["outcome", ...extraGroupModes];
   const [groupMode, setGroupMode] = useState<GroupMode>("outcome");
@@ -172,9 +181,9 @@ export function ReviewTradeGroups({ taken, missed, extraGroupModes = [], hideFas
         </div>
       )}
 
-      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} />
+      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} columnMode={columnMode} />
       {missed.length > 0 && (
-        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} />
+        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} hideFaseOverride={hideFaseOverride} columnMode={columnMode} />
       )}
     </div>
   );

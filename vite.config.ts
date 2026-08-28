@@ -7,11 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     // PWA (Fase L): installable app + a precached app shell. The service worker
-    // is registered manually and ONLY for beta accounts (see RegisterSW.tsx) —
-    // injectRegister:null keeps the plugin from auto-registering it for everyone.
-    // The manifest link + icons are injected for all (harmless, just makes the
-    // app installable). Deliberately conservative: no runtimeCaching for
-    // Supabase (auth + data are cross-origin and must always hit the network).
+    // is registered manually for every account since the beta flip (see
+    // RegisterSW.tsx, which also polls for updates) — injectRegister:null keeps
+    // the plugin from auto-registering a second time. The manifest link + icons
+    // are injected for all (harmless, just makes the app installable).
+    // Deliberately conservative: no runtimeCaching for Supabase (auth + data are
+    // cross-origin and must always hit the network).
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: null,

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { TriangleAlert, X } from "lucide-react";
 import { tradeSchema, type TradeFormValues } from "@/lib/validation";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
+import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { normalizeInstrument } from "@/lib/instruments";
 import { deriveOutcome } from "@/lib/import/mapToTrade";
@@ -37,15 +38,17 @@ interface QuickLogFormProps {
  */
 export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
   const { t } = useTranslation();
+  const { profile } = useAuth();
   const { methodology, isForexJournal, faseNames } = useMethodology();
+  const userId = profile?.id ?? null;
   const methodologyId = methodology?.id ?? null;
 
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: (() => {
       const base = quickLogDefaults(faseNames[0] ?? "Fase 1", localTodayIso());
-      const lastRisk = getLastRisk(methodologyId);
-      const lastInstrument = getLastInstrument(methodologyId);
+      const lastRisk = getLastRisk(userId, methodologyId);
+      const lastInstrument = getLastInstrument(userId, methodologyId);
       if (lastRisk != null) base.risk_pct = lastRisk;
       // Prefill the symbol you last logged in this journal: the pair enum for a
       // forex journal (only when the remembered value is still a valid pair),
@@ -112,8 +115,8 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
         custom: {},
       });
       // Remember what you'll most likely repeat next time (per journal).
-      setLastInstrument(methodologyId, instrument);
-      setLastRisk(methodologyId, values.risk_pct);
+      setLastInstrument(userId, methodologyId, instrument);
+      setLastRisk(userId, methodologyId, values.risk_pct);
       if (keepOpen) {
         // Reset for the next trade, keeping the shared context (instrument,
         // direction, risk, date) and clearing only the per-trade fields.
@@ -164,6 +167,13 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
 
               <Field label={t("quickLog.date")} error={errors.datum_open?.message}>
                 <input type="date" className="input" {...register("datum_open")} />
+              </Field>
+
+              {/* Optional open time (UX-D): quick-log defaults it empty (no auto-"now"
+                  stamp — see quickLogDefaults), but offering the field lets a user who
+                  logs promptly feed the session/hour breakdowns without the full form. */}
+              <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>
+                <input type="time" className="input" {...register("tijd_open")} />
               </Field>
             </div>
 

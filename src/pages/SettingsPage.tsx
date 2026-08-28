@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { useCustomOptions } from "@/hooks/useCustomOptions";
 import { MethodologyEditor } from "@/components/settings/MethodologyEditor";
 import { ReviewSectionsEditor } from "@/components/settings/ReviewSectionsEditor";
@@ -22,6 +23,7 @@ import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { hideFase, betaFeatures, updateProfile } = useAuth();
+  const { isLegacyMethodology } = useMethodology();
   const location = useLocation();
   // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
   // scroll to the preset picker, so that click completes its intent here.
@@ -81,40 +83,46 @@ export default function SettingsPage() {
           </section>
         )}
 
-        <section className="flex flex-col gap-5">
-          <SettingsSectionHeader
-            title={t("settings.sectionTrading")}
-            description={t("settings.sectionTradingDescription")}
-          />
+        {/* Legacy Weekly Phase Method prefs: the fase toggle and the entry/concept
+            option lists are all WPM-specific fields — meaningless for a modern
+            (own/preset) journal, whose fase column is hidden and whose entry/concept
+            fields don't exist. Show the whole section only for a legacy journal. */}
+        {isLegacyMethodology && (
+          <section className="flex flex-col gap-5">
+            <SettingsSectionHeader
+              title={t("settings.sectionTrading")}
+              description={t("settings.sectionTradingDescription")}
+            />
 
-          <Card>
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-body text-sm text-ink">{t("settings.showFases")}</p>
-                <p className="font-mono text-xs mt-1 text-muted">{t("settings.showFasesDescription")}</p>
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-body text-sm text-ink">{t("settings.showFases")}</p>
+                  <p className="font-mono text-xs mt-1 text-muted">{t("settings.showFasesDescription")}</p>
+                </div>
+                <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={[t("settings.on"), t("settings.off")]} />
               </div>
-              <BooleanToggle value={!hideFase} onChange={handleToggleFase} labels={[t("settings.on"), t("settings.off")]} />
-            </div>
-            {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
-            {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
-          </Card>
+              {saving && <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.saving")}</p>}
+              {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
+            </Card>
 
-          <CustomFieldOptions
-            field="entry"
-            baseList={ENTRIES}
-            titleKey="settings.customEntryOptions"
-            descriptionKey="settings.customEntryOptionsDescription"
-            placeholderKey="settings.newEntryPlaceholder"
-          />
+            <CustomFieldOptions
+              field="entry"
+              baseList={ENTRIES}
+              titleKey="settings.customEntryOptions"
+              descriptionKey="settings.customEntryOptionsDescription"
+              placeholderKey="settings.newEntryPlaceholder"
+            />
 
-          <CustomFieldOptions
-            field="trade_concept"
-            baseList={TRADE_CONCEPTS}
-            titleKey="settings.customConceptOptions"
-            descriptionKey="settings.customConceptOptionsDescription"
-            placeholderKey="settings.newConceptPlaceholder"
-          />
-        </section>
+            <CustomFieldOptions
+              field="trade_concept"
+              baseList={TRADE_CONCEPTS}
+              titleKey="settings.customConceptOptions"
+              descriptionKey="settings.customConceptOptionsDescription"
+              placeholderKey="settings.newConceptPlaceholder"
+            />
+          </section>
+        )}
 
         <section className="flex flex-col gap-5">
           <SettingsSectionHeader

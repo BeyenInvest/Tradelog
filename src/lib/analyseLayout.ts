@@ -44,6 +44,29 @@ export function writeLayout(userId: string | null, layout: AnalyseLayout): void 
 }
 
 /**
+ * Whether this user has ever saved a layout. Distinguishes a genuine first visit
+ * (apply the default-collapsed layout — only the overview + equity open) from a
+ * user who has interacted and happens to have nothing collapsed. A read failure
+ * (storage disabled) reports false, so those users get the sensible default too.
+ */
+export function hasStoredLayout(userId: string | null): boolean {
+  try {
+    return localStorage.getItem(keyFor(userId)) != null;
+  } catch {
+    return false;
+  }
+}
+
+/** Forgets the saved layout entirely (reset → back to the first-visit default). */
+export function clearLayout(userId: string | null): void {
+  try {
+    localStorage.removeItem(keyFor(userId));
+  } catch {
+    /* storage disabled — nothing to clear */
+  }
+}
+
+/**
  * The effective display order for the currently-visible sections: the saved order
  * first (minus ids no longer present), then any remaining default ids in their
  * default relative order. So a newly-added section shows up (at the end) instead of

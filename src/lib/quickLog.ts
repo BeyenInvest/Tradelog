@@ -24,8 +24,9 @@ export function quickLogDefaults(fase: string, today: string): TradeFormValues {
   return {
     fase,
     datum_open: today,
-    // Deliberately no time: quick-log is a fast *post-session* entry — stamping
+    // Defaults empty: quick-log is a fast *post-session* entry, so auto-stamping
     // "now" would silently record the log moment as the trade's open time (0051).
+    // The form offers an optional time input (UX-D) for users who want to fill it.
     tijd_open: null,
     datum_sluiting: null,
     pair: "EURUSD",

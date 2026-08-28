@@ -74,8 +74,9 @@ interface TradeJournalViewProps {
  */
 export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding }: TradeJournalViewProps) {
   const { t } = useTranslation();
-  // Soft-launch gate: Fase-E additions (profit factor, current-streak line) stay hidden
-  // from the live users until public launch — only owner/beta accounts see them.
+  // betaFeatures still gates the two not-yet-validated surfaces below: CSV/broker
+  // import (untested against real exports) and share-link management. The Fase-E
+  // stats (profit factor, current-streak) are live for everyone now.
   const { betaFeatures, profile } = useAuth();
   const { trackExit } = useMethodology();
   const { unit: resultUnit, saldo } = useResultDisplay();

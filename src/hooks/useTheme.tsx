@@ -5,8 +5,14 @@ type Theme = "dark" | "light";
 const STORAGE_KEY = "theme";
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "light") return stored;
+  // A browser that blocks site data throws on access — must never white-screen the
+  // app before the ErrorBoundary mounts (C6). Fall back to the system preference.
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    /* storage blocked */
+  }
   return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
@@ -22,7 +28,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");
-    localStorage.setItem(STORAGE_KEY, theme);
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      /* storage blocked/full — remembering the theme is best-effort */
+    }
   }, [theme]);
 
   function toggleTheme() {

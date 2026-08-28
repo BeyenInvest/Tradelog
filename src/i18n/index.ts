@@ -19,8 +19,14 @@ function isLang(v: string | null): v is Lang {
  * toggle first.
  */
 function getInitialLang(): Lang {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (isLang(stored)) return stored;
+  // Runs at module-eval, before any ErrorBoundary — a browser that blocks site
+  // data throws on access, so guard it or the whole app white-screens (C6).
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (isLang(stored)) return stored;
+  } catch {
+    /* storage blocked */
+  }
   return navigator.language?.toLowerCase().startsWith("nl") ? "nl" : "en";
 }
 
@@ -35,7 +41,11 @@ void i18n.use(initReactI18next).init({
 });
 
 i18n.on("languageChanged", (lng) => {
-  localStorage.setItem(STORAGE_KEY, lng);
+  try {
+    localStorage.setItem(STORAGE_KEY, lng);
+  } catch {
+    /* storage blocked/full — remembering the language is best-effort */
+  }
   document.documentElement.lang = lng;
 });
 

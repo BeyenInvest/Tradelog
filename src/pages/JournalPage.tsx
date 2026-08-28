@@ -57,6 +57,14 @@ export default function JournalPage() {
           // owner/beta accounts only; live users keep the pre-launch behaviour.
           onboarding={betaFeatures ? onboarding : undefined}
         />
+      ) : tradesApi.loading ? (
+        // C5: `loading` is only raised on a genuine scope change (journal switch /
+        // first load), not a background refetch — so this gate avoids rendering the
+        // previous journal's trades under the new journal's identity, without
+        // flashing on every save.
+        <div className="flex items-center justify-center py-20">
+          <p className="text-muted text-sm">{t("common.loading")}</p>
+        </div>
       ) : (
         <BacktestingAnalysisView key={journalKey} trades={realTrades} showAdherence />
       )}

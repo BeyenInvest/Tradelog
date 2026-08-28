@@ -8,6 +8,7 @@ import { isoWeekRange } from "@/lib/isoWeek";
 import { localTodayIso } from "@/lib/localDate";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { takenTrades, missedTrades } from "@/lib/stats";
+import { useMethodology } from "@/hooks/useMethodology";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ReviewTradeGroups } from "./ReviewTradeGroups";
 
@@ -21,6 +22,8 @@ interface LinkedTradesPanelProps {
 /** Trades linked to this review, split into "Trades genomen" and "Missed trades" by trade_evaluation. */
 export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: LinkedTradesPanelProps) {
   const { t } = useTranslation();
+  const { isLegacyMethodology } = useMethodology();
+  const columnMode = isLegacyMethodology ? "legacy" : "modern";
   const linked = trades.filter((t) => t.weekly_review_id === review.id);
   const taken = takenTrades(linked);
   const missed = missedTrades(linked);
@@ -77,7 +80,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
       {lastCount != null && !error && <p className="text-[11px] text-muted">{t("reviews.tradesLinked", { count: lastCount })}</p>}
       {error && <p className="text-[11px] text-loss">{error}</p>}
 
-      <ReviewTradeGroups taken={taken} missed={missed} />
+      <ReviewTradeGroups taken={taken} missed={missed} columnMode={columnMode} />
 
       {addOpen &&
         createPortal(

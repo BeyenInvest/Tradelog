@@ -40,6 +40,10 @@ import { useMethodology } from "@/hooks/useMethodology";
  * deep-analysis half, reused per backtest project so each project's numbers
  * never mix with another's.
  */
+
+/** Sections open on a first visit — everything else starts collapsed (audit T2). Module-scoped for a stable reference across renders (used in the layout hook's deps). */
+const DEFAULT_OPEN_SECTIONS = ["kpis", "performance"];
+
 export function BacktestingAnalysisView({
   trades, hideFaseOverride, methodologyOverride, showAdherence = false,
 }: {
@@ -172,7 +176,8 @@ export function BacktestingAnalysisView({
     [displayTrades, customDims, t]
   );
 
-  // Regel-adherentie (Fase N2, beta): same journal-type-aware dimension set as the
+  // Regel-adherentie (Fase N2, live voor iedereen — enkel data-/showAdherence-gated):
+  // same journal-type-aware dimension set as the
   // breakdowns below (+ the journal's own custom fields), minus the calendar-derived
   // splits (weekday/quarter) — those aren't conditions to adhere to and their tables
   // already exist below. Titles/value-labels are pre-resolved so the section stays
@@ -194,7 +199,7 @@ export function BacktestingAnalysisView({
     [isLegacyMethodology, isForexJournal, customDims, t]
   );
 
-  // Kruistabel-dimensies (Fase S2, beta): exactly the dimensions whose plain
+  // Kruistabel-dimensies (Fase S2, live voor iedereen — data-gated): exactly the dimensions whose plain
   // breakdowns render for this journal type — the legacy setup dims (WPM only), the
   // applicable timing/instrument dims, and the journal's own custom fields. Consumes
   // the same DimensionConfig list, pre-resolving each title + row-label translator so
@@ -229,13 +234,21 @@ export function BacktestingAnalysisView({
 
   // Per-user Analyse layout (Fase S2): collapse + drag-to-reorder of the sections
   // below, remembered in localStorage per account. Owner-besluit 2026-08-26: een
-  // neutrale UX-verbetering, dus bewust voor ALLE gebruikers aan (niet achter beta) —
-  // anders dan de nieuwe R-distributie/kruistabel-secties, die wél beta-gated blijven.
+  // neutrale UX-verbetering, dus bewust voor ALLE gebruikers aan (niet achter beta).
+  // De R-distributie/kruistabel-secties zijn sinds fb440da eveneens un-gated (enkel
+  // data-gated via hun `visible`-vlag), niet meer beta-only.
   const interactive = true;
-  const { orderedIds, move, toggleCollapse, isCollapsed, reset, isCustomized } = useAnalyseLayout(profile?.id ?? null);
+  // BINDEND (audit T2): a first visit opens only the overview + equity (result-verloop);
+  // every other section — R-distribution, series-of-5, breakdowns, … — starts collapsed
+  // so the page never grows unbounded as new sections are added. The user's own
+  // collapse/expand choices take over the moment they touch the layout.
+  const { orderedIds, move, toggleCollapse, isCollapsed, reset, isCustomized } = useAnalyseLayout(
+    profile?.id ?? null,
+    DEFAULT_OPEN_SECTIONS
+  );
 
-  // Every Analyse block as a reorderable/collapsible section (Fase S2, beta). Order
-  // here is the default; the layout hook permutes it per user. Conditional/beta-only
+  // Every Analyse block as a reorderable/collapsible section (Fase S2). Order here
+  // is the default; the layout hook permutes it per user. Conditional/data-gated
   // sections carry their own `visible` flag so they drop out cleanly (and the layout
   // never tries to order a section that isn't on screen).
   const sectionDefs: { id: string; title: string; action?: ReactNode; visible: boolean; body: ReactNode }[] = [
@@ -549,7 +562,7 @@ export function BacktestingAnalysisView({
           action={s.action}
           interactive={interactive}
           collapsed={interactive && isCollapsed(s.id)}
-          onToggle={() => toggleCollapse(s.id)}
+          onToggle={() => toggleCollapse(s.id, visibleIds)}
           onReorder={(from, to) => move(visibleIds, from, to)}
         >
           {s.body}

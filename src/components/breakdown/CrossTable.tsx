@@ -26,6 +26,14 @@ interface CrossTableProps {
   dims: CrossDim[];
 }
 
+/** Whether any trade yields a (non-null, non-empty) key for this dimension — i.e. the dimension would produce at least one row/column rather than an empty axis. */
+function dimHasData(dim: CrossDim, trades: ClosedTrade[]): boolean {
+  return trades.some((t) => {
+    const k = dim.keyFn(t);
+    return Array.isArray(k) ? k.length > 0 : k != null;
+  });
+}
+
 /** Sign-based tone for a cell, per the active metric. */
 function toneClass(cell: CrossTableCell, metric: Metric): string {
   if (metric === "resultaat") return cell.resultaatTotal > 0 ? "text-win" : cell.resultaatTotal < 0 ? "text-loss" : "text-be";
@@ -44,17 +52,29 @@ export function CrossTable({ trades, dims }: CrossTableProps) {
   const { t } = useTranslation();
   const resultUnit = useResultUnit();
 
-  // Default: first dimension by second (prefer a timing axis as the columns), so a
-  // fresh open lands on something meaningful like Setup × Sessie / × Uur.
-  const preferredCol = dims.find((d) => d.id === "sessie" || d.id === "uur") ?? dims[1] ?? dims[0];
-  const [rowId, setRowId] = useState<string>(dims[0]?.id ?? "");
-  const [colId, setColId] = useState<string>(preferredCol?.id ?? "");
+  // Row/col start unset ("") = "auto": use the data-aware defaults below. An explicit
+  // pick (even one that's empty) is honoured. Empty string never matches a dim id.
+  const [rowId, setRowId] = useState<string>("");
+  const [colId, setColId] = useState<string>("");
   const [metric, setMetric] = useState<Metric>("resultaat");
 
-  // Fall back to the first dimension if a previously-selected one disappeared
-  // (journal switch changes the available dimensions).
-  const rowDim = dims.find((d) => d.id === rowId) ?? dims[0];
-  const colDim = dims.find((d) => d.id === colId) ?? preferredCol ?? dims[0];
+  // Auto defaults land on dimensions that actually have data, so the flagship
+  // kruistabel never opens empty (UX-C) — the old default preferred a timing axis
+  // (sessie/uur) even for journals with no tijd_open, giving a blank table.
+  const autoRowDim = useMemo(() => dims.find((d) => dimHasData(d, trades)) ?? dims[0], [dims, trades]);
+  const autoColDim = useMemo(() => {
+    // Prefer a timing axis for the columns, but only when it has data.
+    const timing = dims.find((d) => (d.id === "sessie" || d.id === "uur") && dimHasData(d, trades));
+    if (timing) return timing;
+    // Else the first other data-bearing dimension; fall back to any second dim.
+    const other = dims.find((d) => d.id !== autoRowDim?.id && dimHasData(d, trades));
+    return other ?? dims.find((d) => d.id !== autoRowDim?.id) ?? dims[1] ?? dims[0];
+  }, [dims, trades, autoRowDim]);
+
+  // An explicit selection wins; otherwise the data-aware auto default. This also
+  // recovers when a previously-selected dimension disappears (journal switch).
+  const rowDim = dims.find((d) => d.id === rowId) ?? autoRowDim;
+  const colDim = dims.find((d) => d.id === colId) ?? autoColDim;
 
   const table = useMemo(
     () =>

@@ -57,6 +57,47 @@ function PnlPctField({ account, onUpdate }: { account: PropAccount; onUpdate: Ac
   );
 }
 
+/**
+ * Active toggle (M2-a): the €-saldo the whole app displays against is the
+ * active account (ordered actief desc, created_at desc in useResultDisplay), so
+ * with more than one account the user needs a way to pick which one drives it —
+ * otherwise a second account silently rescales every € amount. Toggling fires
+ * onUpdateAccount, which refreshes the saldo (PROP_ACCOUNTS_CHANGED_EVENT).
+ */
+function ActiveToggle({ account, onUpdate }: { account: PropAccount; onUpdate: AccountListProps["onUpdateAccount"] }) {
+  const { t } = useTranslation();
+  const [saving, setSaving] = useState(false);
+
+  async function toggle() {
+    setSaving(true);
+    try {
+      await onUpdate(account.id, { actief: !account.actief });
+    } catch {
+      // Optimistic-free: on failure the shared state is untouched, so the pill
+      // just stays as it was — no local error surface needed for a one-field flip.
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      disabled={saving}
+      title={account.actief ? t("accounts.setInactive") : t("accounts.setActive")}
+      aria-pressed={account.actief}
+      className={`shrink-0 px-2.5 py-1 rounded-full font-mono text-[10px] uppercase tracking-wider border transition-colors disabled:opacity-60 ${
+        account.actief
+          ? "border-win/40 bg-win/10 text-win hover:bg-win/15"
+          : "border-border bg-surface-2 text-muted hover:text-ink"
+      }`}
+    >
+      {account.actief ? t("accounts.active") : t("accounts.inactive")}
+    </button>
+  );
+}
+
 /** Inline editor for an account's three prop-firm rule %s. Blank field = null (rule not set). */
 function PropFirmRulesField({ account, onUpdate }: { account: PropAccount; onUpdate: AccountListProps["onUpdateAccount"] }) {
   const { t } = useTranslation();
@@ -160,15 +201,15 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccoun
     <div className="flex flex-col gap-3">
       {confirmDialog}
       {error && <p className="text-sm text-loss">{error}</p>}
+      {accounts.length > 1 && <p className="text-xs text-muted">{t("accounts.activeHint")}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {accounts.map((acc) => (
           <Card key={acc.id}>
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-display text-xl italic text-ink">{acc.naam}</p>
                 <p className="font-mono text-xs mt-1 text-muted">
                   €{formatEUR(acc.account_size)} · {propAccountTypeLabel(acc.fase, t)}
-                  {!acc.actief && ` · ${t("accounts.inactive")}`}
                   {acc.current_pnl_pct != null && (
                     <>
                       {" · "}
@@ -180,9 +221,12 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccoun
                   )}
                 </p>
               </div>
-              <button onClick={() => void handleDeleteAccount(acc)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ActiveToggle account={acc} onUpdate={onUpdateAccount} />
+                <button onClick={() => void handleDeleteAccount(acc)} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-loss">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             <PnlPctField account={acc} onUpdate={onUpdateAccount} />
             <PropFirmProgress account={acc} />

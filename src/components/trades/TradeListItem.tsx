@@ -36,6 +36,9 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const missed = isMissed(trade);
   const open = isOpen(trade);
   const modern = columnMode === "modern";
+  // A modern journal never carries a meaningful fase — hide the column entirely
+  // (not just when the user toggled hideFase), matching TradeListHeader (UX-A).
+  const showFase = !hideFase && !modern;
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
 
   const dateCell = (
@@ -47,7 +50,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   );
   // Last column is wider than the rest so the open-trade actions (pencil + "Sluiten")
   // fit fully to the right of RESULTAAT instead of spilling left over its value.
-  const gridClass = `grid ${hideFase ? "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
+  const gridClass = `grid ${showFase ? "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
 
   // The two middle cells: universal Richting/R for a modern journal, the legacy
   // WPM Concept/Entry otherwise. R is "—" for a still-running trade (no result).
@@ -75,7 +78,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
       <div className={gridClass}>
         {dateCell}
         <span className="text-ink">{trade.instrument ?? trade.pair}</span>
-        {!hideFase && (
+        {showFase && (
           <span>
             <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
           </span>

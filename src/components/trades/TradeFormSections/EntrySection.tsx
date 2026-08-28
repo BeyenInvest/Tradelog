@@ -23,7 +23,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
     setValue,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
-  const { hideFase, betaFeatures } = useAuth();
+  const { hideFase } = useAuth();
   const { t } = useTranslation();
   const { faseNames, isLegacyMethodology, isForexJournal, instruments, addInstrument } = useMethodology();
   // Entry & Trade concept are the two custom_options-backed fields (plain text
@@ -66,14 +66,13 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
             })}
           />
         </Field>
-        {/* Optional real open time (Fase S2, 0051) — beta-gated like every new
-            feature (gating-regel). When filled, the DB derives `sessie` from it
-            (real time axis) and the trade joins the hour/session breakdowns. */}
-        {betaFeatures ? (
-          <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>
-            <input type="time" className="input" {...register("tijd_open")} />
-          </Field>
-        ) : null}
+        {/* Optional real open time (Fase S2, 0051). Un-gated (UX-D): the session/hour
+            breakdowns it feeds are available to everyone, so gating the input that
+            fills them was a dead promise. When filled, the DB derives `sessie` from
+            it (real time axis) and the trade joins the hour/session breakdowns. */}
+        <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>
+          <input type="time" className="input" {...register("tijd_open")} />
+        </Field>
         {/* Instrument: a forex journal picks from the fixed pair enum (and mirrors it
             into `instrument` on submit); any other journal types its own symbol
             (ticker/coin/contract) and pair stays on its hidden default (cyclus 7). */}

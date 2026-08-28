@@ -111,6 +111,12 @@ export function JournalBuilder({
     setFields((prev) => [...prev, input]);
   }
 
+  // M4-b: not every asset × style has a starter set (futures×swing, stock×scalp).
+  // Grey out the combinations that would apply nothing, so a click is never a
+  // silent no-op — the user sees which pairings aren't offered.
+  const styleDisabled = (s: TradingStyle) => asset != null && !findStartset(asset, s);
+  const assetDisabled = (a: AssetClass) => style != null && !findStartset(a, style);
+
   const started = blank || asset !== null || style !== null || strategy !== null || fields.length > 0;
   const appliedName = strategy
     ? strategyLabel(t, strategy)
@@ -143,7 +149,13 @@ export function JournalBuilder({
         <StepLabel n="01" title={t("builder.startsetStep")} hint={t("builder.startsetOptional")} />
         <div className="flex flex-wrap items-center gap-2">
           {ASSET_ORDER.map((a) => (
-            <Chip key={a} selected={asset === a} onClick={() => chooseAsset(a)}>
+            <Chip
+              key={a}
+              selected={asset === a}
+              disabled={assetDisabled(a)}
+              title={assetDisabled(a) ? t("builder.comboUnavailable") : undefined}
+              onClick={() => chooseAsset(a)}
+            >
               <AssetIcon asset={a} /> {assetLabel(t, a)}
             </Chip>
           ))}
@@ -153,7 +165,13 @@ export function JournalBuilder({
         {(asset || style) && !blank && (
           <div className="flex flex-wrap gap-2">
             {STYLE_ORDER.map((s) => (
-              <Chip key={s} selected={style === s} onClick={() => chooseStyle(s)}>
+              <Chip
+                key={s}
+                selected={style === s}
+                disabled={styleDisabled(s)}
+                title={styleDisabled(s) ? t("builder.comboUnavailable") : undefined}
+                onClick={() => chooseStyle(s)}
+              >
                 {styleLabel(t, s)} <span className="text-muted text-xs">{styleHint(t, s)}</span>
               </Chip>
             ))}
@@ -313,13 +331,19 @@ function StepLabel({ n, title, hint }: { n: string; title: string; hint?: string
   );
 }
 
-function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
+function Chip({ selected, onClick, children, disabled, title }: { selected: boolean; onClick: () => void; children: ReactNode; disabled?: boolean; title?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={`inline-flex items-center gap-2 rounded-full px-4 py-2 font-body text-sm transition-colors ${
-        selected ? "border border-gold bg-gold/12 text-ink" : "border border-border bg-surface-2 text-ink hover:border-gold"
+        disabled
+          ? "border border-border bg-surface-2 text-faint opacity-50 cursor-not-allowed"
+          : selected
+            ? "border border-gold bg-gold/12 text-ink"
+            : "border border-border bg-surface-2 text-ink hover:border-gold"
       }`}
     >
       {children}

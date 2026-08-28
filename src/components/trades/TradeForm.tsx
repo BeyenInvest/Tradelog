@@ -11,6 +11,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { localTodayIso } from "@/lib/localDate";
 import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screenshots";
 import { useMethodology } from "@/hooks/useMethodology";
+import { useAuth } from "@/hooks/useAuth";
 import { normalizeInstrument } from "@/lib/instruments";
 import { missingRequiredCustomFields } from "@/lib/methodologyFields";
 import { getLastInstrument, getLastRisk, setLastInstrument, setLastRisk } from "@/lib/tradeMemory";
@@ -137,6 +138,8 @@ function pruneCustom(raw: Record<string, unknown>): Record<string, string | numb
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
   const { t } = useTranslation();
   const { methodology, fields, isForexJournal } = useMethodology();
+  const { profile } = useAuth();
+  const userId = profile?.id ?? null;
   const methodologyId = methodology?.id ?? null;
 
   // A new trade opens pre-filled with the instrument + risk last logged in this
@@ -145,8 +148,8 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
   function newTradeDefaults(): TradeFormValues {
     const base = emptyDefaults();
     if (initialDate) base.datum_open = initialDate;
-    const lastRisk = getLastRisk(methodologyId);
-    const lastInstrument = getLastInstrument(methodologyId);
+    const lastRisk = getLastRisk(userId, methodologyId);
+    const lastInstrument = getLastInstrument(userId, methodologyId);
     if (lastRisk != null) base.risk_pct = lastRisk;
     if (lastInstrument) {
       if (isForexJournal) {
@@ -250,8 +253,8 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
       // Remember what a new trade was logged with, so the next new one prefills it
       // (Fase S1). Only on create — editing an old trade must not reset the memory.
       if (!trade) {
-        setLastInstrument(methodologyId, payload.instrument);
-        setLastRisk(methodologyId, payload.risk_pct);
+        setLastInstrument(userId, methodologyId, payload.instrument);
+        setLastRisk(userId, methodologyId, payload.risk_pct);
       }
       onClose();
     } catch (err) {

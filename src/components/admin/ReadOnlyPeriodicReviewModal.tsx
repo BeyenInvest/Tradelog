@@ -6,6 +6,7 @@ import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
 import { ReviewSectionsDisplay } from "@/components/reviews/ReviewSectionsDisplay";
 import { ReviewTradeGroups, periodicExtraGroupModes } from "@/components/reviews/ReviewTradeGroups";
+import { columnModeForTrades } from "@/components/trades/TradeListHeader";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { dateLocale, tradesInResultUnit } from "@/lib/format";
@@ -65,7 +66,7 @@ export function ReadOnlyPeriodicReviewModal({
 
             <section className="flex flex-col gap-4 border-t border-border pt-6">
               <p className="font-body text-xs uppercase tracking-wider text-gold">{t("reviews.tradesInPeriod", { count: taken.length + missed.length })}</p>
-              <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
+              <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} columnMode={columnModeForTrades(inPeriod)} />
             </section>
           </div>
         </>

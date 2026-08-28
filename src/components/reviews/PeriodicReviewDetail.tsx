@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import type { PeriodicReview, Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
+import { useMethodology } from "@/hooks/useMethodology";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { periodLabel, rangeOfPeriod } from "@/lib/periodRanges";
 import { localTodayIso } from "@/lib/localDate";
@@ -36,6 +37,7 @@ interface PeriodicReviewDetailProps {
 export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
+  const { isLegacyMethodology } = useMethodology();
   const { unit: resultUnit, saldo } = useResultDisplay();
   // Realized-stats input excludes still-running open trades (missed rows are closed).
   const takenClosed = useMemo(() => closedTrades(taken), [taken]);
@@ -92,7 +94,7 @@ export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, 
               <Plus size={13} /> {t("tradeForm.addTrade")}
             </button>
           </div>
-          <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
+          <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} columnMode={isLegacyMethodology ? "legacy" : "modern"} />
         </section>
       </div>
 

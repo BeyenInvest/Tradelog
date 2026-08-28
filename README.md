@@ -60,15 +60,16 @@ Zolang bovenstaande niet is doorlopen, faalt `/signup` gewoon met een Supabase-f
 ## 6. Structuur
 
 - `src/lib/stats/` — alle rekenregels (streaks, drawdown, expectancy, per-dimensie uitsplitsingen) als pure, herbruikbare functies. Elke view leest hieruit, niets wordt dubbel berekend.
-- `src/lib/constants.ts` — vaste lijsten (pairs, fases, fase-kenmerken-config). Voor nu identiek voor elke gebruiker; nog niet per-gebruiker instelbaar.
+- `src/lib/constants.ts` — vaste lijsten (pairs, fases, fase-kenmerken-config) van de legacy Weekly Phase Method. Moderne journals halen hun velden uit `methodologies`/`methodology_fields` (Scope C), niet uit deze constanten.
 - `supabase/schema.sql` — volledige DB-schema, RLS scoped per gebruiker (`user_id = auth.uid()`), inclusief `profiles` + auto-provisioning.
 - `supabase/migrations/` — incrementele wijzigingen op een bestaand project, in volgorde uit te voeren.
 - `src/pages/` — Journal, Backtesting, Reviews, Accounts, plus de auth-flow: Login, Signup, ForgotPassword, ResetPassword, Terms, Privacy.
 
-**Let op:** de tekst op `/terms` en `/privacy` is placeholder-tekst, nog niet juridisch nagekeken. Vervang dit door echte, gecontroleerde voorwaarden voor je publiek launcht.
+**Let op:** de tekst op `/terms` en `/privacy` is volledig uitgeschreven maar nog niet juridisch nagekeken. Laat dit juridisch reviewen vóór een betaalde launch (niet blokkerend voor de gratis beta).
 
 ## 7. Buiten scope (bewust nog niet gebouwd)
 
-- Per-gebruiker instelbare trading-methodologie (iedereen krijgt nog steeds dezelfde vaste "4 fasen"-strategie en vaste lijsten). Alleen het tónen van fasen is nu per gebruiker uit te zetten via `/settings` (`profiles.hide_fase`).
 - Betaling/abonnementen (Stripe) — de `profiles.plan`-kolom (default `'free'`) is de enige voorbereiding hierop.
-- Migratie vanuit de oude Google Sheets, combinatie-analyse van 2+ criteria, MAE/MFE-tracking, discipline/executie-tracking, live broker-koppeling.
+- Migratie vanuit de oude Google Sheets, discipline/executie-tracking, live broker-koppeling.
+
+> Achterhaald sinds deze lijst: **per-gebruiker instelbare methodiek** (Scope C — eigen journals met custom velden, presets, journal-builder; nog achter `beta_features` tot de publieke beta), **combinatie-analyse van 2+ criteria** (de kruistabel, Fase S2) en **MAE/MFE-tracking** (de advanced-analysis-laag, `methodologies.track_exit`) zijn inmiddels gebouwd.

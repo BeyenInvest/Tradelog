@@ -21,7 +21,10 @@ import {
 } from "@/lib/import";
 import type { TradesApi, TradeScope } from "@/hooks/useTrades";
 
-const PAIR_MAP_STORAGE_KEY = "beyen.import.pairMap";
+// Per-user (C6): the remembered symbol→pair mapping was a single global key,
+// so a second account on the same browser inherited the first's mappings.
+const PAIR_MAP_STORAGE_BASE = "beyen.import.pairMap";
+const pairMapKey = (userId: string) => `${PAIR_MAP_STORAGE_BASE}:${userId}`;
 const PREVIEW_LIMIT = 8;
 const BROKERS: ImportBroker[] = ["ctrader", "mt", "tradingview", "generic"];
 const BROKER_LABEL_KEY: Record<ImportBroker, string> = {
@@ -31,9 +34,9 @@ const BROKER_LABEL_KEY: Record<ImportBroker, string> = {
   generic: "import.brokerGeneric",
 };
 
-function loadStoredPairMap(): Record<string, Pair> {
+function loadStoredPairMap(userId: string): Record<string, Pair> {
   try {
-    const raw = localStorage.getItem(PAIR_MAP_STORAGE_KEY);
+    const raw = localStorage.getItem(pairMapKey(userId));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, string>;
     const valid: Record<string, Pair> = {};
@@ -84,7 +87,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   // dedup would pass everything and the DB unique index would abort the whole
   // batch insert (M8). Importing stays paused until this is "ready".
   const [refsStatus, setRefsStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [pairMap, setPairMap] = useState<Record<string, Pair>>(loadStoredPairMap);
+  const [pairMap, setPairMap] = useState<Record<string, Pair>>(() => loadStoredPairMap(userId));
   const [symbolInput, setSymbolInput] = useState("");
   const [balanceInput, setBalanceInput] = useState("");
   const [importing, setImporting] = useState(false);
@@ -194,7 +197,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
       if (pair === "") delete next[symbol];
       else next[symbol] = pair as Pair;
       try {
-        localStorage.setItem(PAIR_MAP_STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(pairMapKey(userId), JSON.stringify(next));
       } catch {
         /* ignore quota/availability errors — mapping still works this session */
       }

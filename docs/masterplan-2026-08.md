@@ -1,21 +1,26 @@
-# Masterplan naar launch — 2026-08-20
+# Masterplan naar launch — 2026-08-20 [GEARCHIVEERD]
+
+> ⚠️ **Dit document is op 2026-08-27 vervangen door `masterplan-launch.md`** (alleen het resterende werk; alles wat af is, is daar weggelaten). Dit bestand blijft als historie/afvinklijst staan — niet meer bijwerken.
 
 > **Dit document vervangt `stappenplan-verder-bouwen-2026-08.md` als leidend plan.** Het integreert (1) de volledige audit van 2026-08-20 (`audit-en-launchplan-2026-08.md`, ronde 1 + 2) met (2) het bestaande letterfase-plan. Werkwijze per fase ongewijzigd: eigen branch → bouwen → lint/test/build groen → review met owner → commit/push alleen op expliciet verzoek; migraties via `scripts/run-migration.mjs`, owner draait, read-only verifiëren.
 >
 > **Vaste besluiten blijven staan:** geen eigen replay/chart-engine ooit; TradingView is king; differentiatie = methodiek-condities + presets + eerlijke statistiek; alles nieuws achter `beta_features` tot de flip.
 
-## Stand van zaken (geverifieerd)
+## Stand van zaken (geverifieerd — bijgewerkt 2026-08-26)
 
-- **Af:** H, G (deels), J, K, L, M (incl. sessie 2 op main), N2, N4. Prod-DB bij t/m 0042.
-- **Open posities: AF en live op main+prod** (migratie 0043 gedraaid, 2026-08-20; niet beta-gated). De audit-bevindingen N7 en N8 zijn daar al meegenomen en geverifieerd.
-- **Open uit het oude plan:** G-rest (launch-ops, landing), I-praktijktest (import ligt op branch, nooit met echte CSV getest), N1/N3/N5, O, P.
-- **Nieuw uit de audit:** fases Q, R, S hieronder.
+> Prod = `origin/main` @ `fb440da`, migraties t/m **0051**. Eerstvolgend vrij migratienummer: **0052**.
+
+**De hele beta-scope (G-rest + S1 + I + N-rest) is code-compleet en live op prod.** Bovendien zijn S2 sessie 1 + 2 al vooruitgetrokken (zouden ná de beta komen).
+
+- **Af en live:** H, G, J, K, L, M, open posities (0043), **Q** (0044), **R** (0045/0046), **I** (import-praktijktest op echte FTMO-statement), **N1** (ICT/SMC-startsets), **N2** (adherentie, un-gegate), **N3** (MAE/MFE + exit-analyse, 0049), **N5** (review-secties, 0048, beta-gated), **G-rest A1–A4** (preset-builder, label-vertaalbaarheid 0047, journal-overzicht), **G-rest B1–B4** (beta-flip, support-link, account-delete, Terms/Privacy-teksten), **S1** (trader-polish), exit-analyse+SQN opt-in (0050), **S2 s1** (tijd_open/sessie-uur, 0051), **S2 s2** (R-histogram + kruistabellen, un-beta-gated).
+- **Nog te doen vóór beta (niet-code / geblokkeerd):** **B5** landing page (wacht op designer-logo + PWA-iconen), **B6** launch-week owner-ops, juridische review Terms/Privacy.
+- **Bewust ná de beta:** weekly digest e-mail (eerste na launch), S2-restant, post-launch-register (discipline-pack, trade-plan, AI-laag, share-cards), O (monetisatie), P (opruiming/schaal).
 
 ## Volgorde
 
-**Q (waterdicht) → R (correctheid & hygiëne) → G-rest + launch-week → S1 (trader-polish, pre-launch-deel) → LAUNCH → I-praktijktest → S2 (trader-verdieping) → N-rest → O → P**
+**Q ✅ → R ✅ → G-rest (B5 logo-geblokkeerd) + launch-week (owner) → S1 ✅ → T (audit-fixes 2026-08-27) → 🚀BETA → S2 (deels al af) → N-rest ✅ → O → P**
 
-Q en R zijn de nieuwe poortwachters: geen launch zolang Q niet af is. S is gesplitst: S1 = klein spul dat de eerste indruk direct verbetert (vóór launch), S2 = de verdieping (erna).
+Q en R waren de poortwachters (beide af). De beta wacht op het **designer-logo** (voor de landing), de **owner-launchweek** én — sinds de audit van 2026-08-27 — **Fase T** (zie hieronder): een klein fixblok dat precies in de logo-wachttijd past.
 
 ## Modelverdeling — BINDEND
 
@@ -31,6 +36,7 @@ Q en R zijn de nieuwe poortwachters: geen launch zolang Q niet af is. S is gespl
 | I — import-praktijktest | **Fable** (parser-randgevallen; UX-polish eromheen mag Opus) |
 | S2 — per stuk | **Fable:** datetime-migratie + sessie-dimensie, prop v2 (trailing DD), multi-select-veldtype, offline-queue. **Opus:** histogram/kruistabel-views, underwater-chart, dag-laag-UI, projectvergelijking, CSV-export, share-scope, missed-kaart |
 | N-rest | N-1 presets **Opus** · N-3 MAE/MFE **Fable** · N-5 review-secties **Opus** |
+| T — audit-fixes 2026-08-27 | T1 (migratie 0052 + datalaag/import/stats) **Fable** · T2 (UI/product) **Opus** · T3 (docs/hygiëne) **Opus** |
 | O — Monetisatie | **Opus** |
 | P — Opruiming/schaal | **Fable** (cyclus 10 + server-aggregatie; kleine restjes Opus) |
 
@@ -59,21 +65,24 @@ Q en R zijn de nieuwe poortwachters: geen launch zolang Q niet af is. S is gespl
 
 **Klaar wanneer:** alle audit-bevindingen t/m MIDDEL dicht of bewust gedocumenteerd; lint/tests/build groen; repo-hygiëne op orde.
 
-### Migratie-register (N11 — bijgewerkt 2026-08-22)
+### Migratie-register (N11 — bijgewerkt 2026-08-26)
 
-Volgorde van de recente/relevante migraties en hun status op prod. Eerstvolgend vrij nummer: **0047**.
+Volgorde van de recente/relevante migraties en hun status op prod. Eerstvolgend vrij nummer: **0052**.
 
 | Nr | Bestand | Wat | Status prod |
 |---|---|---|---|
-| 0036 | `revoke_anon_execute` | anon EXECUTE per naam intrekken op alle RPC's + admin-policies `to authenticated` | ✅ gedraaid (2026-08-13). **Bestand ontbrak op main**, hersteld in branch `fase-r-correctheid` (stond alleen op `claude/jolly-cannon-8d47fc`) |
+| 0036 | `revoke_anon_execute` | anon EXECUTE per naam intrekken op alle RPC's + admin-policies `to authenticated` | ✅ gedraaid (2026-08-13) |
 | 0043 | `open_trades` | lopende trades (is_open) | ✅ gedraaid (2026-08-20) |
 | 0044 | `audit_hardening` | K1 kolom-grants + N1 ownership-trigger + N2 storage-delete | ✅ gedraaid |
 | 0045 | `rename_field_option` | transactionele option-rename-RPC (Fase R s1, M5) | ✅ gedraaid |
 | 0046 | `admin_methodology_select` | is_admin() SELECT op methodologies + methodology_fields (Fase R s2, H2) | ✅ gedraaid (2026-08-22) |
 | 0047 | `field_label_keys` | label_key/group_key op methodology_fields + render-time-vertaling (Fase G-rest A3) | ✅ gedraaid (2026-08-24) |
-| 0048 | `review_sections` | configureerbare review-secties per journal + content jsonb-bag + get_shared_review-uitbreiding (Fase N5) | ⏳ owner draait nog (branch `fase-n5-review-secties`) |
+| 0048 | `review_sections` | configureerbare review-secties per journal + content jsonb-bag + get_shared_review-uitbreiding (Fase N5) | ✅ gedraaid |
+| 0049 | `mae_mfe` | MAE/MFE + planned_rr + open-trade-check (Fase N3) | ✅ gedraaid (2026-08-24) |
+| 0050 | `methodology_track_exit` | exit-analyse + SQN als per-journal opt-in | ✅ gedraaid |
+| 0051 | `tijd_open` | `tijd_open` + sessie/uur op echte tijd-as (Fase S2 s1) | ✅ gedraaid |
 
-> Eerstvolgend vrij nummer na 0048: **0049**.
+> Eerstvolgend vrij nummer na 0051: **0052**.
 
 ## Fase G-rest + launch-week (owner-ops + klein code)
 
@@ -96,11 +105,11 @@ Zoals het oude plan, aangevuld vanuit de audit:
 4. **KPI-motor afmaken**: grootste win/verlies, gem. risico per trade, SQN/std-dev als StatCards; drawdown-peak/trough-markers op de equity curve.
 5. Tradelijst: kolommen journal-bewust (richting/R i.p.v. dode Concept/Entry-kolommen), sorteren op resultaat.
 
-### S2 — na launch (verdieping, per stuk 1 sessie)
-1. **R-distributie-histogram + kruistabellen op eigen enum-velden** (setup × sessie) — motor bestaat (`breakdownBy`, `numberBuckets`), alleen views.
+### S2 — verdieping (deels al vóór de beta vooruitgetrokken en live)
+1. ✅ **R-distributie-histogram + kruistabellen op eigen enum-velden** (setup × sessie) — af + un-beta-gated (`fb440da`).
 2. **Underwater-curve + drawdown-duur**; equity optioneel op tijd-as.
 3. **Dag-laag**: dagnotitie + day-win-rate e.d. (kalender wordt einde-dag-ritueel).
-4. **`datum_open` → datetime** + sessie/uur-breakdown via `profiles.timezone` (grootste inhoudelijke gat voor universele journals).
+4. ✅ **`datum_open` → datetime** + sessie/uur-breakdown via `profiles.timezone` — af (`tijd_open`, 0051).
 5. **Acties-carry-over** in weekly review + adherentie/breakdown-blok in de PDF + periode-vergelijk in periodieke reviews.
 6. **Adherentie**: drilldown naar trades, trend per week, samenvattings-StatCard bovenaan.
 7. **Missed-trades-analyse** (hypothetisch gelabeld, buiten echte KPI's) + reden-veld.
@@ -133,6 +142,39 @@ Volledige audit: `docs/concurrentie-audit-createimpacts-2026-08.md` (createimpac
 5. **Niet kopiëren:** verplichte plan-keuze vóór gebruik, trades-totaallimiet in free, URL-screenshots i.p.v. upload.
 6. **Waarschuwing bevestigd:** hun hernoemde-UI-op-legacy-kolommen-schuld = extra argument om cyclus 10 (WPM-kolommen droppen, Fase P) niet te laten verwateren.
 
+## Fase T — Audit-fixes 2026-08-27 (vóór de beta; past in de logo-wachttijd)
+
+Bron: `docs/audit-2026-08-27.md` (2 rondes, 12 agents; ronde 2 verifieerde ronde 1 adversarieel — 0 items weerlegd). De rekenmotor is numeriek geverifieerd correct (31/31), er is geen backtest↔live-lek en geen cross-tenant-datalek voor ingelogde gebruikers; wat rest is onderstaand fixwerk.
+
+### T1 — Fable (datalaag/security/stats, ~1-2 sessies) — *eerst dit*
+1. **Migratie 0052** (owner draait via de vaste runner, daarna read-only verificatie + test dat een review-share geen open trades meer levert):
+   - `get_shared_review` hercreëren mét `and not t.is_open` in beide trades-subqueries (S2-1, HOOG — 0048-regressie);
+   - `is_open` én `tijd_open` toevoegen aan `shared_trade_json` (tweede verdedigingslinie + M5-a);
+   - anon-EXECUTE-revoke op `compute_sessie_at` (0036-conventie);
+   - composiet-index `trades(user_id, methodology_id, datum_open)` (bestond nergens — ronde 2 bevestigde dit definitief);
+   - conventie-comment bovenin: share-RPC's altijd hercreëren vanaf de láátste versie.
+2. **C2** quick-log `is_system`-guard (1 regel — zonder dit kan een vers skip-account geen quick-log opslaan) + **C1** `profileError` alleen fataal zonder geladen profiel (2 regels — voorkomt app-brede foutschermen bij een token-refresh-hikje).
+3. **B1** admin-Analyse op journal scopen; **B2** extremen-kaart correct in R-modus.
+4. Import-robuustheid: **P-exp** exponentnotatie in `parseNumber` (stille corruptie) + **B4** `datum_sluiting >= datum_open`-guard. Daarna is de import volgens de fuzz-audit un-gate-klaar (owner-besluit).
+5. **M1-a** review-relink bij datum-wijziging + **M1-b** review-form gaten op sections-loading (dataverlies-klasse); **M4-a** journal-aanmaak atomair (RPC) — vóór de signup-toggle.
+6. **P1** mutatie-patching in `useTrades` (lost meteen het C4-duplicaatrisico grotendeels op).
+7. Tests: kalendertotalen-logica naar `src/lib/` + tests (T1), `localDate.ts`-tests (T2).
+
+### T2 — Opus (UI/product, ~1 sessie)
+1. **UX-A/B** fase-kolom verbergen voor moderne journals + `columnMode` in ReviewTradeGroups (het WPM-lek dat elke nieuwe gebruiker ziet).
+2. **UX-C** kruistabel-default = eerste dimensie mét data (ook voor beta-accounts met alleen historische trades).
+3. **UX-D** `tijd_open`-invoerveld un-gaten + optioneel tijdveld in quick-log.
+4. **P2** periodieke SW-update-check (PWA staat voor iedereen aan).
+5. **M2-a** actief-toggle op prop-accounts (geld-modus leunt erop); **M4-b** dode startset-combinaties uitgrijzen.
+6. **Analyse-defaults**: eerste bezoek = KPI-rij + equity open, rest ingeklapt; "Series van 5" default dicht. → **Vuistregel vanaf nu (BINDEND): elke nieuwe analyse-sectie landt default-ingeklapt en/of achter een per-journal-opt-in (0050-patroon) — nooit meer default-open erbij.**
+7. Klein: "win rate"-string i18n, stale gating-comments (TradeJournalView/BacktestingAnalysisView/vite.config), Settings-"Trading"-sectie legacy-only, C5 loading-gate op de Analyse-tab.
+
+### T3 — Opus (hygiëne, ~½ sessie)
+Masterplan-diff committen; CLAUDE.md/README-drift (4+3 stale punten, zie audit §5); oude handoff-docs archiveren; branch-opruiming (~28 gemergde branches + stash-check, met owner-akkoord); C6 try/catch om `lang`/`theme` + userId in tradeMemory/pairMap-keys.
+
+### Ná launch (verzamelwerk, geen blockers)
+Eén hardening-migratie: vijf uuid-bestaans-oracles (0044-triggerpatroon op reviews/prop_accounts/show_when_field_id), jsonb-/lengte-CHECKs (S2-5), anon-revoke op preset-tabellen, `base-uri`/`form-action` in CSP, `account_size > 0`-CHECK. Verder: C3 profiel-refetch op focus, M3-a per-project import-dedup, offline-banner (M7-a), histogram-halfronding, B3/B5/B6/B7, schema.sql weer volledige bootstrap maken (S2-2), font-preconnect, search-debounce, `date-fns` verwijderen, equity-downsampling + `React.memo` om charts. Formula-escaping is een harde eis zodra ooit een CSV-export gebouwd wordt.
+
 ## Fase O — Monetisatie (beslismoment owner, ongewijzigd)
 
 Freemium-gate op `profiles.plan` (nu ook echt afdwingbaar dankzij de K1-fix — vóór die fix was elke plan-limiet omzeilbaar); Stripe pas als owner het aankaart.
@@ -147,6 +189,17 @@ Cyclus 10 (WPM-kolommen droppen); server-aggregatie pas bij echte >10k-users (sa
 
 Geen replay/chart-engine, geen AI-laag (nog — post-launch-kandidaat, zie §Concurrentie-besluiten punt 3), geen community, geen live broker-integratie. Partials/scale-outs: bekende grens, niet bouwen tot import het afdwingt.
 
-## Direct volgende stap
+## Direct volgende stap — concrete weg naar de beta (bijgewerkt 2026-08-26)
 
-**Fase Q, sessie 1 (Fable):** migratie 0044 schrijven (K1 + N1-ownership-check + N2-storage-delete in één migratie), owner draait hem, daarna H1-paginering + N1-client-kant + N3-relink. Coördinatie met de open-posities-chat: N7+N8 daar melden; trade-form-bestanden mijden tot die chat gemerged is.
+De beta-scope is code-compleet, maar de audit van 2026-08-27 voegde **Fase T** toe (klein fixblok, past in de logo-wachttijd). Volgorde:
+
+1. **Fase T1 (Fable)** — migratie 0052 (review-share-lek!) + de C1/C2-éénregelfixes + datalaag; owner draait 0052. *Dit eerst — het lek staat op prod.*
+2. **Designer-logo + PWA-iconen** (owner/designer) — de harde blokkade voor de landing; loopt parallel aan T.
+3. **Fase T2 + T3 (Opus)** — UI-fixes, analyse-defaults, docs/branch-hygiëne.
+4. **B5 — Landing page** op `/` (Opus, zodra logo er is): goedgekeurde mockup → React; positionering t.o.v. Create Impacts verwerken (volwaardig journal gratis, meerdere journals, %/R/$-weergave, screenshot-upload, open trades).
+5. **Juridische review** Terms/Privacy (owner) — aanbevolen; niet blokkerend voor een gratis beta, wél vóór Stripe/betaalde launch.
+6. **B6 — Launch-week owner-ops** in deze volgorde: Turnstile-site → Supabase URL-config → e-mailtemplates + custom SMTP → Sentry-DSN + uptime-monitoring + DB-backupregeling → "Allow new users to sign up" aan (pas ná T1's M4-a) → smoke-test met vers account. *Ná Turnstile: geen Browser-pane meer op prod zonder overleg.*
+7. 🚀 **Beta-launch.**
+6. **Direct erna:** weekly digest e-mail (Fable infra + Opus inhoud), daarna S2-restant / post-launch-register / O / P naar behoefte.
+
+> **Check bij launch:** PWA-service-worker registreert sinds de beta-flip (B1) origin-wide voor iedereen — verifieer update-gedrag met een vers account.

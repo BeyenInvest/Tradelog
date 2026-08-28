@@ -59,7 +59,7 @@ export function WinRatePieChart({ wins, be, losses, size = 168 }: WinRatePieChar
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="font-mono text-2xl text-ink">{(winRate * 100).toFixed(0)}%</span>
-        <span className="font-body text-[10px] uppercase tracking-wider text-muted">win rate</span>
+        <span className="font-body text-[10px] uppercase tracking-wider text-muted">{t("journal.winRate")}</span>
       </div>
     </div>
   );
