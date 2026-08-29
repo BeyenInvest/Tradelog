@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { LogoLockup } from "@/components/ui/Logo";
 
 /**
  * Privacybeleid — volledig uitgeschreven op basis van wat de app feitelijk doet
@@ -19,9 +19,8 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen w-full flex items-start justify-center bg-bg font-body py-12 px-4">
       <div className="w-full max-w-2xl rounded-xl p-8 bg-surface border border-border">
-        <div className="flex items-center gap-2 mb-6">
-          <LogoMark size={30} className="text-gold" />
-          <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
+        <div className="mb-6">
+          <LogoLockup size={28} className="text-gold" />
         </div>
 
         <h1 className="font-display text-2xl italic text-ink mb-1">Privacybeleid</h1>

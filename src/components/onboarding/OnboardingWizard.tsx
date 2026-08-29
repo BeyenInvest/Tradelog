@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { LogoLockup } from "@/components/ui/Logo";
 import { JournalBuilder } from "@/components/settings/JournalBuilder";
 import { timezoneOptions, guessTimezone } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -91,10 +91,7 @@ function OnboardingWizardInner() {
         <div className="w-full max-w-lg flex flex-col gap-6">
           {/* Brand header + step indicator */}
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex items-center gap-2 text-ink">
-              <LogoMark size={26} className="text-gold" />
-              <Wordmark className="font-display text-2xl" />
-            </div>
+            <LogoLockup size={26} className="text-gold" />
             <StepDots step={step} />
           </div>
 

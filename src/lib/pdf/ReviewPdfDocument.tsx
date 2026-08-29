@@ -507,6 +507,36 @@ function TradeGroupBlock({ group, labels, unit }: { group: ReviewPdfTradeGroup; 
   );
 }
 
+// The definitive Beyen horizontal lockup (REV 07): BY-monogram + eye + BEYEN, drawn
+// as react-pdf primitives so it prints as crisp vector — the same artwork as the app.
+// `gold` is the fill; `cut` is the colour behind the mark (used to punch the eye's
+// pupil and — the source relies on winding — is why the eye pupil is a gold disc with
+// a `cut` overlay circle rather than a fill-rule hole. The matrix-rotated monogram bar
+// is pre-baked as a polygon so no transform is needed.
+function BeyenLockup({ height, gold, cut }: { height: number; gold: string; cut: string }) {
+  const width = height * (589.4 / 134.92);
+  return (
+    <Svg width={width} height={height} viewBox="205.30 932.54 589.40 134.92">
+      <Rect x={205.3} y={961.39} width={14.5} height={106.01} fill={gold} />
+      <Polygon points="219.8,1053.12 219.8,1067.4 206.05,1067.4 210.53,1062.69" fill={gold} />
+      <Polygon points="313.58,1025.27 313.58,1067.39 299.11,1067.39 299.11,1025.27" fill={gold} />
+      <Polygon points="363.52,961.39 359.33,967.54 312.7,1036.03 300.79,1027.81 346.07,961.39" fill={gold} />
+      <Polygon points="311.91,1027.85 299.95,1036 282.75,1010.73 278.41,1004.45 288.51,993.61 292.84,999.89" fill={gold} />
+      <Path d="M276.49,989.35c0,7.6-3.01,14.46-7.89,19.45l-0.12,0.12l-0.17,0.2l-10,10.36c-2.55-1.4-5.46-2.21-8.6-2.21h-25.26v-14.36h9.85v-0.02h12.94c7.5,0,13.52-6.08,13.52-13.55c0-7.5-6.03-13.52-13.52-13.52h-41.92V961.4h43.2C263.99,961.4,276.49,973.87,276.49,989.35z" fill={gold} />
+      <Rect x={205.31} y={1002.9} width={14.47} height={14.4} fill={gold} />
+      <Path d="M282,1035.17v0.02c0,17.81-14.46,32.27-32.27,32.27h-29.94v-14.41h29.92c9.87,0,17.89-8.01,17.89-17.89c0-4.92-2.01-9.41-5.24-12.64c-1.2-1.2-2.55-2.23-4.04-3.04c-2.55-1.4-5.46-2.21-8.6-2.21h-25.26v-14.38h25.29c6.98,0,13.45,2.23,18.74,6.03C276.66,1014.76,282,1024.34,282,1035.17z" fill={gold} />
+      <Path d="M338.59,954.47c-13.75-15.1-28.48-22.43-43.88-21.9c-22.8,0.82-38.58,18.84-41.04,21.75v0.08c2.84,0.37,5.53,1.12,8.15,2.16c5.08-5.23,17.42-15.92,33.19-16.52c12.11-0.45,24.22,5.31,35.81,17.04c-4.86,5.08-17.5,16.37-33.64,16.9c-6.66,0.3-13.16-1.27-19.51-4.63c2.09,3.07,3.74,6.43,4.78,10.09c4.41,1.42,8.9,2.09,13.38,2.09c0.6,0,1.12,0,1.64-0.08c24.22-0.82,40.67-21.23,41.34-22.13l1.95-2.47L338.59,954.47z" fill={gold} />
+      <Circle cx={297.16} cy={957.03} r={14.32} fill={gold} />
+      <Circle cx={297.16} cy={957.03} r={5.73} fill={cut} />
+      <Path d="M434.11,1016.25c8.02-2.4,12.61-8.13,12.61-16.47c0-5.73-2.09-10.32-6.26-13.76c-4.06-3.44-9.69-5.21-16.67-5.21h-32.63v72.96h35.13c14.28,0,23.14-7.61,23.14-19.7C449.43,1024.59,443.8,1018.33,434.11,1016.25z M404.3,992.27h16.57c8.44,0,12.3,3.13,12.3,9.28c0,6.26-3.86,9.38-12.3,9.38H404.3V992.27z M423.37,1042.3H404.3v-20.01h19.07c8.23,0,12.3,3.34,12.3,10.01S431.6,1042.3,423.37,1042.3z" fill={gold} fillRule="evenodd" />
+      <Path d="M492.36,1041.78v-18.86h36.16v-11.88h-36.16V992.8h38.46v-11.99h-51.59v72.96h52.63v-11.99H492.36z" fill={gold} />
+      <Path d="M606.69,980.81l-18.97,31.79l-18.97-31.79h-15.01l27.31,43.67v29.29h13.34v-29.29l27.31-43.67H606.69z" fill={gold} />
+      <Path d="M659.73,1041.78v-18.86h36.17v-11.88h-36.17V992.8h38.46v-11.99H646.6v72.96h52.63v-11.99H659.73z" fill={gold} />
+      <Path d="M781.77,980.81v51.7l-38.45-51.7h-12.41v72.96h13.03v-51.7l38.35,51.7h12.41v-72.96H781.77z" fill={gold} />
+    </Svg>
+  );
+}
+
 export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
   const { kpis, labels } = data;
   const wlLabels = [`${kpis.wins}W`, `${kpis.be}BE`, `${kpis.losses}L`];
@@ -517,9 +547,7 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
         <View style={styles.band} fixed={false}>
           <View style={styles.bandTopRow}>
             <View>
-              <Text style={styles.wordmark}>
-                b<Text style={styles.eye}>eye</Text>n
-              </Text>
+              <BeyenLockup height={26} gold={C.goldOnDark} cut={C.inkBand} />
               <Text style={styles.tagline}>{data.labels.tagline}</Text>
             </View>
             <View style={styles.headingWrap}>
@@ -583,9 +611,7 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
         <View style={styles.footer} fixed>
           <View style={styles.footerRule} />
           <View style={styles.footerRow}>
-            <Text style={styles.footerBrand}>
-              b<Text style={styles.footerEye}>eye</Text>n
-            </Text>
+            <BeyenLockup height={11} gold={C.gold} cut={C.paper} />
             <Text style={styles.footerText}>beyen.app</Text>
             <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
           </View>

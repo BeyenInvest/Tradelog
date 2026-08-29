@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
-import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { LogoMark, LogoLockup } from "@/components/ui/Logo";
 import { JournalSwitcher } from "@/components/layout/JournalSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -47,9 +47,9 @@ export function Sidebar() {
           {signOutError}
         </p>
       )}
-      <div className="flex items-center gap-2 md:px-2 md:mb-8 shrink-0">
-        <LogoMark size={20} className="text-gold" />
-        <span className="hidden sm:inline font-display text-2xl italic tracking-wide text-ink"><Wordmark /></span>
+      <div className="flex items-center md:px-2 md:mb-8 shrink-0">
+        <LogoMark size={22} className="sm:hidden text-gold" />
+        <LogoLockup size={24} className="hidden sm:block text-gold" />
       </div>
 
       {/* Active-journal switcher (cyclus 3b). Full-width in the desktop column; a

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
-import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { LogoLockup } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { signupSchema, type SignupFormValues } from "@/lib/validation";
@@ -39,11 +39,8 @@ export default function SignupPage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
         <div className="mb-8">
-          <div className="flex items-center gap-2.5">
-            <LogoMark size={32} className="text-gold" />
-            <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
-          </div>
-          <p className="mt-1.5 text-xs text-muted font-body">{t("common.tagline")}</p>
+          <LogoLockup size={30} className="text-gold" />
+          <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-gold font-body">{t("common.tagline")}</p>
         </div>
 
         {checkEmail ? (

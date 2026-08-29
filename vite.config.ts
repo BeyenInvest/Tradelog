@@ -23,13 +23,18 @@ export default defineConfig({
         description: "Trading & backtesting journal. Eyes on every trade.",
         lang: "nl",
         theme_color: "#1E2024",
-        background_color: "#1E2024",
+        // Splash background matches the icon tile (#121317, = --color-bg) so the
+        // launch screen reads as one piece with the maskable eye icon.
+        background_color: "#121317",
         display: "standalone",
         start_url: "/",
         scope: "/",
+        // The gold eye sits at ~62% width on a #121317 tile — safe-zone-proof, so
+        // each size is offered as both `any` and `maskable`.
         icons: [
           { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
           { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
-import { LogoMark, Wordmark } from "@/components/ui/Logo";
+import { LogoLockup } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/lib/validation";
@@ -40,9 +40,8 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-bg font-body">
       <div className="w-full max-w-sm rounded-xl p-8 bg-surface border border-border">
-        <div className="flex items-center gap-2 mb-8">
-          <LogoMark size={32} className="text-gold" />
-          <span className="font-display text-3xl italic text-ink"><Wordmark /></span>
+        <div className="mb-8">
+          <LogoLockup size={30} className="text-gold" />
         </div>
 
         {sent ? (
