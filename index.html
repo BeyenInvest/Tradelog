@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Explicit PNG fallbacks (solid-pupil eye) so browsers never fall back to the
+         maskable app icon (which carries the pupil cut-out) for the tab favicon. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <!-- PWA (Fase L): iOS add-to-home-screen only. The manifest link + SW are
          injected by vite-plugin-pwa at build; the SW only registers for beta.
          No global <meta name="theme-color"> on purpose — it would tint the mobile
