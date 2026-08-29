@@ -16,7 +16,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: null,
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon-16.png", "favicon-32.png", "apple-touch-icon.png"],
       manifest: {
         name: "Beyen — Trading Journal",
         short_name: "Beyen",
