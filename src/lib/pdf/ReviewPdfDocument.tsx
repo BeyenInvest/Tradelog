@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Svg, Polyline, Polygon, Line, Rect, Circle, Path } from "@react-pdf/renderer";
-import type { ReviewPdfData, ReviewPdfSection, ReviewPdfTradeRow, ReviewPdfActie } from "./reviewPdfData";
+import type { ReviewPdfData, ReviewPdfSection, ReviewPdfTradeGroup, ReviewPdfActie } from "./reviewPdfData";
 import { formatAggregate } from "@/lib/format";
 import type { ResultUnit } from "@/lib/constants";
 
@@ -70,20 +70,23 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 20,
     paddingHorizontal: 40,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
+    flexDirection: "column",
   },
+  bandTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   bandRule: { height: 3, backgroundColor: C.gold },
   wordmark: { fontFamily: SANS_BOLD, fontSize: T.hero, color: C.onDark, letterSpacing: 0.5 },
   eye: { color: C.goldOnDark },
   tagline: { fontFamily: SANS, fontSize: T.micro, color: C.goldOnDark, letterSpacing: 2.2, marginTop: 6 },
   headingWrap: { alignItems: "flex-end", maxWidth: 300 },
-  preparedFor: { fontFamily: SANS_BOLD, fontSize: T.micro, color: C.goldOnDark, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 3 },
-  traderName: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.title, color: C.onDark, marginBottom: 6, textAlign: "right" },
   heading: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.hero, color: C.goldOnDark },
   subtitle: { fontFamily: SANS, fontSize: T.body, color: C.faint, marginTop: 3, maxWidth: 260, textAlign: "right" },
   generatedOn: { fontFamily: SANS, fontSize: T.micro, color: C.faint, marginTop: 5 },
+
+  // Centered "prepared for <trader>" strip inside the ink masthead — makes the
+  // export feel addressed to the trader instead of hiding the name in the corner.
+  personalBand: { alignItems: "center", marginTop: 16 },
+  personalEyebrow: { fontFamily: SANS_BOLD, fontSize: T.micro, color: C.goldOnDark, letterSpacing: 2.2, textTransform: "uppercase", marginBottom: 4, textAlign: "center" },
+  personalName: { fontFamily: DISPLAY, fontStyle: "italic", fontSize: T.hero, color: C.onDark, textAlign: "center" },
 
   body: { paddingHorizontal: 40, paddingTop: 22 },
 
@@ -147,6 +150,11 @@ const styles = StyleSheet.create({
   table: { marginTop: 4 },
   th: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: C.border, paddingBottom: 4, marginBottom: 2 },
   thText: { fontSize: T.micro, color: C.muted, letterSpacing: 0.5, textTransform: "uppercase" },
+  // Outcome-group subheader (Win/BE/Loss + subtotal) between the column header and
+  // that bucket's rows, so the PDF mirrors the on-screen grouped default view.
+  groupSubhead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.surface2, paddingVertical: 3, paddingHorizontal: 6, marginTop: 6, marginBottom: 1, borderRadius: 3 },
+  groupSubheadLabel: { fontFamily: SANS_BOLD, fontSize: T.small, color: C.ink, letterSpacing: 0.3 },
+  groupSubheadTotal: { fontFamily: SANS_BOLD, fontSize: T.small },
   tr: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: C.borderSoft },
   td: { fontSize: T.small, color: C.ink },
   cDate: { width: "13%", paddingRight: 4 },
@@ -433,38 +441,65 @@ function Section({ s }: { s: ReviewPdfSection }) {
 // overflow. Below the threshold the whole section is kept on one sheet.
 const TABLE_ROWS_PER_PAGE = 28;
 
-function TradeSection({ heading, rows, labels, unit }: { heading: string; rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
-  const fitsOnePage = rows.length <= TABLE_ROWS_PER_PAGE;
+function TradeSection({ heading, groups, labels, unit }: { heading: string; groups: ReviewPdfTradeGroup[]; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
+  const totalRows = groups.reduce((n, g) => n + g.count, 0);
+  // Group subheaders add rows too, so a small section still fits one page below the threshold.
+  const fitsOnePage = totalRows + groups.length <= TABLE_ROWS_PER_PAGE;
   return (
     <View style={styles.section} wrap={!fitsOnePage}>
       <Text style={styles.sectionLabel}>
-        {heading} ({rows.length})
+        {heading} ({totalRows})
       </Text>
-      <TradeTable rows={rows} labels={labels} unit={unit} />
+      <View style={styles.table}>
+        <TradeTableHeader labels={labels} />
+        {groups.map((g, i) => (
+          <TradeGroupBlock key={i} group={g} labels={labels} unit={unit} />
+        ))}
+      </View>
     </View>
   );
 }
 
-function TradeTable({ rows, labels, unit }: { rows: ReviewPdfTradeRow[]; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
+function TradeTableHeader({ labels }: { labels: ReviewPdfData["labels"] }) {
   return (
-    <View style={styles.table}>
-      <View style={styles.th}>
-        <Text style={[styles.thText, styles.cDate]}>{labels.colDate}</Text>
-        <Text style={[styles.thText, styles.cPair]}>{labels.colPair}</Text>
-        <Text style={[styles.thText, styles.cConcept]}>{labels.colConcept}</Text>
-        <Text style={[styles.thText, styles.cEntry]}>{labels.colEntry}</Text>
-        <Text style={[styles.thText, styles.cOut]}>{labels.colOutcome}</Text>
-        <Text style={[styles.thText, styles.cRes]}>{labels.colResult}</Text>
-        <Text style={[styles.thText, styles.cEval]}>{labels.colEval}</Text>
+    <View style={styles.th}>
+      <Text style={[styles.thText, styles.cDate]}>{labels.colDate}</Text>
+      <Text style={[styles.thText, styles.cPair]}>{labels.colPair}</Text>
+      <Text style={[styles.thText, styles.cConcept]}>{labels.colConcept}</Text>
+      <Text style={[styles.thText, styles.cEntry]}>{labels.colEntry}</Text>
+      <Text style={[styles.thText, styles.cOut]}>{labels.colOutcome}</Text>
+      <Text style={[styles.thText, styles.cRes]}>{labels.colResult}</Text>
+      <Text style={[styles.thText, styles.cEval]}>{labels.colEval}</Text>
+    </View>
+  );
+}
+
+// One outcome bucket: a Win/BE/Loss subheader (with subtotal for taken groups)
+// followed by that bucket's rows — the printed equivalent of the on-screen
+// collapsible group.
+function TradeGroupBlock({ group, labels, unit }: { group: ReviewPdfTradeGroup; labels: ReviewPdfData["labels"]; unit: ResultUnit }) {
+  const totalColor = group.subtotal == null ? C.muted : group.subtotal > 0 ? C.win : group.subtotal < 0 ? C.loss : C.be;
+  return (
+    <View wrap={group.rows.length > TABLE_ROWS_PER_PAGE}>
+      <View style={styles.groupSubhead} wrap={false}>
+        <Text style={styles.groupSubheadLabel}>
+          {group.label} · {group.count}
+        </Text>
+        {group.subtotal != null ? (
+          <Text style={[styles.groupSubheadTotal, { color: totalColor }]}>{formatAggregate(group.subtotal, unit)}</Text>
+        ) : null}
       </View>
-      {rows.map((r, i) => (
+      {group.rows.map((r, i) => (
         <View style={styles.tr} key={i} wrap={false}>
           <Text style={[styles.td, styles.cDate]}>{r.datum}</Text>
           <Text style={[styles.td, styles.cPair]}>{r.pair}</Text>
           <Text style={[styles.td, styles.cConcept, { color: C.muted }]}>{r.concept ?? "—"}</Text>
           <Text style={[styles.td, styles.cEntry, { color: C.muted }]}>{r.entry ?? "—"}</Text>
-          <Text style={[styles.td, styles.cOut, { color: outcomeColor(r.outcome) }]}>{r.outcome}</Text>
-          <Text style={[styles.td, styles.cRes, { color: r.resultaat >= 0 ? C.win : C.loss }]}>{formatAggregate(r.resultaat, unit)}</Text>
+          {/* Open trade: no outcome/result yet — mirror the on-screen "loopt" badge + "—". */}
+          <Text style={[styles.td, styles.cOut, { color: r.open ? C.gold : outcomeColor(r.outcome ?? "") }]}>{r.open ? labels.openBadge : r.outcome}</Text>
+          <Text style={[styles.td, styles.cRes, { color: r.resultaat == null ? C.faint : r.resultaat >= 0 ? C.win : C.loss }]}>
+            {r.resultaat == null ? "—" : formatAggregate(r.resultaat, unit)}
+          </Text>
           <Text style={[styles.td, styles.cEval, { color: C.muted }]}>{r.evaluation ?? "—"}</Text>
         </View>
       ))}
@@ -480,21 +515,30 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
     <Document title={`Beyen — ${data.heading}`} author="Beyen Invest">
       <Page size="A4" style={styles.page}>
         <View style={styles.band} fixed={false}>
-          <View>
-            <Text style={styles.wordmark}>
-              b<Text style={styles.eye}>eye</Text>n
-            </Text>
-            <Text style={styles.tagline}>{data.labels.tagline}</Text>
+          <View style={styles.bandTopRow}>
+            <View>
+              <Text style={styles.wordmark}>
+                b<Text style={styles.eye}>eye</Text>n
+              </Text>
+              <Text style={styles.tagline}>{data.labels.tagline}</Text>
+            </View>
+            <View style={styles.headingWrap}>
+              <Text style={styles.heading}>{data.heading}</Text>
+              {data.subtitle ? <Text style={styles.subtitle}>{data.subtitle}</Text> : null}
+              <Text style={styles.generatedOn}>
+                {labels.generatedOn} {data.generatedOn}
+              </Text>
+            </View>
           </View>
-          <View style={styles.headingWrap}>
-            {data.traderName ? <Text style={styles.preparedFor}>{labels.preparedFor}</Text> : null}
-            {data.traderName ? <Text style={styles.traderName}>{data.traderName}</Text> : null}
-            <Text style={styles.heading}>{data.heading}</Text>
-            {data.subtitle ? <Text style={styles.subtitle}>{data.subtitle}</Text> : null}
-            <Text style={styles.generatedOn}>
-              {labels.generatedOn} {data.generatedOn}
-            </Text>
-          </View>
+
+          {/* Personal masthead: the trader's name centered and prominent inside the
+              ink band, so the document reads as addressed to them. */}
+          {data.traderName ? (
+            <View style={styles.personalBand}>
+              <Text style={styles.personalEyebrow}>{labels.preparedFor}</Text>
+              <Text style={styles.personalName}>{data.traderName}</Text>
+            </View>
+          ) : null}
         </View>
         <View style={styles.bandRule} />
 
@@ -527,12 +571,12 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
             <Section key={i} s={s} />
           ))}
 
-          {data.takenRows.length > 0 ? (
-            <TradeSection heading={labels.takenHeading} rows={data.takenRows} labels={labels} unit={data.unit} />
+          {data.takenGroups.length > 0 ? (
+            <TradeSection heading={labels.takenHeading} groups={data.takenGroups} labels={labels} unit={data.unit} />
           ) : null}
 
-          {data.missedRows.length > 0 ? (
-            <TradeSection heading={labels.missedHeading} rows={data.missedRows} labels={labels} unit={data.unit} />
+          {data.missedGroups.length > 0 ? (
+            <TradeSection heading={labels.missedHeading} groups={data.missedGroups} labels={labels} unit={data.unit} />
           ) : null}
         </View>
 

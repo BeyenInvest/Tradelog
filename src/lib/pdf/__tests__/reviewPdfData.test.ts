@@ -49,9 +49,14 @@ describe("buildReviewPdfData", () => {
     expect(data.kpis.losses).toBe(1);
     expect(data.kpis.avgRR).toBe(0.5); // 1 / 2 trades
     expect(data.equity).toEqual([2, 1]); // cumulative over taken, no missed point
-    expect(data.takenRows).toHaveLength(2);
-    expect(data.missedRows).toHaveLength(1);
-    expect(data.missedRows[0].missed).toBe(true);
+    // Trades are grouped by outcome (the on-screen default): Win + Loss buckets, empty BE dropped.
+    expect(data.takenGroups.map((g) => g.label)).toEqual(["Win", "Loss"]);
+    expect(data.takenGroups.find((g) => g.label === "Win")).toMatchObject({ count: 1, subtotal: 2 });
+    expect(data.takenGroups.find((g) => g.label === "Loss")).toMatchObject({ count: 1, subtotal: -1 });
+    // Missed trades group too, but are hypothetical → no per-group subtotal.
+    expect(data.missedGroups).toHaveLength(1);
+    expect(data.missedGroups[0].subtotal).toBeNull();
+    expect(data.missedGroups[0].rows[0].missed).toBe(true);
   });
 
   it("uses weekly headings, labels and parses acties into a checklist", () => {
@@ -135,6 +140,26 @@ describe("buildReviewPdfData", () => {
     const werkpunten = data.sections.find((s) => s.label === "reviewContent.werkpunten");
     expect(werkpunten?.kind).toBe("acties");
     expect(werkpunten?.acties).toEqual([{ label: "Werkpunt een", status: null, value: null }]);
+  });
+
+  it("includes open trades in the trade list but never in the stats", () => {
+    const taken = [
+      makeTrade({ datum_open: "2026-08-04", outcome: "Win", resultaat_pct: 2 }),
+      makeTrade({ datum_open: "2026-08-10", is_open: true }), // still running, no realized result
+    ];
+    const data = buildReviewPdfData(t, { kind: "weekly", sections: wSec, review: baseWeekly, taken, missed: [] });
+
+    // Stats + equity see only the one closed trade.
+    expect(data.kpis.trades).toBe(1);
+    expect(data.kpis.resultaat).toBe(2);
+    expect(data.equity).toEqual([2]);
+
+    // But the open trade still shows in the taken table, in its own leading "Open" bucket, without a subtotal.
+    expect(data.takenGroups[0].label).toBe("Open");
+    const openGroup = data.takenGroups[0];
+    expect(openGroup.subtotal).toBeNull();
+    expect(openGroup.count).toBe(1);
+    expect(openGroup.rows[0]).toMatchObject({ open: true, outcome: null, resultaat: null });
   });
 
   it("formats generatedOn as dd-mm-yyyy", () => {

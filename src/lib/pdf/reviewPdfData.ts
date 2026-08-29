@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
 import type { Outcome, ResultUnit } from "@/lib/constants";
-import type { PeriodicReview, ReviewKind, WeeklyReview } from "@/lib/types";
-import { computeOverviewKpis, computeErrorCounts, sortChronological, round2, type ClosedTrade } from "@/lib/stats";
+import type { PeriodicReview, ReviewKind, Trade, WeeklyReview } from "@/lib/types";
+import { computeOverviewKpis, computeErrorCounts, sortChronological, closedTrades, isOpen, round2, type ClosedTrade } from "@/lib/stats";
+import { groupTradesByOutcome } from "@/lib/tradeGrouping";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { periodLabel } from "@/lib/periodRanges";
 import { readSectionDisplayText, readSectionList, reviewSectionLabel, type ReviewSection } from "@/lib/reviewSections";
@@ -37,10 +38,23 @@ export interface ReviewPdfTradeRow {
   pair: string;
   concept: string | null;
   entry: string | null;
-  outcome: Outcome;
-  resultaat: number;
+  /** Null for a still-running open trade (no outcome yet). */
+  outcome: Outcome | null;
+  /** Null for an open trade — no realized result. */
+  resultaat: number | null;
   evaluation: string | null;
   missed: boolean;
+  /** Still-running trade (is_open) — shown in the list but excluded from every stat. */
+  open: boolean;
+}
+
+export interface ReviewPdfTradeGroup {
+  /** Outcome bucket label — "Win" / "BE" / "Loss", exactly like the on-screen groups. */
+  label: string;
+  count: number;
+  /** Real cumulative result for this bucket, in `unit`. Null for missed groups (hypothetical — no real total). */
+  subtotal: number | null;
+  rows: ReviewPdfTradeRow[];
 }
 
 export interface ReviewPdfKpis {
@@ -66,6 +80,8 @@ export interface ReviewPdfLabels {
   takenHeading: string;
   missedHeading: string;
   noTrades: string;
+  /** Outcome-cell text for a still-running open trade (on-screen "loopt" badge). */
+  openBadge: string;
   colDate: string;
   colPair: string;
   colConcept: string;
@@ -90,19 +106,23 @@ export interface ReviewPdfData {
   errorLine: string | null;
   sections: ReviewPdfSection[];
   acties: ReviewPdfActie[];
-  takenRows: ReviewPdfTradeRow[];
-  missedRows: ReviewPdfTradeRow[];
+  /** Taken trades grouped by outcome (Win/BE/Loss), matching the on-screen default view. Empty buckets omitted. */
+  takenGroups: ReviewPdfTradeGroup[];
+  /** Missed trades grouped by outcome — hypothetical, so no per-group subtotal. Empty buckets omitted. */
+  missedGroups: ReviewPdfTradeGroup[];
   labels: ReviewPdfLabels;
 }
 
 export type ReviewPdfInput = (
   | {
       kind: "weekly";
+      // Full taken list incl. still-running open trades — stats use only the closed
+      // subset (computed here), but the trade list shows the open ones too, like on-screen.
       review: WeeklyReview;
-      taken: ClosedTrade[];
+      taken: Trade[];
       missed: ClosedTrade[];
     }
-  | { kind: "periodic"; review: PeriodicReview; taken: ClosedTrade[]; missed: ClosedTrade[] }
+  | { kind: "periodic"; review: PeriodicReview; taken: Trade[]; missed: ClosedTrade[] }
 ) & {
   /** This journal's resolved review sections (Fase N5) — drives the section list + acties label. */
   sections: ReviewSection[];
@@ -134,17 +154,37 @@ function parseActie(a: string): ReviewPdfActie {
   return { label: m[1].trim(), status, value: status ? null : value };
 }
 
-function toRow(t: ClosedTrade, missed: boolean): ReviewPdfTradeRow {
+function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
+  const open = isOpen(t);
   return {
     datum: t.datum_open,
     pair: t.instrument ?? t.pair, // instrument (falls back to pair) so non-forex journals read right (cyclus 7)
     concept: t.trade_concept,
     entry: t.entry,
-    outcome: t.outcome,
-    resultaat: round2(t.resultaat_pct),
+    outcome: open ? null : t.outcome,
+    resultaat: open || t.resultaat_pct == null ? null : round2(t.resultaat_pct),
     evaluation: t.trade_evaluation,
     missed,
+    open,
   };
+}
+
+/**
+ * Group trades into the on-screen default Win/BE/Loss buckets (empty buckets
+ * dropped), each with its rows in chronological order — so the PDF matches the
+ * grouped default view every on-screen review shows, instead of one flat table.
+ * Taken buckets carry a real subtotal; missed buckets don't (hypothetical).
+ */
+function toTradeGroups(trades: Trade[], missed: boolean): ReviewPdfTradeGroup[] {
+  return groupTradesByOutcome(trades)
+    .filter((g) => g.trades.length > 0)
+    .map((g) => ({
+      label: g.label,
+      count: g.trades.length,
+      // Missed (hypothetical) and Open (no realized result yet) buckets carry no real total.
+      subtotal: missed || g.key === "Open" ? null : g.resultaatTotal,
+      rows: sortChronological(g.trades).map((tr) => toRow(tr, missed)),
+    }));
 }
 
 /** Cumulative resultaat after each taken trade, chronological (for the equity sparkline). */
@@ -223,6 +263,7 @@ function labels(t: TFunction): ReviewPdfLabels {
     takenHeading: t("reviews.tradesTaken"),
     missedHeading: t("reviews.missedTradesLabel"),
     noTrades: t("reviews.noTakenTrades"),
+    openBadge: t("tradeBadge.open"),
     colDate: t("reviewPdf.colDate"),
     colPair: t("reviewPdf.colPair"),
     colConcept: t("reviewPdf.colConcept"),
@@ -247,9 +288,12 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
   // Currency zonder saldo valt eerlijk terug op % — zelfde regel als de provider.
   const preferred = input.resultUnit ?? "percent";
   const resultUnit: ResultUnit = preferred === "currency" && input.saldo == null ? "percent" : preferred;
-  const taken = tradesInResultUnit(input.taken, resultUnit, input.saldo);
+  // Open trades have no realized result — kept for the trade list only, never for
+  // stats/equity/error-line (same rule as isMissed). Convert only the closed ones.
+  const takenClosed = tradesInResultUnit(closedTrades(input.taken), resultUnit, input.saldo);
+  const takenOpen = input.taken.filter(isOpen);
   const missed = tradesInResultUnit(input.missed, resultUnit, input.saldo);
-  const kpis = computeOverviewKpis(taken);
+  const kpis = computeOverviewKpis(takenClosed);
   // Gem. resultaat/trade deelt door álle genomen trades (een BE-trade is een echte
   // genomen trade met 0% en hoort in de noemer) — zo spreken de "trades"-kaart en
   // het gemiddelde elkaar niet tegen. Spiegelt ReviewStatsHeader op het scherm.
@@ -287,12 +331,14 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
       losses: kpis.losses,
     },
     unit: resultUnit,
-    equity: equityCurve(taken),
-    errorLine: buildErrorLine(t, taken, missed, resultUnit),
+    equity: equityCurve(takenClosed),
+    errorLine: buildErrorLine(t, takenClosed, missed, resultUnit),
     sections,
     acties,
-    takenRows: sortChronological(taken).map((tr) => toRow(tr, false)),
-    missedRows: sortChronological(missed).map((tr) => toRow(tr, true)),
+    // Open trades join the taken table (as their own "Open" bucket via
+    // groupTradesByOutcome), so a still-running trade shows up like it does on-screen.
+    takenGroups: toTradeGroups([...takenClosed, ...takenOpen], false),
+    missedGroups: toTradeGroups(missed, true),
     labels: l,
   };
 }

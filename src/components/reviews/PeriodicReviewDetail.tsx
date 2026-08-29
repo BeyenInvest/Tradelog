@@ -65,7 +65,7 @@ export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, 
         <div className="flex items-center gap-1">
           <ShareReviewButton reviewRef={{ kind: "periodic", id: review.id }} />
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "periodic", review, sections, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
+            getData={() => buildReviewPdfData(t, { kind: "periodic", review, sections, taken, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo }, new Date(), dateLocale(i18n.language))}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />

@@ -56,7 +56,7 @@ export function ReviewDetail({ review, sections, trades, onEdit, onDelete, onRel
         <div className="flex items-center gap-1">
           <ShareReviewButton reviewRef={{ kind: "weekly", id: review.id }} />
           <DownloadReviewPdfButton
-            getData={() => buildReviewPdfData(t, { kind: "weekly", review, sections, taken: takenClosed, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo })}
+            getData={() => buildReviewPdfData(t, { kind: "weekly", review, sections, taken, missed: missedClosed, traderName: profile?.display_name, resultUnit, saldo })}
           />
           <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-ink/5 text-muted hover:text-ink">
             <Pencil size={14} />
