@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="346 676 427 251" fill="#D4A64A">
-  <!-- Beyen eye. Solid pupil (no concentric cut-out) so it stays legible as a tab icon under 20px. -->
+  <!-- Beyen eye — the dedicated favicon variant: a big, solid ("massieve") pupil that
+       nearly fills the eye, so it reads as one clean mark at tab size (no cut-out look).
+       The smaller, concentric-cut-out pupil lives only in the large in-app mark. -->
   <path d="M750.69,789.31c-63.65-69.87-131.79-103.77-203.05-101.35c-105.5,3.8-178.49,87.16-189.9,100.66v0.35c13.13,1.72,25.59,5.18,37.7,10.02c23.52-24.2,80.59-73.66,153.59-76.44c56.03-2.07,112.07,24.55,165.7,78.87c-22.5,23.52-80.96,75.76-155.66,78.18c-30.8,1.39-60.89-5.89-90.29-21.44c9.68,14.18,17.3,29.74,22.13,46.7c20.43,6.57,41.17,9.68,61.92,9.68c2.78,0,5.18,0,7.61-0.35c112.09-3.82,188.18-98.24,191.29-102.38l9-11.43L750.69,789.31z"/>
-  <circle cx="559.01" cy="801.18" r="66.25"/>
+  <circle cx="559.01" cy="801.18" r="90"/>
 </svg>
