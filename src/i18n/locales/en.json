@@ -1098,5 +1098,170 @@
     "network": "Can't connect to the server. Check your internet connection.",
     "boundaryBody": "An unexpected error occurred. Your data is safe — reload the page to continue.",
     "reload": "Reload page"
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "cta": "Start free"
+    },
+    "hero": {
+      "eyebrow": "Trading & backtesting journal",
+      "title": "Built around your method.<line2>Not the other way around.</line2>",
+      "sub": "Where other journals lock you into their fixed fields, Beyen bends entirely to you. Every setup, condition and rule, set up the way you actually trade, with numbers that hold up on top of TradingView.",
+      "cta1": "Start free",
+      "cta2": "See how it works",
+      "note": "The free tier is a complete, working journal. No card, no trial clock."
+    },
+    "stage": {
+      "tab1": "Journal",
+      "tab2": "Analysis",
+      "tab3": "Reviews",
+      "meta": "ICT / SMC · 128 trades"
+    },
+    "chart": {
+      "cap": "Cumulative result · YTD"
+    },
+    "kpi": {
+      "pf": "Profit factor",
+      "exp": "Avg R",
+      "wr": "Result",
+      "dd": "Max drawdown"
+    },
+    "fields": {
+      "title": "Your fields"
+    },
+    "chip": {
+      "setup": "Setup",
+      "bias": "HTF-bias",
+      "rule": "Rule followed",
+      "add": "+ field"
+    },
+    "type": {
+      "enum": "enum",
+      "yesno": "yes/no"
+    },
+    "band": {
+      "statement": "Built by a trader. For traders.",
+      "sub": "Only the analysis a serious trader actually uses. Nothing added to pad a feature list.",
+      "t1": "Complete free tier",
+      "t2": "Custom fields you define",
+      "t3": "Live journal + backtesting",
+      "t4": "Diluted numbers, ever"
+    },
+    "m": {
+      "kicker": "The differentiator",
+      "h2": "<em>Your</em> conditions become the fields.",
+      "lead": "Trade ICT, breakout, mean-reversion or something entirely your own. The journal builds itself around your checklist: add enum and yes/no fields, or start from a preset and refine it. Every field instantly becomes a filter and a breakdown in the analysis.",
+      "presetOwn": "+ your own method",
+      "lead2": "Multiple journals side by side, each with its own fields, trades and reviews. Forex swings and index scalps never pollute each other's numbers.",
+      "editor": "Field editor — ICT/SMC",
+      "opt6": "enum · 6 options",
+      "opt3": "enum · 3 options",
+      "opt4": "enum · 4 options",
+      "killzone": "Killzone",
+      "ruleField": "Rule followed?",
+      "yesno": "yes / no",
+      "newField": "New field",
+      "add": "add"
+    },
+    "c": {
+      "kicker": "Brutally honest",
+      "panelhead": "Trades — this week",
+      "missed": "missed",
+      "excl": "Missed trade excluded from all numbers",
+      "h2": "Numbers that <em>hide</em> nothing.",
+      "lead": "A journal is only worth anything if you trust the numbers. So Beyen hides nothing from you, even when the truth stings. Not a setting you switch on, just how it counts.",
+      "p1h": "Missed trades never pollute your numbers",
+      "p1b": "Log a setup you spotted but didn't take with a hypothetical result. It never counts toward the real result, the win rate, streaks or drawdown.",
+      "p2h": "Break-even pauses your streak, but doesn't reset it",
+      "p2b": "A BE isn't a loss. Your winning and losing streaks stay true to how you actually traded.",
+      "p3h": "Avg R, drawdown and streaks, chronologically computed",
+      "p3b": "Cumulative result by date, R-multiple per trade, average R per setup. Enough to know whether your edge is real."
+    },
+    "e": {
+      "kicker": "The deep cut",
+      "h2": "Where the edge is. And where the <em>leak</em> is.",
+      "lead": "Beyen breaks your results down by your own fields: per setup, per bias, per condition. Not generic stats but your methodology, measured. So you see which edge is real and which leak costs you money.",
+      "adhTitle": "Discipline, priced",
+      "adhYes": "Rule followed",
+      "adhNo": "Rule broken",
+      "tableTitle": "Result by setup",
+      "bdSetup": "Setup",
+      "bdTrades": "Trades",
+      "bdResult": "Result",
+      "bdAvgR": "Avg R"
+    },
+    "b": {
+      "kicker": "Backtesting",
+      "project": "Backtest · OB-retrace v3",
+      "isolated": "isolated from live",
+      "trades": "trades",
+      "result": "result",
+      "pf": "profit factor",
+      "exp": "Avg R",
+      "h2": "Prove your edge before you <em>risk</em> it.",
+      "lead": "Backtest projects sit next to the journal, with the same fields and the same engine. Their results never touch your live numbers. Prove a setup on history first, then trade it with real money.",
+      "b1h": "One engine, two modes",
+      "b1b": "The same engine for R, drawdown and streaks runs on your backtests and your live book.",
+      "b2h": "Strictly separated",
+      "b2b": "A backtest never inflates the live win rate or streaks. What you traded and what you tested stay apart."
+    },
+    "t": {
+      "kicker": "The right layer",
+      "h2": "The chart stays <em>in TradingView.</em>",
+      "lead": "You chart and execute in TradingView. That's what you're good at, and we're not rebuilding it. Beyen adds the analysis layer on top: get your trades in and see what your method delivers. No chart of our own, no replay engine, by design.",
+      "n1h": "You trade",
+      "n1b": "TradingView, MetaTrader or your broker. Where you already are.",
+      "n2h": "Log your trade",
+      "n2b": "Logged in a few taps. Broker CSV import is coming.",
+      "n3h": "Beyen analyzes",
+      "n3b": "Your method fields, real numbers, edge per setup.",
+      "note": "CSV import is on the roadmap and coming soon. Everything else on this page works today."
+    },
+    "f": {
+      "kicker": "Complete out of the box",
+      "h2": "Everything else is <em>already</em> here.",
+      "lead": "A journal you'll actually stay in. The tools are built in, not bolted on later.",
+      "c1h": "Weekly reviews",
+      "c1b": "Close the week with a guided review and export it to PDF.",
+      "c2h": "Accounts & balances",
+      "c2b": "Track several trading accounts and their balances side by side.",
+      "c3h": "PDF export",
+      "c3b": "Share a clean report of any trade or review.",
+      "c4h": "Economic calendar",
+      "c4b": "High-impact events, right inside the app.",
+      "c5h": "Lot-size calculator",
+      "c5b": "Position sizing from your risk, in one tap.",
+      "c6h": "English & Dutch",
+      "c6b": "The whole app in your language, switch any time."
+    },
+    "p": {
+      "kicker": "Pricing",
+      "h2": "Free is a <em>complete</em> journal.",
+      "lead": "No stripped-down demo. The free tier is a full journal. You only pay for more: more journals and unlimited custom fields.",
+      "free": "Free",
+      "freeAmt": " / forever",
+      "f1": "One full journal + backtesting projects",
+      "f2": "Full analysis: R-multiples, drawdown, streaks, SQN",
+      "f3": "Weekly reviews + PDF export",
+      "freeCta": "Start free",
+      "pro": "Pro",
+      "proSoon": "soon",
+      "proAmt": " / price TBD",
+      "pf1": "Multiple journals side by side",
+      "pf2": "Unlimited custom fields + all presets",
+      "pf3": "All instrument classes & import sources",
+      "proCta": "Start free, upgrade later"
+    },
+    "cta": {
+      "h2": "Ready to journal <em>your method?</em>",
+      "lead": "Create a free account and log your first trade within minutes.",
+      "btn": "Start free"
+    },
+    "foot": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "small": "© 2026 Beyen · Trading & backtesting journal"
+    }
   }
 }

@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { FullScreenLoading } from "@/components/ui/FullScreenLoading";
 import { ProfileErrorScreen } from "@/components/ui/ProfileErrorScreen";
+import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
@@ -59,6 +60,15 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Public entry at `/`: the marketing landing page for logged-out visitors,
+    straight to the journal once there's a session (the app's real home). */
+function LandingGate() {
+  const { session, loading } = useAuth();
+  if (loading) return <FullScreenLoading />;
+  if (session) return <Navigate to="/journal" replace />;
+  return <LandingPage />;
+}
+
 /** Nested inside ProtectedRoute, so session/loading are already handled — only the role check is new here. */
 function AdminRoute({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
@@ -69,6 +79,7 @@ function AdminRoute({ children }: { children: ReactNode }) {
 export function AppRouter() {
   return (
     <Routes>
+      <Route path="/" element={<LandingGate />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -110,7 +121,6 @@ export function AppRouter() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/journal" replace />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/backtesting" element={<ProjectsListPage />} />
         <Route path="/backtesting/:projectId" element={<ProjectDashboardPage />} />
