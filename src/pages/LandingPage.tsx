@@ -6,18 +6,21 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import "./landing.css";
 
-/* Public marketing landing page shown at `/` to logged-out visitors (B5).
-   Converted 1:1 from the owner-approved mockup (artifact 8cc05b23): same
-   structure, copy and layout, but wired to the app's real i18n, theme and
-   brand components. All copy lives under the `landing.*` i18n namespace;
-   gold-accented headings use <Trans> so the <em>/<line2> markup survives
-   translation. Styles are scoped in ./landing.css under `.landing-root`. */
+/* Public marketing landing page shown at `/` to logged-out visitors (B5 v2).
+   Rebuilt per the Strategic Design & Positioning master prompt (2026-09):
+   structure follows the visitor's mental journey (attention → recognition →
+   belief → trust → action) instead of the standard SaaS skeleton. Design is
+   "serif on graphite": typography-led, luminance hierarchy, gold rationed to
+   the primary CTA / data line / section numbers. Strategy & research notes in
+   docs/landing-strategie-2026-09.md; previous version preserved on branch
+   backup/fase-b5-landing-v1. All copy lives under the `landing.*` i18n
+   namespace; styles are scoped in ./landing.css under `.landing-root`. */
 
 // Shared markup map for translated headings: an <em> gold accent and the
 // hero's second line. Unused tags in a given string are simply ignored.
 const accent = { em: <em />, line2: <span className="line2" /> };
 
-function Check({ size = 20 }: { size?: number }) {
+function Check({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 6 9 17l-5-5" />
@@ -31,14 +34,6 @@ function Grip() {
       <circle cx="3" cy="2" r="1" /><circle cx="9" cy="2" r="1" />
       <circle cx="3" cy="6" r="1" /><circle cx="9" cy="6" r="1" />
       <circle cx="3" cy="10" r="1" /><circle cx="9" cy="10" r="1" />
-    </svg>
-  );
-}
-
-function Arrow() {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
 }
@@ -87,8 +82,8 @@ function Kicker({ num, label }: { num: string; label: string }) {
   return (
     <div className="kicker reveal">
       <span className="num">{num}</span>
+      <span className="eyebrow">{label}</span>
       <span className="rule" />
-      <span className="eyebrow" style={{ letterSpacing: ".14em" }}>{label}</span>
     </div>
   );
 }
@@ -101,9 +96,7 @@ export default function LandingPage() {
   // everything if reduced-motion is set or IntersectionObserver is unavailable.
   useEffect(() => {
     const items = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        ".landing-root .blk .reveal, .landing-root .band .reveal, .landing-root .cta-band .reveal, .landing-root .price-card.reveal",
-      ),
+      document.querySelectorAll<HTMLElement>(".landing-root .reveal:not(.hero .reveal)"),
     );
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce || !("IntersectionObserver" in window)) {
@@ -119,12 +112,15 @@ export default function LandingPage() {
             (n as HTMLElement).classList.contains("reveal"),
           );
           const i = sibs.indexOf(el);
-          el.style.animationDelay = `${i > 0 ? i * 0.08 : 0}s`;
+          el.style.animationDelay = `${i > 0 ? i * 0.07 : 0}s`;
           el.classList.add("in");
           io.unobserve(el);
         });
       },
-      { threshold: 0.14 },
+      // Pre-trigger well below the viewport so fast scrolling never lands on a
+      // section whose reveal hasn't fired yet (was: threshold 0.14, no margin —
+      // which produced blank frames on quick scrolls in dark mode).
+      { threshold: 0, rootMargin: "0px 0px 100% 0px" },
     );
     items.forEach((el) => io.observe(el));
     return () => io.disconnect();
@@ -134,7 +130,8 @@ export default function LandingPage() {
     <div className="landing-root">
       <div className="ambient" aria-hidden="true" />
 
-      <div className="wrap">
+      <header className="topbar-shell">
+        <div className="wrap">
         <div className="topbar">
           <Link className="brand" to="/" aria-label="Beyen — home">
             <LogoLockup size={26} />
@@ -149,11 +146,11 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </header>
 
-      <span id="top" />
       <main>
-        {/* HERO */}
+        {/* HERO — attention: one truth, one line of what it is, one CTA, real product proof. */}
         <section className="hero">
           <div className="wrap">
             <span className="eyebrow reveal d1">
@@ -166,12 +163,8 @@ export default function LandingPage() {
             <p className="hero-sub reveal d3">{t("landing.hero.sub")}</p>
             <div className="hero-cta reveal d4">
               <Link className="btn btn-gold btn-lg" to="/signup">{t("landing.hero.cta1")}</Link>
-              <a className="btn btn-ghost btn-lg" href="#cijfers">{t("landing.hero.cta2")}</a>
+              <span className="hero-note">{t("landing.hero.note")}</span>
             </div>
-            <p className="hero-note reveal d4">
-              <span className="pulse" />
-              <span>{t("landing.hero.note")}</span>
-            </p>
 
             <div className="stage-wrap reveal d5">
               <FrameCorner variant="tl" />
@@ -205,42 +198,85 @@ export default function LandingPage() {
                   </div>
                   <div className="stage-grid">
                     <div className="chart-cell">
-                      <div className="chart-cap">
-                        <span className="t">{t("landing.chart.cap")}</span>
-                      </div>
+                      <div className="chart-cap">{t("landing.stage.cap")}</div>
                       <div className="chart-holder">
                         <svg className="eq-svg" viewBox="0 0 600 210" preserveAspectRatio="none" aria-hidden="true">
                           <defs>
-                            <linearGradient id="lp-eqfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--gold)" stopOpacity="0.26" /><stop offset="1" stopColor="var(--gold)" stopOpacity="0" /></linearGradient>
+                            <linearGradient id="lp-eqfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--gold)" stopOpacity="0.18" /><stop offset="1" stopColor="var(--gold)" stopOpacity="0" /></linearGradient>
                           </defs>
-                          <line x1="0" y1="40" x2="600" y2="40" stroke="var(--border-soft)" strokeWidth="1" />
-                          <line x1="0" y1="105" x2="600" y2="105" stroke="var(--border-soft)" strokeWidth="1" />
-                          <line x1="0" y1="170" x2="600" y2="170" stroke="var(--border-soft)" strokeWidth="1" />
+                          <line x1="0" y1="40" x2="600" y2="40" stroke="var(--hairline)" strokeWidth="1" />
+                          <line x1="0" y1="105" x2="600" y2="105" stroke="var(--hairline)" strokeWidth="1" />
+                          <line x1="0" y1="170" x2="600" y2="170" stroke="var(--hairline)" strokeWidth="1" />
                           <path d="M0,170 L30,152 L60,142 L90,154 L120,134 L150,120 L180,110 L210,92 L240,80 L270,104 L300,132 L330,116 L360,100 L390,108 L420,88 L450,74 L480,84 L510,66 L540,74 L570,62 L600,66 L600,210 L0,210 Z" fill="url(#lp-eqfill)" />
-                          <path className="eq-line" d="M0,170 L30,152 L60,142 L90,154 L120,134 L150,120 L180,110 L210,92 L240,80 L270,104 L300,132 L330,116 L360,100 L390,108 L420,88 L450,74 L480,84 L510,66 L540,74 L570,62 L600,66" fill="none" stroke="var(--gold)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+                          <path className="eq-line" d="M0,170 L30,152 L60,142 L90,154 L120,134 L150,120 L180,110 L210,92 L240,80 L270,104 L300,132 L330,116 L360,100 L390,108 L420,88 L450,74 L480,84 L510,66 L540,74 L570,62 L600,66" fill="none" stroke="var(--gold)" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
                           <circle className="eq-peak" cx="240" cy="80" r="4" fill="var(--surface)" stroke="var(--muted)" strokeWidth="2" />
                           <circle className="eq-trough" cx="300" cy="132" r="4" fill="var(--loss)" stroke="var(--surface)" strokeWidth="2" />
-                          <circle className="eq-dot" cx="600" cy="66" r="4.5" fill="var(--gold)" />
+                          <circle className="eq-dot" cx="600" cy="66" r="4" fill="var(--gold)" />
                         </svg>
                         <div className="yaxis"><span>+20%</span><span>+10%</span><span>0</span><span /></div>
                       </div>
                     </div>
                     <div className="side-cell">
-                      <div className="kpi-two">
-                        <div className="kpi"><div className="label">{t("landing.kpi.wr")}</div><div className="val up">+16.4%</div></div>
-                        <div className="kpi"><div className="label">{t("landing.kpi.pf")}</div><div className="val up">1.58</div></div>
-                        <div className="kpi"><div className="label">{t("landing.kpi.exp")}</div><div className="val up">+0.31R</div></div>
-                        <div className="kpi"><div className="label">{t("landing.kpi.dd")}</div><div className="val down">-8.9%</div></div>
-                      </div>
-                      <div>
-                        <div className="mini-title" style={{ marginBottom: 10 }}>{t("landing.fields.title")}</div>
-                        <div className="chips">
-                          <span className="chip">{t("landing.chip.setup")} <span className="type">{t("landing.type.enum")}</span></span>
-                          <span className="chip">{t("landing.chip.bias")} <span className="type">{t("landing.type.enum")}</span></span>
-                          <span className="chip">{t("landing.chip.rule")} <span className="type">{t("landing.type.yesno")}</span></span>
-                          <span className="chip add">{t("landing.chip.add")}</span>
-                        </div>
-                      </div>
+                      <div className="kpi"><div className="label">{t("landing.kpi.res")}</div><div className="val up">+16.4%</div></div>
+                      <div className="kpi"><div className="label">{t("landing.kpi.pf")}</div><div className="val">1.58</div></div>
+                      <div className="kpi"><div className="label">{t("landing.kpi.exp")}</div><div className="val up">+0.31R</div></div>
+                      <div className="kpi"><div className="label">{t("landing.kpi.dd")}</div><div className="val down">-8.9%</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="sample-note">{t("landing.stage.sample")}</p>
+          </div>
+        </section>
+
+        {/* TRUST BAND — one early beat of who this is for. */}
+        <section className="band">
+          <div className="wrap">
+            <div className="band-inner reveal">
+              <LogoMark size={92} className="band-mark" />
+              <div className="band-top">
+                <h2 className="band-statement">{t("landing.band.statement")}</h2>
+                <p className="band-sub">{t("landing.band.sub")}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 01 RECOGNITION — the visitor's problem, named. The comparison panel
+            shows the same trade as a spreadsheet row vs. as Beyen records it. */}
+        <section className="blk" id="probleem">
+          <div className="wrap">
+            <Kicker num="01" label={t("landing.r.kicker")} />
+            <div className="split">
+              <div className="first">
+                <h2 className="reveal"><Trans i18nKey="landing.r.h2" components={accent} /></h2>
+                <p className="prose-p reveal">{t("landing.r.p1")}</p>
+                <p className="prose-p reveal">{t("landing.r.p2")}</p>
+                <p className="prose-turn reveal">{t("landing.r.p3")}</p>
+              </div>
+              <div className="reveal">
+                <div className="panel cmp">
+                  <div className="cmp-half">
+                    <div className="cmp-cap">{t("landing.r.cmpA")}</div>
+                    <div className="cmp-sheet">
+                      <span>EURUSD</span>
+                      <span className="up">+1.9R</span>
+                      <span className="cmp-check">✓</span>
+                    </div>
+                  </div>
+                  <div className="cmp-divider" aria-hidden="true" />
+                  <div className="cmp-half">
+                    <div className="cmp-cap b">{t("landing.r.cmpB")}</div>
+                    <div className="cmp-sheet">
+                      <span>EURUSD</span>
+                      <span className="up">+1.9R</span>
+                      <span className="opill win"><Trend up /> Win</span>
+                    </div>
+                    <div className="cmp-rows">
+                      <div className="cmp-row"><span>{t("landing.r.cmpRule")}</span><span className="cmp-bad">{t("landing.r.cmpRuleVal")}</span></div>
+                      <div className="cmp-row"><span>{t("landing.r.cmpEval")}</span><span className="cmp-bad">Emotional error</span></div>
+                      <div className="cmp-row"><span>{t("landing.r.cmpKz")}</span><span>London</span></div>
                     </div>
                   </div>
                 </div>
@@ -249,31 +285,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* TRUST / STAT BAND */}
-        <section className="band">
-          <div className="wrap">
-            <div className="band-top reveal">
-              <h2 className="band-statement">{t("landing.band.statement")}</h2>
-              <p className="band-sub">{t("landing.band.sub")}</p>
-            </div>
-            <div className="stat-row">
-              <div className="stat reveal"><div className="num">€0</div><div className="lab">{t("landing.band.t1")}</div></div>
-              <div className="stat reveal"><div className="num">∞</div><div className="lab">{t("landing.band.t2")}</div></div>
-              <div className="stat reveal"><div className="num">2-in-1</div><div className="lab">{t("landing.band.t3")}</div></div>
-              <div className="stat reveal"><div className="num">0</div><div className="lab">{t("landing.band.t4")}</div></div>
-            </div>
-          </div>
-        </section>
-
-        {/* 01 METHOD */}
+        {/* 02 BELIEF — your method becomes the measure. */}
         <section className="blk" id="methodiek">
           <div className="wrap">
-            <Kicker num="01" label={t("landing.m.kicker")} />
+            <Kicker num="02" label={t("landing.m.kicker")} />
             <div className="split">
               <div className="first">
                 <h2 className="reveal"><Trans i18nKey="landing.m.h2" components={accent} /></h2>
                 <p className="lead reveal">{t("landing.m.lead")}</p>
-                <div className="chips reveal" style={{ gap: 10, marginTop: 26 }}>
+                <div className="chips reveal">
                   <span className="chip">ICT / SMC</span>
                   <span className="chip">Breakout</span>
                   <span className="chip">Mean-reversion</span>
@@ -281,17 +301,31 @@ export default function LandingPage() {
                   <span className="chip">Options wheel</span>
                   <span className="chip add">{t("landing.m.presetOwn")}</span>
                 </div>
-                <p className="lead reveal" style={{ fontSize: "15.5px", marginTop: 24 }}>{t("landing.m.lead2")}</p>
+                <p className="lead sm reveal">{t("landing.m.lead2")}</p>
               </div>
-              <div className="reveal">
+              <div className="proof-col reveal">
                 <div className="panel">
-                  <div className="panel-head"><LogoMark size={15} className="mark" /><span>{t("landing.m.editor")}</span></div>
+                  <div className="panel-head"><span>{t("landing.m.editor")}</span></div>
                   <div className="panel-body">
-                    <div className="field-row"><span className="fl"><Grip /> {t("landing.chip.setup")}</span><span className="pill">{t("landing.m.opt6")}</span></div>
-                    <div className="field-row"><span className="fl"><Grip /> {t("landing.chip.bias")}</span><span className="pill">{t("landing.m.opt3")}</span></div>
+                    <div className="field-row"><span className="fl"><Grip /> {t("landing.m.chipSetup")}</span><span className="pill">{t("landing.m.opt6")}</span></div>
+                    <div className="field-row"><span className="fl"><Grip /> {t("landing.m.chipBias")}</span><span className="pill">{t("landing.m.opt3")}</span></div>
                     <div className="field-row"><span className="fl"><Grip /> {t("landing.m.killzone")}</span><span className="pill">{t("landing.m.opt4")}</span></div>
                     <div className="field-row"><span className="fl"><Grip /> <span>{t("landing.m.ruleField")}</span></span><span className="pill">{t("landing.m.yesno")}</span></div>
-                    <div className="field-row"><span className="fl" style={{ color: "var(--gold)" }}><svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg> <span>{t("landing.m.newField")}</span></span><span className="pill gold">{t("landing.m.add")}</span></div>
+                  </div>
+                </div>
+                <div className="proof-join" aria-hidden="true" />
+                <div className="panel">
+                  <div className="panel-head">{t("landing.e.tableTitle")}</div>
+                  <div className="panel-body bd-table">
+                    <div className="bd-head">
+                      <span>{t("landing.e.bdSetup")}</span>
+                      <span className="bd-c-r">{t("landing.e.bdTrades")}</span>
+                      <span className="bd-c-r">{t("landing.e.bdAvgR")}</span>
+                      <span className="bd-c-r">Win%</span>
+                    </div>
+                    <div className="bd-row"><span className="name">OB retrace</span><span className="bd-c-r bd-n">48</span><span className="bd-c-r up">+0.62R</span><span className="bd-c-r">61%</span></div>
+                    <div className="bd-row"><span className="name">Turtle soup</span><span className="bd-c-r bd-n">31</span><span className="bd-c-r up">+0.44R</span><span className="bd-c-r">58%</span></div>
+                    <div className="bd-row"><span className="name">FVG fill</span><span className="bd-c-r bd-n">27</span><span className="bd-c-r down">-0.18R</span><span className="bd-c-r">41%</span></div>
                   </div>
                 </div>
               </div>
@@ -299,10 +333,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 02 NUMBERS */}
+        {/* 03 BELIEF — the constitution: numbers that hide nothing. */}
         <section className="blk" id="cijfers">
           <div className="wrap">
-            <Kicker num="02" label={t("landing.c.kicker")} />
+            <Kicker num="03" label={t("landing.c.kicker")} />
             <div className="split rev">
               <div className="first reveal">
                 <div className="panel">
@@ -345,36 +379,45 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 03 EDGE ANALYSIS */}
-        <section className="blk spotlight" id="edge">
+        {/* MID-PAGE CTA — right after the strongest trust argument. */}
+        <section className="mid-cta">
           <div className="wrap">
-            <Kicker num="03" label={t("landing.e.kicker")} />
+            <div className="hero-cta reveal" style={{ justifyContent: "center" }}>
+              <Link className="btn btn-gold btn-lg" to="/signup">{t("landing.hero.cta1")}</Link>
+              <span className="hero-note">{t("landing.midcta.note")}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 04 BELIEF — discipline is measurable: execution judged apart from outcome. */}
+        <section className="blk spotlight" id="discipline">
+          <div className="wrap">
+            <Kicker num="04" label={t("landing.d.kicker")} />
             <div className="split">
               <div className="first">
-                <h2 className="reveal"><Trans i18nKey="landing.e.h2" components={accent} /></h2>
-                <p className="lead reveal">{t("landing.e.lead")}</p>
-                <div className="adherence reveal">
-                  <div className="at">{t("landing.e.adhTitle")}</div>
-                  <div className="adh-head"><span /><span className="bd-c-r">{t("landing.e.bdTrades")}</span><span className="bd-c-r">{t("landing.e.bdAvgR")}</span><span className="bd-c-r">Win%</span></div>
-                  <div className="adh-row"><span>{t("landing.e.adhYes")}</span><span className="bd-c-r bd-n">82</span><span className="bd-c-r up">+0.51R</span><span className="bd-c-r wr-w">61%</span></div>
-                  <div className="adh-row"><span>{t("landing.e.adhNo")}</span><span className="bd-c-r bd-n">24</span><span className="bd-c-r down">-0.33R</span><span className="bd-c-r wr-w">38%</span></div>
+                <h2 className="reveal"><Trans i18nKey="landing.d.h2" components={accent} /></h2>
+                <p className="lead reveal">{t("landing.d.lead")}</p>
+                <div className="eval-row reveal">
+                  <span className="mini-title">{t("landing.d.evalTitle")}</span>
+                  <div className="chips">
+                    <span className="chip">Good trade</span>
+                    <span className="chip">Emotional error</span>
+                    <span className="chip">Technical error</span>
+                  </div>
                 </div>
               </div>
               <div className="reveal">
                 <div className="panel">
-                  <div className="panel-head">{t("landing.e.tableTitle")}</div>
+                  <div className="panel-head">{t("landing.d.adhTitle")}</div>
                   <div className="panel-body bd-table">
                     <div className="bd-head">
-                      <span>{t("landing.e.bdSetup")}</span>
-                      <span className="bd-c-r">{t("landing.e.bdTrades")}</span>
-                      <span className="bd-c-r">{t("landing.e.bdResult")}</span>
+                      <span />
+                      <span className="bd-c-r">{t("landing.d.bdTrades")}</span>
+                      <span className="bd-c-r">{t("landing.d.bdAvgR")}</span>
                       <span className="bd-c-r">Win%</span>
-                      <span className="bd-c-r">Loss%</span>
                     </div>
-                    <div className="bd-row"><span className="name">OB retrace</span><span className="bd-c-r bd-n">48</span><span className="bd-c-r up">+0.62R</span><span className="bd-c-r wr-w">61%</span><span className="bd-c-r wr-l">33%</span></div>
-                    <div className="bd-row"><span className="name">Turtle soup</span><span className="bd-c-r bd-n">31</span><span className="bd-c-r up">+0.44R</span><span className="bd-c-r wr-w">58%</span><span className="bd-c-r wr-l">39%</span></div>
-                    <div className="bd-row"><span className="name">Breaker</span><span className="bd-c-r bd-n">22</span><span className="bd-c-r up">+0.31R</span><span className="bd-c-r wr-w">54%</span><span className="bd-c-r wr-l">41%</span></div>
-                    <div className="bd-row"><span className="name">FVG fill</span><span className="bd-c-r bd-n">27</span><span className="bd-c-r down">-0.18R</span><span className="bd-c-r wr-w">41%</span><span className="bd-c-r wr-l">52%</span></div>
+                    <div className="bd-row"><span className="name">{t("landing.d.adhYes")}</span><span className="bd-c-r bd-n">82</span><span className="bd-c-r up">+0.51R</span><span className="bd-c-r">61%</span></div>
+                    <div className="bd-row"><span className="name">{t("landing.d.adhNo")}</span><span className="bd-c-r bd-n">24</span><span className="bd-c-r down">-0.33R</span><span className="bd-c-r">38%</span></div>
                   </div>
                 </div>
               </div>
@@ -382,25 +425,23 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 04 BACKTESTING */}
+        {/* 05 BELIEF — backtesting: prove it before you risk it. */}
         <section className="blk" id="backtesting">
           <div className="wrap">
-            <Kicker num="04" label={t("landing.b.kicker")} />
+            <Kicker num="05" label={t("landing.b.kicker")} />
             <div className="split rev">
               <div className="first reveal">
                 <div className="panel">
-                  <div className="panel-head"><span>{t("landing.b.project")}</span><span className="badge gold" style={{ marginLeft: "auto" }}>{t("landing.b.isolated")}</span></div>
+                  <div className="panel-head"><span>{t("landing.b.project")}</span><span className="badge" style={{ marginLeft: "auto" }}>{t("landing.b.isolated")}</span><span className="badge">{t("landing.stage.sample")}</span></div>
                   <div className="panel-body">
                     <div className="bt-stats">
                       <div className="bt-stat"><div className="n">186</div><div className="l">{t("landing.b.trades")}</div></div>
-                      <div className="bt-stat"><div className="n" style={{ color: "var(--win)" }}>+31.4%</div><div className="l">{t("landing.b.result")}</div></div>
+                      <div className="bt-stat"><div className="n up">+31.4%</div><div className="l">{t("landing.b.result")}</div></div>
                       <div className="bt-stat"><div className="n">1.72</div><div className="l">{t("landing.b.pf")}</div></div>
-                      <div className="bt-stat"><div className="n" style={{ color: "var(--win)" }}>+0.34R</div><div className="l">{t("landing.b.exp")}</div></div>
+                      <div className="bt-stat"><div className="n up">+0.34R</div><div className="l">{t("landing.b.exp")}</div></div>
                     </div>
                     <svg viewBox="0 0 600 120" preserveAspectRatio="none" style={{ width: "100%", height: "auto", display: "block" }} aria-hidden="true">
-                      <defs><linearGradient id="lp-btfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--gold)" stopOpacity="0.20" /><stop offset="1" stopColor="var(--gold)" stopOpacity="0" /></linearGradient></defs>
-                      <path d="M0,100 L40,90 L80,96 L120,78 L160,88 L200,66 L240,80 L280,58 L320,68 L360,44 L400,54 L440,38 L480,48 L520,28 L560,36 L600,22 L600,120 L0,120 Z" fill="url(#lp-btfill)" />
-                      <path d="M0,100 L40,90 L80,96 L120,78 L160,88 L200,66 L240,80 L280,58 L320,68 L360,44 L400,54 L440,38 L480,48 L520,28 L560,36 L600,22" fill="none" stroke="var(--gold)" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+                      <path d="M0,100 L40,90 L80,96 L120,78 L160,88 L200,66 L240,80 L280,58 L320,68 L360,44 L400,54 L440,38 L480,48 L520,28 L560,36 L600,22" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                     </svg>
                   </div>
                 </div>
@@ -417,76 +458,79 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 05 TRADINGVIEW */}
-        <section className="blk" id="tradingview">
+        {/* 06 TRUST — the paper interlude: what Beyen deliberately is not. */}
+        <section className="blk paper" id="filosofie">
           <div className="wrap">
-            <Kicker num="05" label={t("landing.t.kicker")} />
-            <h2 className="reveal"><Trans i18nKey="landing.t.h2" components={accent} /></h2>
-            <p className="lead reveal">{t("landing.t.lead")}</p>
-            <div className="pipe reveal">
-              <div className="pipe-node">
-                <div className="pn-ic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 14l3-4 3 3 4-6" /></svg></div>
-                <h4>{t("landing.t.n1h")}</h4><p>{t("landing.t.n1b")}</p>
-              </div>
-              <div className="pipe-arrow"><Arrow /></div>
-              <div className="pipe-node">
-                <div className="pn-ic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v5H4zM4 15h16v5H4z" /><path d="M8 6.5h.01M8 17.5h.01" /></svg></div>
-                <h4>{t("landing.t.n2h")}</h4><p>{t("landing.t.n2b")}</p>
-              </div>
-              <div className="pipe-arrow"><Arrow /></div>
-              <div className="pipe-node end">
-                <div className="pn-ic"><LogoMark size={22} /></div>
-                <h4>{t("landing.t.n3h")}</h4><p>{t("landing.t.n3b")}</p>
-              </div>
+            <Kicker num="06" label={t("landing.t.kicker")} />
+            <div className="prose">
+              <h2 className="reveal"><Trans i18nKey="landing.t.h2" components={accent} /></h2>
+              <p className="prose-p reveal">{t("landing.t.p1")}</p>
+              <p className="prose-p reveal">{t("landing.t.p2")}</p>
             </div>
-            <div className="note-flag">{t("landing.t.note")}</div>
+            <div className="steps reveal">
+              <div className="step"><span className="step-num">01</span><h3>{t("landing.t.n1h")}</h3><p>{t("landing.t.n1b")}</p></div>
+              <div className="step"><span className="step-num">02</span><h3>{t("landing.t.n2h")}</h3><p>{t("landing.t.n2b")}</p></div>
+              <div className="step"><span className="step-num">03</span><h3>{t("landing.t.n3h")}</h3><p>{t("landing.t.n3b")}</p></div>
+            </div>
+            <p className="note-flag reveal">{t("landing.t.note")}</p>
+            <p className="signature reveal">{t("landing.t.p3")}</p>
           </div>
         </section>
 
-        {/* 06 EVERYTHING ELSE */}
-        <section className="blk" id="more">
-          <div className="wrap">
-            <Kicker num="06" label={t("landing.f.kicker")} />
-            <h2 className="reveal"><Trans i18nKey="landing.f.h2" components={accent} /></h2>
-            <p className="lead reveal">{t("landing.f.lead")}</p>
-            <div className="fgrid">
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v14H4z" /><path d="M8 3v4M16 3v4M4 10h16" /></svg></div><h4>{t("landing.f.c1h")}</h4><p>{t("landing.f.c1b")}</p></div>
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h18v12H3z" /><path d="M3 10h18M7 15h4" /></svg></div><h4>{t("landing.f.c2h")}</h4><p>{t("landing.f.c2b")}</p></div>
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5M10 14h5M10 17h5" /></svg></div><h4>{t("landing.f.c3h")}</h4><p>{t("landing.f.c3b")}</p></div>
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></div><h4>{t("landing.f.c4h")}</h4><p>{t("landing.f.c4b")}</p></div>
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z" /><path d="M4 9h16M9 9v11M7 6.5h0M11 6.5h0" /></svg></div><h4>{t("landing.f.c5h")}</h4><p>{t("landing.f.c5b")}</p></div>
-              <div className="fcard reveal"><div className="fic"><svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg></div><h4>{t("landing.f.c6h")}</h4><p>{t("landing.f.c6b")}</p></div>
-            </div>
-          </div>
-        </section>
-
-        {/* PRICING */}
+        {/* 07 ACTION — pricing, sober. */}
         <section className="blk" id="prijs">
           <div className="wrap">
             <Kicker num="07" label={t("landing.p.kicker")} />
             <h2 className="reveal"><Trans i18nKey="landing.p.h2" components={accent} /></h2>
             <p className="lead reveal">{t("landing.p.lead")}</p>
             <div className="price-grid">
-              <div className="price-card reveal">
+              {/* The free card carries the hero button: it's the product you can
+                  actually get today. Pro stays visually secondary until it exists. */}
+              <div className="price-card free reveal">
                 <div className="price-tier">{t("landing.p.free")}</div>
                 <div className="price-amt">€0<small>{t("landing.p.freeAmt")}</small></div>
+                <div className="price-perf" aria-hidden="true" />
                 <ul className="feat-list">
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.f1")}</span></li>
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.f2")}</span></li>
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.f3")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f1")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f2")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f3")}</span></li>
                 </ul>
-                <Link className="btn btn-ghost btn-lg" to="/signup" style={{ width: "100%" }}>{t("landing.p.freeCta")}</Link>
+                <Link className="btn btn-gold btn-lg" to="/signup" style={{ width: "100%" }}>{t("landing.p.freeCta")}</Link>
               </div>
-              <div className="price-card feat reveal">
+              <div className="price-card reveal">
                 <div className="price-tier"><span>{t("landing.p.pro")}</span> <span className="flag">{t("landing.p.proSoon")}</span></div>
                 <div className="price-amt">—<small>{t("landing.p.proAmt")}</small></div>
+                <div className="price-perf" aria-hidden="true" />
                 <ul className="feat-list">
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.pf1")}</span></li>
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.pf2")}</span></li>
-                  <li><span className="ck"><Check size={16} /></span><span>{t("landing.p.pf3")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.pf1")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.pf2")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.pf3")}</span></li>
                 </ul>
-                <Link className="btn btn-gold btn-lg" to="/signup" style={{ width: "100%" }}>{t("landing.p.proCta")}</Link>
+                <Link className="btn btn-ghost btn-lg" to="/signup" style={{ width: "100%" }}>{t("landing.p.proCta")}</Link>
+                <p className="pro-note">{t("landing.p.proNote")}</p>
               </div>
+            </div>
+            <div className="fstrip reveal">
+              <span>{t("landing.fs.f1")}</span>
+              <span>{t("landing.fs.f2")}</span>
+              <span>{t("landing.fs.f3")}</span>
+              <span>{t("landing.fs.f4")}</span>
+              <span>{t("landing.fs.f5")}</span>
+              <span>{t("landing.fs.f6")}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ — the questions a sceptical trader is already asking himself. */}
+        <section className="blk" id="faq">
+          <div className="wrap">
+            <Kicker num="08" label={t("landing.faq.kicker")} />
+            <h2 className="reveal"><Trans i18nKey="landing.faq.h2" components={accent} /></h2>
+            <div className="faq-grid">
+              <div className="faq-item reveal"><h3>{t("landing.faq.q1")}</h3><p>{t("landing.faq.a1")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q2")}</h3><p>{t("landing.faq.a2")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q3")}</h3><p>{t("landing.faq.a3")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q4")}</h3><p>{t("landing.faq.a4")}</p></div>
             </div>
           </div>
         </section>
@@ -494,10 +538,7 @@ export default function LandingPage() {
         {/* FINAL CTA */}
         <section className="cta-band">
           <div className="wrap">
-            <span className="eyebrow reveal" style={{ justifyContent: "center", display: "flex" }}>
-              <LogoMark size={14} /> {t("common.tagline")}
-            </span>
-            <h2 className="reveal" style={{ maxWidth: "18ch" }}><Trans i18nKey="landing.cta.h2" components={accent} /></h2>
+            <h2 className="reveal"><Trans i18nKey="landing.cta.h2" components={accent} /></h2>
             <p className="lead reveal">{t("landing.cta.lead")}</p>
             <div className="hero-cta reveal"><Link className="btn btn-gold btn-lg" to="/signup">{t("landing.cta.btn")}</Link></div>
           </div>
