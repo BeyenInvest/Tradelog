@@ -82,6 +82,8 @@ interface CatalogueEntry {
   periods?: PeriodType[];
   /** Periodic only: the label key depends on the period type (periode_overzicht). */
   labelKeyByPeriod?: Partial<Record<PeriodType, string>>;
+  /** False = a default section not backed by a real column; its value lives in the content bag. Absent = true. */
+  builtin?: boolean;
 }
 
 /**
@@ -110,6 +112,10 @@ const DEFAULT_PERIODIC: CatalogueEntry[] = [
   { key: "technisch", labelKey: "reviewContent.genomenTrades", inputType: "text", style: "text", rows: 3 },
   { key: "mentaal_owner", labelKey: "reviewContent.genomenTradesErrors", inputType: "text", style: "text", rows: 3 },
   { key: "mentaal_trader", labelKey: "reviewContent.gemisteTrades", inputType: "text", style: "text", rows: 3 },
+  // Reflectie-secties, alleen bij de maandreview. Niet gekoppeld aan een eigen
+  // kolom (builtin: false) → hun tekst leeft in de content-bag, net als custom velden.
+  { key: "wat_werkte", labelKey: "reviewContent.watWerkte", periods: ["month"], builtin: false, inputType: "text", style: "text", rows: 3 },
+  { key: "wat_werkte_niet", labelKey: "reviewContent.watWerkteNiet", periods: ["month"], builtin: false, inputType: "text", style: "text", rows: 3 },
   { key: "acties", labelKey: "reviewContent.werkpunten", inputType: "list", style: "list", rows: 1 },
   { key: "takeaway", labelKey: "reviewContent.conclusie", inputType: "text", style: "takeaway", rows: 3 },
   {
@@ -121,7 +127,9 @@ const DEFAULT_PERIODIC: CatalogueEntry[] = [
     style: "text",
     rows: 4,
   },
-  { key: "overall_comment", labelKey: "reviewContent.overallComment", inputType: "text", style: "overall", rows: 2 },
+  // Overall comment overlapt met Conclusie; voor de maandreview geschrapt, blijft
+  // enkel bij kwartaal/jaar.
+  { key: "overall_comment", labelKey: "reviewContent.overallComment", periods: ["quarter", "year"], inputType: "text", style: "overall", rows: 2 },
 ];
 
 function catalogueFor(kind: ReviewKind): CatalogueEntry[] {
@@ -130,7 +138,7 @@ function catalogueFor(kind: ReviewKind): CatalogueEntry[] {
 
 function entryToSection(e: CatalogueEntry, periodType?: PeriodType): ReviewSection {
   const labelKey = (periodType && e.labelKeyByPeriod?.[periodType]) || e.labelKey;
-  return { key: e.key, label: "", labelKey, inputType: e.inputType, style: e.style, rows: e.rows, hintKey: e.hintKey, builtin: true };
+  return { key: e.key, label: "", labelKey, inputType: e.inputType, style: e.style, rows: e.rows, hintKey: e.hintKey, builtin: e.builtin ?? true };
 }
 
 /**

@@ -112,9 +112,9 @@ describe("buildReviewPdfData", () => {
       mentaal_trader: "Gemiste tekst.",
       acties: ["Werkpunt een"],
       takeaway: "Conclusie tekst.",
-      overall_comment: "Slotwoord.",
+      overall_comment: "Slotwoord.", // no longer a month section — must NOT render
       periode_overzicht: null,
-      content: {},
+      content: { wat_werkte: "Wat werkte tekst.", wat_werkte_niet: "Wat niet werkte tekst." },
       created_at: "2026-08-01T00:00:00Z",
       updated_at: "2026-08-01T00:00:00Z",
     };
@@ -133,9 +133,10 @@ describe("buildReviewPdfData", () => {
       "reviewContent.genomenTrades",
       "reviewContent.genomenTradesErrors",
       "reviewContent.gemisteTrades",
+      "reviewContent.watWerkte",
+      "reviewContent.watWerkteNiet",
       "reviewContent.werkpunten",
       "reviewContent.conclusie",
-      "reviewContent.overallComment",
     ]);
     const werkpunten = data.sections.find((s) => s.label === "reviewContent.werkpunten");
     expect(werkpunten?.kind).toBe("acties");

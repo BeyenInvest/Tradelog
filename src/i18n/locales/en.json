@@ -679,6 +679,8 @@
     "genomenTrades": "Taken trades",
     "genomenTradesErrors": "Taken trades with errors",
     "gemisteTrades": "Missed trades",
+    "watWerkte": "What worked for me",
+    "watWerkteNiet": "What didn't work for me",
     "werkpunten": "Action points",
     "werkpuntenAdd": "Add action point",
     "werkpuntenPlaceholder": "e.g. Place the plan next to the trade 100% of the time",

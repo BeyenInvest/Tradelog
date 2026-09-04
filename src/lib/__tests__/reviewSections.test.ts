@@ -37,9 +37,29 @@ describe("defaultReviewSections", () => {
     expect(s.find((x) => x.key === "takeaway")?.style).toBe("takeaway");
   });
 
-  it("periodic omits periode_overzicht for a month", () => {
+  it("periodic month: reflectie-secties in, periode_overzicht + overall_comment out", () => {
     const s = defaultReviewSections("periodic", "month");
-    expect(s.map((x) => x.key)).toEqual(["technisch", "mentaal_owner", "mentaal_trader", "acties", "takeaway", "overall_comment"]);
+    expect(s.map((x) => x.key)).toEqual([
+      "technisch",
+      "mentaal_owner",
+      "mentaal_trader",
+      "wat_werkte",
+      "wat_werkte_niet",
+      "acties",
+      "takeaway",
+    ]);
+    // The two reflectie-secties are content-bag sections, not backed by a column.
+    expect(s.find((x) => x.key === "wat_werkte")?.builtin).toBe(false);
+    expect(s.find((x) => x.key === "wat_werkte_niet")?.builtin).toBe(false);
+  });
+
+  it("periodic quarter/year keep overall_comment and drop the month-only reflectie-secties", () => {
+    for (const p of ["quarter", "year"] as const) {
+      const keys = defaultReviewSections("periodic", p).map((x) => x.key);
+      expect(keys).toContain("overall_comment");
+      expect(keys).not.toContain("wat_werkte");
+      expect(keys).not.toContain("wat_werkte_niet");
+    }
   });
 
   it("periodic includes periode_overzicht for quarter/year with a period-specific label", () => {
