@@ -53,16 +53,21 @@ describe("defaultReviewSections", () => {
     expect(s.find((x) => x.key === "wat_werkte_niet")?.builtin).toBe(false);
   });
 
-  it("periodic quarter/year carry the reflectie-secties and keep overall_comment", () => {
+  it("periodic quarter/year carry the reflectie-secties and drop overall_comment", () => {
     for (const p of ["quarter", "year"] as const) {
       const keys = defaultReviewSections("periodic", p).map((x) => x.key);
-      expect(keys).toContain("overall_comment");
+      expect(keys).not.toContain("overall_comment");
+      expect(keys).toContain("periode_overzicht");
       expect(keys).toContain("wat_werkte");
       expect(keys).toContain("wat_werkte_niet");
       // Reflectie-secties komen na de gemiste-trades-sectie, vóór de werkpunten.
       expect(keys.indexOf("wat_werkte")).toBeGreaterThan(keys.indexOf("mentaal_trader"));
       expect(keys.indexOf("wat_werkte_niet")).toBeLessThan(keys.indexOf("acties"));
     }
+  });
+
+  it("weekly keeps overall_comment (periodic-only removal)", () => {
+    expect(defaultReviewSections("weekly").map((x) => x.key)).toContain("overall_comment");
   });
 
   it("periodic includes periode_overzicht for quarter/year with a period-specific label", () => {

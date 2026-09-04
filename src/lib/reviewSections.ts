@@ -127,9 +127,9 @@ const DEFAULT_PERIODIC: CatalogueEntry[] = [
     style: "text",
     rows: 4,
   },
-  // Overall comment overlapt met Conclusie; voor de maandreview geschrapt, blijft
-  // enkel bij kwartaal/jaar.
-  { key: "overall_comment", labelKey: "reviewContent.overallComment", periods: ["quarter", "year"], inputType: "text", style: "overall", rows: 2 },
+  // Overall comment overlapte met Conclusie en is uit de periodic reviews geschrapt
+  // (maand/kwartaal/jaar). Blijft wél in de weekly review. De kolom + PERIODIC_BUILTIN_KEYS
+  // blijven bestaan zodat oude data en handmatig-toegevoegde overall_comment-secties intact zijn.
 ];
 
 function catalogueFor(kind: ReviewKind): CatalogueEntry[] {
