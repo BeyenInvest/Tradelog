@@ -112,10 +112,10 @@ const DEFAULT_PERIODIC: CatalogueEntry[] = [
   { key: "technisch", labelKey: "reviewContent.genomenTrades", inputType: "text", style: "text", rows: 3 },
   { key: "mentaal_owner", labelKey: "reviewContent.genomenTradesErrors", inputType: "text", style: "text", rows: 3 },
   { key: "mentaal_trader", labelKey: "reviewContent.gemisteTrades", inputType: "text", style: "text", rows: 3 },
-  // Reflectie-secties, alleen bij de maandreview. Niet gekoppeld aan een eigen
-  // kolom (builtin: false) → hun tekst leeft in de content-bag, net als custom velden.
-  { key: "wat_werkte", labelKey: "reviewContent.watWerkte", periods: ["month"], builtin: false, inputType: "text", style: "text", rows: 3 },
-  { key: "wat_werkte_niet", labelKey: "reviewContent.watWerkteNiet", periods: ["month"], builtin: false, inputType: "text", style: "text", rows: 3 },
+  // Reflectie-secties bij elke periodic review (maand/kwartaal/jaar). Niet gekoppeld
+  // aan een eigen kolom (builtin: false) → hun tekst leeft in de content-bag, net als custom velden.
+  { key: "wat_werkte", labelKey: "reviewContent.watWerkte", builtin: false, inputType: "text", style: "text", rows: 3 },
+  { key: "wat_werkte_niet", labelKey: "reviewContent.watWerkteNiet", builtin: false, inputType: "text", style: "text", rows: 3 },
   { key: "acties", labelKey: "reviewContent.werkpunten", inputType: "list", style: "list", rows: 1 },
   { key: "takeaway", labelKey: "reviewContent.conclusie", inputType: "text", style: "takeaway", rows: 3 },
   {
