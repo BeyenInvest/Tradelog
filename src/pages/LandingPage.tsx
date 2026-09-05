@@ -28,12 +28,11 @@ function Check({ size = 18 }: { size?: number }) {
   );
 }
 
-function Grip() {
+/** Dropdown chevron for the app-faithful select fields in the form mockup. */
+function Chev() {
   return (
-    <svg className="grip" width={12} height={12} viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-      <circle cx="3" cy="2" r="1" /><circle cx="9" cy="2" r="1" />
-      <circle cx="3" cy="6" r="1" /><circle cx="9" cy="6" r="1" />
-      <circle cx="3" cy="10" r="1" /><circle cx="9" cy="10" r="1" />
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
@@ -186,13 +185,9 @@ export default function LandingPage() {
                 </div>
                 <div className="stage-main">
                   <div className="stage-head">
-                    <span className="dot" style={{ background: "var(--loss)" }} />
-                    <span className="dot" style={{ background: "var(--be)" }} />
-                    <span className="dot" style={{ background: "var(--win)" }} />
-                    <span className="stage-tabs">
+                    <span className="segtabs">
                       <span className="on">{t("landing.stage.tab1")}</span>
                       <span>{t("landing.stage.tab2")}</span>
-                      <span>{t("landing.stage.tab3")}</span>
                     </span>
                     <span className="stage-meta">{t("landing.stage.meta")}</span>
                   </div>
@@ -226,7 +221,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <p className="sample-note">{t("landing.stage.sample")}</p>
+            <p className="sample-note">{t("landing.stage.sampleRisk")}</p>
           </div>
         </section>
 
@@ -253,7 +248,7 @@ export default function LandingPage() {
                 <h2 className="reveal"><Trans i18nKey="landing.r.h2" components={accent} /></h2>
                 <p className="prose-p reveal">{t("landing.r.p1")}</p>
                 <p className="prose-p reveal">{t("landing.r.p2")}</p>
-                <p className="prose-turn reveal">{t("landing.r.p3")}</p>
+                <p className="prose-turn reveal"><Trans i18nKey="landing.r.p3" components={accent} /></p>
               </div>
               <div className="reveal">
                 <div className="panel cmp">
@@ -278,6 +273,7 @@ export default function LandingPage() {
                       <div className="cmp-row"><span>{t("landing.r.cmpEval")}</span><span className="cmp-bad">Emotional error</span></div>
                       <div className="cmp-row"><span>{t("landing.r.cmpKz")}</span><span>London</span></div>
                     </div>
+                    <div className="panel-sample">{t("landing.stage.sample")}</div>
                   </div>
                 </div>
               </div>
@@ -304,18 +300,20 @@ export default function LandingPage() {
                 <p className="lead sm reveal">{t("landing.m.lead2")}</p>
               </div>
               <div className="proof-col reveal">
+                {/* The app's "Nieuwe trade" drawer, in miniature — but the fields
+                    are this trader's own. The configurability IS the interface. */}
                 <div className="panel">
-                  <div className="panel-head"><span>{t("landing.m.editor")}</span></div>
-                  <div className="panel-body">
-                    <div className="field-row"><span className="fl"><Grip /> {t("landing.m.chipSetup")}</span><span className="pill">{t("landing.m.opt6")}</span></div>
-                    <div className="field-row"><span className="fl"><Grip /> {t("landing.m.chipBias")}</span><span className="pill">{t("landing.m.opt3")}</span></div>
-                    <div className="field-row"><span className="fl"><Grip /> {t("landing.m.killzone")}</span><span className="pill">{t("landing.m.opt4")}</span></div>
-                    <div className="field-row"><span className="fl"><Grip /> <span>{t("landing.m.ruleField")}</span></span><span className="pill">{t("landing.m.yesno")}</span></div>
+                  <div className="panel-head"><span className="ph-title">{t("landing.m.form")}</span><span className="badge" style={{ marginLeft: "auto" }}>{t("landing.m.yourFields")}</span></div>
+                  <div className="panel-body form-mock">
+                    <div className="ff"><div className="ff-label">{t("landing.m.chipSetup")}</div><div className="ff-select"><span>OB retrace</span><Chev /></div></div>
+                    <div className="ff"><div className="ff-label">{t("landing.m.chipBias")}</div><div className="ff-select"><span>Bearish</span><Chev /></div></div>
+                    <div className="ff"><div className="ff-label">{t("landing.m.killzone")}</div><div className="ff-select"><span>London</span><Chev /></div></div>
+                    <div className="ff"><div className="ff-label">{t("landing.m.ruleField")}</div><div className="segtabs ff-toggle"><span className="on">{t("landing.m.yes")}</span><span>{t("landing.m.no")}</span></div></div>
                   </div>
                 </div>
                 <div className="proof-join" aria-hidden="true" />
                 <div className="panel">
-                  <div className="panel-head">{t("landing.e.tableTitle")}</div>
+                  <div className="panel-head"><span className="ph-title">{t("landing.e.tableTitle")}</span></div>
                   <div className="panel-body bd-table">
                     <div className="bd-head">
                       <span>{t("landing.e.bdSetup")}</span>
@@ -325,7 +323,8 @@ export default function LandingPage() {
                     </div>
                     <div className="bd-row"><span className="name">OB retrace</span><span className="bd-c-r bd-n">48</span><span className="bd-c-r up">+0.62R</span><span className="bd-c-r">61%</span></div>
                     <div className="bd-row"><span className="name">Turtle soup</span><span className="bd-c-r bd-n">31</span><span className="bd-c-r up">+0.44R</span><span className="bd-c-r">58%</span></div>
-                    <div className="bd-row"><span className="name">FVG fill</span><span className="bd-c-r bd-n">27</span><span className="bd-c-r down">-0.18R</span><span className="bd-c-r">41%</span></div>
+                    <div className="bd-row"><span className="name">FVG fill</span><span className="bd-c-r bd-n">27</span><span className="bd-c-r down">-0.39R</span><span className="bd-c-r">41%</span></div>
+                    <div className="panel-sample">{t("landing.stage.sample")}</div>
                   </div>
                 </div>
               </div>
@@ -333,49 +332,44 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 03 BELIEF — the constitution: numbers that hide nothing. */}
-        <section className="blk" id="cijfers">
+        {/* 03 BELIEF — the constitution: numbers that hide nothing. The page's
+            one deliberate composition break: a centered editorial spread with a
+            flat ledger (no card chrome) instead of the split-and-panel skeleton
+            every other mid-page section uses. */}
+        <section className="blk grondwet" id="cijfers">
           <div className="wrap">
             <Kicker num="03" label={t("landing.c.kicker")} />
-            <div className="split rev">
-              <div className="first reveal">
-                <div className="panel">
-                  <div className="panel-head">{t("landing.c.panelhead")}</div>
-                  <div className="panel-body trades-list">
-                    <div className="tr">
-                      <span className="tr-sym">EURUSD <span className="tr-dir">long</span></span>
-                      <span className="opill win"><Trend up /> Win</span>
-                      <span className="rr up">+1.9R</span>
-                    </div>
-                    <div className="tr">
-                      <span className="tr-sym">US30 <span className="tr-dir">short</span></span>
-                      <span className="opill be"><MinusIc /> BE</span>
-                      <span className="rr be">+0.0R</span>
-                    </div>
-                    <div className="tr">
-                      <span className="tr-sym">NAS100 <span className="tr-dir">short</span></span>
-                      <span className="opill loss"><Trend up={false} /> Loss</span>
-                      <span className="rr down">-1.0R</span>
-                    </div>
-                    <div className="tr">
-                      <span className="tr-sym">GBPUSD <span className="tr-dir">long</span> <span className="badge missed-solid">{t("landing.c.missed")}</span></span>
-                      <span className="tr-dash">—</span>
-                      <span className="rr strike">+2.3R</span>
-                    </div>
-                    <div className="excl-note"><span>{t("landing.c.excl")}</span><span className="badge">excl.</span></div>
-                  </div>
-                </div>
+            <h2 className="reveal"><Trans i18nKey="landing.c.h2" components={accent} /></h2>
+            <p className="lead reveal">{t("landing.c.lead")}</p>
+            <div className="ledger trades-list reveal">
+              <div className="tr">
+                <span className="tr-sym">EURUSD <span className="tr-dir">long</span></span>
+                <span className="opill win"><Trend up /> Win</span>
+                <span className="rr up">+1.9R</span>
               </div>
-              <div>
-                <h2 className="reveal"><Trans i18nKey="landing.c.h2" components={accent} /></h2>
-                <p className="lead reveal">{t("landing.c.lead")}</p>
-                <ul className="points">
-                  <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p1h")}</h3><p>{t("landing.c.p1b")}</p></div></li>
-                  <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p2h")}</h3><p>{t("landing.c.p2b")}</p></div></li>
-                  <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p3h")}</h3><p>{t("landing.c.p3b")}</p></div></li>
-                </ul>
+              <div className="tr">
+                <span className="tr-sym">US30 <span className="tr-dir">short</span></span>
+                <span className="opill be"><MinusIc /> BE</span>
+                <span className="rr be">+0.0R</span>
               </div>
+              <div className="tr">
+                <span className="tr-sym">NAS100 <span className="tr-dir">short</span></span>
+                <span className="opill loss"><Trend up={false} /> Loss</span>
+                <span className="rr down">-1.0R</span>
+              </div>
+              <div className="tr">
+                <span className="tr-sym">GBPUSD <span className="tr-dir">long</span> <span className="badge missed-solid">{t("landing.c.missed")}</span></span>
+                <span className="tr-dash">—</span>
+                <span className="rr strike">+2.3R</span>
+              </div>
+              <div className="excl-note"><span>{t("landing.c.excl")}</span><span className="badge">excl.</span></div>
+              <div className="panel-sample">{t("landing.stage.sample")}</div>
             </div>
+            <ul className="points cols">
+              <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p1h")}</h3><p>{t("landing.c.p1b")}</p></div></li>
+              <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p2h")}</h3><p>{t("landing.c.p2b")}</p></div></li>
+              <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.c.p3h")}</h3><p>{t("landing.c.p3b")}</p></div></li>
+            </ul>
           </div>
         </section>
 
@@ -408,7 +402,7 @@ export default function LandingPage() {
               </div>
               <div className="reveal">
                 <div className="panel">
-                  <div className="panel-head">{t("landing.d.adhTitle")}</div>
+                  <div className="panel-head"><span className="ph-title">{t("landing.d.adhTitle")}</span></div>
                   <div className="panel-body bd-table">
                     <div className="bd-head">
                       <span />
@@ -416,8 +410,9 @@ export default function LandingPage() {
                       <span className="bd-c-r">{t("landing.d.bdAvgR")}</span>
                       <span className="bd-c-r">Win%</span>
                     </div>
-                    <div className="bd-row"><span className="name">{t("landing.d.adhYes")}</span><span className="bd-c-r bd-n">82</span><span className="bd-c-r up">+0.51R</span><span className="bd-c-r">61%</span></div>
-                    <div className="bd-row"><span className="name">{t("landing.d.adhNo")}</span><span className="bd-c-r bd-n">24</span><span className="bd-c-r down">-0.33R</span><span className="bd-c-r">38%</span></div>
+                    <div className="bd-row"><span className="name">{t("landing.d.adhYes")}</span><span className="bd-c-r bd-n">82</span><span className="bd-c-r up">+0.51R</span><span className="bd-c-r">59%</span></div>
+                    <div className="bd-row"><span className="name">{t("landing.d.adhNo")}</span><span className="bd-c-r bd-n">24</span><span className="bd-c-r down">-0.37R</span><span className="bd-c-r">40%</span></div>
+                    <div className="panel-sample">{t("landing.stage.sample")}</div>
                   </div>
                 </div>
               </div>
@@ -431,18 +426,29 @@ export default function LandingPage() {
             <Kicker num="05" label={t("landing.b.kicker")} />
             <div className="split rev">
               <div className="first reveal">
+                {/* The analysis overview of the maker's own backtest project,
+                    numbers verbatim — losing streak included. */}
                 <div className="panel">
-                  <div className="panel-head"><span>{t("landing.b.project")}</span><span className="badge" style={{ marginLeft: "auto" }}>{t("landing.b.isolated")}</span><span className="badge">{t("landing.stage.sample")}</span></div>
+                  <div className="panel-head">
+                    <span className="ph-title">{t("landing.b.project")}</span>
+                    <span className="segtabs" style={{ marginLeft: "auto" }}>
+                      <span>{t("landing.stage.tab1")}</span>
+                      <span className="on">{t("landing.stage.tab2")}</span>
+                    </span>
+                  </div>
                   <div className="panel-body">
-                    <div className="bt-stats">
-                      <div className="bt-stat"><div className="n">186</div><div className="l">{t("landing.b.trades")}</div></div>
-                      <div className="bt-stat"><div className="n up">+31.4%</div><div className="l">{t("landing.b.result")}</div></div>
-                      <div className="bt-stat"><div className="n">1.72</div><div className="l">{t("landing.b.pf")}</div></div>
-                      <div className="bt-stat"><div className="n up">+0.34R</div><div className="l">{t("landing.b.exp")}</div></div>
+                    <div className="kgrid">
+                      <div className="kcard"><div className="label">{t("landing.b.result")}</div><div className="val up">+37.26%</div></div>
+                      <div className="kcard"><div className="label">{t("landing.b.pf")}</div><div className="val up">4.73</div></div>
+                      <div className="kcard"><div className="label">{t("landing.kpi.dd")}</div><div className="val down">-3.94%</div></div>
+                      <div className="kcard"><div className="label">{t("landing.b.wbl")}</div><div className="val">50 / 28 / 22%</div></div>
+                      <div className="kcard"><div className="label">{t("landing.b.exp")}</div><div className="val up">+0.81R</div><div className="sub">{t("landing.b.subR")}</div></div>
+                      <div className="kcard"><div className="label">{t("landing.b.streak")}</div><div className="val">{t("landing.b.streakVal")}</div></div>
                     </div>
-                    <svg viewBox="0 0 600 120" preserveAspectRatio="none" style={{ width: "100%", height: "auto", display: "block" }} aria-hidden="true">
-                      <path d="M0,100 L40,90 L80,96 L120,78 L160,88 L200,66 L240,80 L280,58 L320,68 L360,44 L400,54 L440,38 L480,48 L520,28 L560,36 L600,22" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-                    </svg>
+                    <div className="bt-foot">
+                      <span className="badge">{t("landing.b.isolated")}</span>
+                      <span className="badge gold">{t("landing.b.real")}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -458,13 +464,30 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* SECOND MID-CTA — right after the persuasion peak of the backtest proof. */}
+        <section className="mid-cta">
+          <div className="wrap">
+            <div className="hero-cta reveal" style={{ justifyContent: "center" }}>
+              <Link className="btn btn-gold btn-lg" to="/signup">{t("landing.hero.cta1")}</Link>
+              <span className="hero-note">{t("landing.midcta.note2")}</span>
+            </div>
+          </div>
+        </section>
+
         {/* 06 TRUST — the paper interlude: what Beyen deliberately is not. */}
         <section className="blk paper" id="filosofie">
+          <LogoMark size={430} className="paper-mark" />
           <div className="wrap">
             <Kicker num="06" label={t("landing.t.kicker")} />
             <div className="prose">
               <h2 className="reveal"><Trans i18nKey="landing.t.h2" components={accent} /></h2>
               <p className="prose-p reveal">{t("landing.t.p1")}</p>
+              <div className="nots reveal">
+                <span>{t("landing.t.no1")}</span>
+                <span>{t("landing.t.no2")}</span>
+                <span>{t("landing.t.no3")}</span>
+                <span>{t("landing.t.no4")}</span>
+              </div>
               <p className="prose-p reveal">{t("landing.t.p2")}</p>
             </div>
             <div className="steps reveal">
@@ -494,6 +517,7 @@ export default function LandingPage() {
                   <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f1")}</span></li>
                   <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f2")}</span></li>
                   <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f3")}</span></li>
+                  <li><span className="ck"><Check size={15} /></span><span>{t("landing.p.f4")}</span></li>
                 </ul>
                 <Link className="btn btn-gold btn-lg" to="/signup" style={{ width: "100%" }}>{t("landing.p.freeCta")}</Link>
               </div>
@@ -510,6 +534,7 @@ export default function LandingPage() {
                 <p className="pro-note">{t("landing.p.proNote")}</p>
               </div>
             </div>
+            <div className="fstrip-head mini-title reveal">{t("landing.fs.head")}</div>
             <div className="fstrip reveal">
               <span>{t("landing.fs.f1")}</span>
               <span>{t("landing.fs.f2")}</span>
@@ -526,11 +551,15 @@ export default function LandingPage() {
           <div className="wrap">
             <Kicker num="08" label={t("landing.faq.kicker")} />
             <h2 className="reveal"><Trans i18nKey="landing.faq.h2" components={accent} /></h2>
+            {/* Ordered by decision weight: status-quo objection first, import and
+                data ownership next; "does it work on my phone" closes. */}
             <div className="faq-grid">
-              <div className="faq-item reveal"><h3>{t("landing.faq.q1")}</h3><p>{t("landing.faq.a1")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q5")}</h3><p>{t("landing.faq.a5")}</p></div>
               <div className="faq-item reveal"><h3>{t("landing.faq.q2")}</h3><p>{t("landing.faq.a2")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q6")}</h3><p>{t("landing.faq.a6")}</p></div>
               <div className="faq-item reveal"><h3>{t("landing.faq.q3")}</h3><p>{t("landing.faq.a3")}</p></div>
               <div className="faq-item reveal"><h3>{t("landing.faq.q4")}</h3><p>{t("landing.faq.a4")}</p></div>
+              <div className="faq-item reveal"><h3>{t("landing.faq.q1")}</h3><p>{t("landing.faq.a1")}</p></div>
             </div>
           </div>
         </section>
@@ -541,6 +570,7 @@ export default function LandingPage() {
             <h2 className="reveal"><Trans i18nKey="landing.cta.h2" components={accent} /></h2>
             <p className="lead reveal">{t("landing.cta.lead")}</p>
             <div className="hero-cta reveal"><Link className="btn btn-gold btn-lg" to="/signup">{t("landing.cta.btn")}</Link></div>
+            <p className="cta-note reveal">{t("landing.cta.note")}</p>
           </div>
         </section>
       </main>

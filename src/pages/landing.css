@@ -54,14 +54,19 @@
   --surface-2: #24201a;
   --grid: rgb(var(--color-ink) / 0.05);
 }
+/* Light gets its own deeper bronze-gold: the app's gold reads as muddy mustard
+   on cream, and light text on it beats the dark-on-gold used in dark mode. */
 :root.light .landing-root {
   --bg: rgb(var(--color-bg));
   --surface: rgb(var(--color-surface));
   --surface-2: rgb(var(--color-surface-2));
-  --gold-soft: #b98f2e;
-  --hairline: rgb(var(--color-ink) / 0.1);
+  --gold: #8a6a1f;
+  --on-gold: #fffdf5;
+  --gold-soft: #a5822c;
+  --glow: rgb(138 106 31 / 0.07);
+  --hairline: rgb(var(--color-ink) / 0.14);
   --grid: rgb(var(--color-ink) / 0.05);
-  --panel-shadow: 0 1px 2px rgb(30 32 36 / 0.05), 0 22px 54px -22px rgb(30 32 36 / 0.16);
+  --panel-shadow: 0 1px 2px rgb(30 32 36 / 0.08), 0 22px 54px -22px rgb(30 32 36 / 0.22);
 }
 
 html:has(.landing-root) {
@@ -98,8 +103,11 @@ html:has(.landing-root) {
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 100% 100%, 52px 52px, 52px 52px;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  /* Grid dies just past the hero stage — texture for the opening, calm bare
+     ground for the argument (a %-mask on the full page height let it run for
+     thousands of px). */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 1100px, transparent 1700px);
+  mask-image: linear-gradient(180deg, #000 0%, #000 1100px, transparent 1700px);
 }
 .landing-root .wrap,
 .landing-root main,
@@ -139,6 +147,11 @@ html:has(.landing-root) {
   background: var(--gold-soft);
   border-color: var(--gold-soft);
   box-shadow: 0 12px 30px -10px var(--gold);
+}
+/* On cream the gold glow smears brown — a crisp hairline shadow instead. */
+:root.light .landing-root .btn-gold,
+:root.light .landing-root .btn-gold:hover {
+  box-shadow: 0 1px 2px rgb(30 32 36 / 0.12);
 }
 .landing-root .btn-ghost {
   background: transparent;
@@ -196,8 +209,14 @@ html:has(.landing-root) {
   max-width: 20ch;
   color: var(--ink);
 }
+/* Gold italics in headings are rationed like the gold itself: ink-italic by
+   default, gold only at the hero, the discipline spotlight and the final CTA. */
 .landing-root h2 em {
   font-style: italic;
+  color: var(--ink);
+}
+.landing-root .spotlight h2 em,
+.landing-root .cta-band h2 em {
   color: var(--gold);
 }
 .landing-root .lead {
@@ -269,6 +288,19 @@ html:has(.landing-root) {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+/* The gold ration: one filled gold CTA per viewport. The sticky topbar CTA
+   becomes a gold-outlined ghost so the hero (and section CTAs) keep the stage. */
+.landing-root .topbar .btn-gold {
+  background: transparent;
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
+  box-shadow: none;
+}
+.landing-root .topbar .btn-gold:hover {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  border-color: var(--gold);
+  box-shadow: none;
 }
 @media (max-width: 520px) {
   .landing-root .topbar .actions {
@@ -346,7 +378,7 @@ html:has(.landing-root) {
   width: 34px;
   height: 34px;
   color: var(--gold);
-  opacity: 0.9;
+  opacity: 0.55;
   z-index: 3;
 }
 .landing-root .fc-tl {
@@ -417,22 +449,6 @@ html:has(.landing-root) {
   font-size: 12px;
   color: var(--muted);
 }
-.landing-root .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-.landing-root .stage-tabs {
-  margin-left: 10px;
-  display: flex;
-  gap: 16px;
-}
-.landing-root .stage-tabs span {
-  color: var(--faint);
-}
-.landing-root .stage-tabs span.on {
-  color: var(--ink);
-}
 .landing-root .stage-meta {
   margin-left: auto;
   color: var(--faint);
@@ -489,7 +505,7 @@ html:has(.landing-root) {
   justify-content: space-between;
   padding: 2px 0 14px 6px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--faint);
 }
 .landing-root .side-cell {
@@ -509,8 +525,8 @@ html:has(.landing-root) {
   border-bottom: 0;
 }
 .landing-root .kpi .label {
-  font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -533,7 +549,48 @@ html:has(.landing-root) {
 /* ---------- sections ---------- */
 
 .landing-root section.blk {
-  padding: 120px 0 0;
+  padding: 96px 0 0;
+}
+/* Vary the vertical measure so the mid-page doesn't march in one beat. */
+.landing-root section.blk#cijfers,
+.landing-root section.blk#backtesting {
+  padding-top: 128px;
+}
+
+/* The constitution (03) as a centered editorial spread — the page's one
+   deliberate composition break. The trades list runs as a flat ledger between
+   hairlines, no card chrome; the three rules fan out in columns below. */
+.landing-root .grondwet {
+  text-align: center;
+}
+.landing-root .grondwet h2 {
+  margin-left: auto;
+  margin-right: auto;
+}
+.landing-root .grondwet .lead {
+  margin-left: auto;
+  margin-right: auto;
+}
+.landing-root .ledger {
+  max-width: 620px;
+  margin: 44px auto 0;
+  padding: 4px 0 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.landing-root .grondwet .points.cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 36px;
+  margin-top: 56px;
+  text-align: left;
+}
+@media (max-width: 760px) {
+  .landing-root .grondwet .points.cols {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 
 /* Trust band: the maker's mark, large — until it carries a name, the monogram
@@ -578,7 +635,7 @@ html:has(.landing-root) {
 
 /* Mid-page CTA: one action right after the strongest trust argument. */
 .landing-root .mid-cta {
-  padding: 88px 0 0;
+  padding: 56px 0 0;
 }
 .landing-root .mid-cta .hero-cta {
   margin-top: 0;
@@ -587,10 +644,12 @@ html:has(.landing-root) {
 /* Spotlight: the discipline section gets a faint gold wash — the page's
    most confronting beat. */
 .landing-root section.blk.spotlight {
-  margin-top: 120px;
-  padding: 110px 0;
-  background: color-mix(in srgb, var(--gold) 5%, var(--surface));
-  border-top: 1px solid var(--hairline);
+  margin-top: 96px;
+  padding: 96px 0;
+  /* 9%: at 5% the wash was invisible in dark — the page's most confronting
+     beat deserves a stage. The gold top rule doubles as its second signal. */
+  background: color-mix(in srgb, var(--gold) 9%, var(--surface));
+  border-top: 1px solid color-mix(in srgb, var(--gold) 35%, var(--hairline));
   border-bottom: 1px solid var(--hairline);
 }
 
@@ -614,6 +673,20 @@ html:has(.landing-root) {
   font-size: 26px;
   line-height: 1.35;
   color: var(--ink);
+}
+.landing-root .prose-turn em {
+  color: var(--gold);
+}
+/* Honest labeling: every mock panel carries the sample-data tag, so the one
+   real-data badge (backtest, section 05) keeps its meaning. */
+.landing-root .panel-sample {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: right;
 }
 
 .landing-root .split {
@@ -752,37 +825,116 @@ html:has(.landing-root) {
   background: linear-gradient(180deg, var(--faint), transparent);
 }
 
-.landing-root .field-row {
+/* App-faithful mockup grammar — mirrors the real beyen.app components:
+   serif-italic panel titles, the gold segmented Journal/Analyse tab, KPI cards
+   with small uppercase labels and mono values, and the form's select fields. */
+.landing-root .ph-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+}
+.landing-root .segtabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.landing-root .segtabs span {
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+.landing-root .segtabs span.on {
+  background: var(--gold);
+  color: var(--on-gold);
+}
+.landing-root .mini-gold {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--gold);
+  color: var(--on-gold);
+  border-radius: 7px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+.landing-root .kgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.landing-root .kcard {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 13px 15px;
+}
+.landing-root .kcard .label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.landing-root .kcard .val {
+  font-family: var(--font-mono);
+  font-size: 21px;
+  font-weight: 500;
+  margin-top: 6px;
+}
+.landing-root .kcard .sub {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--faint);
+  margin-top: 4px;
+}
+.landing-root .bt-foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.landing-root .form-mock {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 14px;
+}
+@media (max-width: 380px) {
+  .landing-root .form-mock {
+    grid-template-columns: 1fr;
+  }
+}
+.landing-root .ff-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.landing-root .ff-select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 0;
-  border-top: 1px solid var(--hairline);
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
 }
-.landing-root .field-row:first-child {
-  border-top: 0;
-}
-.landing-root .field-row .fl {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  font-size: 14px;
-}
-.landing-root .grip {
+.landing-root .ff-select svg {
   color: var(--faint);
   flex: none;
 }
-.landing-root .pill {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  white-space: nowrap;
+.landing-root .ff-toggle {
+  font-size: 12px;
 }
 
 .landing-root .points {
@@ -893,10 +1045,16 @@ html:has(.landing-root) {
   border: 1px solid var(--border);
   color: var(--muted);
 }
+/* Tinted like the Win/Loss/BE pills — a solid red fill was the only saturated
+   block on the page and broke the luminance system. */
 .landing-root .badge.missed-solid {
-  background: var(--loss);
-  color: #fff;
-  border-color: var(--loss);
+  background: color-mix(in srgb, var(--loss) 16%, transparent);
+  color: var(--loss);
+  border-color: color-mix(in srgb, var(--loss) 40%, transparent);
+}
+.landing-root .badge.gold {
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 50%, var(--border));
 }
 .landing-root .excl-note {
   display: flex;
@@ -966,35 +1124,16 @@ html:has(.landing-root) {
   margin-top: 12px;
 }
 
-/* backtest stats */
-.landing-root .bt-stats {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  padding: 2px 2px 14px;
-}
-.landing-root .bt-stat .n {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 500;
-}
-.landing-root .bt-stat .l {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 3px;
-}
-
 /* ---------- paper interlude (inverts against the active theme) ---------- */
 
 /* The interlude always contrasts with the page: warm paper on the dark theme,
    charcoal on the light theme. Tokens are redefined locally so every child
    (borders, muted text, chips) re-derives from the inverted palette. */
 .landing-root section.blk.paper {
-  margin-top: 120px;
-  padding: 110px 0;
+  position: relative;
+  overflow: hidden;
+  margin-top: 96px;
+  padding: 100px 0;
   --ink: #1e2024;
   --muted: #565349;
   --faint: #8d887b;
@@ -1004,14 +1143,15 @@ html:has(.landing-root) {
   background: #f4f1ea;
   color: var(--ink);
 }
+/* Warm charcoal (not blue-grey): the inversion stays in the espresso family. */
 :root.light .landing-root section.blk.paper {
-  --ink: #f1efea;
+  --ink: #f2efe8;
   --muted: #a9a496;
   --faint: #767162;
   --hairline: rgb(241 239 234 / 0.12);
   --border: rgb(241 239 234 / 0.18);
   --gold: #d4a64a;
-  background: #1b1d23;
+  background: #211d18;
 }
 
 .landing-root .steps {
@@ -1054,8 +1194,42 @@ html:has(.landing-root) {
   margin: 56px 0 0;
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 24px;
+  font-size: clamp(24px, 2.6vw, 30px);
   line-height: 1.35;
+}
+/* The "deliberately not" list — scannable where prose buried it. */
+.landing-root .nots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 32px;
+  margin: 30px 0 0;
+  max-width: 480px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+.landing-root .nots span::before {
+  content: "\00d7\2002";
+  color: var(--faint);
+}
+@media (max-width: 480px) {
+  .landing-root .nots {
+    grid-template-columns: 1fr;
+  }
+}
+/* BY-monogram watermark: composes the empty right flank of the interlude. */
+.landing-root .paper-mark {
+  position: absolute;
+  right: -50px;
+  top: 70px;
+  opacity: 0.045;
+  color: var(--ink);
+  pointer-events: none;
+}
+@media (max-width: 880px) {
+  .landing-root .paper-mark {
+    display: none;
+  }
 }
 
 /* ---------- pricing ---------- */
@@ -1156,10 +1330,13 @@ html:has(.landing-root) {
   margin-top: 2px;
 }
 /* Feature strip: six real features as a quiet grid, not a footnote. */
+.landing-root .fstrip-head {
+  margin-top: 36px;
+}
 .landing-root .fstrip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  margin-top: 28px;
+  margin-top: 12px;
   border: 1px solid var(--hairline);
   border-radius: 10px;
   overflow: hidden;
@@ -1228,6 +1405,13 @@ html:has(.landing-root) {
 }
 .landing-root .cta-band .hero-cta {
   justify-content: center;
+}
+.landing-root .cta-note {
+  margin: 18px auto 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 48ch;
 }
 
 .landing-root footer {
@@ -1321,7 +1505,7 @@ html:has(.landing-root) {
     transform: translate(var(--cx), var(--cy)) scale(0.6);
   }
   to {
-    opacity: 0.9;
+    opacity: 0.55;
     transform: none;
   }
 }
