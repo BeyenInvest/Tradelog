@@ -133,6 +133,32 @@ create unique index periodic_reviews_year_unique
   on periodic_reviews(user_id, methodology_id, jaar)
   where period_type = 'year' and methodology_id is not null;
 
+-- ---------- TRADE CONTRACTS (owner-only pre-trade commitment, 0053) ----------
+-- A short contract the trader signs BEFORE a trade (keystone-check, fase,
+-- instrument, risk, news window, signature), later closed with the outcome in R
+-- + whether the process was respected — or logged as a deliberately missed
+-- setup. Owner-only in the UI (betaFeatures gate), but per-user + per-journal in
+-- the DB just like the review tables. No money/P&L is ever stored (outcome is an
+-- R-multiple only). No updated_at: signed once, closed once.
+create table trade_contracts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  methodology_id uuid references methodologies(id) on delete set null,
+  created_at timestamptz not null default now(),
+  signed_at timestamptz,
+  instrument text,
+  fase text,
+  entry_type text,
+  risk_pct numeric,
+  signature text,
+  status text not null default 'open' check (status in ('open', 'closed', 'missed')),
+  outcome_r numeric,
+  proces_goed boolean,
+  note text
+);
+create index idx_trade_contracts_user on trade_contracts(user_id);
+create index idx_trade_contracts_methodology on trade_contracts(methodology_id);
+
 -- ---------- TRADES ----------
 create table trades (
   id uuid primary key default gen_random_uuid(),
@@ -953,6 +979,7 @@ alter table prop_accounts enable row level security;
 alter table payouts enable row level security;
 alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
+alter table trade_contracts enable row level security;
 alter table profiles enable row level security;
 alter table custom_options enable row level security;
 alter table methodologies enable row level security;
@@ -1037,6 +1064,8 @@ create policy "weekly_reviews_owner_all" on weekly_reviews
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "periodic_reviews_owner_all" on periodic_reviews
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "trade_contracts_owner_all" on trade_contracts
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "backtest_projects_owner_all" on backtest_projects
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "prop_accounts_owner_all" on prop_accounts
@@ -1059,6 +1088,8 @@ create policy "trades_admin_select" on trades
 create policy "weekly_reviews_admin_select" on weekly_reviews
   for select to authenticated using (is_admin());
 create policy "periodic_reviews_admin_select" on periodic_reviews
+  for select to authenticated using (is_admin());
+create policy "trade_contracts_admin_select" on trade_contracts
   for select to authenticated using (is_admin());
 create policy "backtest_projects_admin_select" on backtest_projects
   for select to authenticated using (is_admin());

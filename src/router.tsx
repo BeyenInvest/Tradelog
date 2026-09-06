@@ -22,6 +22,7 @@ const JournalPage = lazy(() => import("@/pages/JournalPage"));
 const ProjectsListPage = lazy(() => import("@/pages/ProjectsListPage"));
 const ProjectDashboardPage = lazy(() => import("@/pages/ProjectDashboardPage"));
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage"));
+const ContractPage = lazy(() => import("@/pages/ContractPage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
 const EconomicCalendarPage = lazy(() => import("@/pages/EconomicCalendarPage"));
 const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage"));
@@ -63,6 +64,13 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 function AdminRoute({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
   if (!isAdmin) return <Navigate to="/journal" replace />;
+  return <>{children}</>;
+}
+
+/** Like AdminRoute, but gates on the soft-launch betaFeatures flag (owner-only until public launch). */
+function BetaRoute({ children }: { children: ReactNode }) {
+  const { betaFeatures } = useAuth();
+  if (!betaFeatures) return <Navigate to="/journal" replace />;
   return <>{children}</>;
 }
 
@@ -115,6 +123,14 @@ export function AppRouter() {
         <Route path="/backtesting" element={<ProjectsListPage />} />
         <Route path="/backtesting/:projectId" element={<ProjectDashboardPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
+        <Route
+          path="/contract"
+          element={
+            <BetaRoute>
+              <ContractPage />
+            </BetaRoute>
+          }
+        />
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/calendar" element={<EconomicCalendarPage />} />
         <Route path="/lot-size" element={<LotSizeCalculatorPage />} />
