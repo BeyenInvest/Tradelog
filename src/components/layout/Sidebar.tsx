@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature } from "lucide-react";
+import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature, ListChecks } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { LogoMark, LogoLockup } from "@/components/ui/Logo";
@@ -29,8 +29,14 @@ export function Sidebar() {
   // The lot-size calculator is a forex-only tool (pips/lots) — show it only when the
   // active journal trades forex, not in a stocks/crypto/futures journal (cyclus 7).
   const base = isForexJournal ? NAV : NAV.filter((n) => n.to !== "/lot-size");
-  // Trade Contract is owner-only until public launch — same soft-launch gate (betaFeatures) as the journal-switcher above.
-  const withBeta = betaFeatures ? [...base, { to: "/contract", labelKey: "nav.contract", icon: FileSignature }] : base;
+  // Trade Contract + Habits are owner-only until public launch — same soft-launch gate (betaFeatures) as the journal-switcher above.
+  const withBeta = betaFeatures
+    ? [
+        ...base,
+        { to: "/contract", labelKey: "nav.contract", icon: FileSignature },
+        { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
+      ]
+    : base;
   const nav = isAdmin ? [...withBeta, { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck }] : withBeta;
 
   async function handleSignOut() {

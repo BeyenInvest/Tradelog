@@ -34,6 +34,7 @@
     "backtesting": "Backtesting",
     "reviews": "Reviews",
     "contract": "Contract",
+    "habits": "Habits",
     "accounts": "Accounts",
     "calendar": "Economic Calendar",
     "lotSize": "Lot Size Calculator (Beta)",
@@ -650,6 +651,34 @@
     "deleteConfirm": "Delete this contract?",
     "deleteFailed": "Deleting the contract failed",
     "saveFailed": "Saving the contract failed"
+  },
+  "habits": {
+    "title": "Habits",
+    "subtitle": "Daily habits for my 90-Day Run. Process > outcome.",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "statStreak": "Streak",
+    "statToday": "Today",
+    "statWeek": "This week",
+    "todayTitle": "Today",
+    "floorMet": "Floor met ✓",
+    "floorNotMet": "Floor not yet",
+    "floorHint": "The floor is met when both keystone and daily journal are done. That's non-negotiable.",
+    "weekTitle": "This week",
+    "weekHint": "Ticking counts for today. The tally is the number of days this week with this habit.",
+    "stripTitle": "Last 7 days (floor)",
+    "def": {
+      "keystone": "Keystone: planned trades only, no FOMO",
+      "journal": "Daily journal",
+      "zoon": "30 min no-phone with my son",
+      "verklaren": "Explain myself",
+      "water": "Water only (weekdays)",
+      "stappen": "10,000 steps",
+      "sport": "Exercise",
+      "backtest": "Backtesting",
+      "vriendin": "Intentional evening with my partner",
+      "mama": "Call mum"
+    }
   },
   "reviews": {
     "newReview": "New review",

@@ -222,6 +222,23 @@ export interface TradeContract {
 /** Payload for insert/update — excludes server-managed fields (id/user_id/methodology_id/created_at). methodology_id is injected by the hook. */
 export type TradeContractInput = Omit<TradeContract, "id" | "user_id" | "methodology_id" | "created_at">;
 
+/**
+ * One calendar day of habit completions for the owner's "90-Day Run"
+ * (owner-only tracker, migration 0054). Life-level, so per-user only — NOT
+ * journal-scoped like TradeContract. `values` is a `{ [habitKey]: true }` bag of
+ * the habits completed that day; the definitions live in src/lib/habits.ts.
+ * Mirrors the `habit_days` table 1:1.
+ */
+export interface HabitDay {
+  id: string;
+  user_id: string;
+  /** The calendar day (local yyyy-mm-dd) these habits belong to. */
+  day: string;
+  /** Completed habits that day: `{ [habitKey]: true }`. */
+  values: Record<string, boolean>;
+  created_at: string;
+}
+
 /** Whether a review section holds a single block of prose or a growable list of rows (Fase N5). */
 export type ReviewSectionInputType = "text" | "list";
 

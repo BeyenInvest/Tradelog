@@ -23,6 +23,7 @@ const ProjectsListPage = lazy(() => import("@/pages/ProjectsListPage"));
 const ProjectDashboardPage = lazy(() => import("@/pages/ProjectDashboardPage"));
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage"));
 const ContractPage = lazy(() => import("@/pages/ContractPage"));
+const HabitsPage = lazy(() => import("@/pages/HabitsPage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
 const EconomicCalendarPage = lazy(() => import("@/pages/EconomicCalendarPage"));
 const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage"));
@@ -128,6 +129,14 @@ export function AppRouter() {
           element={
             <BetaRoute>
               <ContractPage />
+            </BetaRoute>
+          }
+        />
+        <Route
+          path="/habits"
+          element={
+            <BetaRoute>
+              <HabitsPage />
             </BetaRoute>
           }
         />

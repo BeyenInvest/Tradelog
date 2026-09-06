@@ -34,6 +34,7 @@
     "backtesting": "Backtesting",
     "reviews": "Reviews",
     "contract": "Contract",
+    "habits": "Habits",
     "accounts": "Accounts",
     "calendar": "Economic Calendar",
     "lotSize": "Lot Size Calculator (Beta)",
@@ -650,6 +651,34 @@
     "deleteConfirm": "Dit contract verwijderen?",
     "deleteFailed": "Verwijderen van contract is mislukt",
     "saveFailed": "Opslaan van contract is mislukt"
+  },
+  "habits": {
+    "title": "Habits",
+    "subtitle": "Dagelijkse gewoontes voor mijn 90-Day Run. Proces > resultaat.",
+    "days_one": "{{count}} dag",
+    "days_other": "{{count}} dagen",
+    "statStreak": "Streak",
+    "statToday": "Vandaag",
+    "statWeek": "Deze week",
+    "todayTitle": "Vandaag",
+    "floorMet": "Floor gehaald ✓",
+    "floorNotMet": "Floor nog niet",
+    "floorHint": "De floor staat als keystone én daily journal gedaan zijn. Dat is niet onderhandelbaar.",
+    "weekTitle": "Deze week",
+    "weekHint": "Aanvinken telt vandaag mee. De teller is het aantal dagen deze week met deze gewoonte.",
+    "stripTitle": "Laatste 7 dagen (floor)",
+    "def": {
+      "keystone": "Keystone: alleen geplande trades, geen FOMO",
+      "journal": "Daily journal",
+      "zoon": "30 min no-phone met mijn zoon",
+      "verklaren": "Mezelf verklaren",
+      "water": "Enkel water (weekdagen)",
+      "stappen": "10.000 stappen",
+      "sport": "Sporten",
+      "backtest": "Backtesten",
+      "vriendin": "Intentionele avond met mijn partner",
+      "mama": "Mama bellen"
+    }
   },
   "reviews": {
     "newReview": "Nieuwe review",
