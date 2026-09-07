@@ -37,16 +37,14 @@ export function Sidebar() {
       ],
     },
     {
-      // Contract + Habits + Dagboek are owner-only until public launch — same
-      // soft-launch gate (betaFeatures, 0033) as the journal-switcher below.
+      // Habits + Dagboek are live for all members. Contract stays owner-only
+      // (betaFeatures, 0033) — the same soft-launch gate as the journal-switcher below.
       labelKey: "nav.catPerformance",
-      items: betaFeatures
-        ? [
-            { to: "/contract", labelKey: "nav.contract", icon: FileSignature },
-            { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
-            { to: "/daily", labelKey: "nav.dailyJournal", icon: NotebookText },
-          ]
-        : [],
+      items: [
+        ...(betaFeatures ? [{ to: "/contract", labelKey: "nav.contract", icon: FileSignature }] : []),
+        { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
+        { to: "/daily", labelKey: "nav.dailyJournal", icon: NotebookText },
+      ],
     },
     {
       labelKey: "nav.catTools",

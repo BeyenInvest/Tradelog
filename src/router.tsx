@@ -133,23 +133,9 @@ export function AppRouter() {
             </BetaRoute>
           }
         />
-        <Route
-          path="/habits"
-          element={
-            <BetaRoute>
-              <HabitsPage />
-            </BetaRoute>
-          }
-        />
-        {/* Daily journal (dagboek) — sits under Habits, same owner-only gate (0055). */}
-        <Route
-          path="/daily"
-          element={
-            <BetaRoute>
-              <DailyJournalPage />
-            </BetaRoute>
-          }
-        />
+        {/* Habits + Daily journal are live for all members; Contract stays owner-only. */}
+        <Route path="/habits" element={<HabitsPage />} />
+        <Route path="/daily" element={<DailyJournalPage />} />
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/calendar" element={<EconomicCalendarPage />} />
         <Route path="/lot-size" element={<LotSizeCalculatorPage />} />
