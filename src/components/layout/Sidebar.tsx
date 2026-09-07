@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { LucideIcon } from "lucide-react";
 import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature, ListChecks, NotebookText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
@@ -12,33 +13,77 @@ import { toErrorMessage } from "@/lib/errorMessage";
 // not in the main nav — too easy to stumble into. Its entry point lives in the
 // Settings "Account" section (SettingsPage → DeleteAccountSettings) instead.
 
-const NAV = [
-  { to: "/journal", labelKey: "nav.journal", icon: BookOpen },
-  { to: "/backtesting", labelKey: "nav.backtesting", icon: Target },
-  { to: "/reviews", labelKey: "nav.reviews", icon: NotebookPen },
-  { to: "/accounts", labelKey: "nav.accounts", icon: Wallet },
-  { to: "/calendar", labelKey: "nav.calendar", icon: CalendarClock },
-  { to: "/lot-size", labelKey: "nav.lotSize", icon: Calculator },
-];
+type NavItem = { to: string; labelKey: string; icon: LucideIcon };
+type NavGroup = { labelKey: string; items: NavItem[] };
 
 export function Sidebar() {
   const { signOut, isAdmin, betaFeatures } = useAuth();
   const { isForexJournal } = useMethodology();
   const { t } = useTranslation();
   const [signOutError, setSignOutError] = useState<string | null>(null);
-  // The lot-size calculator is a forex-only tool (pips/lots) — show it only when the
-  // active journal trades forex, not in a stocks/crypto/futures journal (cyclus 7).
-  const base = isForexJournal ? NAV : NAV.filter((n) => n.to !== "/lot-size");
-  // Trade Contract + Habits + Dagboek are owner-only until public launch — same soft-launch gate (betaFeatures) as the journal-switcher above.
-  const withBeta = betaFeatures
-    ? [
-        ...base,
-        { to: "/contract", labelKey: "nav.contract", icon: FileSignature },
-        { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
-        { to: "/daily", labelKey: "nav.dailyJournal", icon: NotebookText },
-      ]
-    : base;
-  const nav = isAdmin ? [...withBeta, { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck }] : withBeta;
+
+  // The nav is grouped into labelled sections. Section headers show only in the
+  // desktop column; on the mobile top bar they're hidden so the icons stay in one
+  // flat horizontal scroll row. Each group is gated independently and empty groups
+  // are dropped, so the headers never sit above nothing.
+  const groups: NavGroup[] = [
+    {
+      labelKey: "nav.catTrading",
+      items: [
+        { to: "/journal", labelKey: "nav.journal", icon: BookOpen },
+        { to: "/backtesting", labelKey: "nav.backtesting", icon: Target },
+        { to: "/reviews", labelKey: "nav.reviews", icon: NotebookPen },
+        { to: "/accounts", labelKey: "nav.accounts", icon: Wallet },
+      ],
+    },
+    {
+      // Contract + Habits + Dagboek are owner-only until public launch — same
+      // soft-launch gate (betaFeatures, 0033) as the journal-switcher below.
+      labelKey: "nav.catPerformance",
+      items: betaFeatures
+        ? [
+            { to: "/contract", labelKey: "nav.contract", icon: FileSignature },
+            { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
+            { to: "/daily", labelKey: "nav.dailyJournal", icon: NotebookText },
+          ]
+        : [],
+    },
+    {
+      labelKey: "nav.catTools",
+      items: [
+        { to: "/calendar", labelKey: "nav.calendar", icon: CalendarClock },
+        // The lot-size calculator is a forex-only tool (pips/lots) — show it only
+        // when the active journal trades forex (cyclus 7).
+        ...(isForexJournal ? [{ to: "/lot-size", labelKey: "nav.lotSize", icon: Calculator }] : []),
+      ],
+    },
+  ].filter((g) => g.items.length > 0);
+
+  // Admin stays outside the sections — a standalone item at the end of the list.
+  const adminItem: NavItem | null = isAdmin ? { to: "/admin", labelKey: "nav.admin", icon: ShieldCheck } : null;
+
+  function renderItem(n: NavItem) {
+    const Icon = n.icon;
+    return (
+      <NavLink
+        key={n.to}
+        to={n.to}
+        aria-label={t(n.labelKey)}
+        className={({ isActive }) =>
+          `flex items-center gap-2.5 px-2.5 md:px-3 py-2 rounded-lg font-body text-sm transition-colors shrink-0 ${
+            isActive ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <Icon size={16} className={isActive ? "text-gold" : "text-muted"} />
+            <span className="hidden md:inline">{t(n.labelKey)}</span>
+          </>
+        )}
+      </NavLink>
+    );
+  }
 
   async function handleSignOut() {
     setSignOutError(null);
@@ -77,30 +122,19 @@ export function Sidebar() {
 
       {/* flex-1 + min-w-0 lets this item both absorb the row's remaining width AND shrink below its
           content size on mobile, so overflow-x-auto actually kicks in instead of the row silently
-          clipping under AppShell's overflow-hidden when there isn't room for every nav item. */}
+          clipping under AppShell's overflow-hidden when there isn't room for every nav item.
+          Section headers are hidden on mobile (display:none), so on the horizontal bar every icon
+          is a direct flex child and the row flows/scrolls exactly as before the grouping. */}
       <nav className="flex flex-row md:flex-col flex-1 md:flex-none gap-1 min-w-0 overflow-x-auto md:overflow-visible px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {nav.map((n) => {
-          const Icon = n.icon;
-          return (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              aria-label={t(n.labelKey)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-2.5 md:px-3 py-2 rounded-lg font-body text-sm transition-colors shrink-0 ${
-                  isActive ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={16} className={isActive ? "text-gold" : "text-muted"} />
-                  <span className="hidden md:inline">{t(n.labelKey)}</span>
-                </>
-              )}
-            </NavLink>
-          );
-        })}
+        {groups.map((group) => (
+          <Fragment key={group.labelKey}>
+            <p className="hidden md:block px-3 mt-3 first:mt-0 mb-0.5 text-[10px] font-body font-medium uppercase tracking-[0.12em] text-muted/60">
+              {t(group.labelKey)}
+            </p>
+            {group.items.map(renderItem)}
+          </Fragment>
+        ))}
+        {adminItem && renderItem(adminItem)}
       </nav>
 
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">

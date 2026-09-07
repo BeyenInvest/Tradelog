@@ -42,7 +42,10 @@
     "admin": "Admin",
     "settings": "Instellingen",
     "logout": "Uitloggen",
-    "logoutFailed": "Uitloggen is mislukt"
+    "logoutFailed": "Uitloggen is mislukt",
+    "catTrading": "Trading",
+    "catPerformance": "Performance",
+    "catTools": "Tools"
   },
   "journalSwitcher": {
     "label": "Actief journal",

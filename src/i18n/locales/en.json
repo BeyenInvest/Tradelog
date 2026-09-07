@@ -42,7 +42,10 @@
     "admin": "Admin",
     "settings": "Settings",
     "logout": "Log out",
-    "logoutFailed": "Sign-out failed"
+    "logoutFailed": "Sign-out failed",
+    "catTrading": "Trading",
+    "catPerformance": "Performance",
+    "catTools": "Tools"
   },
   "journalSwitcher": {
     "label": "Active journal",
