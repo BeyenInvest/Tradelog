@@ -1,23 +1,31 @@
 /**
- * Pure analytics over the owner's habit history (migration 0054). All functions
+ * Pure analytics over a user's habit history (migration 0054/0056). All functions
  * take a `DaysByDate` map (yyyy-mm-dd → the day's completed-habit bag) exactly as
  * `useHabits` exposes it, plus an explicit `today` (yyyy-mm-dd, local) so nothing
  * here reads the clock — that keeps every function deterministic and testable.
  *
- * Two tiers of habit (see src/lib/habits.ts):
+ * The habit *definitions* are passed in (the user's own configurable list), never
+ * imported: callers pass the daily keys, the floor keys, and the weekly targets.
+ *
+ * Two tiers of habit (see src/lib/types.ts `Habit`):
  *  - daily  → a day either did it or didn't; adherence = done days / days.
  *  - weekly → a per-ISO-week target count; the week's progress is how many days
  *             in that week carry the key.
  *
- * The whole point of these views is to make the owner's "zig-zag" visible —
- * ~3 strong weeks then a week-4 collapse. The per-week summary is what surfaces it.
+ * The per-week summary is what surfaces the "zig-zag" — strong weeks then a slide.
  */
 
-import { DAILY_HABITS, WEEKLY_HABITS, isFloorMet, type HabitValues } from "@/lib/habits";
+import { isFloorMet, type HabitValues } from "@/lib/habits";
 import { isoWeekOf, isoWeekRange } from "@/lib/isoWeek";
 import { toLocalIso } from "@/lib/localDate";
 
 export type DaysByDate = Map<string, HabitValues>;
+
+/** A weekly-target habit as far as the stats care: its key and per-week target. */
+export interface WeeklyDef {
+  key: string;
+  target: number | null;
+}
 
 /** Inclusive list of yyyy-mm-dd from `startIso` to `endIso`. Empty if start > end. */
 export function isoDaysBetween(startIso: string, endIso: string): string[] {
@@ -54,23 +62,23 @@ function lastNRange(today: string, n: number): string[] {
   return isoDaysBetween(toLocalIso(start), today);
 }
 
-/** Per daily-habit adherence over the last `n` days (inclusive of today). */
-export function dailyAdherenceLastN(days: DaysByDate, today: string, n: number): Adherence[] {
+/** Per daily-habit adherence over the last `n` days (inclusive of today), in `dailyKeys` order. */
+export function dailyAdherenceLastN(days: DaysByDate, today: string, n: number, dailyKeys: readonly string[]): Adherence[] {
   const range = lastNRange(today, n);
-  return DAILY_HABITS.map((h) => adherenceOver(days, range, (v) => v?.[h.key] === true, h.key));
+  return dailyKeys.map((key) => adherenceOver(days, range, (v) => v?.[key] === true, key));
 }
 
-/** Floor (keystone + journal) adherence over the last `n` days. */
-export function floorAdherenceLastN(days: DaysByDate, today: string, n: number): Adherence {
-  return adherenceOver(days, lastNRange(today, n), (v) => isFloorMet(v), "floor");
+/** Floor adherence over the last `n` days. */
+export function floorAdherenceLastN(days: DaysByDate, today: string, n: number, floorKeys: readonly string[]): Adherence {
+  return adherenceOver(days, lastNRange(today, n), (v) => isFloorMet(v, floorKeys), "floor");
 }
 
 /** Longest run of consecutive floor-met days within the last `n` days. */
-export function bestFloorStreakLastN(days: DaysByDate, today: string, n: number): number {
+export function bestFloorStreakLastN(days: DaysByDate, today: string, n: number, floorKeys: readonly string[]): number {
   let best = 0;
   let cur = 0;
   for (const iso of lastNRange(today, n)) {
-    if (isFloorMet(days.get(iso))) {
+    if (isFloorMet(days.get(iso), floorKeys)) {
       cur += 1;
       best = Math.max(best, cur);
     } else {
@@ -89,25 +97,29 @@ export interface WeekSummary {
   /** Elapsed days in the week counted so far (≤ 7; a past week is 7, the current week is Mon→today). */
   daysCounted: number;
   floorDays: number;
-  keystoneDays: number;
   /** Per weekly-target habit: how many days carried it, its target, and whether reached. */
   weekly: { key: string; count: number; target: number; reached: boolean }[];
 }
 
-function summarizeWeek(days: DaysByDate, jaar: number, week: number, today: string): WeekSummary {
+function summarizeWeek(
+  days: DaysByDate,
+  jaar: number,
+  week: number,
+  today: string,
+  floorKeys: readonly string[],
+  weeklyDefs: readonly WeeklyDef[]
+): WeekSummary {
   const { start, end } = isoWeekRange(jaar, week);
   // Never count into the future: cap the window at today.
   const cappedEnd = end < today ? end : today;
   const range = isoDaysBetween(start, cappedEnd);
   let floorDays = 0;
-  let keystoneDays = 0;
   const weeklyCounts: Record<string, number> = {};
-  for (const h of WEEKLY_HABITS) weeklyCounts[h.key] = 0;
+  for (const h of weeklyDefs) weeklyCounts[h.key] = 0;
   for (const iso of range) {
     const v = days.get(iso);
-    if (isFloorMet(v)) floorDays += 1;
-    if (v?.keystone === true) keystoneDays += 1;
-    for (const h of WEEKLY_HABITS) if (v?.[h.key] === true) weeklyCounts[h.key] += 1;
+    if (isFloorMet(v, floorKeys)) floorDays += 1;
+    for (const h of weeklyDefs) if (v?.[h.key] === true) weeklyCounts[h.key] += 1;
   }
   return {
     jaar,
@@ -116,8 +128,7 @@ function summarizeWeek(days: DaysByDate, jaar: number, week: number, today: stri
     endIso: end,
     daysCounted: range.length,
     floorDays,
-    keystoneDays,
-    weekly: WEEKLY_HABITS.map((h) => ({
+    weekly: weeklyDefs.map((h) => ({
       key: h.key,
       count: weeklyCounts[h.key],
       target: h.target ?? 0,
@@ -127,7 +138,13 @@ function summarizeWeek(days: DaysByDate, jaar: number, week: number, today: stri
 }
 
 /** The last `numWeeks` ISO weeks up to and including `today`'s week, oldest → newest. */
-export function recentWeekSummaries(days: DaysByDate, today: string, numWeeks: number): WeekSummary[] {
+export function recentWeekSummaries(
+  days: DaysByDate,
+  today: string,
+  numWeeks: number,
+  floorKeys: readonly string[],
+  weeklyDefs: readonly WeeklyDef[]
+): WeekSummary[] {
   const seen = new Set<string>();
   const weeks: { jaar: number; week: number }[] = [];
   const cursor = new Date(today + "T00:00:00");
@@ -141,7 +158,7 @@ export function recentWeekSummaries(days: DaysByDate, today: string, numWeeks: n
     cursor.setDate(cursor.getDate() - 7);
   }
   weeks.reverse();
-  return weeks.map(({ jaar, week }) => summarizeWeek(days, jaar, week, today));
+  return weeks.map(({ jaar, week }) => summarizeWeek(days, jaar, week, today, floorKeys, weeklyDefs));
 }
 
 /** A calendar month's summary (year + 0-based month), capped at `today`. */
@@ -159,13 +176,20 @@ export interface MonthSummary {
 }
 
 /** Summarize the calendar month containing (year, month), counting only up to `today`. */
-export function monthSummary(days: DaysByDate, year: number, month: number, today: string): MonthSummary {
+export function monthSummary(
+  days: DaysByDate,
+  year: number,
+  month: number,
+  today: string,
+  dailyKeys: readonly string[],
+  floorKeys: readonly string[]
+): MonthSummary {
   const firstIso = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const lastOfMonth = new Date(year, month + 1, 0); // day 0 of next month = last day of this one
   const lastIso = toLocalIso(lastOfMonth);
   const lastCountedIso = lastIso < today ? lastIso : today;
   const range = firstIso > today ? [] : isoDaysBetween(firstIso, lastCountedIso);
-  const floor = adherenceOver(days, range, (v) => isFloorMet(v), "floor");
+  const floor = adherenceOver(days, range, (v) => isFloorMet(v, floorKeys), "floor");
   return {
     year,
     month,
@@ -174,6 +198,6 @@ export function monthSummary(days: DaysByDate, year: number, month: number, toda
     daysCounted: range.length,
     floorDays: floor.done,
     floor,
-    daily: DAILY_HABITS.map((h) => adherenceOver(days, range, (v) => v?.[h.key] === true, h.key)),
+    daily: dailyKeys.map((key) => adherenceOver(days, range, (v) => v?.[key] === true, key)),
   };
 }

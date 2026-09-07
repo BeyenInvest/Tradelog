@@ -5,53 +5,65 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { isoWeekOf } from "@/lib/isoWeek";
 import { toLocalIso, localTodayIso } from "@/lib/localDate";
-import { DAILY_HABITS, WEEKLY_HABITS, isFloorMet, type HabitValues } from "@/lib/habits";
-import type { HabitDay } from "@/lib/types";
+import { isFloorMet, type HabitValues } from "@/lib/habits";
+import type { WeeklyDef } from "@/lib/habitStats";
+import type { Habit, HabitDay, HabitInput } from "@/lib/types";
 
 /** How far back we load — enough for the streak, the week view and a strip. */
 const LOOKBACK_DAYS = 120;
 
 /**
- * Owner-only habit-tracker data hook (migration 0054). Per-user only — habits
- * are life-level, NOT journal-scoped like useTradeContracts. Follows the same
- * app conventions: useAuth for the session/userId, an explicit user_id filter,
- * fetchAllPages past the 1000-row cap, and a requestIdRef guard so a slow
- * response can't land after a newer request.
+ * Owner/beta habit-tracker data hook (migrations 0054 + 0056). Per-user only —
+ * habits are life-level, NOT journal-scoped. Since 0056 the habit *definitions*
+ * are user-owned rows the user builds on the Habits page, so this hook loads two
+ * things: the `habits` config (the list) and `habit_days` (the ticks), and exposes
+ * both the derived day-stats and CRUD to edit the list.
  *
- * The single mutation, `toggle`, read-modify-writes the day's `values` jsonb and
- * upserts on (user_id, day) — optimistically, then reconciled by a refresh.
+ * `toggle` read-modify-writes a day's `values` bag (keyed by habit key) and upserts
+ * on (user_id, day) — optimistically, then reconciled by a refresh.
  */
 export function useHabits() {
   const { session } = useAuth();
   const userId = session!.user.id;
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [days, setDays] = useState<HabitDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Guard against a slow response landing after a newer request (same pattern as useTradeContracts).
+  // Guard against a slow response landing after a newer request.
   const requestIdRef = useRef(0);
 
   const refresh = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
-    // Only the recent window is needed; call at fetch time so a long-lived PWA tab
-    // doesn't freeze "today" (M2). yyyy-mm-dd string compares are safe for `date`.
+    // Only the recent window of ticks is needed; call at fetch time so a long-lived
+    // PWA tab doesn't freeze "today" (M2). yyyy-mm-dd string compares are safe for `date`.
     const since = toLocalIso(new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
-    const { data, error: fetchError } = await fetchAllPages<HabitDay>((from, to) =>
+    const [habitsRes, daysRes] = await Promise.all([
       supabase
-        .from("habit_days")
+        .from("habits")
         .select("*")
         .eq("user_id", userId)
-        .gte("day", since)
-        .order("day", { ascending: false })
-        .order("id", { ascending: true })
-        .range(from, to)
-    );
+        .eq("archived", false)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+      fetchAllPages<HabitDay>((from, to) =>
+        supabase
+          .from("habit_days")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("day", since)
+          .order("day", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+    ]);
     if (requestId !== requestIdRef.current) return; // superseded by a newer request
-    if (fetchError) {
-      setError(toErrorMessage(fetchError));
+    if (habitsRes.error || daysRes.error) {
+      setError(toErrorMessage(habitsRes.error ?? daysRes.error));
     } else {
-      setDays(data as HabitDay[]);
+      setHabits((habitsRes.data ?? []) as Habit[]);
+      setDays((daysRes.data ?? []) as HabitDay[]);
     }
     setLoading(false);
   }, [userId]);
@@ -59,6 +71,15 @@ export function useHabits() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // ── Habit definitions, split by tier ───────────────────────────────────────
+  const dailyHabits = useMemo(() => habits.filter((h) => h.tier === "daily"), [habits]);
+  const weeklyHabits = useMemo(() => habits.filter((h) => h.tier === "weekly"), [habits]);
+  const dailyKeys = useMemo(() => dailyHabits.map((h) => h.key), [dailyHabits]);
+  const floorKeys = useMemo(() => habits.filter((h) => h.is_floor).map((h) => h.key), [habits]);
+  const weeklyDefs = useMemo<WeeklyDef[]>(() => weeklyHabits.map((h) => ({ key: h.key, target: h.target })), [weeklyHabits]);
+  const hasHabits = habits.length > 0;
+  const hasFloor = floorKeys.length > 0;
 
   /** day (yyyy-mm-dd) → its values bag. */
   const daysByDate = useMemo(() => {
@@ -79,7 +100,6 @@ export function useHabits() {
       if (done) nextValues[habitKey] = true;
       else delete nextValues[habitKey];
 
-      // Optimistic: patch the matching row, or add a synthetic one for a fresh day.
       setDays((cur) => {
         const idx = cur.findIndex((d) => d.day === day);
         if (idx >= 0) {
@@ -94,48 +114,110 @@ export function useHabits() {
           values: nextValues,
           created_at: new Date().toISOString(),
         };
-        // Keep the descending-by-day order the fetch uses.
         return [optimistic, ...cur].sort((a, b) => (a.day < b.day ? 1 : -1));
       });
 
       const { error: upsertError } = await supabase
         .from("habit_days")
         .upsert({ user_id: userId, day, values: nextValues }, { onConflict: "user_id,day" });
-      if (upsertError) {
-        setError(toErrorMessage(upsertError));
-      }
-      // Reconcile with the server (also replaces the synthetic id with the real row).
+      if (upsertError) setError(toErrorMessage(upsertError));
       await refresh();
     },
     [daysByDate, userId, refresh]
   );
 
-  // ── Derived helpers the page renders from ──────────────────────────────────
+  // ── Habit CRUD (the builder) ───────────────────────────────────────────────
+
+  /** Add a habit to the end of the list. A fresh random `key` is generated so ticks stay stable across renames. */
+  const addHabit = useCallback(
+    async (input: HabitInput) => {
+      const key = crypto.randomUUID();
+      const sortOrder = habits.reduce((max, h) => Math.max(max, h.sort_order), -1) + 1;
+      const { error: insertError } = await supabase.from("habits").insert({
+        user_id: userId,
+        key,
+        label: input.label,
+        tier: input.tier,
+        target: input.tier === "weekly" ? input.target : null,
+        is_floor: input.is_floor,
+        sort_order: sortOrder,
+      });
+      if (insertError) throw insertError;
+      await refresh();
+    },
+    [habits, userId, refresh]
+  );
+
+  const updateHabit = useCallback(
+    async (id: string, patch: Partial<HabitInput>) => {
+      // Keep target coherent with tier: a daily habit never carries a target.
+      const clean = { ...patch };
+      if (clean.tier === "daily") clean.target = null;
+      const { error: updateError } = await supabase.from("habits").update(clean).eq("id", id);
+      if (updateError) throw updateError;
+      await refresh();
+    },
+    [refresh]
+  );
+
+  /** Soft-delete: archive so historical ticks in habit_days stay intact and untouched. */
+  const deleteHabit = useCallback(
+    async (id: string) => {
+      const { error: delError } = await supabase.from("habits").update({ archived: true }).eq("id", id);
+      if (delError) throw delError;
+      await refresh();
+    },
+    [refresh]
+  );
+
+  /** Move a habit up/down among its same-tier siblings by swapping sort_order. */
+  const moveHabit = useCallback(
+    async (id: string, dir: -1 | 1) => {
+      const target = habits.find((h) => h.id === id);
+      if (!target) return;
+      const siblings = habits.filter((h) => h.tier === target.tier);
+      const idx = siblings.findIndex((h) => h.id === id);
+      const swapWith = siblings[idx + dir];
+      if (!swapWith) return;
+      // Optimistic reorder for a snappy feel; refresh reconciles.
+      setHabits((cur) =>
+        cur.map((h) => {
+          if (h.id === target.id) return { ...h, sort_order: swapWith.sort_order };
+          if (h.id === swapWith.id) return { ...h, sort_order: target.sort_order };
+          return h;
+        })
+      );
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from("habits").update({ sort_order: swapWith.sort_order }).eq("id", target.id),
+        supabase.from("habits").update({ sort_order: target.sort_order }).eq("id", swapWith.id),
+      ]);
+      if (e1 || e2) setError(toErrorMessage(e1 ?? e2));
+      await refresh();
+    },
+    [habits, refresh]
+  );
+
+  // ── Derived day-stats (all keyed off the user's own definitions) ────────────
 
   const today = localTodayIso();
   const todayValues = daysByDate.get(today) ?? {};
 
-  /** How many of the 6 daily habits are done today. */
-  const todayDailyDone = useMemo(
-    () => DAILY_HABITS.filter((h) => todayValues[h.key] === true).length,
-    [todayValues]
-  );
+  const todayDailyDone = useMemo(() => dailyKeys.filter((k) => todayValues[k] === true).length, [dailyKeys, todayValues]);
 
-  /** Whether today's floor (keystone + journal) is met. */
-  const todayFloorMet = isFloorMet(todayValues);
+  const todayFloorMet = isFloorMet(todayValues, floorKeys);
 
   /** For each weekly habit: how many days in the current ISO week carry its key. */
   const weeklyCounts = useMemo(() => {
     const { jaar, week_nummer } = isoWeekOf(today);
     const counts: Record<string, number> = {};
-    for (const h of WEEKLY_HABITS) counts[h.key] = 0;
+    for (const h of weeklyHabits) counts[h.key] = 0;
     for (const [day, values] of daysByDate) {
       const w = isoWeekOf(day);
       if (w.jaar !== jaar || w.week_nummer !== week_nummer) continue;
-      for (const h of WEEKLY_HABITS) if (values[h.key] === true) counts[h.key] += 1;
+      for (const h of weeklyHabits) if (values[h.key] === true) counts[h.key] += 1;
     }
     return counts;
-  }, [daysByDate, today]);
+  }, [daysByDate, today, weeklyHabits]);
 
   /** Floor-met days in the current ISO week. */
   const weekFloorDays = useMemo(() => {
@@ -143,29 +225,27 @@ export function useHabits() {
     let n = 0;
     for (const [day, values] of daysByDate) {
       const w = isoWeekOf(day);
-      if (w.jaar === jaar && w.week_nummer === week_nummer && isFloorMet(values)) n += 1;
+      if (w.jaar === jaar && w.week_nummer === week_nummer && isFloorMet(values, floorKeys)) n += 1;
     }
     return n;
-  }, [daysByDate, today]);
+  }, [daysByDate, today, floorKeys]);
 
   /**
-   * Current streak: consecutive days, counting back from today, whose floor is
-   * met. Today not being done yet does NOT break a streak that ran up to
-   * yesterday — we start counting from today if done, else from yesterday.
+   * Current streak: consecutive floor-met days counting back from today. Today
+   * not being done yet does NOT break a streak that ran up to yesterday.
    */
   const streak = useMemo(() => {
     let count = 0;
     const cursor = new Date(today + "T00:00:00");
-    // If today's floor isn't met yet, the streak is measured up to yesterday.
-    if (!isFloorMet(daysByDate.get(today))) cursor.setDate(cursor.getDate() - 1);
+    if (!isFloorMet(daysByDate.get(today), floorKeys)) cursor.setDate(cursor.getDate() - 1);
     for (;;) {
       const iso = toLocalIso(cursor);
-      if (!isFloorMet(daysByDate.get(iso))) break;
+      if (!isFloorMet(daysByDate.get(iso), floorKeys)) break;
       count += 1;
       cursor.setDate(cursor.getDate() - 1);
     }
     return count;
-  }, [daysByDate, today]);
+  }, [daysByDate, today, floorKeys]);
 
   /** Last `n` days (oldest → newest) with their floor state, for the dot strip. */
   const recentFloor = useCallback(
@@ -175,12 +255,12 @@ export function useHabits() {
       cursor.setDate(cursor.getDate() - (n - 1));
       for (let i = 0; i < n; i += 1) {
         const iso = toLocalIso(cursor);
-        out.push({ day: iso, floorMet: isFloorMet(daysByDate.get(iso)) });
+        out.push({ day: iso, floorMet: isFloorMet(daysByDate.get(iso), floorKeys) });
         cursor.setDate(cursor.getDate() + 1);
       }
       return out;
     },
-    [daysByDate, today]
+    [daysByDate, today, floorKeys]
   );
 
   return {
@@ -191,6 +271,21 @@ export function useHabits() {
     todayValues,
     toggle,
     refresh,
+    // definitions
+    habits,
+    dailyHabits,
+    weeklyHabits,
+    dailyKeys,
+    floorKeys,
+    weeklyDefs,
+    hasHabits,
+    hasFloor,
+    // builder
+    addHabit,
+    updateHabit,
+    deleteHabit,
+    moveHabit,
+    // day stats
     todayDailyDone,
     todayFloorMet,
     weeklyCounts,

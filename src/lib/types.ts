@@ -239,11 +239,10 @@ export interface TradeContract {
 export type TradeContractInput = Omit<TradeContract, "id" | "user_id" | "methodology_id" | "created_at">;
 
 /**
- * One calendar day of habit completions for the owner's "90-Day Run"
- * (owner-only tracker, migration 0054). Life-level, so per-user only — NOT
- * journal-scoped like TradeContract. `values` is a `{ [habitKey]: true }` bag of
- * the habits completed that day; the definitions live in src/lib/habits.ts.
- * Mirrors the `habit_days` table 1:1.
+ * One calendar day of habit completions (owner/beta habit tracker, migration
+ * 0054). Life-level, so per-user only — NOT journal-scoped like TradeContract.
+ * `values` is a `{ [habitKey]: true }` bag of the habits completed that day,
+ * keyed by `Habit.key`. Mirrors the `habit_days` table 1:1.
  */
 export interface HabitDay {
   id: string;
@@ -254,6 +253,40 @@ export interface HabitDay {
   values: Record<string, boolean>;
   created_at: string;
 }
+
+/** A daily checkbox habit, or a weekly-target habit (ticked on the days it happens). */
+export type HabitTier = "daily" | "weekly";
+
+/**
+ * One user-defined habit (migration 0056) — the configurable replacement for the
+ * old hardcoded 90-Day-Run list. Each user builds their own on the Habits page.
+ * `key` is a stable identifier stored in every `habit_days.values` bag, so
+ * renaming a habit never orphans its tick history. `is_floor` marks a habit as a
+ * daily non-negotiable — a day's "floor" is met when ALL floor habits are done.
+ * Mirrors the `habits` table 1:1.
+ */
+export interface Habit {
+  id: string;
+  user_id: string;
+  key: string;
+  label: string;
+  tier: HabitTier;
+  /** Weekly target count; null for daily habits. */
+  target: number | null;
+  is_floor: boolean;
+  sort_order: number;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Payload for creating/updating a habit — server-managed columns excluded. */
+export type HabitInput = {
+  label: string;
+  tier: HabitTier;
+  target: number | null;
+  is_floor: boolean;
+};
 
 /** Whether a review section holds a single block of prose or a growable list of rows (Fase N5). */
 export type ReviewSectionInputType = "text" | "list";

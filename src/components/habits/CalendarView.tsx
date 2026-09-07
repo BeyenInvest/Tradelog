@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { HabitCheckbox } from "@/components/habits/HabitCheckbox";
 import type { useHabits } from "@/hooks/useHabits";
-import { DAILY_HABITS, WEEKLY_HABITS, FLOOR_KEYS, isFloorMet, type HabitDef } from "@/lib/habits";
+import { isFloorMet } from "@/lib/habits";
 
 /** yyyy-mm-dd for a calendar cell — local, no timezone drift. */
 function cellIso(year: number, month: number, day: number): string {
@@ -20,13 +20,14 @@ function cellIso(year: number, month: number, day: number): string {
  */
 export function CalendarView({ h }: { h: ReturnType<typeof useHabits> }) {
   const { t, i18n } = useTranslation();
-  const { today, daysByDate, toggle, loading } = h;
+  const { today, daysByDate, toggle, loading, dailyHabits, weeklyHabits, floorKeys, hasFloor } = h;
 
   const now = useMemo(() => new Date(today + "T00:00:00"), [today]);
   const [view, setView] = useState<{ year: number; month: number }>({ year: now.getFullYear(), month: now.getMonth() });
   const [selected, setSelected] = useState<string>(today);
 
   const atCurrentMonth = view.year === now.getFullYear() && view.month === now.getMonth();
+  const editHabits = useMemo(() => [...dailyHabits, ...weeklyHabits], [dailyHabits, weeklyHabits]);
 
   const monthLabel = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { month: "long", year: "numeric" }).format(new Date(view.year, view.month, 1)),
@@ -55,9 +56,8 @@ export function CalendarView({ h }: { h: ReturnType<typeof useHabits> }) {
     });
 
   const selectedValues = daysByDate.get(selected) ?? {};
-  const selectedFloor = isFloorMet(selectedValues);
+  const selectedFloor = isFloorMet(selectedValues, floorKeys);
   const selectedFuture = selected > today;
-  const label = (hb: HabitDef) => t(hb.labelKey, hb.label);
   const selectedLabel = new Intl.DateTimeFormat(i18n.language, {
     weekday: "long",
     day: "numeric",
@@ -97,8 +97,8 @@ export function CalendarView({ h }: { h: ReturnType<typeof useHabits> }) {
           {cells.map((iso, i) => {
             if (!iso) return <div key={`b${i}`} />;
             const values = daysByDate.get(iso);
-            const floor = isFloorMet(values);
-            const dailyDone = DAILY_HABITS.filter((hb) => values?.[hb.key] === true).length;
+            const floor = isFloorMet(values, floorKeys);
+            const dailyDone = dailyHabits.filter((hb) => values?.[hb.key] === true).length;
             const isToday = iso === today;
             const isFuture = iso > today;
             const isSelected = iso === selected;
@@ -122,29 +122,31 @@ export function CalendarView({ h }: { h: ReturnType<typeof useHabits> }) {
                 )}
               >
                 <span className={clsx("text-sm leading-none", floor && "font-semibold")}>{dayNum}</span>
-                {!isFuture && dailyDone > 0 && (
-                  <span className="text-[9px] leading-none text-muted">{dailyDone}/{DAILY_HABITS.length}</span>
+                {!isFuture && dailyDone > 0 && dailyHabits.length > 0 && (
+                  <span className="text-[9px] leading-none text-muted">{dailyDone}/{dailyHabits.length}</span>
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-4 text-[11px] text-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-gold/15 border border-gold" /> {t("habits.calLegendFloor")}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded border border-gold/40" /> {t("habits.calLegendPartial")}
-          </span>
-        </div>
+        {hasFloor && (
+          <div className="flex items-center gap-4 text-[11px] text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-gold/15 border border-gold" /> {t("habits.calLegendFloor")}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded border border-gold/40" /> {t("habits.calLegendPartial")}
+            </span>
+          </div>
+        )}
       </Card>
 
       {/* Per-day editor */}
       <Card className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-xl italic text-ink capitalize">{selectedLabel}</h2>
-          {!selectedFuture && (
+          {!selectedFuture && hasFloor && (
             <span
               className={clsx(
                 "text-xs font-body px-2.5 py-1 rounded-full border shrink-0",
@@ -158,14 +160,16 @@ export function CalendarView({ h }: { h: ReturnType<typeof useHabits> }) {
 
         {selectedFuture ? (
           <p className="text-sm text-muted">{t("habits.calFutureHint")}</p>
+        ) : editHabits.length === 0 ? (
+          <p className="text-sm text-muted">{t("habits.noDailyHabits")}</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {[...DAILY_HABITS, ...WEEKLY_HABITS].map((hb) => (
+            {editHabits.map((hb) => (
               <HabitCheckbox
                 key={hb.key}
-                label={label(hb)}
+                label={hb.label}
                 checked={selectedValues[hb.key] === true}
-                accent={(FLOOR_KEYS as readonly string[]).includes(hb.key)}
+                accent={hb.is_floor}
                 disabled={loading}
                 onToggle={(next) => void toggle(selected, hb.key, next)}
               />

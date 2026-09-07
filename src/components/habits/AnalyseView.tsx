@@ -4,7 +4,6 @@ import clsx from "clsx";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card } from "@/components/ui/Card";
 import type { useHabits } from "@/hooks/useHabits";
-import { DAILY_HABITS, WEEKLY_HABITS, type HabitDef } from "@/lib/habits";
 import { monthSummary, recentWeekSummaries, bestFloorStreakLastN, type Adherence } from "@/lib/habitStats";
 
 const WEEKS_SHOWN = 8;
@@ -14,11 +13,7 @@ function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-/**
- * Traffic-light classes for an adherence rate against the 80% goal: green at/above
- * goal, gold in the mid band, red when it's slipping. One source of truth so the
- * trend bars, adherence bars and their number labels all agree on the colour.
- */
+/** Traffic-light classes for a rate against the 80% goal. One source of truth for chart + bars + labels. */
 function rateClasses(rate: number): { bar: string; text: string } {
   if (rate >= GOAL) return { bar: "bg-win", text: "text-win" };
   if (rate >= 0.5) return { bar: "bg-gold", text: "text-gold" };
@@ -50,47 +45,48 @@ function AdherenceRow({ label, a, targetBadge }: { label: string; a: Adherence; 
 /** Month totals, the weekly floor trend (the zig-zag), and per-habit adherence. */
 export function AnalyseView({ h }: { h: ReturnType<typeof useHabits> }) {
   const { t, i18n } = useTranslation();
-  const { today, daysByDate } = h;
+  const { today, daysByDate, dailyKeys, floorKeys, weeklyDefs, weeklyHabits, dailyHabits, hasFloor } = h;
+
+  const labelOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const hb of [...dailyHabits, ...weeklyHabits]) m.set(hb.key, hb.label);
+    return (key: string) => m.get(key) ?? key;
+  }, [dailyHabits, weeklyHabits]);
 
   const now = useMemo(() => new Date(today + "T00:00:00"), [today]);
   const month = useMemo(
-    () => monthSummary(daysByDate, now.getFullYear(), now.getMonth(), today),
-    [daysByDate, now, today]
+    () => monthSummary(daysByDate, now.getFullYear(), now.getMonth(), today, dailyKeys, floorKeys),
+    [daysByDate, now, today, dailyKeys, floorKeys]
   );
   const monthLabel = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { month: "long", year: "numeric" }).format(now),
     [i18n.language, now]
   );
-  // Oldest → newest so the trend reads left-to-right in time; the last one is the
-  // current (still-running) week.
-  const weeks = useMemo(() => recentWeekSummaries(daysByDate, today, WEEKS_SHOWN), [daysByDate, today]);
+  // Oldest → newest so the trend reads left-to-right in time; the last one is the current (running) week.
+  const weeks = useMemo(
+    () => recentWeekSummaries(daysByDate, today, WEEKS_SHOWN, floorKeys, weeklyDefs),
+    [daysByDate, today, floorKeys, weeklyDefs]
+  );
   const bestStreak = useMemo(
-    () => bestFloorStreakLastN(daysByDate, today, Math.max(1, month.daysCounted)),
-    [daysByDate, today, month.daysCounted]
+    () => bestFloorStreakLastN(daysByDate, today, Math.max(1, month.daysCounted), floorKeys),
+    [daysByDate, today, month.daysCounted, floorKeys]
   );
 
-  // Weekly-target adherence is only fair over *completed* weeks — a still-running
-  // week hasn't had the chance to hit its target yet.
+  // Weekly-target adherence is only fair over *completed* weeks — a still-running week can't have hit its target yet.
   const completedWeeks = useMemo(() => weeks.filter((w) => w.daysCounted >= 7), [weeks]);
   const weeklyAdherence: Adherence[] = useMemo(
     () =>
-      WEEKLY_HABITS.map((hb) => {
+      weeklyHabits.map((hb) => {
         const total = completedWeeks.length;
         const done = completedWeeks.filter((w) => w.weekly.find((x) => x.key === hb.key)?.reached).length;
         return { key: hb.key, done, total, rate: total ? done / total : 0 };
       }),
-    [completedWeeks]
+    [completedWeeks, weeklyHabits]
   );
 
-  const keystone = month.daily.find((a) => a.key === "keystone");
-  const label = (key: string) => {
-    const def = [...DAILY_HABITS, ...WEEKLY_HABITS].find((hb: HabitDef) => hb.key === key);
-    return def ? t(def.labelKey, def.label) : key;
-  };
   const weekLabel = (week: number) => t("habits.anWeekLabel", { week });
 
-  const noData =
-    month.daysCounted === 0 && weeks.every((w) => w.floorDays === 0 && w.keystoneDays === 0);
+  const noData = month.daysCounted === 0 && weeks.every((w) => w.floorDays === 0);
 
   if (noData) {
     return (
@@ -107,103 +103,99 @@ export function AnalyseView({ h }: { h: ReturnType<typeof useHabits> }) {
         <h2 className="font-display text-xl italic text-ink capitalize">
           {t("habits.anMonthTitle")} · {monthLabel}
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard label={t("habits.anFloorRate")} value={pct(month.floor.rate)} tone={month.floor.rate >= GOAL ? "up" : "neutral"} compact />
-          <StatCard label={t("habits.anKeystoneRate")} value={keystone ? pct(keystone.rate) : "—"} tone={keystone && keystone.rate >= GOAL ? "up" : "neutral"} compact />
           <StatCard label={t("habits.anFloorDays")} value={`${month.floorDays}/${month.daysCounted}`} compact />
           <StatCard label={t("habits.anBestStreak")} value={t("habits.days", { count: bestStreak })} compact />
         </div>
+        {!hasFloor && <p className="text-xs text-muted">{t("habits.noFloorHint")}</p>}
       </section>
 
       {/* Weekly floor trend — the hero. The zig-zag (strong weeks then a slide) reads at a glance. */}
-      <Card className="flex flex-col gap-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anTrendTitle")}</p>
-          <span className="font-mono text-[10px] text-gold/80">{t("habits.anGoalLabel")} {pct(GOAL)}</span>
-        </div>
-
-        <div className="relative h-44 border-b border-border">
-          {/* 80% goal line */}
-          <div className="absolute inset-x-0 border-t border-dashed border-gold/40" style={{ bottom: pct(GOAL) }} />
-          {/* Bars */}
-          <div className="absolute inset-0 flex items-end gap-1.5 sm:gap-2">
-            {weeks.map((w, i) => {
-              const rate = w.daysCounted ? w.floorDays / w.daysCounted : 0;
-              const isCurrent = i === weeks.length - 1;
-              return (
-                <div
-                  key={`${w.jaar}-${w.week}`}
-                  className="flex-1 flex flex-col justify-end h-full min-w-0"
-                  title={`${weekLabel(w.week)} — ${w.floorDays}/${w.daysCounted} (${pct(rate)})`}
-                >
-                  <div
-                    className={clsx(
-                      "w-full rounded-t-md transition-[height]",
-                      rateClasses(rate).bar,
-                      isCurrent && "ring-1 ring-inset ring-ink/15"
-                    )}
-                    style={{ height: `${Math.max(rate * 100, 2)}%` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Week axis */}
-        <div className="flex gap-1.5 sm:gap-2">
-          {weeks.map((w, i) => {
-            const isCurrent = i === weeks.length - 1;
-            return (
-              <span
-                key={`${w.jaar}-${w.week}`}
-                className={clsx("flex-1 text-center text-[10px] font-mono truncate min-w-0", isCurrent ? "text-ink" : "text-muted")}
-              >
-                {w.week}
-              </span>
-            );
-          })}
-        </div>
-
-        <p className="text-xs text-muted">{t("habits.anWeekHint")}</p>
-      </Card>
-
-      {/* Per-habit adherence — daily habits (this month) and weekly targets (completed weeks) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {hasFloor && (
         <Card className="flex flex-col gap-4">
-          <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anDailyTitle")}</p>
-          <div className="flex flex-col gap-3">
-            {month.daily.map((a) => (
-              <AdherenceRow key={a.key} label={label(a.key)} a={a} />
-            ))}
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anTrendTitle")}</p>
+            <span className="font-mono text-[10px] text-gold/80">{t("habits.anGoalLabel")} {pct(GOAL)}</span>
           </div>
-        </Card>
 
-        <Card className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anWeeklyTitle")}</p>
-            {completedWeeks.length > 0 && (
-              <span className="font-mono text-[10px] text-muted">{t("habits.anOverWeeks", { count: completedWeeks.length })}</span>
-            )}
-          </div>
-          {completedWeeks.length === 0 ? (
-            <p className="text-sm text-muted">{t("habits.anNoCompletedWeeks")}</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {weeklyAdherence.map((a) => {
-                const def = WEEKLY_HABITS.find((hb) => hb.key === a.key);
+          <div className="relative h-44 border-b border-border">
+            <div className="absolute inset-x-0 border-t border-dashed border-gold/40" style={{ bottom: pct(GOAL) }} />
+            <div className="absolute inset-0 flex items-end gap-1.5 sm:gap-2">
+              {weeks.map((w, i) => {
+                const rate = w.daysCounted ? w.floorDays / w.daysCounted : 0;
+                const isCurrent = i === weeks.length - 1;
                 return (
-                  <AdherenceRow
-                    key={a.key}
-                    label={label(a.key)}
-                    a={a}
-                    targetBadge={def?.target ? t("habits.anPerWeek", { count: def.target }) : undefined}
-                  />
+                  <div
+                    key={`${w.jaar}-${w.week}`}
+                    className="flex-1 flex flex-col justify-end h-full min-w-0"
+                    title={`${weekLabel(w.week)} — ${w.floorDays}/${w.daysCounted} (${pct(rate)})`}
+                  >
+                    <div
+                      className={clsx("w-full rounded-t-md transition-[height]", rateClasses(rate).bar, isCurrent && "ring-1 ring-inset ring-ink/15")}
+                      style={{ height: `${Math.max(rate * 100, 2)}%` }}
+                    />
+                  </div>
                 );
               })}
             </div>
-          )}
+          </div>
+
+          <div className="flex gap-1.5 sm:gap-2">
+            {weeks.map((w, i) => (
+              <span
+                key={`${w.jaar}-${w.week}`}
+                className={clsx("flex-1 text-center text-[10px] font-mono truncate min-w-0", i === weeks.length - 1 ? "text-ink" : "text-muted")}
+              >
+                {w.week}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-xs text-muted">{t("habits.anWeekHint")}</p>
         </Card>
+      )}
+
+      {/* Per-habit adherence — daily habits (this month) and weekly targets (completed weeks) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {dailyHabits.length > 0 && (
+          <Card className="flex flex-col gap-4">
+            <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anDailyTitle")}</p>
+            <div className="flex flex-col gap-3">
+              {month.daily.map((a) => (
+                <AdherenceRow key={a.key} label={labelOf(a.key)} a={a} />
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {weeklyHabits.length > 0 && (
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="font-body text-xs uppercase tracking-wider text-muted">{t("habits.anWeeklyTitle")}</p>
+              {completedWeeks.length > 0 && (
+                <span className="font-mono text-[10px] text-muted">{t("habits.anOverWeeks", { count: completedWeeks.length })}</span>
+              )}
+            </div>
+            {completedWeeks.length === 0 ? (
+              <p className="text-sm text-muted">{t("habits.anNoCompletedWeeks")}</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {weeklyAdherence.map((a) => {
+                  const def = weeklyHabits.find((hb) => hb.key === a.key);
+                  return (
+                    <AdherenceRow
+                      key={a.key}
+                      label={labelOf(a.key)}
+                      a={a}
+                      targetBadge={def?.target ? t("habits.anPerWeek", { count: def.target }) : undefined}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     </div>
   );
