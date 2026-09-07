@@ -35,6 +35,7 @@
     "reviews": "Reviews",
     "contract": "Contract",
     "habits": "Habits",
+    "dailyJournal": "Dagboek",
     "accounts": "Accounts",
     "calendar": "Economic Calendar",
     "lotSize": "Lot Size Calculator (Beta)",
@@ -699,6 +700,22 @@
       "vriendin": "Intentionele avond met mijn partner",
       "mama": "Mama bellen"
     }
+  },
+  "dailyJournal": {
+    "subtitle": "Een korte notitie over je dag. Schrijf, bewaar en kijk altijd terug.",
+    "dateLabel": "Dag",
+    "todayBadge": "Vandaag",
+    "writeLabel": "Hoe was je dag?",
+    "placeholder": "Hoe je je voelde, wat je zag in de markt, wat morgen beter kan…",
+    "save": "Opslaan",
+    "saved": "Opgeslagen",
+    "saveFailed": "Kon de notitie niet opslaan",
+    "delete": "Verwijderen",
+    "deleteConfirm": "Notitie van {{date}} verwijderen?",
+    "deleteFailed": "Kon de notitie niet verwijderen",
+    "pastHeading": "Eerdere dagen",
+    "noEntries": "Nog geen notities. Schrijf links je eerste.",
+    "aiPlanned": "AI-review van je notities (wekelijks & maandelijks) staat gepland voor een latere update."
   },
   "reviews": {
     "newReview": "Nieuwe review",

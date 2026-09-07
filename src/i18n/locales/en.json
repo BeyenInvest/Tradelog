@@ -35,6 +35,7 @@
     "reviews": "Reviews",
     "contract": "Contract",
     "habits": "Habits",
+    "dailyJournal": "Daily Journal",
     "accounts": "Accounts",
     "calendar": "Economic Calendar",
     "lotSize": "Lot Size Calculator (Beta)",
@@ -699,6 +700,22 @@
       "vriendin": "Intentional evening with my partner",
       "mama": "Call mum"
     }
+  },
+  "dailyJournal": {
+    "subtitle": "A short note about your day. Write, save, and look back anytime.",
+    "dateLabel": "Day",
+    "todayBadge": "Today",
+    "writeLabel": "How was your day?",
+    "placeholder": "How you felt, what you saw in the market, what to do better tomorrow…",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Could not save the entry",
+    "delete": "Delete",
+    "deleteConfirm": "Delete the entry for {{date}}?",
+    "deleteFailed": "Could not delete the entry",
+    "pastHeading": "Earlier days",
+    "noEntries": "No entries yet. Write your first one on the left.",
+    "aiPlanned": "AI review of your entries (weekly & monthly) is planned for a later update."
   },
   "reviews": {
     "newReview": "New review",

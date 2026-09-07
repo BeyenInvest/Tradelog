@@ -186,6 +186,22 @@ export interface PeriodicReview {
 
 export type PeriodicReviewInput = Omit<PeriodicReview, "id" | "user_id" | "methodology_id" | "created_at" | "updated_at">;
 
+/**
+ * A short free-text note about one calendar day (the dagboek). Deliberately
+ * GLOBAL per user — no methodology_id — so the same daily notes stay visible
+ * across every journal switch (0055), unlike trades/reviews which are per-journal.
+ * One row per (user_id, entry_date); the app upserts on that pair.
+ */
+export interface DailyJournalEntry {
+  id: string;
+  user_id: string;
+  /** The calendar day this note is about, ISO `YYYY-MM-DD` (a Postgres `date`). */
+  entry_date: string;
+  content: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Lifecycle of a trade contract: signed & running, signed & wrapped up, or a deliberately skipped setup. */
 export type TradeContractStatus = "open" | "closed" | "missed";
 

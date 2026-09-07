@@ -24,6 +24,7 @@ const ProjectDashboardPage = lazy(() => import("@/pages/ProjectDashboardPage"));
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage"));
 const ContractPage = lazy(() => import("@/pages/ContractPage"));
 const HabitsPage = lazy(() => import("@/pages/HabitsPage"));
+const DailyJournalPage = lazy(() => import("@/pages/DailyJournalPage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
 const EconomicCalendarPage = lazy(() => import("@/pages/EconomicCalendarPage"));
 const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage"));
@@ -137,6 +138,15 @@ export function AppRouter() {
           element={
             <BetaRoute>
               <HabitsPage />
+            </BetaRoute>
+          }
+        />
+        {/* Daily journal (dagboek) — sits under Habits, same owner-only gate (0055). */}
+        <Route
+          path="/daily"
+          element={
+            <BetaRoute>
+              <DailyJournalPage />
             </BetaRoute>
           }
         />
