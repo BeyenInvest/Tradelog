@@ -18,11 +18,11 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 | Blok | Naam | Model | Effort | Status |
 |---|---|---|---|---|
 | A | De grote schoonmaak (integratie) | **Fable** | 1 dag | ☑ 2026-09-09 |
-| B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ☐ |
-| C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ☐ |
-| D | Zichtbare motor-poets | **Fable** | ½ dag | ☐ |
-| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☐ |
-| F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☐ |
+| B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ◐ code ☑ 2026-09-10 · owner-stappen open (B2-B5 + required-check) |
+| C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ◐ code ☑ 2026-09-10 · owner: 0057 draaien + CA + beta-SQL (C7 met B3) |
+| D | Zichtbare motor-poets | **Fable** | ½ dag | ☑ 2026-09-10 |
+| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☐ (bewust overgeslagen door Fable-sessie — model-regel) |
+| F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☑ 2026-09-10 (PA2 → H; vitest-advisory → H) |
 | G | Launch-week (B6) | owner + **Opus** | 2–3 dagen owner-werk | ☐ |
 | H | Post-launch (pas ná 2–4 weken echte gebruikers) | per item | — | ☐ |
 
