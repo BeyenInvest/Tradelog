@@ -136,11 +136,20 @@ export function useJournals() {
       headCount("prop_accounts"),
       headCount("share_links"),
     ]);
+    // Hard falen op élke count-fout (C-R2-4): een mislukte count die stil naar 0
+    // degradeert laat een gevuld journal leeg lijken — en dan waait de
+    // delete-guard eroverheen en raken de trades wees. Beter geen delete-dialog
+    // dan een verkeerde.
+    const count = (r: { count: number | null; error: { message: string } | null }): number => {
+      if (r.error) throw new Error(r.error.message);
+      if (r.count === null) throw new Error("count unavailable");
+      return r.count;
+    };
     return {
-      trades: tr.count ?? 0,
-      reviews: (wr.count ?? 0) + (pr.count ?? 0),
-      accounts: acc.count ?? 0,
-      shareLinks: sl.count ?? 0,
+      trades: count(tr),
+      reviews: count(wr) + count(pr),
+      accounts: count(acc),
+      shareLinks: count(sl),
     };
   }, []);
 

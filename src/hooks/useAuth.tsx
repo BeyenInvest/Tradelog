@@ -57,13 +57,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Owner accounts that always get the beta surface, regardless of the profiles.beta_features flag.
- * Keeps in-development features visible to the owner while staying hidden from the live users,
- * without needing a DB flip. Compared case-insensitively against the signed-in email.
- */
-const OWNER_BETA_EMAILS = ["superrrdun@gmail.com"];
-
-/**
  * The profile is load-bearing (active journal, role, display prefs) — a failed
  * fetch is FATAL for the app shell, not something to render past (audit blocker
  * N1; the old "non-fatal — only role gating" comment predated multi-journal).
@@ -194,10 +187,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isAdmin: profile?.role === "admin",
         hideFase: profile?.hide_fase ?? false,
-        betaFeatures:
-          (profile?.beta_features ?? false) ||
-          profile?.role === "admin" ||
-          OWNER_BETA_EMAILS.includes((session?.user.email ?? "").toLowerCase()),
+        // De vroegere OWNER_BETA_EMAILS-hardcode is verwijderd (fixplan C6): het
+        // owner-e-mailadres hoort niet in de publieke bundle. De owner heeft nu
+        // gewoon profiles.beta_features = true in de DB (en is admin).
+        betaFeatures: (profile?.beta_features ?? false) || profile?.role === "admin",
         resultUnit: profile?.result_unit ?? "percent",
         loading,
         profileError,

@@ -1,6 +1,12 @@
 -- =========================================================
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
+--
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0057 (gesynct in fixplan
+-- blok C, 2026-09-09). ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
+-- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
+-- commit bij. Migratienummers nooit hergebruiken. (Historische voetnoot: 0020
+-- bestaat dubbel — twee bestanden, beide gedraaid; 0034 bestaat niet.)
 -- =========================================================
 create extension if not exists pgcrypto;
 
@@ -77,8 +83,10 @@ create table weekly_reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   -- Which journal this review belongs to (per-journal isolation, cyclus 3b). Nullable
-  -- + on delete set null, mirroring trades.methodology_id.
-  methodology_id uuid references methodologies(id) on delete set null,
+  -- + on delete set null, mirroring trades.methodology_id. The FK constraint is
+  -- added AFTER the methodologies block below (fresh-bootstrap order, fixplan C1/W1)
+  -- — an inline REFERENCES here would fail: methodologies doesn't exist yet.
+  methodology_id uuid,
   week_nummer integer not null check (week_nummer between 1 and 53),
   jaar integer not null check (jaar between 2000 and 2100),
   titel text,
@@ -107,7 +115,8 @@ create table periodic_reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   -- Which journal this review belongs to (per-journal isolation, cyclus 3b).
-  methodology_id uuid references methodologies(id) on delete set null,
+  -- FK added after the methodologies block (see weekly_reviews).
+  methodology_id uuid,
   period_type period_type_enum not null,
   jaar integer not null check (jaar between 2000 and 2100),
   periode_nummer integer, -- 1-12 for month, 1-4 for quarter, null for year
@@ -118,6 +127,10 @@ create table periodic_reviews (
   acties text[] not null default '{}',
   takeaway text,
   overall_comment text,
+  -- Vrije sub-periode-recap (maanden binnen een kwartaal, kwartalen binnen een
+  -- jaar — zie 0007). get_shared_review selecteert deze kolom, dus zonder haar
+  -- faalt élke periodieke review-save én de review-share op een verse install.
+  periode_overzicht text,
   -- Custom review-section values (Fase N5, 0048) — see weekly_reviews.content.
   content jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
@@ -143,7 +156,8 @@ create unique index periodic_reviews_year_unique
 create table trade_contracts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  methodology_id uuid references methodologies(id) on delete set null,
+  -- FK added after the methodologies block (see weekly_reviews).
+  methodology_id uuid,
   created_at timestamptz not null default now(),
   signed_at timestamptz,
   instrument text,
@@ -158,6 +172,60 @@ create table trade_contracts (
 );
 create index idx_trade_contracts_user on trade_contracts(user_id);
 create index idx_trade_contracts_methodology on trade_contracts(methodology_id);
+
+-- ---------- HABITS (0054 + 0056 — performance-laag naast het journal) ----------
+-- Life-level, deliberately GLOBAL per user (no methodology_id): habits and the
+-- daily journal below belong to the person, not to whichever trading book is
+-- active. A conscious exception to the per-journal isolation of trades/reviews.
+-- User-built habit definitions (0056). habit_days.values stays keyed by `key`,
+-- so tick history survives edits; new users get no rows → a blank builder page.
+-- (The 0056 seed for pre-existing habit_days users is prod-only backfill — a
+-- fresh install has no habit_days and seeds nothing.)
+create table habits (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Stable identifier stored in habit_days.values; unique per user.
+  key text not null,
+  label text not null,
+  tier text not null check (tier in ('daily', 'weekly')),
+  target integer check (target is null or target > 0), -- only meaningful for weekly
+  is_floor boolean not null default false,             -- part of the daily non-negotiable floor
+  sort_order integer not null default 0,
+  archived boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, key)
+);
+create index idx_habits_user_order on habits(user_id, sort_order);
+
+-- One row per (user, day) holds the habits completed that day: `{ [habitKey]: true }`.
+-- No updated_at (the row is upserted in place per day) → no set_updated_at trigger.
+create table habit_days (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  day date not null,
+  values jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (user_id, day)
+);
+create index idx_habit_days_user_day on habit_days(user_id, day);
+
+-- ---------- DAILY JOURNAL / DAGBOEK (0055) ----------
+-- A short free-text note per calendar day, next to the Habits tracker. Global
+-- per user (see the habits comment above). One note per day, edited in place.
+create table daily_journal_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  entry_date date not null,
+  content text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index daily_journal_entries_user_date_unique
+  on daily_journal_entries(user_id, entry_date);
+-- List/browse is always "my entries, newest day first".
+create index idx_daily_journal_entries_user_date
+  on daily_journal_entries(user_id, entry_date desc);
 
 -- ---------- TRADES ----------
 create table trades (
@@ -268,7 +336,8 @@ create table prop_accounts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   -- Which journal this account belongs to (per-journal isolation, cyclus 3b).
-  methodology_id uuid references methodologies(id) on delete set null,
+  -- FK added after the methodologies block (see weekly_reviews).
+  methodology_id uuid,
   naam text not null,
   account_size numeric(12,2) not null,
   fase prop_fase_enum not null default 'Phase 1',
@@ -563,6 +632,64 @@ where parent.methodology_id = child.methodology_id
     '00000000-0000-4000-8000-000000000042'
   );
 
+-- Render-time label translation backfill (0047 §3/§4, fixplan C1/W10): the seed
+-- VALUES above don't carry label_key/group_key, so stamp them here for every
+-- field whose frozen label exactly matches a catalogue label — otherwise a fresh
+-- install shows frozen NL labels in the EN UI (share view, preset preview).
+-- Idempotent and catalogue-matches only, verbatim from 0047.
+update methodology_fields f
+set label_key = f.field_key
+from (values
+  ('setup',            'Setup'),
+  ('timeframe',        'Timeframe'),
+  ('market_condition', 'Marktconditie'),
+  ('market_condition', 'Market condition'),
+  ('quality',          'Setup-kwaliteit'),
+  ('quality',          'Setup quality'),
+  ('direction_note',   'Richting'),
+  ('direction_note',   'Direction'),
+  ('session',          'Sessie'),
+  ('session',          'Session'),
+  ('news',             'High-impact nieuws?'),
+  ('news',             'High-impact news?'),
+  ('sector',           'Sector'),
+  ('market_cap',       'Market cap'),
+  ('catalyst',         'Katalysator'),
+  ('catalyst',         'Catalyst'),
+  ('contracts',        'Aantal contracten'),
+  ('contracts',        'Contracts'),
+  ('contract_type',    'Contracttype'),
+  ('contract_type',    'Contract type'),
+  ('hours',            'Handelsuren'),
+  ('hours',            'Trading hours'),
+  ('market_type',      'Markttype'),
+  ('market_type',      'Market type'),
+  ('leverage',         'Hefboom (x)'),
+  ('leverage',         'Leverage (x)'),
+  ('market_regime',    'Marktregime'),
+  ('market_regime',    'Market regime'),
+  ('targets',          'Targets (R)'),
+  ('emotion',          'Emotie'),
+  ('emotion',          'Emotion'),
+  ('mistake',          'Fout'),
+  ('mistake',          'Mistake'),
+  ('followed_plan',    'Volgde ik mijn plan?'),
+  ('followed_plan',    'Did I follow my plan?')
+) as k(field_key, written_label)
+where f.label_key is null
+  and f.field_key = k.field_key
+  and f.label = k.written_label;
+
+update methodology_fields
+set group_key = case
+  when group_label in ('Setup & uitvoering', 'Setup & execution', 'Setup') then 'setup'
+  when group_label in ('Markt', 'Market') then 'markt'
+  when group_label in ('Mindset & discipline', 'Mindset') then 'mindset'
+end
+where group_key is null
+  and group_label in ('Setup & uitvoering', 'Setup & execution', 'Setup',
+                      'Markt', 'Market', 'Mindset & discipline', 'Mindset');
+
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
 alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
@@ -570,6 +697,20 @@ alter table trades add column custom jsonb not null default '{}'::jsonb; -- flex
 -- No column default: new users are provisioned an own empty journal by
 -- handle_new_user() (see 0025), not silently handed the Weekly Phase Method template.
 alter table profiles add column methodology_id uuid references methodologies(id) on delete set null;
+
+-- Deferred FK constraints for the tables created BEFORE the methodologies block
+-- (fresh-bootstrap order, fixplan C1/W1): their methodology_id columns are plain
+-- uuid in the CREATE TABLE and get their FK here. Constraint names match what
+-- prod got from 0030/0053's inline REFERENCES (default naming), so prod and a
+-- fresh install stay pg_dump-identical.
+alter table weekly_reviews add constraint weekly_reviews_methodology_id_fkey
+  foreign key (methodology_id) references methodologies(id) on delete set null;
+alter table periodic_reviews add constraint periodic_reviews_methodology_id_fkey
+  foreign key (methodology_id) references methodologies(id) on delete set null;
+alter table prop_accounts add constraint prop_accounts_methodology_id_fkey
+  foreign key (methodology_id) references methodologies(id) on delete set null;
+alter table trade_contracts add constraint trade_contracts_methodology_id_fkey
+  foreign key (methodology_id) references methodologies(id) on delete set null;
 
 -- Journal ownership (0044, audit blocker N1): trades.methodology_id has a plain
 -- FK, so nothing else stops a write from pointing a trade at a *system template*
@@ -604,6 +745,9 @@ create index idx_trades_user on trades(user_id);
 create index idx_trades_datum_open on trades(datum_open);
 create index idx_trades_fase on trades(fase);
 create index idx_trades_methodology on trades(methodology_id);
+-- Hoofdleespad (0052): elke journal-gescopeerde fetch filtert op
+-- (user_id, methodology_id) en sorteert/vergelijkt op datum_open.
+create index idx_trades_user_methodology_datum on trades(user_id, methodology_id, datum_open);
 create index idx_trades_pair on trades(pair);
 create index idx_trades_weekly_review on trades(weekly_review_id);
 create index idx_trades_backtest_project on trades(backtest_project_id);
@@ -636,6 +780,14 @@ create trigger trg_periodic_reviews_updated_at before update on periodic_reviews
 create trigger trg_profiles_updated_at before update on profiles
   for each row execute function set_updated_at();
 create trigger trg_methodologies_updated_at before update on methodologies
+  for each row execute function set_updated_at();
+create trigger trg_habits_updated_at before update on habits
+  for each row execute function set_updated_at();
+create trigger trg_daily_journal_entries_updated_at before update on daily_journal_entries
+  for each row execute function set_updated_at();
+-- 0057: review_sections had an updated_at column but never a trigger — every
+-- edit left it at its created_at value (meta-audit §4.2).
+create trigger trg_review_sections_updated_at before update on review_sections
   for each row execute function set_updated_at();
 
 -- ---------- render-time label translation: renaming un-freezes (see 0047) ----------
@@ -694,6 +846,10 @@ begin
 end;
 $$;
 
+-- 0036-conventie (zie delete_own_account): anon by name revoken.
+revoke execute on function compute_sessie(cc_enum, date, text) from public, anon;
+grant execute on function compute_sessie(cc_enum, date, text) to authenticated;
+
 -- Time-based sibling (0051): (date, real open time, tz) -> session, same
 -- Brussels-anchored buckets. Used when trades.tijd_open is filled in.
 create or replace function compute_sessie_at(p_datum date, p_tijd time, p_tz text)
@@ -723,6 +879,9 @@ begin
   end;
 end;
 $$;
+
+revoke execute on function compute_sessie_at(date, time, text) from public, anon;
+grant execute on function compute_sessie_at(date, time, text) to authenticated;
 
 create or replace function trades_set_sessie() returns trigger
 language plpgsql as $$
@@ -810,7 +969,10 @@ begin
 end;
 $$;
 
-revoke all on function delete_own_account() from public;
+-- 0036-conventie: Supabase default privileges granten anon EXECUTE op elke
+-- nieuwe functie — anon moet bij naam gerevoked worden, `from public` alleen
+-- laat die grant staan.
+revoke all on function delete_own_account() from public, anon;
 grant execute on function delete_own_account() to authenticated;
 
 -- ---------- admin read-only access (debugging, future coaching foundation) ----------
@@ -824,7 +986,7 @@ language sql security definer stable set search_path = public as $$
   select exists(select 1 from profiles where id = auth.uid() and role = 'admin')
 $$;
 
-revoke all on function is_admin() from public;
+revoke all on function is_admin() from public, anon;
 grant execute on function is_admin() to authenticated;
 
 -- ---------- per-project trade summaries (Fase 2, server-side aggregation) ----------
@@ -883,8 +1045,10 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  insert into methodologies (user_id, naam, is_system, asset_class, instrument_config)
-  select auth.uid(), naam, false, asset_class, instrument_config
+  -- track_exit reist mee de fork in (0057) — 0048 hercreëerde deze insert
+  -- zonder de 0050-kolom, waardoor een fork de opt-in stil verloor.
+  insert into methodologies (user_id, naam, is_system, asset_class, instrument_config, track_exit)
+  select auth.uid(), naam, false, asset_class, instrument_config, track_exit
   from methodologies where id = source_id
   returning id into new_id;
 
@@ -918,15 +1082,16 @@ begin
 end;
 $$;
 
-revoke all on function fork_methodology(uuid) from public;
+revoke all on function fork_methodology(uuid) from public, anon;
 grant execute on function fork_methodology(uuid) to authenticated;
 
 -- ---------- auto-link trade <-> weekly_review ----------
--- Two BEFORE/AFTER INSERT triggers keep the link in sync in both directions:
---   * new trade  -> find existing review for its ISO week (below)
+-- Two triggers keep the link in sync in both directions:
+--   * new/edited trade -> find existing review for its ISO week (below; since
+--     0052 an UPDATE that really changes datum_open/methodology_id re-resolves
+--     the link — M1-a: a trade edited into another week no longer sticks to the
+--     old review)
 --   * new review -> backfill existing live trades of that week (further down)
--- (edited a trade's date into another week? the link is only refreshed by the
---  manual relink action in-app — see linkTradesToReview in useWeeklyReviews.ts)
 create or replace function link_trade_to_weekly_review() returns trigger as $$
 declare
   iso_year int;
@@ -934,22 +1099,37 @@ declare
   found_id uuid;
 begin
   -- backtest_project_id is not null => project trade, never belongs to a weekly review
-  if new.weekly_review_id is null and new.backtest_project_id is null then
-    iso_year := extract(isoyear from new.datum_open);
-    iso_week := extract(week from new.datum_open);
-    select id into found_id from weekly_reviews
-      where user_id = new.user_id
-        and methodology_id is not distinct from new.methodology_id
-        and jaar = iso_year and week_nummer = iso_week
-      limit 1;
-    new.weekly_review_id := found_id;
+  if new.backtest_project_id is not null then
+    return new;
   end if;
+  if tg_op = 'INSERT' then
+    -- Ongewijzigd 0030-gedrag: een expliciet meegegeven koppeling respecteren.
+    if new.weekly_review_id is not null then
+      return new;
+    end if;
+  else
+    -- UPDATE: alleen her-resolven als de week-bepalende velden écht wijzigen —
+    -- de kolomlijst van de trigger vuurt al bij het NOEMEN van de kolom in SET
+    -- (het volle trade-formulier stuurt altijd alles mee), dus vergelijk zelf.
+    if new.datum_open is not distinct from old.datum_open
+       and new.methodology_id is not distinct from old.methodology_id then
+      return new;
+    end if;
+  end if;
+  iso_year := extract(isoyear from new.datum_open);
+  iso_week := extract(week from new.datum_open);
+  select id into found_id from weekly_reviews
+    where user_id = new.user_id
+      and methodology_id is not distinct from new.methodology_id
+      and jaar = iso_year and week_nummer = iso_week
+    limit 1;
+  new.weekly_review_id := found_id;
   return new;
 end;
 $$ language plpgsql;
 
 create trigger trg_link_trade_weekly_review
-  before insert on trades
+  before insert or update of datum_open, methodology_id on trades
   for each row execute function link_trade_to_weekly_review();
 
 -- reverse direction: a review created after its week's trades already exist
@@ -972,6 +1152,566 @@ create trigger trg_link_weekly_review_trades
   after insert on weekly_reviews
   for each row execute function link_weekly_review_to_trades();
 
+-- ---------- rename_field_option (Fase R — M5, see 0045) ----------
+-- Transactional option rename: option list + sibling show_when conditions +
+-- every stored answer in trades.custom, in ONE call. SECURITY INVOKER: every
+-- UPDATE re-checks the caller's RLS. Mirrors the client-side guards it
+-- replaced: own non-system methodology only, `fase` locked (legacy enum),
+-- enum field, old value must exist, case-insensitive collision refuses.
+create or replace function rename_field_option(p_field_id uuid, p_old_value text, p_new_value text)
+returns integer
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_field methodology_fields%rowtype;
+  v_new text := btrim(p_new_value);
+  v_migrated integer := 0;
+begin
+  -- Lock the field row for the duration so two concurrent renames of the same
+  -- field serialize instead of interleaving their option-list rewrites.
+  select f.* into v_field
+  from methodology_fields f
+  join methodologies m on m.id = f.methodology_id
+  where f.id = p_field_id
+    and m.user_id = auth.uid()
+    and not m.is_system
+  for update of f;
+
+  if not found then
+    raise exception 'field not found or not editable' using errcode = 'P0002';
+  end if;
+  if v_field.field_key = 'fase' then
+    raise exception 'legacy field is locked' using errcode = '23514';
+  end if;
+  if v_field.field_type <> 'enum' or v_field.options is null or not (v_field.options ? p_old_value) then
+    raise exception 'option not found' using errcode = 'P0002';
+  end if;
+  if v_new = '' or v_new = p_old_value then
+    return 0;
+  end if;
+  if exists (
+    select 1 from jsonb_array_elements_text(v_field.options) as o(val)
+    where o.val <> p_old_value and lower(o.val) = lower(v_new)
+  ) then
+    raise exception 'option already exists' using errcode = '23505';
+  end if;
+
+  -- 1. The option list itself, position preserved.
+  update methodology_fields
+  set options = (
+    select jsonb_agg(case when o.val = p_old_value then to_jsonb(v_new) else to_jsonb(o.val) end order by o.ord)
+    from jsonb_array_elements_text(v_field.options) with ordinality as o(val, ord)
+  )
+  where id = p_field_id;
+
+  -- 2. Sibling fields whose show_when condition references the old value —
+  -- without this, a rename would silently break conditional visibility.
+  update methodology_fields f
+  set show_when_values = (
+    select jsonb_agg(case when s.val = p_old_value then to_jsonb(v_new) else to_jsonb(s.val) end order by s.ord)
+    from jsonb_array_elements_text(f.show_when_values) with ordinality as s(val, ord)
+  )
+  where f.show_when_field_id = p_field_id
+    and f.show_when_values ? p_old_value;
+
+  -- 3. Migrate stored answers: every trade of this journal holding the old
+  -- value in its custom bag. One statement — no 1000-row pagination, no chunks.
+  update trades t
+  set custom = jsonb_set(t.custom, array[v_field.field_key], to_jsonb(v_new))
+  where t.user_id = auth.uid()
+    and t.methodology_id = v_field.methodology_id
+    and t.custom ->> v_field.field_key = p_old_value;
+  get diagnostics v_migrated = row_count;
+
+  return v_migrated;
+end;
+$$;
+
+revoke all on function rename_field_option(uuid, text, text) from public, anon;
+grant execute on function rename_field_option(uuid, text, text) to authenticated;
+
+-- ---------- create_journal (M4-a, see 0052) ----------
+-- Journal-aanmaak (methodology + velden + activatie) als één transactie i.p.v.
+-- 3 losse client-writes — een netwerkfout halverwege laat geen orphan-journal
+-- of duplicaat meer achter. SECURITY INVOKER zodat alle RLS gewoon geldt.
+-- p_fields: jsonb-array van veld-objecten in palet-volgorde (FieldInput-shape,
+-- useMethodologyEditor.ts); sort_order = arraypositie (1-based).
+create or replace function create_journal(
+  p_name text,
+  p_fields jsonb,
+  p_asset_class text,
+  p_instrument_config jsonb,
+  p_track_exit boolean,
+  p_reuse_active_if_empty boolean
+) returns uuid
+language plpgsql
+security invoker
+as $$
+declare
+  uid uuid := auth.uid();
+  target_id uuid;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  -- Onboarding/empty-state: hergebruik het actieve journal als dat je eigen,
+  -- nog lege journal is (zelfde reuseActiveIfEmpty-regel die de client had) —
+  -- zo blijft er geen leeg trigger-journal als wees achter.
+  if p_reuse_active_if_empty then
+    select m.id into target_id
+    from profiles p
+    join methodologies m on m.id = p.methodology_id
+    where p.id = uid
+      and m.user_id = uid
+      and not m.is_system
+      and not exists (select 1 from methodology_fields f where f.methodology_id = m.id);
+  end if;
+
+  if target_id is not null then
+    update methodologies
+       set naam = p_name,
+           asset_class = p_asset_class,
+           instrument_config = p_instrument_config,
+           track_exit = p_track_exit
+     where id = target_id;
+  else
+    insert into methodologies (user_id, naam, is_system, asset_class, instrument_config, track_exit)
+    values (uid, p_name, false, p_asset_class, p_instrument_config, p_track_exit)
+    returning id into target_id;
+  end if;
+
+  insert into methodology_fields
+    (methodology_id, field_key, label, label_key, field_type, options,
+     required, group_label, group_key, show_when_field_id, show_when_values, sort_order)
+  select target_id,
+         ord.f->>'field_key',
+         ord.f->>'label',
+         ord.f->>'label_key',
+         ord.f->>'field_type',
+         nullif(ord.f->'options', 'null'::jsonb),
+         coalesce((ord.f->>'required')::boolean, false),
+         ord.f->>'group_label',
+         ord.f->>'group_key',
+         (ord.f->>'show_when_field_id')::uuid,
+         nullif(ord.f->'show_when_values', 'null'::jsonb),
+         ord.n::int
+  from jsonb_array_elements(coalesce(p_fields, '[]'::jsonb)) with ordinality as ord(f, n);
+
+  update profiles set methodology_id = target_id where id = uid;
+
+  return target_id;
+end;
+$$;
+
+revoke execute on function create_journal(text, jsonb, text, jsonb, boolean, boolean) from public, anon;
+grant execute on function create_journal(text, jsonb, text, jsonb, boolean, boolean) to authenticated;
+
+-- ---------- SHARE-LAAG (Fase M — 0040/0042/0043/0047/0048/0052-eindstand) ----------
+-- ⚠️ BINDENDE CONVENTIE (0052, tweede regressie in deze familie): een
+-- `create or replace` op een share-RPC vertrekt ALTIJD van de body uit de
+-- LAATSTE migratie die de functie definieerde — nooit van een oudere versie.
+-- 0048 hercreëerde get_shared_review vanaf de 0042-body en liet daarmee het
+-- `and not t.is_open`-filter uit 0043 vallen, waardoor een anonieme
+-- link-houder de lopende posities van de owner zag.
+--
+-- token = capability: wie de link heeft, ziet het journal/de review. Owner
+-- beheert eigen rijen via RLS; anon leest uitsluitend via de SECURITY DEFINER
+-- RPC's — bewust géén RLS-policy op trades voor anon (kleinste oppervlak).
+create table share_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  -- Welk journal gedeeld wordt. null = het legacy/ongescopete journal
+  -- (trades.methodology_id is null), zelfde semantiek als useTrades.
+  methodology_id uuid references methodologies(id) on delete cascade,
+  scope text not null default 'journal' check (scope in ('journal', 'review')),
+  -- 2× gen_random_uuid() zonder streepjes = 64 hex-tekens (~244 bits entropie).
+  token text not null unique default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
+  -- null = verloopt nooit; de app zet standaard een vervaldatum (30 dagen).
+  expires_at timestamptz,
+  revoked boolean not null default false,
+  -- Review-share (0042): precies één van beide gezet bij scope 'review'. Twee
+  -- aparte FK-kolommen i.p.v. één polymorf id — echte referentiële integriteit,
+  -- en een verwijderde review trekt zijn links automatisch in.
+  weekly_review_id uuid references weekly_reviews(id) on delete cascade,
+  periodic_review_id uuid references periodic_reviews(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  constraint share_links_scope_refs_check check (
+    (scope = 'journal' and weekly_review_id is null and periodic_review_id is null)
+    or (scope = 'review'
+        and ((weekly_review_id is not null)::int + (periodic_review_id is not null)::int = 1))
+  )
+);
+
+create index idx_share_links_user_methodology on share_links(user_id, methodology_id);
+create index idx_share_links_weekly_review
+  on share_links(weekly_review_id) where weekly_review_id is not null;
+create index idx_share_links_periodic_review
+  on share_links(periodic_review_id) where periodic_review_id is not null;
+
+alter table share_links enable row level security;
+
+-- Owner beheert eigen links. De with-check eist óók dat het gedeelde
+-- journal/de review van de inserter zelf is — de kale FK wordt als table-owner
+-- gecheckt (bypasst RLS), dus zonder deze subqueries zou een geldige vreemde
+-- uuid geaccepteerd worden en via de RPC andermans data prijsgeven.
+-- NB: share_links heeft BEWUST géén admin_select-carve-out — tokens zijn
+-- capabilities; een admin die andermans tokens ziet, zou andermans shares
+-- kunnen openen. Niet "fixen".
+create policy "share_links_owner_all" on share_links
+  for all
+  using (user_id = auth.uid())
+  with check (
+    user_id = auth.uid()
+    and (
+      methodology_id is null
+      or exists (
+        select 1 from methodologies m
+        where m.id = methodology_id and m.user_id = auth.uid()
+      )
+    )
+    and (
+      weekly_review_id is null
+      or exists (
+        select 1 from weekly_reviews r
+        where r.id = weekly_review_id and r.user_id = auth.uid()
+      )
+    )
+    and (
+      periodic_review_id is null
+      or exists (
+        select 1 from periodic_reviews r
+        where r.id = periodic_review_id and r.user_id = auth.uid()
+      )
+    )
+  );
+
+revoke all on table share_links from anon;
+
+-- De ENE trade-allow-list voor alle share-RPC's (0042, eindstand 0052 incl.
+-- is_open + tijd_open). Geen user_id/import_ref; screenshot-kolommen alleen
+-- als externe URL (bucket-paden bevatten de owner-uuid en zijn voor anon toch
+-- niet te signen). Een nieuwe trades-kolom delen = een bewuste wijziging hier.
+-- Niet voor anon aanroepbaar — alleen de definer-RPC's gebruiken hem.
+create or replace function shared_trade_json(t trades)
+returns jsonb
+language sql
+stable
+as $$
+  select jsonb_build_object(
+    'id', t.id,
+    'fase', t.fase,
+    'datum_open', t.datum_open,
+    'tijd_open', t.tijd_open,
+    'datum_sluiting', t.datum_sluiting,
+    'duur_dagen', t.duur_dagen,
+    'is_open', t.is_open,
+    'pair', t.pair,
+    'instrument', t.instrument,
+    'direction', t.direction,
+    'outcome', t.outcome,
+    'resultaat_pct', t.resultaat_pct,
+    'risk_pct', t.risk_pct,
+    'trade_evaluation', t.trade_evaluation,
+    'weekly_criteria', t.weekly_criteria,
+    'weekly_kenmerk', t.weekly_kenmerk,
+    'trade_concept', t.trade_concept,
+    'entry', t.entry,
+    'cc', t.cc,
+    'sessie', t.sessie,
+    'nieuws', t.nieuws,
+    'w_confirm', t.w_confirm,
+    'd_confirm', t.d_confirm,
+    'h4_confirm', t.h4_confirm,
+    'w_screenshot', case when t.w_screenshot ~* '^https?://' then t.w_screenshot end,
+    'd_screenshot', case when t.d_screenshot ~* '^https?://' then t.d_screenshot end,
+    'h4_screenshot', case when t.h4_screenshot ~* '^https?://' then t.h4_screenshot end,
+    'h2_screenshot', case when t.h2_screenshot ~* '^https?://' then t.h2_screenshot end,
+    'extra_d_conf', t.extra_d_conf,
+    'notes', t.notes,
+    'fase1_daily_respecteert_zone', t.fase1_daily_respecteert_zone,
+    'fase1_spelers_verleden', t.fase1_spelers_verleden,
+    'fase2_daily_respecteert_zone', t.fase2_daily_respecteert_zone,
+    'fase2_structuur', t.fase2_structuur,
+    'fase3_zone_min_2_touches', t.fase3_zone_min_2_touches,
+    'fase3_engulfing_candle', t.fase3_engulfing_candle,
+    'fase3_beide', t.fase3_beide,
+    'fase3_structuur', t.fase3_structuur,
+    'fase4_weekly_bevestigingscandle', t.fase4_weekly_bevestigingscandle,
+    'weekly_review_id', t.weekly_review_id,
+    'backtest_project_id', t.backtest_project_id,
+    'methodology_id', t.methodology_id,
+    'custom', t.custom,
+    'created_at', t.created_at,
+    'updated_at', t.updated_at
+  );
+$$;
+
+revoke all on function shared_trade_json(trades) from public, anon, authenticated;
+
+-- Veld-definities van het gedeelde journal (0042, eindstand 0047 incl.
+-- label_key/group_key), voor de custom-veld-rijen in de trade-detail-modal.
+create or replace function shared_methodology_fields(mid uuid, owner_id uuid)
+returns jsonb
+language sql
+stable
+as $$
+  select coalesce(
+    (
+      select jsonb_agg(jsonb_build_object(
+        'field_key', f.field_key,
+        'label', f.label,
+        'label_key', f.label_key,
+        'field_type', f.field_type,
+        'options', to_jsonb(f.options),
+        'group_label', f.group_label,
+        'group_key', f.group_key,
+        'is_computed', f.is_computed,
+        'sort_order', f.sort_order
+      ) order by f.sort_order, f.field_key)
+      from methodology_fields f
+      join methodologies m on m.id = f.methodology_id
+      where f.methodology_id = mid and m.user_id = owner_id
+    ),
+    '[]'::jsonb
+  );
+$$;
+
+revoke all on function shared_methodology_fields(uuid, uuid) from public, anon, authenticated;
+
+-- Sectie-definities van het gedeelde journal (0048), voor de custom-secties in
+-- de gedeelde review. null journal → []; leeg = client resolvet de defaults.
+create or replace function shared_review_sections(mid uuid, owner_id uuid, kind text)
+returns jsonb
+language sql
+stable
+as $$
+  select coalesce(
+    (
+      select jsonb_agg(jsonb_build_object(
+        'section_key', s.section_key,
+        'label', s.label,
+        'label_key', s.label_key,
+        'input_type', s.input_type,
+        'sort_order', s.sort_order
+      ) order by s.sort_order, s.section_key)
+      from review_sections s
+      join methodologies m on m.id = s.methodology_id
+      where s.methodology_id = mid and m.user_id = owner_id and s.review_kind = kind
+    ),
+    '[]'::jsonb
+  );
+$$;
+
+revoke all on function shared_review_sections(uuid, uuid, text) from public, anon, authenticated;
+
+-- get_shared_journal (eindstand 0043: 0042-shape + `and not t.is_open`): het
+-- enige leespad voor een anonieme coach. SECURITY DEFINER → de body filtert
+-- strak; missed trades blijven server-side achter (domeinregel), open trades
+-- ook. Geen rij (ongeldig/ingetrokken/verlopen token) → null, geen error.
+create or replace function get_shared_journal(share_token text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'journal_name', m.naam,
+    'display_name', p.display_name,
+    'result_unit', p.result_unit,
+    'hide_fase', p.hide_fase,
+    'fields', shared_methodology_fields(l.methodology_id, l.user_id),
+    'trades', coalesce(
+      (
+        select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
+        from trades t
+        where t.user_id = l.user_id
+          and t.backtest_project_id is null
+          and t.methodology_id is not distinct from l.methodology_id
+          and t.trade_evaluation is distinct from 'Missed trade'
+          and not t.is_open
+      ),
+      '[]'::jsonb
+    )
+  )
+  from share_links l
+  join profiles p on p.id = l.user_id
+  left join methodologies m on m.id = l.methodology_id and m.user_id = l.user_id
+  where l.token = share_token
+    and l.scope = 'journal'
+    and not l.revoked
+    and (l.expires_at is null or l.expires_at > now());
+$$;
+
+revoke execute on function get_shared_journal(text) from public;
+grant execute on function get_shared_journal(text) to anon, authenticated;
+
+-- get_shared_review (eindstand 0052: 0048-body + `and not t.is_open` in BEIDE
+-- trades-subqueries). Missed trades gaan hier WEL mee — de client toont ze
+-- gebadged en houdt ze uit de stats, identiek aan de eigen review-weergave.
+create or replace function get_shared_review(share_token text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when l.weekly_review_id is not null then
+      (
+        select jsonb_build_object(
+          'kind', 'weekly',
+          'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
+          'display_name', p.display_name,
+          'result_unit', p.result_unit,
+          'hide_fase', p.hide_fase,
+          'sections', shared_review_sections(r.methodology_id, l.user_id, 'weekly'),
+          'review', jsonb_build_object(
+            'id', r.id,
+            'week_nummer', r.week_nummer,
+            'jaar', r.jaar,
+            'titel', r.titel,
+            'verhalen', r.verhalen,
+            'technisch', r.technisch,
+            'mentaal_owner', r.mentaal_owner,
+            'mentaal_trader', r.mentaal_trader,
+            'acties', to_jsonb(r.acties),
+            'takeaway', r.takeaway,
+            'overall_comment', r.overall_comment,
+            'content', r.content
+          ),
+          'trades', coalesce(
+            (
+              select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
+              from trades t
+              where t.user_id = l.user_id
+                and t.weekly_review_id = r.id
+                and t.backtest_project_id is null
+                and not t.is_open
+                and t.methodology_id is not distinct from r.methodology_id
+            ),
+            '[]'::jsonb
+          )
+        )
+        from weekly_reviews r
+        where r.id = l.weekly_review_id and r.user_id = l.user_id
+      )
+    else
+      (
+        select jsonb_build_object(
+          'kind', 'periodic',
+          'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
+          'display_name', p.display_name,
+          'result_unit', p.result_unit,
+          'hide_fase', p.hide_fase,
+          'sections', shared_review_sections(r.methodology_id, l.user_id, 'periodic'),
+          'review', jsonb_build_object(
+            'id', r.id,
+            'period_type', r.period_type,
+            'jaar', r.jaar,
+            'periode_nummer', r.periode_nummer,
+            'titel', r.titel,
+            'technisch', r.technisch,
+            'mentaal_owner', r.mentaal_owner,
+            'mentaal_trader', r.mentaal_trader,
+            'acties', to_jsonb(r.acties),
+            'takeaway', r.takeaway,
+            'overall_comment', r.overall_comment,
+            'periode_overzicht', r.periode_overzicht,
+            'content', r.content
+          ),
+          -- Kalenderperiode identiek aan rangeOfPeriod() client-side
+          -- (src/lib/periodRanges.ts): maand / kwartaal / jaar, inclusieve grenzen.
+          'trades', coalesce(
+            (
+              select jsonb_agg(shared_trade_json(t) order by t.datum_open, t.id)
+              from trades t
+              where t.user_id = l.user_id
+                and t.backtest_project_id is null
+                and not t.is_open
+                and t.methodology_id is not distinct from r.methodology_id
+                and t.datum_open >= case r.period_type
+                    when 'month' then make_date(r.jaar, r.periode_nummer, 1)
+                    when 'quarter' then make_date(r.jaar, (r.periode_nummer - 1) * 3 + 1, 1)
+                    else make_date(r.jaar, 1, 1)
+                  end
+                and t.datum_open <= case r.period_type
+                    when 'month' then (make_date(r.jaar, r.periode_nummer, 1) + interval '1 month - 1 day')::date
+                    when 'quarter' then (make_date(r.jaar, (r.periode_nummer - 1) * 3 + 1, 1) + interval '3 months - 1 day')::date
+                    else make_date(r.jaar, 12, 31)
+                  end
+            ),
+            '[]'::jsonb
+          )
+        )
+        from periodic_reviews r
+        where r.id = l.periodic_review_id and r.user_id = l.user_id
+      )
+  end
+  from share_links l
+  join profiles p on p.id = l.user_id
+  where l.token = share_token
+    and l.scope = 'review'
+    and not l.revoked
+    and (l.expires_at is null or l.expires_at > now());
+$$;
+
+revoke execute on function get_shared_review(text) from public;
+grant execute on function get_shared_review(text) to anon, authenticated;
+
+-- ---------- STORAGE: private `screenshots`-bucket (Fase K, see 0039) ----------
+-- Vereist een Supabase-omgeving (storage-schema); op een kale Postgres zonder
+-- Supabase faalt dit blok — dan weglaten. Private bucket: de app mint signed
+-- URLs on demand; delete_own_account() verwijdert de per-user prefix.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'screenshots',
+  'screenshots',
+  false,
+  5242880, -- 5 * 1024 * 1024
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+)
+on conflict (id) do update set
+  public             = excluded.public,
+  file_size_limit    = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Per-user RLS op de objects: eerste pad-segment == auth.uid(). anon krijgt
+-- geen enkele policy ("anon niets"-hygiëne).
+create policy "screenshots_select_own" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "screenshots_insert_own" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "screenshots_update_own" on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "screenshots_delete_own" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'screenshots'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 -- ---------- RLS ----------
 alter table trades enable row level security;
 alter table weekly_reviews enable row level security;
@@ -980,6 +1720,9 @@ alter table payouts enable row level security;
 alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
 alter table trade_contracts enable row level security;
+alter table habits enable row level security;
+alter table habit_days enable row level security;
+alter table daily_journal_entries enable row level security;
 alter table profiles enable row level security;
 alter table custom_options enable row level security;
 alter table methodologies enable row level security;
@@ -1066,6 +1809,12 @@ create policy "periodic_reviews_owner_all" on periodic_reviews
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "trade_contracts_owner_all" on trade_contracts
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "habits_owner_all" on habits
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "habit_days_owner_all" on habit_days
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "daily_journal_entries_owner_all" on daily_journal_entries
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "backtest_projects_owner_all" on backtest_projects
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "prop_accounts_owner_all" on prop_accounts
@@ -1091,9 +1840,86 @@ create policy "periodic_reviews_admin_select" on periodic_reviews
   for select to authenticated using (is_admin());
 create policy "trade_contracts_admin_select" on trade_contracts
   for select to authenticated using (is_admin());
+create policy "habits_admin_select" on habits
+  for select to authenticated using (is_admin());
+create policy "habit_days_admin_select" on habit_days
+  for select to authenticated using (is_admin());
+create policy "daily_journal_entries_admin_select" on daily_journal_entries
+  for select to authenticated using (is_admin());
 create policy "backtest_projects_admin_select" on backtest_projects
   for select to authenticated using (is_admin());
 create policy "prop_accounts_admin_select" on prop_accounts
   for select to authenticated using (is_admin());
 create policy "payouts_admin_select" on payouts
   for select to authenticated using (is_admin());
+
+-- ---------- MIGRATIE-REGISTRY (0057, fixplan C3) ----------
+-- scripts/run-migration.mjs registreert elke gedraaide migratie hier en weigert
+-- een tweede run van hetzelfde bestand. Geen RLS/grants voor app-rollen: dit is
+-- puur operationele metadata, alleen benaderd via de directe DB-verbinding.
+create table schema_migrations (
+  filename text primary key,
+  applied_at timestamptz not null default now()
+);
+revoke all on table schema_migrations from anon, authenticated;
+
+-- Een verse bootstrap IS de eindstand t/m 0057 — vul de registry meteen, zodat
+-- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
+insert into schema_migrations (filename) values
+  ('0001_backtest_projects.sql'),
+  ('0002_trade_evaluation.sql'),
+  ('0003_missed_trade_and_periodic_reviews.sql'),
+  ('0004_weekly_review_live_trades_only.sql'),
+  ('0005_profiles.sql'),
+  ('0006_delete_own_account.sql'),
+  ('0007_periodic_review_extra_fields.sql'),
+  ('0008_admin_role.sql'),
+  ('0009_hide_fase.sql'),
+  ('0010_custom_entries.sql'),
+  ('0011_prop_account_pnl_pct.sql'),
+  ('0012_risk_pct.sql'),
+  ('0013_prop_firm_rules.sql'),
+  ('0014_drop_tpfs.sql'),
+  ('0015_prop_account_private_type.sql'),
+  ('0016_project_trade_summaries.sql'),
+  ('0017_trade_import_ref.sql'),
+  ('0018_custom_trade_concepts.sql'),
+  ('0019_timezone_sessions.sql'),
+  ('0020_backfill_trades_on_review_insert.sql'),
+  ('0020_configurable_methodology.sql'),
+  ('0021_weekly_review_verhalen.sql'),
+  ('0022_journal_foundation.sql'),
+  ('0023_fase_as_field.sql'),
+  ('0024_fork_methodology.sql'),
+  ('0025_empty_journal_for_new_users.sql'),
+  ('0026_rename_methodology.sql'),
+  ('0027_journal_presets.sql'),
+  ('0028_scalper_presets.sql'),
+  ('0029_trade_direction.sql'),
+  ('0030_journal_scoping.sql'),
+  ('0031_fork_users_off_shared_template.sql'),
+  ('0032_trade_instrument.sql'),
+  ('0033_beta_features.sql'),
+  ('0035_neutral_journal_name.sql'),
+  ('0036_revoke_anon_execute.sql'),
+  ('0037_result_unit.sql'),
+  ('0038_revoke_anon_project_summaries.sql'),
+  ('0039_screenshots_bucket.sql'),
+  ('0040_share_links.sql'),
+  ('0041_onboarded_at.sql'),
+  ('0042_review_share_links.sql'),
+  ('0043_open_trades.sql'),
+  ('0044_audit_hardening.sql'),
+  ('0045_rename_field_option.sql'),
+  ('0046_admin_methodology_select.sql'),
+  ('0047_field_label_keys.sql'),
+  ('0048_review_sections.sql'),
+  ('0049_mae_mfe.sql'),
+  ('0050_methodology_track_exit.sql'),
+  ('0051_tijd_open.sql'),
+  ('0052_fix_review_share_open_trades.sql'),
+  ('0053_trade_contracts.sql'),
+  ('0054_habits.sql'),
+  ('0055_daily_journal.sql'),
+  ('0056_configurable_habits.sql'),
+  ('0057_registry_fork_track_exit.sql');

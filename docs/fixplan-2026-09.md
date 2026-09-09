@@ -60,13 +60,13 @@ Doel: de blinde vlek dicht — nooit meer onherstelbaar, nooit meer onzichtbaar.
 
 Doel: de DB-waarheid verankerd. Werklijst = `docs/schema-sync-werklijst-2026-09.md`, plus wat er sinds 03-09 bij kwam. Owner draait de migratie zelf (runner-werkwijze), sessie verifieert read-only.
 
-- [ ] C1. schema.sql volledig syncen t/m **0056**: FK-volgorde-fix (methodologies vóór r81/110/245), `periodic_reviews.periode_overzicht`, share-laag (share_links + 5 RPC's), `create_journal`, `rename_field_option`, screenshots-bucket + policies, 0047-seeds-backfill, composiet-index, 0036-conventie — én **habits, habit_days, daily_journal_entries** (0054–0056, ontbreken ook).
-- [ ] C2. Migratie 0057: `fork_methodology` kopieert `track_exit` (0048-body als vertrekpunt, 0052-conventie) + `review_sections.updated_at`-trigger (staat ook op prod eeuwig op insert-waarde).
-- [ ] C3. **`schema_migrations`-registry**: tabel + `run-migration.mjs` registreert elke gedraaide file en weigert dubbele runs; 0020-duplicaat documenteren. Backfill-insert voor 0001–0057 meeleveren.
-- [ ] C4. Runner-TLS: Supabase-CA meegeven + `rejectUnauthorized: true` (M2).
-- [ ] C5. `fetchCounts` hard laten falen bij count-error (C-R2-4, `useJournals.ts:130-144`) — voorkomt orphaned trades bij journal-delete.
-- [ ] C6. **Owner-e-mail uit de bundle** (`useAuth.tsx:64`): owner draait `update profiles set beta_features = true where ...` (copy-paste-klaar aanleveren), daarna `OWNER_BETA_EMAILS` verwijderen.
-- [ ] C7. Verse-bootstrap-test: schema.sql tegen een wegwerp-project draaien (combineert mooi met B3).
+- [x] C1. schema.sql volledig gesynct t/m **0056** + 0057 (2026-09-09): W1-FK-volgorde gefixt (methodology_id als kale kolom in weekly/periodic/prop_accounts **én trade_contracts** — die had hetzelfde probleem — met named-FK-constraints ná het methodologies-blok, namen = prod-default), periode_overzicht, volledige share-laag (share_links 0042-eindstand + shared_trade_json 0052 + shared_methodology_fields 0047 + shared_review_sections 0048 + get_shared_journal 0043 + get_shared_review 0052, incl. bindende share-RPC-conventie als commentaar), create_journal + rename_field_option, screenshots-bucket + 4 policies, 0047-label-backfill na de seeds, composiet-index, 0036-conventie op alle 5 functies, link_trade_to_weekly_review 0052-versie, habits/habit_days/daily_journal_entries (0054–0056) incl. RLS + triggers, header + conventie. share_links-zonder-admin-policy als bewuste keuze gedocumenteerd.
+- [x] C2. Migratie **0057** (`0057_registry_fork_track_exit.sql`) geschreven: fork_methodology + track_exit (0048-body als vertrekpunt), review_sections-updated_at-trigger, registry + backfill. ☐ **Owner draait 'm** (runner-werkwijze); daarna verifieer ik read-only.
+- [x] C3. Registry: tabel in 0057 + backfill 0001–0057 (0020-duplicaat = 2 bestandsnamen = 2 rijen, gedocumenteerd in schema.sql-header); `run-migration.mjs` weigert al-geregistreerde files (FORCE_RERUN=1 als bewuste override) en registreert elke run in dezelfde transactie.
+- [x] C4. Runner-TLS strict: verifieert tegen `supabase/prod-ca-2021.crt` (of env `SUPABASE_DB_CA`), weigert zonder CA (escape hatch `ALLOW_INSECURE_DB_TLS=1`). ☐ **Owner:** CA eenmalig downloaden — Dashboard → Project Settings → Database → SSL Certificate → opslaan als `supabase/prod-ca-2021.crt` (staat niet in git nodig; mag wel, het is een publiek certificaat).
+- [x] C5. `fetchCounts` faalt nu hard op elke count-error (geen stille `?? 0` meer).
+- [x] C6. `OWNER_BETA_EMAILS` uit `useAuth.tsx` verwijderd. ☐ **Owner draait éérst** (vóór of direct na de deploy): `update profiles set beta_features = true where email = 'superrrdun@gmail.com';`
+- [ ] C7. Verse-bootstrap-test: schema.sql tegen een wegwerp-project draaien (owner, combineert met B3). NB: het storage-blok vereist een Supabase-omgeving (staat zo gemarkeerd in schema.sql).
 
 ## Blok D — Zichtbare motor-poets · **Fable** · ½ dag 🔴-randje
 
