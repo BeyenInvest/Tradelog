@@ -43,7 +43,7 @@ Doel: er bestaat weer precies één werkelijkheid (main = prod = docs). Fable va
   - `fase-i-import` + `fase-2-scale-import` (lokaal) en oude backups (`backup/fase-2-pre-sync-20260808`, `backup/fase-b5-landing-v1/-v2`) verwijderd — alle inhoud aantoonbaar bevat in `parked/fase-i-import-v2` resp. de gemergde `fase-b5-landing`.
   - Nog door owner (classifier blokkeerde destructieve remote-acties): `git push origin --delete weekly-review-pdf-polish fase-2-scale-import backup/fase-b5-landing-v1 backup/fase-b5-landing-v2` en `git stash drop stash@{0}` (orphan `epitaxy`).
 - [x] A6. CLAUDE.md bijgewerkt (freeze-regel, "klaar = main + docs", UI-bouwstenen-regel, gating-status, Habits/Dagboek/Contract, landing); README §5 kreeg statusblok; masterplan-launch.md kop "VERVANGEN door fixplan-2026-09.md".
-- [x] A7. Alles naar main + gepusht; lint/test (420)/build groen; Vercel-deploy geverifieerd Ready.
+- [x] A7. Alles op lokale main (ff naar ec3eb07+) — lint/tsc + 420 tests + build groen; werkbranch als vangnet gepusht. Push naar origin/main door owner (classifier blokkeerde `git push origin main`); Vercel-deploy daarna als Ready verifiëren.
 
 ## Blok B — Vangrails · **Fable** (CI) + **owner** (dashboards) · 1 dag 🔴
 
