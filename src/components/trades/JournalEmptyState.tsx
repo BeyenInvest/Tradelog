@@ -13,10 +13,10 @@ interface JournalEmptyStateProps {
    */
   hasFields: boolean;
   /**
-   * Whether to offer the template picker. Gated on beta_features upstream — the
-   * multi-journal / preset UI is soft-launched, and a non-beta (legacy WPM) user
-   * always has fields anyway, so in practice only beta users reach the no-fields
-   * variant. Kept as an explicit prop so the gate lives in one place.
+   * Whether to offer the template picker. Now on for every user (un-gated at the
+   * beta launch); a legacy WPM user always has fields anyway, so in practice only
+   * a fresh journal reaches the no-fields variant. Kept as an explicit prop so the
+   * decision lives in one place.
    */
   showPresetPicker: boolean;
   /** Import is Beta — the CTA follows the same beta_features gate as the header button. */

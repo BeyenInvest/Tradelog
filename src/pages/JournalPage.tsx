@@ -10,7 +10,7 @@ import { takenTrades } from "@/lib/stats";
 /** Live market trades only — backtest project trades never appear here. */
 export default function JournalPage() {
   const { t } = useTranslation();
-  const { profile, betaFeatures } = useAuth();
+  const { profile } = useAuth();
   const { fields, loading: methLoading } = useMethodology();
   const [tab, setTab] = useState<"journal" | "analyse">("journal");
   // Remount the views on a journal switch so local view state (filters, period, view
@@ -24,10 +24,11 @@ export default function JournalPage() {
 
   // First-run empty-state config (fase C). Treat the journal as "configured" while
   // the methodology is still loading so we never flash the big preset picker before
-  // we know the field count. The picker itself is beta-gated, matching Settings.
+  // we know the field count. Shown to every new user (un-gated at the beta launch);
+  // a legacy WPM user always has fields, so they never reach the picker variant.
   const onboarding = useMemo(
-    () => ({ hasFields: methLoading || fields.length > 0, showPresetPicker: betaFeatures }),
-    [methLoading, fields.length, betaFeatures]
+    () => ({ hasFields: methLoading || fields.length > 0, showPresetPicker: true }),
+    [methLoading, fields.length]
   );
 
   return (
@@ -53,9 +54,9 @@ export default function JournalPage() {
           scope={{ type: "live" }}
           tradesApi={tradesApi}
           title={t("journal.title")}
-          // Soft-launch: the Fase-C onboarding empty-state (preset picker) ships to
-          // owner/beta accounts only; live users keep the pre-launch behaviour.
-          onboarding={betaFeatures ? onboarding : undefined}
+          // The Fase-C onboarding empty-state wayfinder now ships to every user
+          // (un-gated at the beta launch); import inside it stays beta-gated.
+          onboarding={onboarding}
         />
       ) : tradesApi.loading ? (
         // C5: `loading` is only raised on a genuine scope change (journal switch /
