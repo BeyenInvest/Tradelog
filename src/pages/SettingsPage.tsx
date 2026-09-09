@@ -22,7 +22,7 @@ import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const { hideFase, betaFeatures, updateProfile } = useAuth();
+  const { hideFase, updateProfile } = useAuth();
   const { isLegacyMethodology } = useMethodology();
   const location = useLocation();
   // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
@@ -64,24 +64,24 @@ export default function SettingsPage() {
           <ResultUnitSettings />
         </section>
 
-        {/* Multi-journal configuration (verschillende journals + builder) —
-            soft-launch: beta-flagged users only (0033) until the public launch.
-            Above the legacy trading prefs: for a new trader this is the section
-            that matters, the WPM-era cards below are secondary. */}
-        {betaFeatures && (
-          <section className="flex flex-col gap-5">
-            <SettingsSectionHeader
-              title={t("methodology.title")}
-              description={t("methodology.description")}
-            />
-            <JournalOverview />
-            <NewJournalCard defaultOpen={openPresets} />
-            <MethodologyEditor />
-            <ReviewSectionsEditor />
-            <AdvancedAnalysisSettings />
-            <JournalInstruments />
-          </section>
-        )}
+        {/* Multi-journal configuration (verschillende journals + builder) — live
+            for every user since the beta launch (fixplan blok A3): the wizard and
+            Gids promise "je past alles later aan in Instellingen", so this section
+            must exist for everyone. Above the legacy trading prefs: for a new
+            trader this is the section that matters, the WPM-era cards below are
+            secondary. */}
+        <section className="flex flex-col gap-5">
+          <SettingsSectionHeader
+            title={t("methodology.title")}
+            description={t("methodology.description")}
+          />
+          <JournalOverview />
+          <NewJournalCard defaultOpen={openPresets} />
+          <MethodologyEditor />
+          <ReviewSectionsEditor />
+          <AdvancedAnalysisSettings />
+          <JournalInstruments />
+        </section>
 
         {/* Legacy Weekly Phase Method prefs: the fase toggle and the entry/concept
             option lists are all WPM-specific fields — meaningless for a modern

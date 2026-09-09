@@ -38,7 +38,7 @@ export function Sidebar() {
     },
     {
       // Habits + Dagboek are live for all members. Contract stays owner-only
-      // (betaFeatures, 0033) — the same soft-launch gate as the journal-switcher below.
+      // (betaFeatures, 0033).
       labelKey: "nav.catPerformance",
       items: [
         ...(betaFeatures ? [{ to: "/contract", labelKey: "nav.contract", icon: FileSignature }] : []),
@@ -106,17 +106,14 @@ export function Sidebar() {
 
       {/* Active-journal switcher (cyclus 3b). Full-width in the desktop column; a
           compact variant in the mobile top bar so mobile can switch/create too.
-          Soft-launch: beta-flagged users only (0033) until the public launch. */}
-      {betaFeatures && (
-        <>
-          <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
-            <JournalSwitcher />
-          </div>
-          <div className="md:hidden shrink-0 min-w-0 max-w-[8.5rem]">
-            <JournalSwitcher compact />
-          </div>
-        </>
-      )}
+          Live for every user since the beta launch (fixplan blok A3), matching the
+          un-gated Settings journal section. */}
+      <div className="hidden md:block md:px-2 md:mb-6 shrink-0">
+        <JournalSwitcher />
+      </div>
+      <div className="md:hidden shrink-0 min-w-0 max-w-[8.5rem]">
+        <JournalSwitcher compact />
+      </div>
 
       {/* flex-1 + min-w-0 lets this item both absorb the row's remaining width AND shrink below its
           content size on mobile, so overflow-x-auto actually kicks in instead of the row silently
