@@ -93,12 +93,12 @@ Doel: de 7 openstaande motorpunten (na twee audits 0/7) — waarvan één voor g
 
 ## Blok F — Stabiliteit vóór gebruikers · **Fable** · 1 dag 🔴 (F1–F2) + 🟠
 
-- [ ] F1. **PWA-reload-guard** (C-R2-1): reload uitstellen zolang een dirty modal openstaat, óf prompt-mode met verversen-toast (`vite.config.ts:17` + `RegisterSW.tsx`) — "deploy om 21:30 wist een halfgeschreven review" mag nooit gebeuren.
-- [ ] F2. **Visibility/focus-refetch** van profiel + trades (C-R2-2 + C3; dekt ook stale switcher-counts en de token-refresh-remount C-R2-3) + 0-rows in `updateTrade` mappen naar "deze trade bestaat niet meer".
-- [ ] F3. E1-kalender-guard: `Array.isArray` op de feed (`useEconomicCalendar.ts:17`) — 1 regel, voorkomt hele-pagina-crash.
-- [ ] F4. Quick-log: verplichte custom velden tonen of hint (Q1, `QuickLogForm.tsx:115`).
-- [ ] F5. Prop-accounts: één-actief-invariant of bron-badge (PA1) + inline-edit voor naam/size/fase (PA2, mag naar H).
-- [ ] F6. `npm audit fix` (fast-uri) + `npm uninstall date-fns` + dode exports constants.ts + api-tsconfig (M1) — de hygiëne-restjes in één veeg.
+- [x] F1. **PWA-reload-guard**: registerType → "prompt" + `dirtyFormRegistry` (useModalGuard meldt dirty formulieren aan; RegisterSW parkeert de update-reload tot het laatste dirty formulier sluit/opslaat — geen toast nodig, zonder dirty werk blijft het gedrag stil-en-vers zoals voorheen).
+- [x] F2. **Visibility/focus-refetch**: nieuwe `useVisibilityRefetch`-hook (60s-throttle) op trades (useTrades.refresh, in-place) én profiel (useAuth.loadProfile, gesequenced); `updateTrade` mapt 0 rijen naar "Deze trade bestaat niet meer" (tradeForm.updateGone NL/EN) + verwijdert de rij lokaal.
+- [x] F3. Kalender-guard: `Array.isArray` op de feed-JSON, anders nette foutmelding i.p.v. paginacrash.
+- [x] F4. Quick-log toont een hint met de verplichte custom velden van het journal (fieldLabel-vertaald) — bewust hint, geen blokkade.
+- [x] F5. Prop-accounts één-actief-invariant (PA1): actief-maken (create of toggle) deactiveert de andere actieve accounts van hetzelfde journal — de €-weergavebron is nu eenduidig. PA2 (inline-edit) → blok H.
+- [x] F6. `npm audit fix` gedraaid: **fast-uri (high) gefixt**; date-fns verwijderd (0 imports); dode exports MONTH_NAMES + PERIOD_TYPE_LABELS weg (hardcoded NL/EN-strings die i18n omzeilden); `api/` in tsconfig-include (ff-calendar.ts draait nu mee in tsc). ⚠️ Restje: 2 moderate dev-only advisories in vitest/@vitest/mocker — fix = vitest 5-major-bump, bewust niet 's nachts gedaan; raakt alleen de dev-toolchain, niet de app. Meenemen bij de jsdom/hook-tests-post in blok H.
 
 ## Blok G — Launch-week (B6) · **owner** + **Opus** (copy/kleinwerk) · 2–3 dagen 🔴
 

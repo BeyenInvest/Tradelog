@@ -30,8 +30,11 @@ export default defineConfig({
     // are injected for all (harmless, just makes the app installable).
     // Deliberately conservative: no runtimeCaching for Supabase (auth + data are
     // cross-origin and must always hit the network).
+    // registerType "prompt" (fixplan F1): the new worker WAITS until RegisterSW
+    // calls updateSW() — which it only does when no form holds unsaved changes
+    // (dirtyFormRegistry). autoUpdate reloaded mid-edit and wiped dirty forms.
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       injectRegister: null,
       includeAssets: ["favicon.svg", "favicon-16.png", "favicon-32.png", "apple-touch-icon.png"],
       manifest: {

@@ -4,6 +4,7 @@ import { fetchAllPages } from "@/lib/fetchAll";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { removeScreenshots, screenshotStoragePaths } from "@/lib/storage/screenshots";
 import { useAuth } from "@/hooks/useAuth";
+import { useVisibilityRefetch } from "@/hooks/useVisibilityRefetch";
 import i18n from "@/i18n";
 import { TRADES_MIGRATED_EVENT } from "@/hooks/useMethodology";
 import type { Trade, TradeInput } from "@/lib/types";
@@ -98,6 +99,11 @@ export function useTrades(scope: TradeScope) {
     return () => window.removeEventListener(TRADES_MIGRATED_EVENT, onMigrated);
   }, [refresh]);
 
+  // F2 (C-R2-2): een tab die na uren weer zichtbaar wordt, haalt de trades
+  // opnieuw op — data van andere apparaten/tabs (of een server-side wijziging)
+  // wordt anders nooit zichtbaar. refresh() wisselt in-place (geen laadscherm).
+  useVisibilityRefetch(() => void refresh());
+
   /**
    * Refuse writes while the profile hasn't loaded (audit blocker N1): without it
    * activeJournalId is unknowable, so a new live trade would silently land in the
@@ -139,8 +145,16 @@ export function useTrades(scope: TradeScope) {
 
   async function updateTrade(id: string, input: Partial<TradeSubmitInput>): Promise<Trade> {
     const before = trades.find((t) => t.id === id);
-    const { data, error: updateError } = await supabase.from("trades").update(input).eq("id", id).select().single();
+    const { data, error: updateError } = await supabase.from("trades").update(input).eq("id", id).select().maybeSingle();
     if (updateError) throw updateError;
+    // F2: 0 rijen = de trade bestaat niet meer (op een ander apparaat/tab
+    // verwijderd terwijl dit formulier openstond). Zonder deze mapping gaf
+    // .single() een cryptische PostgREST-fout; nu een duidelijke melding, en de
+    // verdwenen rij gaat ook lokaal weg zodat de lijst weer klopt.
+    if (!data) {
+      setTrades((cur) => cur.filter((t) => t.id !== id));
+      throw new Error(i18n.t("tradeForm.updateGone"));
+    }
     const updated = data as Trade;
     // N2-lifecycle: an edit that replaced or cleared an uploaded screenshot
     // leaves the old file orphaned in the bucket — remove what the row no

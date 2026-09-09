@@ -144,20 +144,9 @@ export type Weekday = (typeof WEEKDAYS)[number];
 export const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const;
 export type Quarter = (typeof QUARTERS)[number];
 
-export const MONTH_NAMES = [
-  "Januari", "Februari", "Maart", "April", "Mei", "Juni",
-  "Juli", "Augustus", "September", "Oktober", "November", "December",
-] as const;
-
 /** month/quarter/year — "week" stays on its own dedicated table (weekly_reviews), unchanged. */
 export const PERIOD_TYPES = ["month", "quarter", "year"] as const;
 export type PeriodType = (typeof PERIOD_TYPES)[number];
-
-export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
-  month: "Monthly",
-  quarter: "Quarterly",
-  year: "Yearly",
-};
 
 /** Minimum trades in a breakdown bucket before it's considered statistically meaningful (rekenregel 6). */
 export const MIN_SAMPLE_SIZE = 15;

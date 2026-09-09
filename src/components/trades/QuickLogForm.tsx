@@ -14,6 +14,7 @@ import { localTodayIso } from "@/lib/localDate";
 import { PAIRS, DIRECTIONS, SANITY_RESULT_PCT } from "@/lib/constants";
 import { quickLogDefaults, QUICK_EVALUATIONS } from "@/lib/quickLog";
 import { getLastInstrument, getLastRisk, setLastInstrument, setLastRisk } from "@/lib/tradeMemory";
+import { fieldLabel } from "@/lib/fieldBlocks";
 import { Modal } from "@/components/ui/Modal";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { EnumSelect } from "@/components/ui/EnumSelect";
@@ -39,9 +40,18 @@ interface QuickLogFormProps {
 export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
   const { t } = useTranslation();
   const { profile } = useAuth();
-  const { methodology, isForexJournal, faseNames } = useMethodology();
+  const { methodology, fields, isForexJournal, faseNames } = useMethodology();
   const userId = profile?.id ?? null;
   const methodologyId = methodology?.id ?? null;
+
+  // F4 (Q1): quick-log slaat bewust een lege custom-bag op, maar een journal
+  // kan custom velden als VERPLICHT gemarkeerd hebben — benoem die expliciet,
+  // zodat de trader weet dat deze trade nog aanvulling nodig heeft via
+  // bewerken. Bewust een hint, geen blokkade: snelheid is het hele punt van
+  // quick-log. ('fase' is de verborgen legacy-default, geen invoerveld.)
+  const requiredCustomLabels = fields
+    .filter((f) => f.required && !f.is_computed && f.field_key !== "fase")
+    .map((f) => fieldLabel(t, f));
 
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
@@ -227,6 +237,13 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
             <Field label={t("quickLog.note")}>
               <input type="text" className="input" placeholder={t("quickLog.notePlaceholder")} {...register("notes")} />
             </Field>
+
+            {requiredCustomLabels.length > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-muted -mt-1">
+                <TriangleAlert size={13} className="mt-0.5 shrink-0 text-gold" />
+                <span>{t("quickLog.requiredFieldsHint", { fields: requiredCustomLabels.join(", ") })}</span>
+              </p>
+            )}
 
             {error && <p className="text-sm text-loss">{error}</p>}
 

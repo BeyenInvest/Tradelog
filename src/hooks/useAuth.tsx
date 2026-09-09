@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, pendingAuthRedirectType } from "@/lib/supabase";
+import { useVisibilityRefetch } from "@/hooks/useVisibilityRefetch";
 import type { Profile } from "@/lib/types";
 import type { ResultUnit } from "@/lib/constants";
 import i18n from "@/i18n";
@@ -124,6 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!data.session) return;
     await loadProfile(data.session.user.id);
   }
+
+  // F2 (C-R2-2): profiel silently herladen wanneer de tab weer zichtbaar wordt —
+  // een journal-switch of instelling uit een andere tab/apparaat wordt anders
+  // pas bij de volgende token-refresh zichtbaar. loadProfile is gesequenced
+  // (profileSeqRef) en degradeert nooit bestaande state bij een netwerkfout.
+  useVisibilityRefetch(() => {
+    if (session) void loadProfile(session.user.id);
+  });
 
   async function signIn(email: string, password: string, captchaToken?: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });

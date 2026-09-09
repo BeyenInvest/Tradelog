@@ -83,6 +83,23 @@ export function usePropAccounts() {
   // refetching both tables (and re-toggling `loading`, which used to unmount/remount the whole
   // page on every single create/delete — losing in-progress form input and scroll position).
 
+  /**
+   * Eén-actief-invariant (F5/PA1): binnen een journal is hooguit één account
+   * actief — het actieve account voedt de €-weergave (useResultDisplay), en met
+   * twee actieve accounts was de bron daarvan willekeurig (orden-op-created_at).
+   * Wordt een account actief (gemaakt), dan gaan de andere actieve accounts van
+   * ditzelfde journal uit. Twee writes, geen transactie — in het ergste geval
+   * (netwerkfout ertussenin) blijven er even twee actief staan, precies de oude
+   * situatie, en herstelt de volgende toggle het.
+   */
+  async function demoteOtherActives(exceptId: string): Promise<void> {
+    let query = supabase.from("prop_accounts").update({ actief: false }).eq("user_id", userId).eq("actief", true).neq("id", exceptId);
+    query = activeJournalId ? query.eq("methodology_id", activeJournalId) : query.is("methodology_id", null);
+    const { error: err } = await query;
+    if (err) throw err;
+    setAccounts((prev) => prev.map((a) => (a.id === exceptId ? a : a.actief ? { ...a, actief: false } : a)));
+  }
+
   async function createAccount(input: PropAccountInput): Promise<PropAccount> {
     // Stamp the active journal so the account lands in (and stays visible in) it (cyclus 3b).
     const { data, error: err } = await supabase
@@ -93,6 +110,7 @@ export function usePropAccounts() {
     if (err) throw err;
     const created = data as PropAccount;
     setAccounts((prev) => [created, ...prev]);
+    if (created.actief) await demoteOtherActives(created.id);
     notifyAccountsChanged();
     return created;
   }
@@ -102,6 +120,7 @@ export function usePropAccounts() {
     if (err) throw err;
     const updated = data as PropAccount;
     setAccounts((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    if (input.actief === true) await demoteOtherActives(id);
     notifyAccountsChanged();
     return updated;
   }

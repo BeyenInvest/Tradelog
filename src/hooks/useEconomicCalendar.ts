@@ -14,8 +14,11 @@ export function useEconomicCalendar() {
     try {
       const res = await fetch("/api/ff-calendar");
       if (!res.ok) throw new Error(t("economicCalendar.feedError", { status: res.status }));
-      const data = (await res.json()) as EconomicEvent[];
-      setEvents(data);
+      const data: unknown = await res.json();
+      // F3-guard: de onofficiële feed kan bij storing een object/HTML-string
+      // teruggeven — zonder deze check crasht dan de hele pagina op .filter().
+      if (!Array.isArray(data)) throw new Error(t("economicCalendar.loadFailed"));
+      setEvents(data as EconomicEvent[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("economicCalendar.loadFailed"));
     } finally {

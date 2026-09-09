@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { acquireDirtyForm } from "@/lib/dirtyFormRegistry";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -34,6 +35,13 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
     if (!isDirtyRef.current) onCloseRef.current();
     else setConfirmingDiscard(true);
   }
+
+  // F1: meld een dirty formulier bij het globale register, zodat de PWA-update
+  // (RegisterSW) zijn reload uitstelt zolang hier onopgeslagen werk open staat.
+  useEffect(() => {
+    if (!isDirty) return;
+    return acquireDirtyForm();
+  }, [isDirty]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
