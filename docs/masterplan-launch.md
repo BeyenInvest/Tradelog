@@ -1,5 +1,7 @@
 # Masterplan — resterende weg naar de beta-launch (2026-08-27)
 
+> ⚠️ **VERVANGEN door `docs/fixplan-2026-09.md` (2026-09-09).** Dit document is historie; het fixplan (blokken A–H, n.a.v. `docs/meta-audit-2026-09.md`) is het enige leidende plan. Niets hieronder nog uitvoeren zonder het fixplan te checken.
+
 > **Dit document vervangt `masterplan-2026-08.md` als leidend plan.** Alles wat af is, is eruit gehaald; de historie (fases A t/m S2, audit-afvinklijsten, concurrentie-analyse) staat in het oude masterplan en in `docs/audit-2026-08-27.md` (12-agent-audit, 2 rondes — de bron van Fase T hieronder). Werkwijze ongewijzigd: eigen branch → bouwen → lint/test/build groen → review met owner → commit/push alleen op expliciet verzoek; migraties via `scripts/run-migration.mjs`, owner draait, read-only verifiëren.
 >
 > **Vaste besluiten blijven staan:** geen eigen replay/chart-engine ooit (TradingView is king); differentiatie = methodiek-condities + presets + eerlijke statistiek; geen community, geen live broker-integratie; partials/scale-outs niet bouwen tot import het afdwingt.

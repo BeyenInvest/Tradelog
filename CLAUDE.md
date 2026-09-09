@@ -7,6 +7,13 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 - Product domain rules & non-obvious conventions: this file (see the Domain rules section below)
 - Setup/ops instructions: `README.md` (Supabase bootstrap, env vars, signup rollout steps)
 
+## Current plan & feature-freeze (2026-09-09)
+
+- **Leidend plan = `docs/fixplan-2026-09.md`** (blokken A–H, n.a.v. `docs/meta-audit-2026-09.md`). Het vervangt masterplan-launch.md. Werk nooit uit een ander plandocument zonder het fixplan te checken.
+- **Totale feature-freeze tot na de beta-launch** (owner-besluit 2026-09-09): geen nieuwe features, geen nieuwe migraties buiten het fixplan. Bevroren oppervlakken (ook geen "kleine" commits): Habits, Dagboek, Contract, Review-PDF, MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in het fixplan.
+- **"Klaar" = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt in het fixplan** — niet "code groen op een branch". Eén sessie = één branch = één blok; max 1 open werkstroom tegelijk.
+- Migratienummers: nooit hergebruiken; elke migratie werkt `supabase/schema.sql` mee bij. Eerstvolgend vrij nummer staat in het fixplan (nu **0057**).
+
 ## Domain rules (non-obvious, easy to violate accidentally)
 
 - `trade_evaluation` enum (`src/lib/constants.ts`): `"Good trade" | "Emotional error" | "Technical error" | "Missed trade"`. This is *execution quality*, separate from `outcome` (`Win/Loss/BE`, the actual P&L).
@@ -23,6 +30,7 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 - Streak rule: BE pauses a streak (no reset, no increment), only Win/Loss break it.
 - Drawdown/equity curve: chronological by `datum_open`, tie-broken by `id`, via `sortChronological()`.
 - Fase-specific fields (`FASE_KENMERKEN` in `constants.ts`) are config-driven so the Backtesting breakdown UI renders every fase-kenmerk via one `.map()` instead of hand-written blocks per fase.
+- **UI-bouwstenen: eerst zoeken in `src/components/ui/`** (Card, Modal, BooleanToggle, AddableSelect, Logo, ThemeToggle, ...) vóór je iets nieuws bouwt; een nieuwe gedeelde bouwsteen hoort dáár, niet als lokaal one-off component in een feature-map.
 
 ## Auth / multi-tenant status
 
@@ -34,9 +42,17 @@ Multi-tenant signup is **built**, not hypothetical: `profiles` table + auto-prov
 
 Terms/Privacy pages carry full drafted copy but are **not yet legally reviewed** — flag this if asked about launch readiness (a legal review is a launch-week task, blocking before Stripe/paid but not before the free beta).
 
-## Deliberately out of scope for now (don't build unprompted)
+## Feature-gating status (bijgewerkt 2026-09-09, fixplan blok A)
 
-- ~~Per-user configurable trading methodology~~ — **built** (Scope C, "configureerbare methodiek"): journals = user-owned `methodologies` rows with `methodology_fields`, per-journal isolation of trades/reviews/accounts, presets, custom fields in `trades.custom`. **The journal-config UI is still soft-launched behind `profiles.beta_features`** (0033; exposed as `useAuth().betaFeatures` = flag OR admin OR owner-email) until the public beta: journal-switcher, journal-builder/preset-picker, veld-editor, review-sections-editor, journal-instruments, CSV/broker import, and share-links stay flagged. But several pieces that were once beta-only are now live for everyone (data-gated, not flag-gated): the universal Richting field/filter, the `tijd_open` input, and the whole analyse layer (collapsible/reorderable sections, R-distribution, kruistabel, session/hour breakdowns). New features still default behind `betaFeatures` (gating-regel). The legacy WPM fields stay hardcoded columns until cyclus 10; their editor rows are locked (`isLockedLegacyField`) because `trades.fase` is still a Postgres enum.
+- Per-user configurable trading methodology is **built** (Scope C): journals = user-owned `methodologies` rows with `methodology_fields`, per-journal isolation of trades/reviews/accounts, presets, custom fields in `trades.custom`.
+- **Live voor iedereen (un-gated bij de beta-launch):** de volledige journal-config UI — journal-switcher (Sidebar), Settings-journalsectie (JournalOverview, NewJournalCard/preset-picker, veld-editor, review-sections-editor, advanced-analysis, journal-instruments) — plus de onboarding-wizard (eerste run, `onboarded_at`), de Gids (`/help`), de preset-picker empty-state in het Journal, de analyse-laag (R-distribution, kruistabel, session/hour), Richting, `tijd_open`, resultaat-eenheid %/R/geld, data-export (CSV), Habits (`/habits`, per-user configureerbaar, 0056) en Dagboek (`/daily`, 0055).
+- **Nog beta-gated (`useAuth().betaFeatures` = flag OR admin OR owner-email, 0033):** CSV/broker-import, share-links (trades + reviews), screenshots-upload (anderen krijgen het URL-veld), en Trade Contract (`/contract`, owner-only via `BetaRoute`). Un-gaten hiervan = fixplan blok H, ná validatie met echte gebruikers.
+- **Gating-regel voor nieuw werk:** elke nieuwe feature start achter `betaFeatures` (maar zie de feature-freeze hierboven — er komt nu geen nieuw werk).
+- The legacy WPM fields stay hardcoded columns until cyclus 10; their editor rows are locked (`isLockedLegacyField`) because `trades.fase` is still a Postgres enum.
+- Habits/Dagboek/Contract zijn een aparte performance-laag naast het journal (nav-groep "Performance"): global per-user (niet journal-gebonden), tabellen `habits`/`habit_days`/`daily_journal_entries` (migraties 0054–0056). **Bevroren** — zie feature-freeze.
+- De landing-page (B5, `LandingPage.tsx` + `landing.css`) is gemerged en live op `/` voor uitgelogde bezoekers (ingelogd → redirect `/journal`); aankondiging/kanalen = launch-week (fixplan blok G).
+
+## Deliberately out of scope for now (don't build unprompted)
 - Stripe/billing — `profiles.plan` defaults to `'free'` as the only hook for this later.
 - Migration from the old Google Sheets workflow, discipline/execution tracking, live broker integration. See spec §7-8. (MAE/MFE tracking is now **built** — the advanced-analysis layer, `methodologies.track_exit` per-journal opt-in, 0049/0050 — no longer out of scope.)
 

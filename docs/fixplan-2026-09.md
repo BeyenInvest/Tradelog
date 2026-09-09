@@ -17,7 +17,7 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 
 | Blok | Naam | Model | Effort | Status |
 |---|---|---|---|---|
-| A | De grote schoonmaak (integratie) | **Fable** | 1 dag | ☐ |
+| A | De grote schoonmaak (integratie) | **Fable** | 1 dag | ☑ 2026-09-09 |
 | B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ☐ |
 | C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ☐ |
 | D | Zichtbare motor-poets | **Fable** | ½ dag | ☐ |
@@ -34,13 +34,16 @@ A → B → C mogen niet wisselen van volgorde. D/E/F mogen onderling schuiven m
 
 Doel: er bestaat weer precies één werkelijkheid (main = prod = docs). Fable vanwege git-chirurgie + gating-logica.
 
-- [ ] A1. Backup-branch pushen vóór alles (`backup/pre-fixplan-<datum>` van zowel `fase-onboarding-ungate` als origin/main-stand) — conventie.
-- [ ] A2. `fase-onboarding-ungate` rebasen op `origin/main`; conflicten in `Sidebar.tsx`, `router.tsx`, beide locale-jsons bewust oplossen (remote nav-hergroepering Trading/Performance/Tools behouden, Help-link + un-gate-werk erin passen).
-- [ ] A3. **Un-gate-gaten dichten (besluit: optie 1 — consistent un-gaten).** Settings-journalsectie (`SettingsPage.tsx:71`) én journal-switcher (`Sidebar.tsx:58`) uit de `betaFeatures`-gate halen, zodat wizard/Gids-copy ("je past alles later aan in Instellingen") en de 7 Gids-items kloppen. Daarmee vervalt ook het doodlopende spoor na trade #1 (`TradeJournalView.tsx:106` hoeft dan niet aangepast). ⚠️ Wat bewust beta-gated **blijft**: CSV-import, share-links, screenshots-upload (staan in blok H).
-- [ ] A4. `fase-b5-landing` mergen naar main (heeft SEO-basics + `exportCsv.ts` al aan boord — commit 69a681a/db7ef42). Landing-route pas publiek zichtbaar maken mag wachten tot blok G als dat aparte config vergt; de merge zelf niet.
-- [ ] A5. Branch-hygiëne: `weekly-review-pdf-polish` (ahead 3, bevat CSV-headerwerk onder verkeerde naam) — cherry-picken wat waarde heeft naar een correct genaamde geparkeerde branch óf expliciet documenteren; `fase-i-import`/`fase-2-scale-import` expliciet parkeren (één regel in dit doc); orphan-stash `epitaxy` weggooien; backup-branches ouder dan dit plan opruimen.
-- [ ] A6. **CLAUDE.md bijwerken** (krachtigste stuurinstrument, zie audit bril 19): Habits/Dagboek/Contract documenteren; feature-freeze-regel opnemen; "klaar = gemerged op main + docs bij"; regel "UI-bouwstenen eerst zoeken in components/ui, nieuwe gedeelde bouwsteen = daar plaatsen"; gating-status actualiseren (wat is nu live vs beta). README §5-status en masterplan-launch.md kop "vervangen door fixplan-2026-09.md" geven.
-- [ ] A7. Alles naar main + `git push origin main` (owner draait de push zelf als de sessie geblokkeerd is — commando copy-paste-klaar aanleveren). Vercel-deploy verifiëren als écht Ready.
+- [x] A1. Backup-branch pushen vóór alles — gedaan: `backup/pre-fixplan-20260909-ungate` + `backup/pre-fixplan-20260909-main` op origin.
+- [x] A2. `fase-onboarding-ungate` gerebased op `origin/main` — WIP eerst gecommit; enige echte conflict was de Sidebar-importregel (nav-hergroepering behouden, HelpCircle toegevoegd); locales/router auto-gemerged.
+- [x] A3. Un-gate-gaten gedicht (optie 1): Settings-journalsectie + journal-switcher live voor iedereen; `TradeJournalView` ongemoeid. CSV-import, share-links, screenshots-upload blijven beta-gated (blok H).
+- [x] A4. `fase-b5-landing` (db7ef42, lokaal 1 voor op origin) gemerged. Landing staat daarmee live op `/` voor uitgelogde bezoekers — vergt geen aparte config; aankondiging blijft blok G.
+- [x] A5. Branch-hygiëne, uitgevoerd 2026-09-09:
+  - `weekly-review-pdf-polish` bleek de meest complete import-branch (bevatte héél `fase-i-import` + `fase-2-scale-import` + MT4/cTrader/TV-parserwerk + 1 weekly-PDF-restyle-commit 7360fe4) → hernoemd geparkeerd als **`parked/fase-i-import-v2`** (gepusht). Ontparkeren bij blok H (eerste echte CSV-import); de PDF-restyle-commit erin valt onder de Review-PDF-freeze.
+  - `fase-i-import` + `fase-2-scale-import` (lokaal) en oude backups (`backup/fase-2-pre-sync-20260808`, `backup/fase-b5-landing-v1/-v2`) verwijderd — alle inhoud aantoonbaar bevat in `parked/fase-i-import-v2` resp. de gemergde `fase-b5-landing`.
+  - Nog door owner (classifier blokkeerde destructieve remote-acties): `git push origin --delete weekly-review-pdf-polish fase-2-scale-import backup/fase-b5-landing-v1 backup/fase-b5-landing-v2` en `git stash drop stash@{0}` (orphan `epitaxy`).
+- [x] A6. CLAUDE.md bijgewerkt (freeze-regel, "klaar = main + docs", UI-bouwstenen-regel, gating-status, Habits/Dagboek/Contract, landing); README §5 kreeg statusblok; masterplan-launch.md kop "VERVANGEN door fixplan-2026-09.md".
+- [x] A7. Alles naar main + gepusht; lint/test (420)/build groen; Vercel-deploy geverifieerd Ready.
 
 ## Blok B — Vangrails · **Fable** (CI) + **owner** (dashboards) · 1 dag 🔴
 
