@@ -49,12 +49,12 @@ Doel: er bestaat weer precies één werkelijkheid (main = prod = docs). Fable va
 
 Doel: de blinde vlek dicht — nooit meer onherstelbaar, nooit meer onzichtbaar.
 
-- [ ] B1. **CI** (Fable, ~30 min): `.github/workflows/ci.yml` — `npm ci` → lint → test → build op elke push + PR naar main. Daarna op GitHub als required check op main zetten (owner-klik).
-- [ ] B2. **Backups** (owner-besluit): Supabase **Pro ($25/mnd, 7 dagen backups)** — aanbevolen zodra er ook maar één beta-gebruiker echte data heeft — óf een dagelijkse `pg_dump`-cron via de bestaande `SUPABASE_DB_URL`. Fable levert desgewenst het pg_dump-script.
-- [ ] B3. **Restore één keer oefenen** (owner + Fable read-only begeleiding): dump terugzetten naar een gratis wegwerp-Supabase-project en verifiëren dat de app ertegen start. Dít is het bewijs dat B2 echt werkt.
+- [x] B1. **CI** — `.github/workflows/ci.yml` staat er (npm ci → lint → test → build, push+PR naar main, Node 24). ☐ **Owner-klik open:** na de eerste groene run op GitHub als required check op main zetten (Settings → Branches → require status check "ci").
+- [ ] B2. **Backups** (owner-besluit open: Pro vs cron). Het pg_dump-script is geleverd: `scripts/backup-db.mjs` (public+auth, -Fc, rotatie 14, faalt hard op lege dump; `backups/` in .gitignore). Vereist eenmalig PostgreSQL client-tools (`winget install PostgreSQL.PostgreSQL.17`). Aanbeveling blijft Supabase Pro zodra één echte beta-gebruiker data heeft.
+- [ ] B3. **Restore één keer oefenen** (owner): stappen staan in de kop van `scripts/backup-db.mjs` (wegwerp-project + schema.sql + pg_restore --data-only). Combineert met C7.
 - [ ] B4. **Uptime-ping** (owner, 10 min): gratis monitor (bijv. UptimeRobot) op https://beyen.app + e-mail-alert.
 - [ ] B5. **Owner-dashboard-checklist** (uit audit Laag 7, ~15 min): Supabase-tier & backup-status · zijn 0053–0056 echt op prod gedraaid · Auth-wachtwoordminimum ≥8 + leaked-password-protection aan · projectregio = EU · `VITE_SENTRY_DSN` op Vercel gezet en komen events binnen · SMTP/e-mailtemplates klaar · DPA's Supabase/Vercel/Sentry/Cloudflare afgevinkt en bewaard. Uitkomsten terugmelden in de sessie → dit doc bijwerken.
-- [ ] B6. Sentry-sourcemaps (`@sentry/vite-plugin`) — mag ook in blok F, maar hoort vóór de eerste echte gebruikersfout.
+- [x] B6. Sentry-sourcemaps: `@sentry/vite-plugin` in vite.config.ts, volledig inert zonder `SENTRY_AUTH_TOKEN` (lokaal/CI bouwen zonder secrets; sourcemap "hidden", maps na upload verwijderd). ☐ **Owner:** `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` als env-vars op Vercel zetten.
 
 ## Blok C — Schema-sync + registry · **Fable** · 1 sessie · migratie **0057** 🔴
 

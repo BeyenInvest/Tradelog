@@ -1,11 +1,28 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import path from "node:path";
+
+// Sentry-sourcemaps (fixplan B6) draaien alleen wanneer een auth-token aanwezig
+// is (Vercel-env: SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT). Zonder token
+// — lokaal en in CI — is de plugin volledig inert en worden er geen sourcemaps
+// gebouwd, zodat `npm run build` overal zonder secrets blijft werken.
+const uploadSourcemaps = Boolean(process.env.SENTRY_AUTH_TOKEN);
 
 export default defineConfig({
   plugins: [
     react(),
+    sentryVitePlugin({
+      disable: !uploadSourcemaps,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      // Maps worden na de upload uit dist/ verwijderd: Sentry kan symboliseren,
+      // maar de publieke deploy lekt geen sourcemaps.
+      sourcemaps: { filesToDeleteAfterUpload: ["dist/**/*.map"] },
+    }),
     // PWA (Fase L): installable app + a precached app shell. The service worker
     // is registered manually for every account since the beta flip (see
     // RegisterSW.tsx, which also polls for updates) — injectRegister:null keeps
@@ -60,6 +77,9 @@ export default defineConfig({
     },
   },
   build: {
+    // "hidden" = wél .map-bestanden voor de Sentry-upload, géén
+    // sourceMappingURL-verwijzing in de geleverde JS. Alleen met token aan.
+    sourcemap: uploadSourcemaps ? "hidden" : false,
     rollupOptions: {
       output: {
         // recharts is large and shared by several code-split pages (Journal,

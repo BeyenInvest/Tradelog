@@ -1,0 +1,28 @@
+# Fixplan blok B1: elke push + PR naar main moet lint (tsc), tests en build
+# groen hebben. Owner-stap ná de eerste groene run: GitHub → Settings →
+# Branches → branch protection op main → require status check "ci".
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+      # Geen VITE_*-secrets nodig: de build leest env alleen in als inline
+      # strings; de app zelf draait hier niet.
+      - run: npm run build
