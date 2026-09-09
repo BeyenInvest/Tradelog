@@ -16,6 +16,9 @@ import { JournalOverview } from "@/components/settings/JournalOverview";
 import { AdvancedAnalysisSettings } from "@/components/settings/AdvancedAnalysisSettings";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
+import { fetchAllPages } from "@/lib/fetchAll";
+import { downloadCsv, rowsToCsv } from "@/lib/exportCsv";
 import { timezoneOptions } from "@/lib/timezones";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { SUPPORTED_LANGS, type Lang } from "@/i18n";
@@ -132,6 +135,8 @@ export default function SettingsPage() {
 
           <SupportSettings />
 
+          <DataExportSettings />
+
           <DeleteAccountSettings />
         </section>
       </div>
@@ -163,6 +168,76 @@ function SupportSettings() {
           {t("settings.supportCta")}
         </a>
       </div>
+    </Card>
+  );
+}
+
+/**
+ * Raw data export — every trade the user owns (all journals + backtest
+ * projects), verbatim, as CSV. Not beta-gated on purpose: this is the
+ * "jouw data blijft van jou"-belofte, and a trust promise that only works
+ * for flagged users is no promise. Client-side only: the paginated fetch is
+ * the same RLS-scoped read the Journal uses, rows go straight into a Blob.
+ */
+function DataExportSettings() {
+  const { t } = useTranslation();
+  const { session } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  async function handleExport() {
+    setMessage(null);
+    setBusy(true);
+    try {
+      const userId = session!.user.id;
+      // Explicit user_id filter for the same reason as useTrades: an admin's
+      // blanket read-all RLS policy would otherwise export everyone's rows.
+      const { data, error } = await fetchAllPages<Record<string, unknown>>((from, to) =>
+        supabase
+          .from("trades")
+          .select("*")
+          .eq("user_id", userId)
+          .order("datum_open", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (error) throw error;
+      const rows = data ?? [];
+      if (rows.length === 0) {
+        setMessage({ kind: "err", text: t("settings.dataExportEmpty") });
+        return;
+      }
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(rowsToCsv(rows), `beyen-trades-${stamp}.csv`);
+      setMessage({ kind: "ok", text: t("settings.dataExportDone", { count: rows.length }) });
+    } catch (err) {
+      setMessage({ kind: "err", text: toErrorMessage(err, t("settings.dataExportFailed")) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-body text-sm text-ink">{t("settings.dataExport")}</p>
+          <p className="font-mono text-xs mt-1 text-muted">{t("settings.dataExportDescription")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={busy}
+          className="shrink-0 px-4 py-2 rounded-lg font-body text-sm font-medium border border-border text-ink hover:border-gold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? t("settings.dataExportBusy") : t("settings.dataExportCta")}
+        </button>
+      </div>
+      {message && (
+        <p className={`font-mono text-[11px] mt-3 ${message.kind === "ok" ? "text-win" : "text-loss"}`}>
+          {message.text}
+        </p>
+      )}
     </Card>
   );
 }

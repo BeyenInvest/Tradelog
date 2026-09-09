@@ -6,14 +6,16 @@ const STORAGE_KEY = "theme";
 
 function getInitialTheme(): Theme {
   // A browser that blocks site data throws on access — must never white-screen the
-  // app before the ErrorBoundary mounts (C6). Fall back to the system preference.
+  // app before the ErrorBoundary mounts (C6).
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
   } catch {
     /* storage blocked */
   }
-  return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  // Light is the brand's base theme: without a stored choice everyone starts
+  // light, system preference included. Keep in sync with public/theme-init.js.
+  return "light";
 }
 
 interface ThemeContextValue {

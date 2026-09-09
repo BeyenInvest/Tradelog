@@ -1107,7 +1107,14 @@
     "sectionAccountDescription": "Beheer je account.",
     "support": "Support & contact",
     "supportDescription": "Vragen of feedback? Mail ons op",
-    "supportCta": "Mail ons"
+    "supportCta": "Mail ons",
+    "dataExport": "Data-export",
+    "dataExportDescription": "Al je trades (alle journals + backtest-projecten) als CSV. Jouw data blijft van jou.",
+    "dataExportCta": "Exporteer CSV",
+    "dataExportBusy": "Exporteren...",
+    "dataExportDone": "{{count}} trades geëxporteerd.",
+    "dataExportEmpty": "Nog geen trades om te exporteren.",
+    "dataExportFailed": "Export mislukt."
   },
   "methodology": {
     "title": "Journal & velden",
@@ -1283,5 +1290,193 @@
     "network": "Kan geen verbinding maken met de server. Controleer je internetverbinding.",
     "boundaryBody": "Er trad een onverwachte fout op. Je gegevens zijn veilig — herlaad de pagina om verder te gaan.",
     "reload": "Pagina herladen"
+  },
+  "landing": {
+    "nav": {
+      "login": "Inloggen",
+      "cta": "Gratis starten"
+    },
+    "hero": {
+      "eyebrow": "Trading- & backtest-journal",
+      "title": "Een journal dat zich vormt naar jouw methodiek.<line2>Niet andersom.</line2>",
+      "sub": "Je spreadsheet onthoudt wat je verdiende. Beyen onthoudt hoe je handelde: jouw setups en regels worden de velden, en elk veld een filter in de analyse. Eerlijke cijfers, geen coach, geen signalen.",
+      "cta1": "Gratis starten",
+      "note": "De gratis laag is een volwaardig journal. Geen demo, geen aftelklok."
+    },
+    "stage": {
+      "tab1": "Journal",
+      "tab2": "Analyse",
+      "meta": "Setup · Killzone · Regel gevolgd? — jouw velden",
+      "cap": "Cumulatief resultaat · YTD",
+      "sample": "Voorbeelddata",
+      "sampleRisk": "Voorbeelddata · 106 trades · gem. 0.5% risico per trade"
+    },
+    "kpi": {
+      "res": "Resultaat",
+      "pf": "Profit factor",
+      "exp": "Gem. R",
+      "dd": "Max drawdown"
+    },
+    "r": {
+      "kicker": "Het probleem",
+      "h2": "Je geheugen <em>liegt</em>.",
+      "p1": "Na een verlies weet je zeker dat de setup goed was. Na een winst vergeet je dat je je regel brak. Een spreadsheet onthoudt je resultaat — niet je gedrag.",
+      "p2": "Daarom voelt elke rode maand als een raadsel. Niet omdat het bewijs er niet is, maar omdat niemand het vastlegde.",
+      "p3": "Beyen legt het vast. En rekent er <em>zonder mededogen</em> mee.",
+      "cmpA": "Wat je spreadsheet onthoudt",
+      "cmpB": "Wat Beyen onthoudt",
+      "cmpRule": "Regel gevolgd?",
+      "cmpRuleVal": "NEE",
+      "cmpEval": "Evaluatie",
+      "cmpKz": "Killzone"
+    },
+    "m": {
+      "kicker": "De differentiator",
+      "h2": "<em>Jouw</em> condities worden de velden.",
+      "lead": "ICT, breakout, mean-reversion of iets volledig eigens: je richt het journal in met jouw setups, condities en regels. Elk veld wordt een filter en een breakdown in de analyse — je meet wat jíj doet, niet wat een template belangrijk vindt.",
+      "lead2": "Meerdere journals naast elkaar, elk met eigen velden, trades en reviews. Forex-swings en index-scalps vervuilen elkaars cijfers nooit.",
+      "presetOwn": "+ eigen methodiek",
+      "form": "Nieuwe trade",
+      "yourFields": "jouw velden",
+      "chipSetup": "Setup",
+      "chipBias": "HTF-bias",
+      "killzone": "Killzone",
+      "ruleField": "Regel gevolgd?",
+      "yes": "Ja",
+      "no": "Nee"
+    },
+    "e": {
+      "tableTitle": "Resultaat per setup",
+      "bdSetup": "Setup",
+      "bdTrades": "Trades",
+      "bdAvgR": "Gem. R"
+    },
+    "c": {
+      "kicker": "De grondwet",
+      "h2": "Cijfers die niets <em>verbloemen</em>.",
+      "lead": "Een journal is alleen iets waard als je de getallen vertrouwt. Dit zijn geen instellingen die je aan moet zetten — het is hoe Beyen rekent.",
+      "panelhead": "deze week",
+      "newTrade": "+ Nieuwe trade",
+      "missed": "gemist",
+      "excl": "Gemiste trade uitgesloten uit álle cijfers",
+      "p1h": "Gemiste trades vervuilen je cijfers nooit",
+      "p1b": "Een setup die je zag maar niet nam, log je met een hypothetisch resultaat. Hij telt nooit mee in het echte resultaat, de win-rate, streaks of drawdown.",
+      "p2h": "Break-even pauzeert je streak, maar reset 'm niet",
+      "p2b": "Een BE is geen verlies. Je winst- en verliesreeksen blijven kloppen met hoe je echt handelde.",
+      "p3h": "Gem. R, drawdown en streaks, chronologisch berekend",
+      "p3b": "Cumulatief resultaat op datum, R-multiple per trade, gemiddelde R per setup. Precies genoeg om te weten of je edge echt is."
+    },
+    "d": {
+      "kicker": "Discipline",
+      "h2": "Een winnende trade kan een <em>slechte</em> trade zijn.",
+      "lead": "Beyen beoordeelt uitvoering los van uitkomst. Een impulsieve entry die toevallig wint, blijft een fout. En één veld — regel gevolgd? — laat zien wat afwijken van je plan werkelijk kost.",
+      "evalTitle": "Uitvoering ≠ uitkomst",
+      "adhTitle": "Discipline, in cijfers",
+      "adhYes": "Regel gevolgd",
+      "adhNo": "Regel gebroken",
+      "bdTrades": "Trades",
+      "bdAvgR": "Gem. R"
+    },
+    "b": {
+      "kicker": "Backtesting",
+      "h2": "Bewijs het eerst. <em>Riskeer het daarna.</em>",
+      "lead": "Backtest-projecten staan naast het journal, met dezelfde velden en dezelfde rekenkern. Hun resultaten raken je live-cijfers nooit. Replayen doe je op de chart — loggen en rekenen doe je hier. Bewijs een setup op historie, handel 'm daarna pas met echt geld.",
+      "project": "Q1 & Q2 2026",
+      "isolated": "los van live",
+      "real": "echte backtest-data",
+      "result": "Resultaat",
+      "pf": "Profit factor",
+      "exp": "Gem. R",
+      "wbl": "Win / BE / Loss",
+      "streak": "Huidige streak",
+      "streakVal": "3× verlies",
+      "subR": "totaal 37.26R · 46 trades op 1% risico",
+      "b1h": "Eén motor, twee modi",
+      "b1b": "Dezelfde rekenkern voor R, drawdown en streaks draait op je backtests en je live boek.",
+      "b2h": "Strikt gescheiden",
+      "b2b": "Een backtest blaast de live win-rate of streaks nooit op. Wat je handelde en wat je testte blijft apart."
+    },
+    "t": {
+      "kicker": "Wat Beyen niet is",
+      "h2": "Bewust <em>geen</em> chart.",
+      "p1": "Tekenen en uitvoeren doe je in TradingView. Daar ben je goed in, dat bouwen we niet na. Beyen is de analyse-laag erbovenop: breng je trades binnen en zie wat je methodiek werkelijk oplevert.",
+      "p2": "Geen belofte dat je rijk wordt. Alleen de analyse die een serieuze trader echt gebruikt — verder niets.",
+      "no1": "Geen replay-engine",
+      "no2": "Geen AI-coach",
+      "no3": "Geen signalen",
+      "no4": "Geen aftelklok-korting",
+      "p3": "Gebouwd door een trader die dit zelf miste.",
+      "n1h": "Je handelt",
+      "n1b": "TradingView, MetaTrader of je broker. Waar je al zit.",
+      "n2h": "Je logt",
+      "n2b": "Vandaag nog handmatig — ook op je telefoon. Broker-CSV-import (TradingView, MetaTrader) staat bovenaan de roadmap.",
+      "n3h": "Beyen meet",
+      "n3b": "Jouw velden, echte cijfers, edge en lek per setup.",
+      "note": "Al het andere op deze pagina werkt vandaag."
+    },
+    "p": {
+      "kicker": "Prijs",
+      "h2": "Gratis is een <em>compleet</em> journal.",
+      "lead": "Geen uitgeklede demo. Eén journal met onbeperkt eigen velden is gratis — je betaalt pas voor extra journals naast elkaar.",
+      "free": "Gratis",
+      "freeAmt": " / voor altijd",
+      "f1": "Eén volledig journal + backtest-projecten",
+      "f2": "Onbeperkt eigen methodiek-velden",
+      "f3": "Volledige analyse: R-multiples, drawdown, streaks",
+      "f4": "Weekly reviews + PDF-export",
+      "freeCta": "Gratis starten",
+      "pro": "Pro",
+      "proSoon": "binnenkort",
+      "proAmt": " / prijs volgt",
+      "pf1": "Meerdere journals naast elkaar",
+      "pf2": "Alle methodiek-presets",
+      "pf3": "Alle instrument-classes",
+      "proCta": "Gratis starten, upgrade later",
+      "proNote": "Pro komt later. De gratis laag blijft een volwaardig journal."
+    },
+    "cta": {
+      "h2": "Begin met de <em>waarheid</em>.",
+      "lead": "Maak een gratis account en log je eerste trade binnen enkele minuten.",
+      "btn": "Gratis starten",
+      "note": "Geen creditcard, geen aftelklok."
+    },
+    "foot": {
+      "terms": "Voorwaarden",
+      "privacy": "Privacy",
+      "small": "© 2026 Beyen · Trading- & backtest-journal"
+    },
+    "band": {
+      "statement": "Gebouwd door een trader. Voor traders.",
+      "sub": "Eén taak: jouw methodiek meten en de waarheid teruggeven."
+    },
+    "midcta": {
+      "note": "Geen creditcard. Je eerste trade staat er vanavond in.",
+      "note2": "Backtest-projecten zitten in de gratis laag."
+    },
+    "fs": {
+      "head": "Standaard inbegrepen",
+      "f1": "Weekly reviews",
+      "f2": "Accounts & saldo's",
+      "f3": "PDF-export",
+      "f4": "Economische kalender",
+      "f5": "Lot-size calculator",
+      "f6": "Nederlands & Engels"
+    },
+    "faq": {
+      "kicker": "Vragen",
+      "h2": "Eerlijke <em>antwoorden</em>.",
+      "q1": "Werkt het op mijn telefoon?",
+      "a1": "Ja. Beyen draait in de browser en werkt volledig op mobiel — een trade loggen doe je ook vanaf je telefoon.",
+      "q2": "Wanneer komt broker-import?",
+      "a2": "CSV-import staat bovenaan de roadmap, te beginnen met TradingView en MetaTrader. Tot die tijd log je handmatig — dat is bewust licht gehouden.",
+      "q3": "Voor welke markten werkt het?",
+      "a3": "Alles wat je in R of procenten kunt uitdrukken: forex, indices, crypto, aandelen. Jouw velden bepalen de analyse, niet het instrument.",
+      "q4": "Wat gaat Pro kosten?",
+      "a4": "Dat maken we bij de publieke launch bekend. Wat we nu al zeggen: de gratis laag is geen lokkertje — die blijft een volwaardig journal.",
+      "q5": "Waarom niet gewoon een spreadsheet?",
+      "a5": "Voor het resultaat volstaat een sheet. Voor je gedrag niet: gemiste trades buiten je cijfers houden, streaks die BE juist behandelen, chronologische drawdown, een regel-gevolgd-breakdown — dat is formule-onderhoud dat niemand volhoudt. Beyen rekent het standaard, en jouw velden blijven filters in plaats van kolommen.",
+      "q6": "Van wie is mijn data?",
+      "a6": "Van jou. Al je trades exporteer je op elk moment als CSV vanuit de instellingen — geen lock-in, geen exportmuur achter een betaalplan."
+    }
   }
 }

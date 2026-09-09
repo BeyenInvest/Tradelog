@@ -1107,7 +1107,14 @@
     "sectionAccountDescription": "Manage your account.",
     "support": "Support & contact",
     "supportDescription": "Questions or feedback? Email us at",
-    "supportCta": "Email us"
+    "supportCta": "Email us",
+    "dataExport": "Data export",
+    "dataExportDescription": "All your trades (every journal + backtest project) as CSV. Your data stays yours.",
+    "dataExportCta": "Export CSV",
+    "dataExportBusy": "Exporting...",
+    "dataExportDone": "{{count}} trades exported.",
+    "dataExportEmpty": "No trades to export yet.",
+    "dataExportFailed": "Export failed."
   },
   "methodology": {
     "title": "Journal & fields",
@@ -1283,5 +1290,193 @@
     "network": "Can't connect to the server. Check your internet connection.",
     "boundaryBody": "An unexpected error occurred. Your data is safe — reload the page to continue.",
     "reload": "Reload page"
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "cta": "Start free"
+    },
+    "hero": {
+      "eyebrow": "Trading & backtesting journal",
+      "title": "A journal shaped by your method.<line2>Not the other way around.</line2>",
+      "sub": "Your spreadsheet remembers what you made. Beyen remembers how you traded: your setups and rules become the fields, and every field a filter in the analysis. Honest numbers, no coach, no signals.",
+      "cta1": "Start free",
+      "note": "The free tier is a complete journal. No demo, no countdown."
+    },
+    "stage": {
+      "tab1": "Journal",
+      "tab2": "Analysis",
+      "meta": "Setup · Killzone · Rule followed? — your fields",
+      "cap": "Cumulative result · YTD",
+      "sample": "Sample data",
+      "sampleRisk": "Sample data · 106 trades · avg 0.5% risk per trade"
+    },
+    "kpi": {
+      "res": "Result",
+      "pf": "Profit factor",
+      "exp": "Avg R",
+      "dd": "Max drawdown"
+    },
+    "r": {
+      "kicker": "The problem",
+      "h2": "Your memory <em>lies</em>.",
+      "p1": "After a loss, you're certain the setup was good. After a win, you forget you broke your rule. A spreadsheet remembers your result — not your behaviour.",
+      "p2": "That's why every red month feels like a mystery. Not because the evidence isn't there, but because nobody recorded it.",
+      "p3": "Beyen records it. And runs the numbers <em>without mercy</em>.",
+      "cmpA": "What your spreadsheet remembers",
+      "cmpB": "What Beyen remembers",
+      "cmpRule": "Rule followed?",
+      "cmpRuleVal": "NO",
+      "cmpEval": "Evaluation",
+      "cmpKz": "Killzone"
+    },
+    "m": {
+      "kicker": "The differentiator",
+      "h2": "<em>Your</em> conditions become the fields.",
+      "lead": "ICT, breakout, mean-reversion or something entirely your own: you set up the journal with your setups, conditions and rules. Every field becomes a filter and a breakdown in the analysis — you measure what you do, not what a template thinks matters.",
+      "lead2": "Multiple journals side by side, each with its own fields, trades and reviews. Forex swings and index scalps never dilute each other's numbers.",
+      "presetOwn": "+ your own method",
+      "form": "New trade",
+      "yourFields": "your fields",
+      "chipSetup": "Setup",
+      "chipBias": "HTF bias",
+      "killzone": "Killzone",
+      "ruleField": "Rule followed?",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "e": {
+      "tableTitle": "Result per setup",
+      "bdSetup": "Setup",
+      "bdTrades": "Trades",
+      "bdAvgR": "Avg R"
+    },
+    "c": {
+      "kicker": "The constitution",
+      "h2": "Numbers that hide <em>nothing</em>.",
+      "lead": "A journal is only worth something if you trust the numbers. These aren't settings you have to switch on — it's how Beyen counts.",
+      "panelhead": "this week",
+      "newTrade": "+ New trade",
+      "missed": "missed",
+      "excl": "Missed trade excluded from all numbers",
+      "p1h": "Missed trades never dilute your numbers",
+      "p1b": "A setup you saw but didn't take is logged with a hypothetical result. It never counts toward your real result, win rate, streaks or drawdown.",
+      "p2h": "Break-even pauses your streak, it doesn't reset it",
+      "p2b": "A BE is not a loss. Your win and loss streaks keep matching how you actually traded.",
+      "p3h": "Avg R, drawdown and streaks, computed chronologically",
+      "p3b": "Cumulative result by date, R-multiple per trade, average R per setup. Exactly enough to know whether your edge is real."
+    },
+    "d": {
+      "kicker": "Discipline",
+      "h2": "A winning trade can be a <em>bad</em> trade.",
+      "lead": "Beyen judges execution apart from outcome. An impulsive entry that happens to win is still a mistake. And one field — rule followed? — shows what deviating from your plan really costs.",
+      "evalTitle": "Execution ≠ outcome",
+      "adhTitle": "Discipline, in numbers",
+      "adhYes": "Rule followed",
+      "adhNo": "Rule broken",
+      "bdTrades": "Trades",
+      "bdAvgR": "Avg R"
+    },
+    "b": {
+      "kicker": "Backtesting",
+      "h2": "Prove it first. <em>Risk it after.</em>",
+      "lead": "Backtest projects sit next to the journal, with the same fields and the same calculation core. Their results never touch your live numbers. You replay on the chart — you log and measure here. Prove a setup on history before trading it with real money.",
+      "project": "Q1 & Q2 2026",
+      "isolated": "isolated from live",
+      "real": "real backtest data",
+      "result": "Result",
+      "pf": "Profit factor",
+      "exp": "Avg R",
+      "wbl": "Win / BE / Loss",
+      "streak": "Current streak",
+      "streakVal": "3 losses",
+      "subR": "total 37.26R · 46 trades at 1% risk",
+      "b1h": "One engine, two modes",
+      "b1b": "The same calculation core for R, drawdown and streaks runs on your backtests and your live book.",
+      "b2h": "Strictly separated",
+      "b2b": "A backtest never inflates your live win rate or streaks. What you traded and what you tested stay apart."
+    },
+    "t": {
+      "kicker": "What Beyen is not",
+      "h2": "Deliberately <em>no</em> chart.",
+      "p1": "You draw and execute in TradingView. You're good there — we're not rebuilding it. Beyen is the analysis layer on top: bring in your trades and see what your method actually produces.",
+      "p2": "No promise of getting rich. Only the analysis a serious trader actually uses — nothing else.",
+      "no1": "No replay engine",
+      "no2": "No AI coach",
+      "no3": "No signals",
+      "no4": "No countdown discounts",
+      "p3": "Built by a trader who was missing exactly this.",
+      "n1h": "You trade",
+      "n1b": "TradingView, MetaTrader or your broker. Where you already are.",
+      "n2h": "You log",
+      "n2b": "Manual for now — on your phone too. Broker CSV import (TradingView, MetaTrader) is top of the roadmap.",
+      "n3h": "Beyen measures",
+      "n3b": "Your fields, real numbers, edge and leak per setup.",
+      "note": "Everything else on this page works today."
+    },
+    "p": {
+      "kicker": "Pricing",
+      "h2": "Free is a <em>complete</em> journal.",
+      "lead": "Not a stripped-down demo. One journal with unlimited custom fields is free — you only pay for extra journals side by side.",
+      "free": "Free",
+      "freeAmt": " / forever",
+      "f1": "One full journal + backtest projects",
+      "f2": "Unlimited custom methodology fields",
+      "f3": "Full analysis: R-multiples, drawdown, streaks",
+      "f4": "Weekly reviews + PDF export",
+      "freeCta": "Start free",
+      "pro": "Pro",
+      "proSoon": "soon",
+      "proAmt": " / price to follow",
+      "pf1": "Multiple journals side by side",
+      "pf2": "All methodology presets",
+      "pf3": "All instrument classes",
+      "proCta": "Start free, upgrade later",
+      "proNote": "Pro comes later. The free tier stays a complete journal."
+    },
+    "cta": {
+      "h2": "Start with the <em>truth</em>.",
+      "lead": "Create a free account and log your first trade in minutes.",
+      "btn": "Start free",
+      "note": "No credit card, no countdown."
+    },
+    "foot": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "small": "© 2026 Beyen · Trading & backtesting journal"
+    },
+    "band": {
+      "statement": "Built by a trader. For traders.",
+      "sub": "One job: measure your method and return the truth."
+    },
+    "midcta": {
+      "note": "No credit card. Your first trade is logged tonight.",
+      "note2": "Backtest projects are part of the free tier."
+    },
+    "fs": {
+      "head": "Included as standard",
+      "f1": "Weekly reviews",
+      "f2": "Accounts & balances",
+      "f3": "PDF export",
+      "f4": "Economic calendar",
+      "f5": "Lot-size calculator",
+      "f6": "English & Dutch"
+    },
+    "faq": {
+      "kicker": "Questions",
+      "h2": "Honest <em>answers</em>.",
+      "q1": "Does it work on my phone?",
+      "a1": "Yes. Beyen runs in the browser and works fully on mobile — logging a trade from your phone included.",
+      "q2": "When is broker import coming?",
+      "a2": "CSV import is top of the roadmap, starting with TradingView and MetaTrader. Until then you log manually — kept deliberately light.",
+      "q3": "Which markets does it work for?",
+      "a3": "Anything you can express in R or percentages: forex, indices, crypto, stocks. Your fields drive the analysis, not the instrument.",
+      "q4": "What will Pro cost?",
+      "a4": "We'll announce that at public launch. What we can say now: the free tier is not bait — it stays a complete journal.",
+      "q5": "Why not just a spreadsheet?",
+      "a5": "For the result, a sheet is fine. For your behaviour it isn't: keeping missed trades out of your numbers, streaks that treat BE correctly, chronological drawdown, a rule-followed breakdown — that's formula upkeep nobody sustains. Beyen computes it by default, and your fields stay filters instead of columns.",
+      "q6": "Whose data is it?",
+      "a6": "Yours. Export all your trades as CSV from settings at any time — no lock-in, no export wall behind a paid plan."
+    }
   }
 }
