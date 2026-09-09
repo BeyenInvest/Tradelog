@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
-import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature, ListChecks, NotebookText } from "lucide-react";
+import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature, ListChecks, NotebookText, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { LogoMark, LogoLockup } from "@/components/ui/Logo";
@@ -138,6 +138,14 @@ export function Sidebar() {
       <div className="hidden md:flex md:mt-auto flex-col gap-3 px-2">
         <ThemeToggle />
         <NavLink
+          to="/help"
+          className={({ isActive }) =>
+            `flex items-center gap-2 text-xs font-body transition-colors ${isActive ? "text-ink" : "text-muted hover:text-ink"}`
+          }
+        >
+          <HelpCircle size={14} /> {t("nav.help")}
+        </NavLink>
+        <NavLink
           to="/settings"
           className={({ isActive }) =>
             `flex items-center gap-2 text-xs font-body transition-colors ${isActive ? "text-ink" : "text-muted hover:text-ink"}`
@@ -154,6 +162,13 @@ export function Sidebar() {
       </div>
       <div className="flex items-center gap-1 md:hidden shrink-0">
         <ThemeToggle iconOnly />
+        <NavLink
+          to="/help"
+          aria-label={t("nav.help")}
+          className={({ isActive }) => `p-2 rounded-lg ${isActive ? "text-ink" : "text-muted hover:text-ink"}`}
+        >
+          <HelpCircle size={16} />
+        </NavLink>
         <NavLink
           to="/settings"
           aria-label={t("nav.settings")}

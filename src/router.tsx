@@ -29,6 +29,7 @@ const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
 const EconomicCalendarPage = lazy(() => import("@/pages/EconomicCalendarPage"));
 const LotSizeCalculatorPage = lazy(() => import("@/pages/LotSizeCalculatorPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const HelpPage = lazy(() => import("@/pages/HelpPage"));
 const AdminUsersListPage = lazy(() => import("@/pages/AdminUsersListPage"));
 const AdminUserDetailPage = lazy(() => import("@/pages/AdminUserDetailPage"));
 // Public but lazy: the share view pulls in the charts/stats bundle, and it's never
@@ -140,6 +141,7 @@ export function AppRouter() {
         <Route path="/calendar" element={<EconomicCalendarPage />} />
         <Route path="/lot-size" element={<LotSizeCalculatorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route
           path="/admin"
           element={

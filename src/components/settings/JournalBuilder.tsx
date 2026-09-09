@@ -269,9 +269,9 @@ export function JournalBuilder({
               <button
                 type="button"
                 onClick={() => setShowAdvanced(true)}
-                className="self-start font-body text-sm text-muted hover:text-ink inline-flex items-center gap-1.5"
+                className="self-start inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-surface-2 px-3 py-1.5 font-body text-sm text-ink transition-colors hover:border-gold"
               >
-                <ChevronDown size={14} /> {t("builder.advanced")}
+                <Plus size={13} className="text-gold" /> {t("builder.advanced")}
               </button>
             ) : (
               <CustomFieldAdd existingKeys={addedKeys} onAdd={addCustomField} onClose={() => setShowAdvanced(false)} />
