@@ -72,13 +72,13 @@ Doel: de DB-waarheid verankerd. Werklijst = `docs/schema-sync-werklijst-2026-09.
 
 Doel: de 7 openstaande motorpunten (na twee audits 0/7) — waarvan één voor gebruikers zichtbaar is.
 
-- [ ] D1. Kalendertotalen: maand/week sommeren over rauwe waarden i.p.v. gerondde dagtotalen (`calendarTotals.ts:75-80,87`) — dicht de zichtbare 0,99R-vs-1,0R-drift. + consistentietest kalender ≡ KPI.
-- [ ] D2. Kruistabel: `d.id !== autoRowDim?.id` in de timing-tak (`CrossTable.tsx:67`) — één regel (N-R2-1, MIDDEL).
-- [ ] D3. PDF-equity-curve: duplicaat in `reviewPdfData.ts:191-197` vervangen door `computeEquityCurve(taken)`.
-- [ ] D4. Eén round-half-away-from-zero-helper: dekt `round2` (`core.ts:567`) én R-histogram (`breakdown.ts:189`).
-- [ ] D5. `computeProfitFactor` op rauwe sommen delen (`core.ts:276-279`).
-- [ ] D6. `computeDurationByOutcome` → `ClosedTrade[]`-signature + missed-guard-test (`duration.ts:9`).
-- [ ] D7. Klein: comment bij `CROSS_SEP = "\0"` (breakdown.ts:229); `propFirm.ts:68` NaN-guard bij target 0; M8-commentaar `types.ts:11-16` corrigeren.
+- [x] D1. Kalendertotalen: `rawDayTotalsInUnit` toegevoegd — week/maand sommeren over raw, dagcellen blijven round2 (CalendarView aangepast) + consistentietest kalender ≡ KPI (0.335×3-drift-case).
+- [x] D2. Kruistabel: timing-tak sluit `autoRowDim` nu uit (CrossTable.tsx).
+- [x] D3. PDF-equity-curve deelt `computeEquityCurve` (oude lokale kopie rondde de running sum per stap).
+- [x] D4. `roundHalfAwayFromZero` in core.ts als dé afrondingsprimitief; `round2` en de R-histogram-bins gebruiken hem (−0.5R hoort in −1R, niet 0R).
+- [x] D5. `computeProfitFactor` deelt op rauwe sommen; afronden alleen voor weergave.
+- [x] D6. `computeDurationByOutcome` → `ClosedTrade[]` + missed-guard-test (422 tests totaal).
+- [x] D7. CROSS_SEP-NUL-byte-comment, propFirm `> 0`-guards (NaN/Infinity bij 0-target), types.ts-fase-commentaar gecorrigeerd (kolom is wél nog een Postgres-enum).
 
 ## Blok E — UX / a11y / i18n / merk-poets · **Opus** · 1 dag 🔴 (E1–E3) + 🟡
 

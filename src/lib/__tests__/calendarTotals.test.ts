@@ -4,10 +4,12 @@ import {
   mondayFirstOffset,
   monthTotalOf,
   monthWeeks,
+  rawDayTotalsInUnit,
   rowWeekNumber,
   tradesByDayOfMonth,
   weekTotalOf,
 } from "@/lib/calendarTotals";
+import { round2 } from "@/lib/stats";
 
 function t(datum_open: string, resultaat_pct: number, risk_pct: number | null = null) {
   return { datum_open, resultaat_pct, risk_pct };
@@ -82,20 +84,40 @@ describe("dayTotalsInUnit", () => {
 
 describe("weekTotalOf / monthTotalOf", () => {
   const byDay = tradesByDayOfMonth([t("2026-08-03", 1.1), t("2026-08-05", -0.4), t("2026-08-21", 2)], 2026, 7);
-  const totals = dayTotalsInUnit(byDay, "percent");
+  const raw = rawDayTotalsInUnit(byDay, "percent");
   const weeks = monthWeeks(2026, 7);
 
   it("sums only the days inside the row, skipping padding", () => {
     // Row 1 = Aug 3-9 (the first full week).
-    expect(weekTotalOf(weeks[1], totals)).toEqual({ total: 0.7, hasResult: true });
+    expect(weekTotalOf(weeks[1], raw)).toEqual({ total: 0.7, hasResult: true });
   });
 
   it("hasResult is false for a week with no realized trades (row renders no total)", () => {
-    expect(weekTotalOf(weeks[0], totals)).toEqual({ total: 0, hasResult: false });
+    expect(weekTotalOf(weeks[0], raw)).toEqual({ total: 0, hasResult: false });
   });
 
   it("month total is the sum of the day totals", () => {
-    expect(monthTotalOf(totals)).toBe(2.7);
+    expect(monthTotalOf(raw)).toBe(2.7);
+  });
+
+  it("D1: sums RAW values, not rounded day totals — calendar ≡ KPI row", () => {
+    // Three days of +0.335 each: per-day display rounds each to 0.33 (float
+    // 0.335 sits just under the half), summing those gives 0.99 — the visible
+    // 0,99-vs-1,0 drift. The raw sum rounds once to 1.0, exactly what the KPI
+    // row computes over the same trades.
+    const drift = tradesByDayOfMonth(
+      [t("2026-08-03", 0.335), t("2026-08-04", 0.335), t("2026-08-05", 0.335)],
+      2026,
+      7
+    );
+    const driftRaw = rawDayTotalsInUnit(drift, "percent");
+    const kpiTotal = round2(0.335 + 0.335 + 0.335);
+    expect(monthTotalOf(driftRaw)).toBe(kpiTotal);
+    // The old bug: month over *display* totals ≠ KPI.
+    const display = dayTotalsInUnit(drift, "percent");
+    let sumOfRounded = 0;
+    for (const v of display.values()) sumOfRounded += v;
+    expect(round2(sumOfRounded)).not.toBe(kpiTotal);
   });
 });
 

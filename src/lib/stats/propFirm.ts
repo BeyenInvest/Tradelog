@@ -60,8 +60,11 @@ function clamp01(n: number): number {
 export function computePropFirmStatus(acc: PropFirmRuleFields): PropFirmStatus {
   const pnl = acc.current_pnl_pct;
 
+  // > 0-guards (D7/M8): de DB-check eist positieve percentages, maar een 0 die
+  // toch binnenkomt (oude rij, handmatige import) zou hier 0/0 = NaN of
+  // Infinity in de progress-balk gieten — behandel 'm als niet-geconfigureerd.
   let profitTarget: ProfitTargetStatus | null = null;
-  if (acc.profit_target_pct != null && pnl != null) {
+  if (acc.profit_target_pct != null && acc.profit_target_pct > 0 && pnl != null) {
     const targetPct = acc.profit_target_pct;
     profitTarget = {
       targetPct,
@@ -71,7 +74,7 @@ export function computePropFirmStatus(acc: PropFirmRuleFields): PropFirmStatus {
   }
 
   let drawdown: DrawdownStatus | null = null;
-  if (acc.max_drawdown_pct != null && pnl != null) {
+  if (acc.max_drawdown_pct != null && acc.max_drawdown_pct > 0 && pnl != null) {
     const limitPct = acc.max_drawdown_pct;
     // Only a loss (negative running P&L) consumes the drawdown buffer.
     const loss = pnl < 0 ? -pnl : 0;

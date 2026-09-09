@@ -63,8 +63,9 @@ export function CrossTable({ trades, dims }: CrossTableProps) {
   // (sessie/uur) even for journals with no tijd_open, giving a blank table.
   const autoRowDim = useMemo(() => dims.find((d) => dimHasData(d, trades)) ?? dims[0], [dims, trades]);
   const autoColDim = useMemo(() => {
-    // Prefer a timing axis for the columns, but only when it has data.
-    const timing = dims.find((d) => (d.id === "sessie" || d.id === "uur") && dimHasData(d, trades));
+    // Prefer a timing axis for the columns, but only when it has data — and never
+    // the dimension the row already auto-picked (D2: same axis twice = a diagonal).
+    const timing = dims.find((d) => (d.id === "sessie" || d.id === "uur") && d.id !== autoRowDim?.id && dimHasData(d, trades));
     if (timing) return timing;
     // Else the first other data-bearing dimension; fall back to any second dim.
     const other = dims.find((d) => d.id !== autoRowDim?.id && dimHasData(d, trades));

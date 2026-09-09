@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { Outcome, ResultUnit } from "@/lib/constants";
 import type { PeriodicReview, ReviewKind, Trade, WeeklyReview } from "@/lib/types";
-import { computeOverviewKpis, computeErrorCounts, sortChronological, closedTrades, isOpen, round2, type ClosedTrade } from "@/lib/stats";
+import { computeEquityCurve, computeOverviewKpis, computeErrorCounts, sortChronological, closedTrades, isOpen, round2, type ClosedTrade } from "@/lib/stats";
 import { groupTradesByOutcome } from "@/lib/tradeGrouping";
 import { formatAggregate, tradesInResultUnit } from "@/lib/format";
 import { periodLabel } from "@/lib/periodRanges";
@@ -187,14 +187,13 @@ function toTradeGroups(trades: Trade[], missed: boolean): ReviewPdfTradeGroup[] 
     }));
 }
 
-/** Cumulative resultaat after each taken trade, chronological (for the equity sparkline). */
+/**
+ * Cumulative resultaat after each taken trade (equity sparkline) — via the ONE
+ * shared computeEquityCurve (D3): the old local copy re-rounded the running sum
+ * at every step, so the curve could drift from the app's own equity chart.
+ */
 function equityCurve(taken: ClosedTrade[]): number[] {
-  const sorted = sortChronological(taken);
-  let running = 0;
-  return sorted.map((t) => {
-    running = round2(running + t.resultaat_pct);
-    return running;
-  });
+  return computeEquityCurve(taken).map((p) => p.cum);
 }
 
 function buildErrorLine(t: TFunction, taken: ClosedTrade[], missed: ClosedTrade[], unit: ResultUnit): string | null {

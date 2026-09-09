@@ -6,7 +6,7 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
-import { dayTotalsInUnit, monthTotalOf, monthWeeks, rowWeekNumber, tradesByDayOfMonth, weekTotalOf } from "@/lib/calendarTotals";
+import { dayTotalsInUnit, monthTotalOf, monthWeeks, rawDayTotalsInUnit, rowWeekNumber, tradesByDayOfMonth, weekTotalOf } from "@/lib/calendarTotals";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -46,8 +46,11 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
   // Bucketing + dag-/maandtotalen: pure functies in src/lib/calendarTotals.ts
   // (audit T1 — de totaallogica is daar getest, hier alleen nog wiring).
   const byDay = useMemo(() => tradesByDayOfMonth(trades, year, month), [trades, year, month]);
+  // Twee lagen (D1): raw voor week-/maandsommen (geen dubbele afronding — de
+  // kalender matcht zo exact de KPI-rij), gerond voor de dagcellen zelf.
+  const rawResultByDay = useMemo(() => rawDayTotalsInUnit(byDay, resultUnit, saldo), [byDay, resultUnit, saldo]);
   const realResultByDay = useMemo(() => dayTotalsInUnit(byDay, resultUnit, saldo), [byDay, resultUnit, saldo]);
-  const monthTotal = useMemo(() => monthTotalOf(realResultByDay), [realResultByDay]);
+  const monthTotal = useMemo(() => monthTotalOf(rawResultByDay), [rawResultByDay]);
 
   /** Unique (pair, outcome) combos per day, in first-taken order — a pair traded twice with the same outcome shows once, but a pair that won once and lost once still shows both, since the outcome drives the chip's color. */
   const pairsByDay = useMemo(() => {
@@ -309,7 +312,7 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
       <div className="grid gap-1.5" style={GRID_TEMPLATE}>
         {weeks.map((week, wi) => {
-          const { total: weekTotal, hasResult } = weekTotalOf(week, realResultByDay);
+          const { total: weekTotal, hasResult } = weekTotalOf(week, rawResultByDay);
           const weekNum = rowWeekNumber(year, month, wi);
           return (
             <div key={wi} className="contents">

@@ -56,9 +56,27 @@ export function tradesByDayOfMonth<T extends { datum_open: string }>(
 }
 
 /**
- * Realized day totals in the chosen unit, round2'd (CLAUDE.md-invariant: the
- * win/loss cell color and the aggregates may never read float dust like
- * -2.8e-17). The single source for cell values, week rows and the month total.
+ * RAW realized day totals in the chosen unit — unrounded, the single source the
+ * week rows and the month total sum over (fixplan D1: summing the *rounded* day
+ * totals let the visible month total drift up to n×0.005 from the KPI row —
+ * 0,99R op de kalender vs 1,0R in het overzicht). Display values round via
+ * dayTotalsInUnit below.
+ */
+export function rawDayTotalsInUnit(
+  byDay: Map<number, Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]>,
+  unit: ResultUnit,
+  saldo?: number | null
+): Map<number, number> {
+  const m = new Map<number, number>();
+  for (const [day, dayTrades] of byDay) {
+    m.set(day, dayTrades.reduce((s, t) => s + resultInUnit(t, unit, saldo), 0));
+  }
+  return m;
+}
+
+/**
+ * Realized day totals for the day CELLS, round2'd (CLAUDE.md-invariant: the
+ * win/loss cell color may never read float dust like -2.8e-17).
  */
 export function dayTotalsInUnit(
   byDay: Map<number, Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]>,
@@ -66,26 +84,24 @@ export function dayTotalsInUnit(
   saldo?: number | null
 ): Map<number, number> {
   const m = new Map<number, number>();
-  for (const [day, dayTrades] of byDay) {
-    m.set(day, round2(dayTrades.reduce((s, t) => s + resultInUnit(t, unit, saldo), 0)));
-  }
+  for (const [day, raw] of rawDayTotalsInUnit(byDay, unit, saldo)) m.set(day, round2(raw));
   return m;
 }
 
-/** Month total: the sum of the (already rounded) day totals, round2'd again. */
-export function monthTotalOf(dayTotals: Map<number, number>): number {
+/** Month total: the sum of the RAW day totals, rounded once — identical to the KPI row over the same trades. */
+export function monthTotalOf(rawDayTotals: Map<number, number>): number {
   let sum = 0;
-  for (const v of dayTotals.values()) sum += v;
+  for (const v of rawDayTotals.values()) sum += v;
   return round2(sum);
 }
 
-/** Week-row total + whether any day in the row carries a realized result (an all-empty row renders no total). */
+/** Week-row total (over RAW day totals, rounded once) + whether any day in the row carries a realized result. */
 export function weekTotalOf(
   week: (number | null)[],
-  dayTotals: Map<number, number>
+  rawDayTotals: Map<number, number>
 ): { total: number; hasResult: boolean } {
-  const total = round2(week.reduce<number>((s, d) => s + (d != null ? dayTotals.get(d) ?? 0 : 0), 0));
-  const hasResult = week.some((d) => d != null && dayTotals.has(d));
+  const total = round2(week.reduce<number>((s, d) => s + (d != null ? rawDayTotals.get(d) ?? 0 : 0), 0));
+  const hasResult = week.some((d) => d != null && rawDayTotals.has(d));
   return { total, hasResult };
 }
 

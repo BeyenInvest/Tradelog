@@ -1,12 +1,15 @@
-import type { Trade } from "../types";
 import type { Outcome } from "../constants";
 import { OUTCOMES } from "../constants";
-import { round2 } from "./core";
+import { round2, type ClosedTrade } from "./core";
 
 export type DurationByOutcome = Record<Outcome, { avgDays: number | null; n: number }>;
 
-/** Gemiddelde duur (dagen) per outcome. Open trades (duur_dagen null) zijn uitgesloten. */
-export function computeDurationByOutcome(trades: Trade[]): DurationByOutcome {
+/**
+ * Gemiddelde duur (dagen) per outcome. Trades zonder duur_dagen zijn uitgesloten.
+ * ClosedTrade-signature (D6): caller levert een al gescoped, missed-excluded,
+ * closed lijst (takenTrades + closedTrades) — zelfde contract als elke stat.
+ */
+export function computeDurationByOutcome(trades: ClosedTrade[]): DurationByOutcome {
   const result = {} as DurationByOutcome;
   for (const outcome of OUTCOMES) {
     const days = trades

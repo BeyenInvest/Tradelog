@@ -9,9 +9,11 @@ export interface Trade {
   user_id: string;
 
   /**
-   * Fase name. Since Scope C (migration 0020+) this is the name of a fase in the
-   * trade's methodology, not the fixed FASES enum — free text, like `entry`.
-   * For Weekly Phase Method users the values are still "Fase 1".."Fase 4".
+   * Fase. In de DB nog steeds de vaste Postgres-enum fase_enum ('Fase 1'..'Fase 4'),
+   * NIET vrije tekst (D7/M8-correctie — het oude commentaar beweerde het omgekeerde):
+   * de kolom blijft not null met default 'Fase 1' tot cyclus 10 de legacy-WPM-velden
+   * de-hardcodet. TS typt 'm als string omdat moderne journals fase alleen nog als
+   * verborgen default meesturen; de methodology-laag leeft in trades.custom.
    */
   fase: string;
   datum_open: string; // ISO date (yyyy-mm-dd)

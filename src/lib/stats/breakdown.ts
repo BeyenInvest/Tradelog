@@ -1,6 +1,6 @@
 import type { Trade } from "../types";
 import { FASES, MIN_SAMPLE_SIZE, QUARTERS, WEEKDAYS, type Fase, type Quarter, type Weekday } from "../constants";
-import { round2, rMultiple, type ClosedTrade } from "./core";
+import { round2, roundHalfAwayFromZero, rMultiple, type ClosedTrade } from "./core";
 
 export interface BreakdownRow<K extends string> {
   key: K;
@@ -186,7 +186,9 @@ function rBinLabel(bin: number): string {
  */
 export function computeRHistogram(trades: Pick<ClosedTrade, "resultaat_pct" | "risk_pct">[]): RHistogramBin[] {
   if (trades.length === 0) return [];
-  const binOf = (r: number) => Math.max(-R_HISTOGRAM_CAP, Math.min(R_HISTOGRAM_CAP, Math.round(r)));
+  // Symmetric half-rounding (D4): a -0.5R scratch belongs in the -1R bin just
+  // like +0.5R belongs in +1R — Math.round would send -0.5 to the 0R bin.
+  const binOf = (r: number) => Math.max(-R_HISTOGRAM_CAP, Math.min(R_HISTOGRAM_CAP, roundHalfAwayFromZero(r)));
   const counts = new Map<number, number>();
   for (const t of trades) {
     const b = binOf(rMultiple(t));
@@ -226,6 +228,9 @@ export function getCell(table: CrossTableResult, rowKey: string, colKey: string)
   return table.cells.get(rowKey)?.get(colKey) ?? null;
 }
 
+// NUL-byte als interne (rij, kolom)-sleutelscheiding (D7): het enige teken dat
+// nooit in een dimensiewaarde (pair, sessie, custom-veldwaarde, ...) voorkomt,
+// dus samengestelde sleutels kunnen nooit botsen. Puur intern — rendert nergens.
 const CROSS_SEP = " ";
 
 function aggregateCell(bucket: Pick<ClosedTrade, "outcome" | "resultaat_pct">[], minSample: number): CrossTableCell {

@@ -273,13 +273,14 @@ export function computeProfitFactor(trades: Pick<ClosedTrade, "resultaat_pct">[]
     if (t.resultaat_pct > 0) grossProfit += t.resultaat_pct;
     else if (t.resultaat_pct < 0) grossLoss += -t.resultaat_pct;
   }
-  const gp = round2(grossProfit);
-  const gl = round2(grossLoss);
+  // Delen op de RAUWE sommen (D5): eerst per kant round2'en en dan delen liet
+  // de factor bij kleine totalen zichtbaar afwijken van gp/gl zoals de trader
+  // die zelf narekent. Afronden is alleen voor weergave, ná de deling.
   let profitFactor: number | null;
-  if (gl > 0) profitFactor = round2(gp / gl);
-  else if (gp > 0) profitFactor = Infinity; // winners, no losers → unbounded
+  if (grossLoss > 0) profitFactor = round2(grossProfit / grossLoss);
+  else if (grossProfit > 0) profitFactor = Infinity; // winners, no losers → unbounded
   else profitFactor = null; // nothing decisive yet
-  return { grossProfit: gp, grossLoss: gl, profitFactor };
+  return { grossProfit: round2(grossProfit), grossLoss: round2(grossLoss), profitFactor };
 }
 
 /**
@@ -563,8 +564,18 @@ export function mean(values: number[]): number {
   return values.reduce((s, v) => s + v, 0) / values.length;
 }
 
-/** Rounds to 2 decimals, normalizing an exact-zero negative sum (-0) to 0 — Math.round(-0.001 * 100) / 100 is -0, which is falsy and renders as "-0%". */
-export function round2(n: number): number {
-  const r = Math.round(n * 100) / 100;
+/**
+ * Round half AWAY FROM ZERO, symmetric for gains and losses (D4): Math.round
+ * rounds halves toward +∞, so -0.5 becomes -0 while +0.5 becomes 1 — a win and
+ * an equal loss would round differently. Also normalizes -0 to 0.
+ * The ONE rounding primitive: round2 below and the R-histogram bins use this.
+ */
+export function roundHalfAwayFromZero(n: number): number {
+  const r = Math.sign(n) * Math.round(Math.abs(n));
   return Object.is(r, -0) ? 0 : r;
+}
+
+/** Rounds to 2 decimals via roundHalfAwayFromZero — never -0 (which is falsy and renders as "-0%"), never half-toward-+∞ asymmetry. */
+export function round2(n: number): number {
+  return roundHalfAwayFromZero(n * 100) / 100;
 }
