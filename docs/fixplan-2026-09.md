@@ -21,7 +21,7 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 | B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ◐ CI groen op main ☑ · owner-stappen open (B2-B5 + required-check) |
 | C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ☑ 2026-09-10 — 0057 op prod + geverifieerd; rest-☐: CA-download (C4) + C7-bootstrap-test (met B3) |
 | D | Zichtbare motor-poets | **Fable** | ½ dag | ☑ 2026-09-10 |
-| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☑ 2026-09-10 — E1-E8 af op branch `fixplan-e-ux-polish`, groen |
+| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☑ 2026-09-10 — E1-E8 gemerged+gepusht (727f0b3), groen |
 | F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☑ 2026-09-10 (PA2 → H; vitest-advisory → H) |
 | G | Launch-week (B6) | owner + **Opus** | 2–3 dagen owner-werk | ☐ |
 | H | Post-launch (pas ná 2–4 weken echte gebruikers) | per item | — | ☐ |
@@ -82,7 +82,7 @@ Doel: de 7 openstaande motorpunten (na twee audits 0/7) — waarvan één voor g
 
 ## Blok E — UX / a11y / i18n / merk-poets · **Opus** · 1 dag 🔴 (E1–E3) + 🟡
 
-**AF 2026-09-10** (branch `fixplan-e-ux-polish`, lint/tsc + 422 tests + build groen, i18n-parity 1629=1629). Alle 8 punten hieronder afgevinkt; besluiten die van de letterlijke tekst afwijken staan onderaan bij "Besluiten".
+**AF + GEPUSHT 2026-09-10** (merge `727f0b3` op origin/main, lint/tsc + 422 tests + build groen, i18n-parity 1629=1629; geen migratie). Alle 8 punten hieronder afgevinkt; besluiten die van de letterlijke tekst afwijken staan onderaan bij "Besluiten". CI draait op de push; Vercel-deploy nog als Ready te verifiëren.
 
 - [x] E1. **Field.tsx label-associatie** — opgelost via een **wrappende `<label>`** (caption nu een `<span>`); dat associeert impliciet met de geneste control zonder per-child id/htmlFor-geplumb, robuust voor élk childtype (input/select/EnumSelect/BooleanToggle-buttons). Geen enkel child rendert een eigen `<label>`, dus geen nested-label-risico. Repareert vrijwel elk formulier in één component (X2).
 - [x] E2. **Discard-dialog binnen de focus-trap + autofocus** (X1) — `useModalGuard` kreeg een eigen `discardRef`: Tab wordt nu binnen de discard-prompt getrapt (voorheen op `containerRef`, waardoor de prompt-knoppen — die als *sibling* renderen — onbereikbaar waren), en bij openen krijgt de niet-destructieve Cancel (eerste in DOM) focus (stray Enter annuleert i.p.v. weggooien). Bij annuleren keert focus terug naar de modal. Eén fix dekt zowel Modal.tsx als TradeForm.tsx (beide renderen `{discardDialog}` als sibling).
