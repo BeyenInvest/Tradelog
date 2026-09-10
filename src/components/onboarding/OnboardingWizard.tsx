@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { LogoMark } from "@/components/ui/Logo";
@@ -202,9 +202,19 @@ function OnboardingWizardInner() {
             )}
           </div>
 
-          <p className="ob-up text-center font-mono text-[11px] text-faint" style={{ animationDelay: "120ms" }}>
-            {t("onboarding.reassure")}
-          </p>
+          <div className="ob-up flex flex-col items-center gap-2" style={{ animationDelay: "120ms" }}>
+            <p className="text-center font-mono text-[11px] text-faint">{t("onboarding.reassure")}</p>
+            {/* The Gids was only reachable from the sidebar, which the first-run takeover covers (E8).
+                Opens in a new tab so peeking at it doesn't throw away wizard progress. */}
+            <a
+              href="/help"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-body text-xs text-gold underline-offset-2 hover:underline"
+            >
+              <HelpCircle size={13} /> {t("onboarding.guideLink")}
+            </a>
+          </div>
         </div>
       </div>
     </div>

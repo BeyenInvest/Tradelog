@@ -274,7 +274,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
       >
         <div className="flex items-center justify-between mb-6">
           <h2 id="trade-form-title" className="font-display text-2xl italic text-ink">{trade ? t("tradeForm.editTitle") : t("journal.newTrade")}</h2>
-          <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
+          <button onClick={requestClose} aria-label={t("common.close")} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
             <X size={18} />
           </button>
         </div>

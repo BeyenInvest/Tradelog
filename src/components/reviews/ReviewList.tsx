@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
+import { EmptyHint } from "@/components/ui/EmptyHint";
 import { formatAggregate } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
 import type { WeeklyReview } from "@/lib/types";
@@ -20,7 +21,7 @@ export function ReviewList({ reviews, selectedId, onSelect, resultaatOf, tradeCo
   return (
     <Card className="flex flex-col gap-2">
       <h3 className="font-display text-xl italic mb-2 px-1 text-ink">{t("reviews.weeklyReviewsHeading")}</h3>
-      {reviews.length === 0 && <p className="text-sm text-muted px-1">{t("reviews.noReviews")}</p>}
+      {reviews.length === 0 && <EmptyHint className="px-1" title={t("reviews.noReviews")} hint={t("reviews.noReviewsHint")} />}
       {reviews.map((rv) => {
         const resultaat = resultaatOf(rv);
         const active = rv.id === selectedId;

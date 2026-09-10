@@ -30,7 +30,9 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 - Streak rule: BE pauses a streak (no reset, no increment), only Win/Loss break it.
 - Drawdown/equity curve: chronological by `datum_open`, tie-broken by `id`, via `sortChronological()`.
 - Fase-specific fields (`FASE_KENMERKEN` in `constants.ts`) are config-driven so the Backtesting breakdown UI renders every fase-kenmerk via one `.map()` instead of hand-written blocks per fase.
-- **UI-bouwstenen: eerst zoeken in `src/components/ui/`** (Card, Modal, BooleanToggle, AddableSelect, Logo, ThemeToggle, ...) vóór je iets nieuws bouwt; een nieuwe gedeelde bouwsteen hoort dáár, niet als lokaal one-off component in een feature-map.
+- **UI-bouwstenen: eerst zoeken in `src/components/ui/`** (Card, Modal, BooleanToggle, AddableSelect, EmptyHint, Logo, ThemeToggle, ...) vóór je iets nieuws bouwt; een nieuwe gedeelde bouwsteen hoort dáár, niet als lokaal one-off component in een feature-map. `EmptyHint` (blok E) is de gedeelde lege-staat: uitleg-zin + link naar de Gids (`/help`).
+- **Locale-volgende getallen:** `numberLocale()` in `src/lib/format.ts` (leest `<html lang>`, dat de i18n-bootstrap synct; fallback NL) is de bron voor duizendtal/decimaal-groepering. `formatEUR`/`formatAggregate` volgen 'm automatisch; een los `.toLocaleString()` hoort `numberLocale(i18n.language)` te krijgen i.p.v. hardcoded `"nl-BE"`. Datums lopen via `dateLocale(lang)`.
+- **Vaste trade-enums vertalen via het `enums`-i18n-namespace** (blok E): `getLabel={(o) => t(\`enums.<kind>.${o}\`, o)}` op `EnumSelect`; de opgeslagen waarde blijft de rauwe enum-string. Win/Loss/BE en Long/Short zijn bewust identiek in beide talen (trading-loanwords, in sync met OutcomePill/lijst-badges) — alleen de trade-evaluation-zinnen verschillen.
 
 ## Auth / multi-tenant status
 

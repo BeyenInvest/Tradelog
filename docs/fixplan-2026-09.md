@@ -21,7 +21,7 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 | B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ◐ CI groen op main ☑ · owner-stappen open (B2-B5 + required-check) |
 | C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ☑ 2026-09-10 — 0057 op prod + geverifieerd; rest-☐: CA-download (C4) + C7-bootstrap-test (met B3) |
 | D | Zichtbare motor-poets | **Fable** | ½ dag | ☑ 2026-09-10 |
-| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☐ (bewust overgeslagen door Fable-sessie — model-regel) |
+| E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☑ 2026-09-10 — E1-E8 af op branch `fixplan-e-ux-polish`, groen |
 | F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☑ 2026-09-10 (PA2 → H; vitest-advisory → H) |
 | G | Launch-week (B6) | owner + **Opus** | 2–3 dagen owner-werk | ☐ |
 | H | Post-launch (pas ná 2–4 weken echte gebruikers) | per item | — | ☐ |
@@ -82,14 +82,16 @@ Doel: de 7 openstaande motorpunten (na twee audits 0/7) — waarvan één voor g
 
 ## Blok E — UX / a11y / i18n / merk-poets · **Opus** · 1 dag 🔴 (E1–E3) + 🟡
 
-- [ ] E1. **Field.tsx label-associatie** (htmlFor/id of wrap) — één component repareert vrijwel elk formulier voor screenreaders (X2).
-- [ ] E2. **Discard-dialog binnen de focus-trap + autofocus** op de dialog (X1 — toetsenbordgebruiker kan "Niet opslaan" nu onmogelijk bereiken; Modal.tsx/TradeForm.tsx:308 + useModalGuard.tsx).
-- [ ] E3. Enum-vertaling aan de invoerkant: `getLabel` voor OUTCOMES/TRADE_EVALUATIONS/DIRECTIONS in `EnumSelect`-call-sites (ResultSection.tsx:123,127; EntrySection.tsx:106) — weergavekant vertaalt al.
-- [ ] E4. "Beyen Invest" → "Beyen" op `SharePageShell.tsx:29` en `ReviewPdfDocument.tsx:545` (klinkt als vermogensbeheerder, lekt op exact de publieke oppervlakken).
-- [ ] E5. Lege staten Reviews/Accounts/Backtesting: één uitleg-zin + link naar de Gids (`/help`).
-- [ ] E6. Icon-knoppen aria-labels (modal-sluitkruisjes TradeForm.tsx:277, QuickLogForm.tsx:146); `text-faint` → `--muted` voor informatieve tekst (AA-contrast).
-- [ ] E7. i18n-klein: `formatEUR`/LotSize locale volgen i.p.v. hardcoded nl-BE (format.ts:7); economische-kalendertijden in profiel-timezone (EconomicEventRow.tsx:8).
-- [ ] E8. Gids-link vanuit de onboarding-wizard (gemiste kans, nu alleen sidebar).
+**AF 2026-09-10** (branch `fixplan-e-ux-polish`, lint/tsc + 422 tests + build groen, i18n-parity 1629=1629). Alle 8 punten hieronder afgevinkt; besluiten die van de letterlijke tekst afwijken staan onderaan bij "Besluiten".
+
+- [x] E1. **Field.tsx label-associatie** — opgelost via een **wrappende `<label>`** (caption nu een `<span>`); dat associeert impliciet met de geneste control zonder per-child id/htmlFor-geplumb, robuust voor élk childtype (input/select/EnumSelect/BooleanToggle-buttons). Geen enkel child rendert een eigen `<label>`, dus geen nested-label-risico. Repareert vrijwel elk formulier in één component (X2).
+- [x] E2. **Discard-dialog binnen de focus-trap + autofocus** (X1) — `useModalGuard` kreeg een eigen `discardRef`: Tab wordt nu binnen de discard-prompt getrapt (voorheen op `containerRef`, waardoor de prompt-knoppen — die als *sibling* renderen — onbereikbaar waren), en bij openen krijgt de niet-destructieve Cancel (eerste in DOM) focus (stray Enter annuleert i.p.v. weggooien). Bij annuleren keert focus terug naar de modal. Eén fix dekt zowel Modal.tsx als TradeForm.tsx (beide renderen `{discardDialog}` als sibling).
+- [x] E3. Enum-vertaling aan de invoerkant — nieuw `enums`-namespace + `getLabel` op ResultSection (outcome+evaluation), EntrySection (direction) én QuickLogForm (evaluation, voor consistentie). **Besluit:** Win/Loss/BE en Long/Short blijven identiek in beide talen (conventionele trading-loanwords, in sync met de OutcomePill/lijst-badges) — alleen de execution-quality-zinnen ("Good trade"→"Goede trade" etc.) verschillen echt. Zo geen invoer/weergave-inconsistentie.
+- [x] E4. "Beyen Invest" → "Beyen" op `SharePageShell.tsx` (footer-link) en `ReviewPdfDocument.tsx` (PDF-`author`-metadata). Enige twee voorkomens in de codebase (geverifieerd via grep). NB: alleen de één-woord merk-string in de PDF geraakt — geen restyle, dus geen Review-PDF-freeze-schending (dit file:line is expliciet in blok E benoemd).
+- [x] E5. Lege staten Reviews/Accounts/Backtesting — nieuwe gedeelde bouwsteen `src/components/ui/EmptyHint.tsx` (uitleg-zin + link naar de Gids `/help`), gewired in ReviewList / AccountList / ProjectsListPage.
+- [x] E6. Icon-knoppen aria-labels op de modal-sluitkruisjes (TradeForm + QuickLogForm, `aria-label={t("common.close")}`); `text-faint` → `text-muted` op de gedeelde form-hint (Field.tsx) — dé informatieve-tekst-pattern app-breed. Bewust-decoratieve faint (scheidingstekens, streepjes, mini-badges, attributie) blijft faint.
+- [x] E7. `formatEUR`/`formatAggregate` volgen nu de UI-taal via een nieuwe `numberLocale()` (leest `<html lang>`, dat de i18n-bootstrap synct; fallback Dutch voor node-tests/PDF — geen call-site-churn); LotSize-cijfers idem via `numberLocale(i18n.language)`; economische-kalendertijden in de profiel-timezone (`EconomicEventRow.tsx`, event.date is een absoluut instant). Day-grouping blijft browser-lokaal (matcht voor de NL/BE-tz-doelgroep).
+- [x] E8. Gids-link in de onboarding-wizard (footer, opent `/help` in nieuw tabblad zodat wizard-voortgang niet verloren gaat — de takeover-overlay dekt anders de sidebar-link af).
 
 ## Blok F — Stabiliteit vóór gebruikers · **Fable** · 1 dag 🔴 (F1–F2) + 🟠
 

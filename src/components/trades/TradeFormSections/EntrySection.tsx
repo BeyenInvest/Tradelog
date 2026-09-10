@@ -103,7 +103,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
             or not. The column is nullable, so legacy trades logged before it existed
             simply stay null. */}
         <Field label={t("tradeForm.direction")} error={errors.direction?.message}>
-          <EnumSelect options={DIRECTIONS} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
+          <EnumSelect options={DIRECTIONS} getLabel={(o) => t(`enums.direction.${o}`, o)} {...register("direction")} placeholder={t("tradeForm.directionPlaceholder")} />
         </Field>
         {/* The rest of this section is the Weekly Phase Method's hardcoded legacy block
             (cc, concept, entry, weekly criteria/kenmerk, news). An own or empty journal only

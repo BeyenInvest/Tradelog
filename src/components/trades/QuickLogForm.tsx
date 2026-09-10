@@ -153,7 +153,7 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
             <h2 id="quick-log-title" className="font-display text-xl italic text-ink">
               {t("quickLog.title")}
             </h2>
-            <button onClick={requestClose} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
+            <button onClick={requestClose} aria-label={t("common.close")} className="p-1.5 rounded-md hover:bg-ink/5 text-muted">
               <X size={18} />
             </button>
           </div>
@@ -228,6 +228,7 @@ export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
             <Field label={t("quickLog.evaluation")}>
               <EnumSelect
                 options={QUICK_EVALUATIONS}
+                getLabel={(o) => t(`enums.evaluation.${o}`, o)}
                 placeholder={t("quickLog.evaluationNone")}
                 className="input"
                 {...register("trade_evaluation")}

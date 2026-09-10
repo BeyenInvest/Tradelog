@@ -24,7 +24,8 @@
     "no": "Nee",
     "close": "Sluiten",
     "noData": "Geen data",
-    "selectPlaceholder": "Selecteer..."
+    "selectPlaceholder": "Selecteer...",
+    "readGuide": "Lees de Gids"
   },
   "theme": {
     "darkMode": "Donkere modus",
@@ -326,7 +327,8 @@
     "back": "Terug",
     "skip": "Nu overslaan",
     "startBlank": "Begin met een blanco journal",
-    "saveFailed": "Opslaan mislukt — probeer het opnieuw"
+    "saveFailed": "Opslaan mislukt — probeer het opnieuw",
+    "guideLink": "Nieuw hier? Bekijk eerst de Gids"
   },
   "help": {
     "title": "Gids",
@@ -440,6 +442,17 @@
     "thisYear": "Dit jaar",
     "custom": "Aangepaste periode",
     "to": "t/m"
+  },
+  "enums": {
+    "_comment": "Localized dropdown labels for the fixed trade enums (E3). The stored value stays the raw enum string. Win/Loss/BE and Long/Short are conventional trading loanwords kept identical in every language, in sync with the OutcomePill/list badges; only the execution-quality phrases actually differ.",
+    "outcome": { "Win": "Win", "Loss": "Loss", "BE": "BE" },
+    "direction": { "Long": "Long", "Short": "Short" },
+    "evaluation": {
+      "Good trade": "Goede trade",
+      "Emotional error": "Emotionele fout",
+      "Technical error": "Technische fout",
+      "Missed trade": "Gemiste trade"
+    }
   },
   "tradeForm": {
     "editTitle": "Trade bewerken",
@@ -797,6 +810,7 @@
     "deleteFailed": "Verwijderen van review is mislukt",
     "selectOrCreate": "Selecteer of maak een review.",
     "noReviews": "Nog geen reviews.",
+    "noReviewsHint": "Reviews bundelen je trades per periode, zodat je patronen ziet in plaats van losse trades.",
     "weeklyReviewsHeading": "Weekreviews",
     "monthlyReviewsHeading": "Maandelijkse reviews",
     "quarterlyReviewsHeading": "Kwartaalreviews",
@@ -877,6 +891,7 @@
     "subtitle": "Elk project is een volledig geïsoleerde testomgeving — eigen trades, eigen journal, eigen analyse",
     "newProject": "Nieuw project",
     "noProjects": "Nog geen backtestprojecten.",
+    "noProjectsHint": "Een backtestproject verzamelt geoefende setups, los van je live journal.",
     "open": "Openen",
     "deleteConfirm": "Project \"{{name}}\" en al zijn trades definitief verwijderen?",
     "deleteFailed": "Verwijderen van project is mislukt",
@@ -1056,6 +1071,7 @@
     "deleteConfirm": "Account \"{{name}}\" verwijderen? Alle bijbehorende payouts worden ook verwijderd.",
     "deleteFailed": "Verwijderen van account is mislukt",
     "noAccounts": "Nog geen accounts.",
+    "noAccountsHint": "Voeg een prop- of eigen account toe om saldo en risico in euro's te volgen.",
     "payouts": "Payouts",
     "payoutsTotal": "totaal €{{amount}}",
     "amountPlaceholder": "bedrag",

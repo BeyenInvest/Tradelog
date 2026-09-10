@@ -1,11 +1,21 @@
 import { useTranslation } from "react-i18next";
 import type { EconomicEvent } from "@/lib/economicCalendar";
 import { dateLocale } from "@/lib/format";
+import { useAuth } from "@/hooks/useAuth";
 import { ImpactBadge } from "./ImpactBadge";
 
 export function EconomicEventRow({ event }: { event: EconomicEvent }) {
   const { i18n } = useTranslation();
-  const time = new Date(event.date).toLocaleTimeString(dateLocale(i18n.language), { hour: "2-digit", minute: "2-digit" });
+  const { profile } = useAuth();
+  // event.date is an absolute instant (ISO with UTC offset); render it in the user's own
+  // profile timezone — the one the onboarding wizard asked for — instead of the browser's,
+  // so a traveller sees the times they actually trade by (E7). The day-grouping upstream is
+  // still browser-local, which matches for the NL/BE audience whose tz is Europe/Brussels.
+  const time = new Date(event.date).toLocaleTimeString(dateLocale(i18n.language), {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: profile?.timezone || "Europe/Brussels",
+  });
 
   return (
     <div className="grid grid-cols-[64px_60px_1fr_90px_80px_80px] gap-3 items-center py-2 border-b border-border-soft font-mono text-xs">

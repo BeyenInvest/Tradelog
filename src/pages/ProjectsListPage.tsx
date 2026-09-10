@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Trash2, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { EmptyHint } from "@/components/ui/EmptyHint";
 import { ProjectForm } from "@/components/backtesting/ProjectForm";
 import { useBacktestProjects } from "@/hooks/useBacktestProjects";
 import { supabase } from "@/lib/supabase";
@@ -88,7 +89,7 @@ export default function ProjectsListPage() {
           <p className="text-muted text-sm">{t("common.loading")}</p>
         ) : projects.length === 0 ? (
           <Card>
-            <p className="text-sm text-muted">{t("backtesting.noProjects")}</p>
+            <EmptyHint title={t("backtesting.noProjects")} hint={t("backtesting.noProjectsHint")} />
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
