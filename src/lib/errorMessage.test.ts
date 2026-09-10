@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 
 // The test env is "node" (see vite.config.ts). Importing errorMessage pulls in i18n, which reads
 // localStorage/navigator at module-eval time. vi.hoisted runs before the imports below, so we stub
@@ -18,6 +18,16 @@ vi.hoisted(() => {
 });
 
 import { toErrorMessage } from "./errorMessage";
+import i18n from "@/i18n";
+
+// Node ≥21 ships its OWN global `navigator` whose language mirrors the OS
+// locale, so the ??=-stub above no longer applies there — on an English CI
+// runner i18n then detects "en" and every NL assertion below fails (first CI
+// run, 2026-09-10). Force the language explicitly so the test is
+// deterministic on every machine.
+beforeAll(async () => {
+  await i18n.changeLanguage("nl");
+});
 
 describe("toErrorMessage", () => {
   it("maps a known pattern from a real Error", () => {
