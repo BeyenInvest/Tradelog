@@ -18,8 +18,8 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 | Blok | Naam | Model | Effort | Status |
 |---|---|---|---|---|
 | A | De grote schoonmaak (integratie) | **Fable** | 1 dag | ☑ 2026-09-09 |
-| B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ◐ code ☑ 2026-09-10 · owner-stappen open (B2-B5 + required-check) |
-| C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ◐ code ☑ 2026-09-10 · owner: 0057 draaien + CA + beta-SQL (C7 met B3) |
+| B | Vangrails (CI + backups + alerting) | **Fable** + owner | 1 dag | ◐ CI groen op main ☑ · owner-stappen open (B2-B5 + required-check) |
+| C | Schema-sync + registry (migratie 0057) | **Fable** | 1 sessie | ☑ 2026-09-10 — 0057 op prod + geverifieerd; rest-☐: CA-download (C4) + C7-bootstrap-test (met B3) |
 | D | Zichtbare motor-poets | **Fable** | ½ dag | ☑ 2026-09-10 |
 | E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☐ (bewust overgeslagen door Fable-sessie — model-regel) |
 | F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☑ 2026-09-10 (PA2 → H; vitest-advisory → H) |
@@ -49,7 +49,7 @@ Doel: er bestaat weer precies één werkelijkheid (main = prod = docs). Fable va
 
 Doel: de blinde vlek dicht — nooit meer onherstelbaar, nooit meer onzichtbaar.
 
-- [x] B1. **CI** — `.github/workflows/ci.yml` staat er (npm ci → lint → test → build, push+PR naar main, Node 24). ☐ **Owner-klik open:** na de eerste groene run op GitHub als required check op main zetten (Settings → Branches → require status check "ci").
+- [x] B1. **CI** — `.github/workflows/ci.yml` staat er en is **groen op main** (2026-09-10; eerste run was rood door een latente taal-afhankelijke errorMessage-test — gefixt in f00f517, Node ≥21 heeft een eigen global navigator). ☐ **Owner-klik open:** op GitHub als required check op main zetten (Settings → Branches → require status check "ci").
 - [ ] B2. **Backups** (owner-besluit open: Pro vs cron). Het pg_dump-script is geleverd: `scripts/backup-db.mjs` (public+auth, -Fc, rotatie 14, faalt hard op lege dump; `backups/` in .gitignore). Vereist eenmalig PostgreSQL client-tools (`winget install PostgreSQL.PostgreSQL.17`). Aanbeveling blijft Supabase Pro zodra één echte beta-gebruiker data heeft.
 - [ ] B3. **Restore één keer oefenen** (owner): stappen staan in de kop van `scripts/backup-db.mjs` (wegwerp-project + schema.sql + pg_restore --data-only). Combineert met C7.
 - [ ] B4. **Uptime-ping** (owner, 10 min): gratis monitor (bijv. UptimeRobot) op https://beyen.app + e-mail-alert.
@@ -61,7 +61,7 @@ Doel: de blinde vlek dicht — nooit meer onherstelbaar, nooit meer onzichtbaar.
 Doel: de DB-waarheid verankerd. Werklijst = `docs/schema-sync-werklijst-2026-09.md`, plus wat er sinds 03-09 bij kwam. Owner draait de migratie zelf (runner-werkwijze), sessie verifieert read-only.
 
 - [x] C1. schema.sql volledig gesynct t/m **0056** + 0057 (2026-09-09): W1-FK-volgorde gefixt (methodology_id als kale kolom in weekly/periodic/prop_accounts **én trade_contracts** — die had hetzelfde probleem — met named-FK-constraints ná het methodologies-blok, namen = prod-default), periode_overzicht, volledige share-laag (share_links 0042-eindstand + shared_trade_json 0052 + shared_methodology_fields 0047 + shared_review_sections 0048 + get_shared_journal 0043 + get_shared_review 0052, incl. bindende share-RPC-conventie als commentaar), create_journal + rename_field_option, screenshots-bucket + 4 policies, 0047-label-backfill na de seeds, composiet-index, 0036-conventie op alle 5 functies, link_trade_to_weekly_review 0052-versie, habits/habit_days/daily_journal_entries (0054–0056) incl. RLS + triggers, header + conventie. share_links-zonder-admin-policy als bewuste keuze gedocumenteerd.
-- [x] C2. Migratie **0057** (`0057_registry_fork_track_exit.sql`) geschreven: fork_methodology + track_exit (0048-body als vertrekpunt), review_sections-updated_at-trigger, registry + backfill. ☐ **Owner draait 'm** (runner-werkwijze); daarna verifieer ik read-only.
+- [x] C2. Migratie **0057** GEDRAAID op prod (owner, 2026-09-10, via SQL Editor) en read-only geverifieerd: fork kopieert track_exit ✓, trigger bestaat ✓, registry = 57 rijen incl. 0057 ✓, app-rollen geen toegang ✓. Vrij migratienr = **0058**.
 - [x] C3. Registry: tabel in 0057 + backfill 0001–0057 (0020-duplicaat = 2 bestandsnamen = 2 rijen, gedocumenteerd in schema.sql-header); `run-migration.mjs` weigert al-geregistreerde files (FORCE_RERUN=1 als bewuste override) en registreert elke run in dezelfde transactie.
 - [x] C4. Runner-TLS strict: verifieert tegen `supabase/prod-ca-2021.crt` (of env `SUPABASE_DB_CA`), weigert zonder CA (escape hatch `ALLOW_INSECURE_DB_TLS=1`). ☐ **Owner:** CA eenmalig downloaden — Dashboard → Project Settings → Database → SSL Certificate → opslaan als `supabase/prod-ca-2021.crt` (staat niet in git nodig; mag wel, het is een publiek certificaat).
 - [x] C5. `fetchCounts` faalt nu hard op elke count-error (geen stille `?? 0` meer).
