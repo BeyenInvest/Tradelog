@@ -2,9 +2,23 @@ import type { ResultUnit } from "./constants";
 import type { Trade } from "./types";
 import { closedTrades, computeRStats, riskPct, takenTrades, type ClosedTrade } from "./stats/core";
 
-/** Consistent EUR formatting (nl-BE grouping/decimal style) for account sizes, payouts, etc. */
-export function formatEUR(n: number): string {
-  return n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/**
+ * BCP47 locale for number/currency grouping, following the active UI language (E7):
+ * a Dutch user keeps "1.234,56", an English one gets "1,234.56". Defaults to the
+ * language on `<html lang>` — which the i18n bootstrap keeps synced to the active
+ * language — so every €-display follows the toggle without threading the language
+ * through each caller. Falls back to Dutch when there is no document (node-env
+ * tests, PDF render) so storage/tests keep their existing nl-BE output; pass an
+ * explicit `lang` (e.g. i18n.language) where determinism matters. Mirrors `dateLocale`.
+ */
+export function numberLocale(lang?: string): string {
+  const resolved = lang ?? ((typeof document !== "undefined" ? document.documentElement.lang : "") || "nl");
+  return resolved.startsWith("nl") ? "nl-BE" : "en-GB";
+}
+
+/** Consistent EUR formatting (grouping/decimals) for account sizes, payouts, etc. — locale-following (see numberLocale). */
+export function formatEUR(n: number, locale: string = numberLocale()): string {
+  return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**
@@ -125,11 +139,11 @@ export function formatAggregate(v: number, unit: ResultUnit, opts?: { decimals?:
   const digits = opts?.decimals ?? 2;
   if (Math.round(v * 10 ** digits) === 0) v = 0;
   if (unit === "currency") {
-    // toLocaleString i.p.v. toFixed zodat de duizendtal-groepering (nl-BE, zoals
+    // toLocaleString i.p.v. toFixed zodat de duizendtal-groepering (locale-volgend, zoals
     // formatEUR) ook met afgedwongen decimalen behouden blijft: "+€12.500", niet "+€12500".
     const abs =
       opts?.decimals != null
-        ? Math.abs(v).toLocaleString("nl-BE", { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals })
+        ? Math.abs(v).toLocaleString(numberLocale(), { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals })
         : formatEUR(Math.abs(v));
     return `${v > 0 ? "+" : v < 0 ? "-" : ""}€${abs}`;
   }

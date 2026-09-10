@@ -23,6 +23,7 @@ const FOCUSABLE_SELECTOR =
 export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: boolean, onClose: () => void) {
   const { t } = useTranslation();
   const containerRef = useRef<T>(null);
+  const discardRef = useRef<HTMLDivElement>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const isDirtyRef = useRef(isDirty);
   const onCloseRef = useRef(onClose);
@@ -62,8 +63,12 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
         else requestClose();
         return;
       }
-      if (e.key !== "Tab" || !containerRef.current) return;
-      const focusable = Array.from(containerRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (e.key !== "Tab") return;
+      // While the discard prompt is up, trap Tab inside *it* — it renders as a sibling of the
+      // modal container, so trapping on containerRef would leave its buttons unreachable (X1).
+      const trapRoot = confirmingRef.current ? discardRef.current : containerRef.current;
+      if (!trapRoot) return;
+      const focusable = Array.from(trapRoot.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -85,12 +90,27 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When the discard prompt opens, pull focus into it so a keyboard user lands on (and can reach)
+  // its buttons — the non-destructive Cancel is first in DOM order, so it becomes the default target
+  // and a stray Enter cancels rather than discards. On cancel the prompt closes with the modal still
+  // mounted, so hand focus back to whatever was focused before (on discard the modal unmounts and its
+  // own cleanup restores focus, so the guarded refocus below simply no-ops).
+  useEffect(() => {
+    if (!confirmingDiscard) return;
+    const returnTo = document.activeElement as HTMLElement | null;
+    discardRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+    return () => {
+      if (containerRef.current?.contains(returnTo)) returnTo?.focus();
+    };
+  }, [confirmingDiscard]);
+
   const discardDialog: ReactNode = confirmingDiscard ? (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
       onClick={() => setConfirmingDiscard(false)}
     >
       <div
+        ref={discardRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="discard-dialog-title"

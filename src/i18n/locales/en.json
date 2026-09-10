@@ -24,7 +24,8 @@
     "no": "No",
     "close": "Close",
     "noData": "No data",
-    "selectPlaceholder": "Select..."
+    "selectPlaceholder": "Select...",
+    "readGuide": "Read the guide"
   },
   "theme": {
     "darkMode": "Dark mode",
@@ -326,7 +327,8 @@
     "back": "Back",
     "skip": "Skip for now",
     "startBlank": "Start with a blank journal",
-    "saveFailed": "Couldn't save — please try again"
+    "saveFailed": "Couldn't save — please try again",
+    "guideLink": "New here? Take a look at the Guide first"
   },
   "help": {
     "title": "Guide",
@@ -440,6 +442,17 @@
     "thisYear": "This year",
     "custom": "Custom period",
     "to": "to"
+  },
+  "enums": {
+    "_comment": "Localized dropdown labels for the fixed trade enums (E3). The stored value stays the raw enum string. Win/Loss/BE and Long/Short are conventional trading loanwords kept identical in every language, in sync with the OutcomePill/list badges; only the execution-quality phrases actually differ.",
+    "outcome": { "Win": "Win", "Loss": "Loss", "BE": "BE" },
+    "direction": { "Long": "Long", "Short": "Short" },
+    "evaluation": {
+      "Good trade": "Good trade",
+      "Emotional error": "Emotional error",
+      "Technical error": "Technical error",
+      "Missed trade": "Missed trade"
+    }
   },
   "tradeForm": {
     "editTitle": "Edit trade",
@@ -797,6 +810,7 @@
     "deleteFailed": "Deleting the review failed",
     "selectOrCreate": "Select or create a review.",
     "noReviews": "No reviews yet.",
+    "noReviewsHint": "Reviews group your trades per period, so you spot patterns instead of one-off trades.",
     "weeklyReviewsHeading": "Weekly reviews",
     "monthlyReviewsHeading": "Monthly reviews",
     "quarterlyReviewsHeading": "Quarterly reviews",
@@ -877,6 +891,7 @@
     "subtitle": "Each project is a fully isolated test environment — its own trades, own journal, own analysis",
     "newProject": "New project",
     "noProjects": "No backtest projects yet.",
+    "noProjectsHint": "A backtest project collects practised setups, separate from your live journal.",
     "open": "Open",
     "deleteConfirm": "Permanently delete project \"{{name}}\" and all its trades?",
     "deleteFailed": "Deleting the project failed",
@@ -1056,6 +1071,7 @@
     "deleteConfirm": "Delete account \"{{name}}\"? All associated payouts will also be deleted.",
     "deleteFailed": "Deleting the account failed",
     "noAccounts": "No accounts yet.",
+    "noAccountsHint": "Add a prop or personal account to track balance and risk in euros.",
     "payouts": "Payouts",
     "payoutsTotal": "total €{{amount}}",
     "amountPlaceholder": "amount",

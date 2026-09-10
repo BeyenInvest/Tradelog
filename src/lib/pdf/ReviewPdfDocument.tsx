@@ -542,7 +542,7 @@ export function ReviewPdfDocument({ data }: { data: ReviewPdfData }) {
   const wlLabels = [`${kpis.wins}W`, `${kpis.be}BE`, `${kpis.losses}L`];
 
   return (
-    <Document title={`Beyen — ${data.heading}`} author="Beyen Invest">
+    <Document title={`Beyen — ${data.heading}`} author="Beyen">
       <Page size="A4" style={styles.page}>
         <View style={styles.band} fixed={false}>
           <View style={styles.bandTopRow}>

@@ -120,11 +120,11 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
         // derived Duration) instead of leaving a hole beside Outcome up top.
         <div className="grid grid-cols-2 gap-4">
           <Field label={t("tradeForm.outcome")} error={errors.outcome?.message}>
-            <EnumSelect options={OUTCOMES} {...register("outcome")} />
+            <EnumSelect options={OUTCOMES} getLabel={(o) => t(`enums.outcome.${o}`, o)} {...register("outcome")} />
           </Field>
           {allowMissedTrade && (
             <Field label={t("tradeForm.tradeEvaluation")} error={errors.trade_evaluation?.message}>
-              <EnumSelect options={TRADE_EVALUATIONS} {...register("trade_evaluation")} />
+              <EnumSelect options={TRADE_EVALUATIONS} getLabel={(o) => t(`enums.evaluation.${o}`, o)} {...register("trade_evaluation")} />
             </Field>
           )}
           <Field label={t("tradeForm.resultPct")} error={errors.resultaat_pct?.message} hint={t("tradeForm.resultSignHint")}>

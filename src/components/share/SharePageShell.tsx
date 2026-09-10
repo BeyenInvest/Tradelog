@@ -26,7 +26,7 @@ export function SharePageShell({ maxWidthClass, children }: { maxWidthClass: str
         <p className="text-center font-body text-xs text-faint pt-4 pb-2">
           {t("share.poweredByPrefix")}{" "}
           <Link to="/" className="text-muted hover:text-gold underline-offset-2 hover:underline">
-            Beyen Invest
+            Beyen
           </Link>
         </p>
       </div>

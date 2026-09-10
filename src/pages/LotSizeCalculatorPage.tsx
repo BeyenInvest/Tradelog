@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { EnumSelect } from "@/components/ui/EnumSelect";
 import { FOREX_PAIRS, currenciesOfPair, type ForexPair } from "@/lib/constants";
 import { calculateLotSize, requiresCrossRate, requiresCurrentPrice, pipSizeOf, type AccountCurrency } from "@/lib/lotSize";
+import { numberLocale } from "@/lib/format";
 
 const ACCOUNT_CURRENCIES: AccountCurrency[] = ["USD", "EUR"];
 
@@ -16,7 +17,8 @@ const CASE_LABEL_KEY: Record<string, string> = {
 };
 
 export default function LotSizeCalculatorPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const numLocale = numberLocale(i18n.language);
   const [accountCurrency, setAccountCurrency] = useState<AccountCurrency>("USD");
   const [pair, setPair] = useState<ForexPair>("EURUSD");
   const [accountBalance, setAccountBalance] = useState("");
@@ -170,14 +172,14 @@ export default function LotSizeCalculatorPage() {
               <div>
                 <p className="font-body text-xs uppercase tracking-wider text-muted">{t("lotSize.positionSize")}</p>
                 <p className="font-mono text-4xl mt-1 text-gold">{outcome.result.lots} {t("lotSize.lotsUnit")}</p>
-                <p className="font-mono text-sm text-muted mt-1">{outcome.result.units.toLocaleString("nl-BE")} {t("lotSize.unitsUnit")}</p>
+                <p className="font-mono text-sm text-muted mt-1">{outcome.result.units.toLocaleString(numLocale)} {t("lotSize.unitsUnit")}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div>
                   <p className="font-body text-xs uppercase tracking-wider text-muted">{t("lotSize.riskAmount")}</p>
                   <p className="font-mono text-lg text-ink">
-                    {outcome.result.riskAmount.toLocaleString("nl-BE")} {accountCurrency}
+                    {outcome.result.riskAmount.toLocaleString(numLocale)} {accountCurrency}
                   </p>
                 </div>
                 <div>

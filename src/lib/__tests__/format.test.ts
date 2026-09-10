@@ -16,9 +16,11 @@ import {
 import { makeTrade } from "../stats/__tests__/fixtures";
 
 describe("formatEUR", () => {
-  it("formats with nl-BE grouping and two decimals", () => {
-    expect(formatEUR(1234.5)).toBe("1.234,50");
-    expect(formatEUR(0)).toBe("0,00");
+  it("formats with the given locale's grouping and two decimals", () => {
+    // Explicit locale so the assertion is deterministic regardless of the active UI language (E7).
+    expect(formatEUR(1234.5, "nl-BE")).toBe("1.234,50");
+    expect(formatEUR(0, "nl-BE")).toBe("0,00");
+    expect(formatEUR(1234.5, "en-GB")).toBe("1,234.50");
   });
 });
 

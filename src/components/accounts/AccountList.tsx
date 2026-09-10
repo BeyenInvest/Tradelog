@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { EmptyHint } from "@/components/ui/EmptyHint";
 import { useConfirm } from "@/hooks/useConfirm";
 import type { Payout, PayoutInput, PropAccount, PropAccountInput } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -192,7 +193,7 @@ export function AccountList({ accounts, payouts, onDeleteAccount, onUpdateAccoun
   if (accounts.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-muted">{t("accounts.noAccounts")}</p>
+        <EmptyHint title={t("accounts.noAccounts")} hint={t("accounts.noAccountsHint")} />
       </Card>
     );
   }
