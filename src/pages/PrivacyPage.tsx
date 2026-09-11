@@ -3,8 +3,8 @@ import { LogoLockup } from "@/components/ui/Logo";
 
 /**
  * Privacybeleid — volledig uitgeschreven op basis van wat de app feitelijk doet
- * (niet door een jurist nagekeken). Bevestigde/afgeleide feiten: natuurlijke
- * persoon in België; alle hosting in een EU-regio; geen tracking-/analytics-
+ * (niet door een jurist nagekeken). Bevestigde/afgeleide feiten: Chesney Beyen als
+ * natuurlijke persoon in België; alle hosting in een EU-regio; geen tracking-/analytics-
  * cookies; verwerkers = Supabase (DB/auth/opslag), Vercel (hosting), Cloudflare
  * (Turnstile-CAPTCHA bij registratie) en Sentry (foutmonitoring, alleen actief met
  * VITE_SENTRY_DSN, enkel fouten, sendDefaultPii:false — geen IP/cookies). Account
@@ -12,7 +12,8 @@ import { LogoLockup } from "@/components/ui/Logo";
  * deleteAccount, RPC 0006). Contact = info@beyen.app. Aanbevolen: juridische/GDPR-
  * review vóór de betaalde launch. Houd in sync met TermsPage.tsx.
  */
-const LAST_UPDATED = "25 augustus 2026";
+const LAST_UPDATED = "11 september 2026";
+const PROVIDER_NAME = "Chesney Beyen";
 const CONTACT_EMAIL = "info@beyen.app";
 
 export default function PrivacyPage() {
@@ -30,9 +31,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-ink font-medium mb-1">1. Wie verwerkt je gegevens</h2>
             <p>
-              Beyen wordt beheerd door een natuurlijke persoon, gevestigd in België (de "verwerkingsverantwoordelijke").
-              Dit beleid wordt bijgewerkt met definitieve bedrijfsgegevens zodra Beyen een geregistreerde onderneming
-              wordt. Contact voor alle privacyvragen:{" "}
+              Beyen wordt beheerd door {PROVIDER_NAME}, een natuurlijke persoon gevestigd in België (de
+              "verwerkingsverantwoordelijke"). Dit beleid wordt bijgewerkt met definitieve bedrijfsgegevens zodra Beyen
+              een geregistreerde onderneming wordt. Contact voor alle privacyvragen:{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>.
             </p>
           </section>

@@ -4,15 +4,16 @@ import { LogoLockup } from "@/components/ui/Logo";
 /**
  * Algemene voorwaarden — een volledig uitgeschreven eerste versie, opgesteld op de
  * feiten van het project zelf (niet door een jurist nagekeken). Bevestigde feiten
- * (owner 2026-08-01): aangeboden door een natuurlijke persoon in België, nog geen
- * geregistreerde onderneming, Belgisch recht, minimumleeftijd 16, alle hosting in
- * de EU, geen betaalde plannen tot billing bestaat. Contact = SUPPORT_EMAIL
- * (info@beyen.app). Aanbevolen: laat deze tekst juridisch nakijken zodra er geld
- * binnenkomt (Stripe/abonnementen) — dan gelden extra consumentenregels.
+ * (owner 2026-08-01): aangeboden door Chesney Beyen als natuurlijke persoon in
+ * België, nog geen geregistreerde onderneming, Belgisch recht, minimumleeftijd 16,
+ * alle hosting in de EU, geen betaalde plannen tot billing bestaat. Contact =
+ * CONTACT_EMAIL (info@beyen.app). Aanbevolen: laat deze tekst juridisch nakijken
+ * zodra er geld binnenkomt (Stripe/abonnementen) — dan gelden extra consumentenregels.
  *
- * Blijf in sync met PrivacyPage.tsx (verwerkers, bewaartermijn, contact).
+ * Blijf in sync met PrivacyPage.tsx (aanbieder, verwerkers, bewaartermijn, contact).
  */
-const LAST_UPDATED = "25 augustus 2026";
+const LAST_UPDATED = "11 september 2026";
+const PROVIDER_NAME = "Chesney Beyen";
 const CONTACT_EMAIL = "info@beyen.app";
 
 export default function TermsPage() {
@@ -30,9 +31,9 @@ export default function TermsPage() {
           <section>
             <h2 className="text-ink font-medium mb-1">1. Wie we zijn</h2>
             <p>
-              Beyen (hierna "Beyen", "wij" of "ons") wordt aangeboden door een natuurlijke persoon, gevestigd in
-              België. Beyen is op dit moment nog geen geregistreerde onderneming; deze voorwaarden worden bijgewerkt
-              met de definitieve bedrijfs- en contactgegevens zodra dat verandert. Je kunt ons bereiken via{" "}
+              Beyen (hierna "Beyen", "wij" of "ons") wordt aangeboden door {PROVIDER_NAME}, een natuurlijke persoon
+              gevestigd in België. Beyen is op dit moment nog geen geregistreerde onderneming; deze voorwaarden worden
+              bijgewerkt met de definitieve bedrijfsgegevens zodra dat verandert. Je kunt ons bereiken via{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>. Door een
               account aan te maken of Beyen te gebruiken, ga je akkoord met deze voorwaarden.
             </p>
