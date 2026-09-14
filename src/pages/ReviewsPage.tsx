@@ -158,6 +158,11 @@ function WeeklyReviewsTab({
       }
     } else {
       const created = await createReview(input);
+      // The DB after-insert trigger auto-links the week's existing trades, but the
+      // client-side trades state still shows weekly_review_id = null for them, so
+      // the detail panel would list zero linked trades until a manual relink. Pull
+      // the freshly-linked trades so they appear immediately (matches the edit tak).
+      await refreshTrades();
       setSelectedId(created.id);
     }
   }

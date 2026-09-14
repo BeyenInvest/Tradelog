@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ReviewPdfData } from "@/lib/pdf/reviewPdfData";
-import { generateReviewPdf } from "@/lib/pdf/generateReviewPdf";
+import { generateReviewPdf, warmUpReviewPdf } from "@/lib/pdf/generateReviewPdf";
 import { toErrorMessage } from "@/lib/errorMessage";
+
+// Honor Data Saver — don't pull the ~1.4 MB renderer unasked on a metered connection.
+function saveDataOn(): boolean {
+  return Boolean((navigator as { connection?: { saveData?: boolean } }).connection?.saveData);
+}
 
 /**
  * Export-to-PDF trigger for a review detail panel. Takes a `getData` factory
@@ -14,6 +19,20 @@ export function DownloadReviewPdfButton({ getData }: { getData: () => ReviewPdfD
   const { t } = useTranslation();
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [errMsg, setErrMsg] = useState("");
+
+  // Warm the PDF renderer in the background once a review detail is on screen, so
+  // the (likely) upcoming export is instant instead of a cold ~1-minute first load.
+  // Runs on idle to stay out of the way of the page's own render.
+  useEffect(() => {
+    if (saveDataOn()) return;
+    const ric = window.requestIdleCallback;
+    if (ric) {
+      const id = ric(() => void warmUpReviewPdf());
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(() => void warmUpReviewPdf(), 1200);
+    return () => window.clearTimeout(id);
+  }, []);
 
   async function handleClick() {
     if (state === "loading") return;
