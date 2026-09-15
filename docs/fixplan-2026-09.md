@@ -129,7 +129,9 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 | Share-tokens hashen; token-URL-restpunten documenteren | **Fable** | LAAG uit audit |
 | Taalkeuze in profiel; EN-getalnotatie-review | **Opus** | Bij EN-push |
 
-**Bevroren (geen commits, ook geen "kleine"):** Habits, Dagboek, Contract, Review-PDF (incl. polish-branch), MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in dit doc.
+**Bevroren (geen commits, ook geen "kleine"):** Habits, Dagboek, Review-PDF (incl. polish-branch), MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in dit doc.
+
+**Trade Contract verwijderd (owner-besluit 2026-09-15):** de volledige `/contract`-feature (owner-only tool, migratie 0053) is uit de app gehaald — `ContractPage`, `useTradeContracts`, `components/contract/`, de route (`BetaRoute` daarmee ook weg), de Sidebar-nav-link, de `TradeContract*`-types en de i18n-`contract`-namespace (NL+EN). lint/tsc + 422 tests + build groen. De `trade_contracts`-tabel blijft in de prod-DB tot een aparte drop-migratie (Fable + owner draait 'm); de data blijft dus veilig recupereerbaar tot dan.
 
 ---
 

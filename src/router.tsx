@@ -23,7 +23,6 @@ const JournalPage = lazy(() => import("@/pages/JournalPage"));
 const ProjectsListPage = lazy(() => import("@/pages/ProjectsListPage"));
 const ProjectDashboardPage = lazy(() => import("@/pages/ProjectDashboardPage"));
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage"));
-const ContractPage = lazy(() => import("@/pages/ContractPage"));
 const HabitsPage = lazy(() => import("@/pages/HabitsPage"));
 const DailyJournalPage = lazy(() => import("@/pages/DailyJournalPage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
@@ -80,13 +79,6 @@ function AdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Like AdminRoute, but gates on the soft-launch betaFeatures flag (owner-only until public launch). */
-function BetaRoute({ children }: { children: ReactNode }) {
-  const { betaFeatures } = useAuth();
-  if (!betaFeatures) return <Navigate to="/journal" replace />;
-  return <>{children}</>;
-}
-
 export function AppRouter() {
   return (
     <Routes>
@@ -136,15 +128,7 @@ export function AppRouter() {
         <Route path="/backtesting" element={<ProjectsListPage />} />
         <Route path="/backtesting/:projectId" element={<ProjectDashboardPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
-        <Route
-          path="/contract"
-          element={
-            <BetaRoute>
-              <ContractPage />
-            </BetaRoute>
-          }
-        />
-        {/* Habits + Daily journal are live for all members; Contract stays owner-only. */}
+        {/* Habits + Daily journal are live for all members. */}
         <Route path="/habits" element={<HabitsPage />} />
         <Route path="/daily" element={<DailyJournalPage />} />
         <Route path="/accounts" element={<AccountsPage />} />

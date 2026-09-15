@@ -10,9 +10,9 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 ## Current plan & feature-freeze (2026-09-09)
 
 - **Leidend plan = `docs/fixplan-2026-09.md`** (blokken A–H, n.a.v. `docs/meta-audit-2026-09.md`). Het vervangt masterplan-launch.md. Werk nooit uit een ander plandocument zonder het fixplan te checken.
-- **Totale feature-freeze tot na de beta-launch** (owner-besluit 2026-09-09): geen nieuwe features, geen nieuwe migraties buiten het fixplan. Bevroren oppervlakken (ook geen "kleine" commits): Habits, Dagboek, Contract, Review-PDF, MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in het fixplan.
+- **Totale feature-freeze tot na de beta-launch** (owner-besluit 2026-09-09): geen nieuwe features, geen nieuwe migraties buiten het fixplan. Bevroren oppervlakken (ook geen "kleine" commits): Habits, Dagboek, Review-PDF, MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in het fixplan.
 - **"Klaar" = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt in het fixplan** — niet "code groen op een branch". Eén sessie = één branch = één blok; max 1 open werkstroom tegelijk.
-- Migratienummers: nooit hergebruiken; elke migratie werkt `supabase/schema.sql` mee bij. Eerstvolgend vrij nummer staat in het fixplan (nu **0057**).
+- Migratienummers: nooit hergebruiken; elke migratie werkt `supabase/schema.sql` mee bij. Eerstvolgend vrij nummer staat in het fixplan (nu **0058** — 0057 draaide op prod).
 
 ## Domain rules (non-obvious, easy to violate accidentally)
 
@@ -48,10 +48,10 @@ Terms/Privacy pages carry full drafted copy but are **not yet legally reviewed**
 
 - Per-user configurable trading methodology is **built** (Scope C): journals = user-owned `methodologies` rows with `methodology_fields`, per-journal isolation of trades/reviews/accounts, presets, custom fields in `trades.custom`.
 - **Live voor iedereen (un-gated bij de beta-launch):** de volledige journal-config UI — journal-switcher (Sidebar), Settings-journalsectie (JournalOverview, NewJournalCard/preset-picker, veld-editor, review-sections-editor, advanced-analysis, journal-instruments) — plus de onboarding-wizard (eerste run, `onboarded_at`), de Gids (`/help`), de preset-picker empty-state in het Journal, de analyse-laag (R-distribution, kruistabel, session/hour), Richting, `tijd_open`, resultaat-eenheid %/R/geld, data-export (CSV), Habits (`/habits`, per-user configureerbaar, 0056) en Dagboek (`/daily`, 0055).
-- **Nog beta-gated (`useAuth().betaFeatures` = flag OR admin OR owner-email, 0033):** CSV/broker-import, share-links (trades + reviews), screenshots-upload (anderen krijgen het URL-veld), en Trade Contract (`/contract`, owner-only via `BetaRoute`). Un-gaten hiervan = fixplan blok H, ná validatie met echte gebruikers.
+- **Nog beta-gated (`useAuth().betaFeatures` = flag OR admin OR owner-email, 0033):** CSV/broker-import, share-links (trades + reviews), screenshots-upload (anderen krijgen het URL-veld). Un-gaten hiervan = fixplan blok H, ná validatie met echte gebruikers. (De Trade Contract-feature — `/contract`, owner-only — is 2026-09-15 volledig uit de app verwijderd; de `trade_contracts`-tabel staat nog in de DB tot een aparte drop-migratie.)
 - **Gating-regel voor nieuw werk:** elke nieuwe feature start achter `betaFeatures` (maar zie de feature-freeze hierboven — er komt nu geen nieuw werk).
 - The legacy WPM fields stay hardcoded columns until cyclus 10; their editor rows are locked (`isLockedLegacyField`) because `trades.fase` is still a Postgres enum.
-- Habits/Dagboek/Contract zijn een aparte performance-laag naast het journal (nav-groep "Performance"): global per-user (niet journal-gebonden), tabellen `habits`/`habit_days`/`daily_journal_entries` (migraties 0054–0056). **Bevroren** — zie feature-freeze.
+- Habits/Dagboek zijn een aparte performance-laag naast het journal (nav-groep "Performance"): global per-user (niet journal-gebonden), tabellen `habits`/`habit_days`/`daily_journal_entries` (migraties 0054–0056). **Bevroren** — zie feature-freeze. (Trade Contract hoorde hier ook bij maar is 2026-09-15 verwijderd.)
 - De landing-page (B5, `LandingPage.tsx` + `landing.css`) is gemerged en live op `/` voor uitgelogde bezoekers (ingelogd → redirect `/journal`); aankondiging/kanalen = launch-week (fixplan blok G).
 
 ## Deliberately out of scope for now (don't build unprompted)

@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
-import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, FileSignature, ListChecks, NotebookText, HelpCircle } from "lucide-react";
+import { Target, BookOpen, NotebookPen, Wallet, CalendarClock, Calculator, LogOut, ShieldCheck, Settings, ListChecks, NotebookText, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { LogoMark, LogoLockup } from "@/components/ui/Logo";
@@ -17,7 +17,7 @@ type NavItem = { to: string; labelKey: string; icon: LucideIcon };
 type NavGroup = { labelKey: string; items: NavItem[] };
 
 export function Sidebar() {
-  const { signOut, isAdmin, betaFeatures } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const { isForexJournal } = useMethodology();
   const { t } = useTranslation();
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -37,11 +37,9 @@ export function Sidebar() {
       ],
     },
     {
-      // Habits + Dagboek are live for all members. Contract stays owner-only
-      // (betaFeatures, 0033).
+      // Habits + Dagboek are live for all members.
       labelKey: "nav.catPerformance",
       items: [
-        ...(betaFeatures ? [{ to: "/contract", labelKey: "nav.contract", icon: FileSignature }] : []),
         { to: "/habits", labelKey: "nav.habits", icon: ListChecks },
         { to: "/daily", labelKey: "nav.dailyJournal", icon: NotebookText },
       ],

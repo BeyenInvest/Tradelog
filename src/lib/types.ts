@@ -204,45 +204,9 @@ export interface DailyJournalEntry {
   updated_at: string;
 }
 
-/** Lifecycle of a trade contract: signed & running, signed & wrapped up, or a deliberately skipped setup. */
-export type TradeContractStatus = "open" | "closed" | "missed";
-
-/**
- * A pre-trade commitment (owner-only tool, migration 0053) — the trader signs a
- * short contract BEFORE taking a trade and closes it afterwards with the outcome
- * in R + whether the process was respected. Owner-only in the UI (betaFeatures
- * gate), but per-user + per-journal in the DB exactly like WeeklyReview. No
- * money/P&L is ever stored — `outcome_r` is an R-multiple only, on purpose.
- * Mirrors the `trade_contracts` table 1:1.
- */
-export interface TradeContract {
-  id: string;
-  user_id: string;
-  /** Which journal this contract belongs to (per-journal isolation, cyclus 3b). Injected by the hook on create. */
-  methodology_id: string | null;
-  created_at: string;
-  /** When the contract was signed (status 'open'/'closed'); null for a 'missed' setup, which is never signed. */
-  signed_at: string | null;
-  instrument: string | null;
-  /** Free text ("F2"/"F3" in the owner's UI) — kept free like trades.fase, not a methodology fase name. */
-  fase: string | null;
-  entry_type: string | null;
-  risk_pct: number | null;
-  signature: string | null;
-  status: TradeContractStatus;
-  /** Outcome as an R-multiple — deliberately no money/P&L. Filled on close. */
-  outcome_r: number | null;
-  /** Whether the process was followed, filled on close. */
-  proces_goed: boolean | null;
-  note: string | null;
-}
-
-/** Payload for insert/update — excludes server-managed fields (id/user_id/methodology_id/created_at). methodology_id is injected by the hook. */
-export type TradeContractInput = Omit<TradeContract, "id" | "user_id" | "methodology_id" | "created_at">;
-
 /**
  * One calendar day of habit completions (owner/beta habit tracker, migration
- * 0054). Life-level, so per-user only — NOT journal-scoped like TradeContract.
+ * 0054). Life-level, so per-user only — not journal-scoped.
  * `values` is a `{ [habitKey]: true }` bag of the habits completed that day,
  * keyed by `Habit.key`. Mirrors the `habit_days` table 1:1.
  */
