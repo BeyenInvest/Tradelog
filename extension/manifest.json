@@ -3,7 +3,7 @@
   "name": "Beyen voor TradingView (beta)",
   "version": "0.1.0",
   "description": "Koppel je Beyen-journal aan TradingView. Beta — F2a: auth + journal-schema + chart-adapter (leest de position-tool).",
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "activeTab"],
   "host_permissions": ["https://*.tradingview.com/*"],
   "background": { "service_worker": "dist/sw.js", "type": "module" },
   "action": { "default_popup": "dist/popup.html" },
