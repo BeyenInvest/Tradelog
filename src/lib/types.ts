@@ -105,6 +105,13 @@ export interface Trade {
 
   weekly_review_id: string | null;
 
+  /** Chart-prijzen (TV-extensie F2c, 0058): entry/SL/TP zoals ingetekend in TV's position-tool. Alles null op handmatige/bestaande trades; set-regel + richting-consistentie zitten hard in de DB (trades_prices_*_chk). */
+  entry_price: number | null;
+  stop_price: number | null;
+  target_price: number | null;
+  /** F5-haak (close-from-chart) — nu altijd null. */
+  exit_price: number | null;
+
   /** null = live Journal trade. Set = belongs to exactly that backtest project, isolated from Journal and every other project. */
   backtest_project_id: string | null;
 

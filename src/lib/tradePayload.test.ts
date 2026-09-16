@@ -69,6 +69,11 @@ describe("buildTradePayload — live-open (M1)", () => {
     expect(p.mae_pct).toBeNull();
     expect(p.mfe_pct).toBeNull();
     expect(p.planned_rr).toBe(2); // S0-fixture
+    // F2c (0058): prijzen landen in echte kolommen; exit is de F5-haak.
+    expect(p.entry_price).toBe(110.33);
+    expect(p.stop_price).toBe(109.83);
+    expect(p.target_price).toBe(111.33);
+    expect(p.exit_price).toBeNull();
     expect(p.pair).toBe("AUDJPY");
     expect(p.instrument).toBe("AUDJPY"); // forex spiegelt pair → instrument
     expect(p.datum_open).toBe("2026-09-15");
@@ -171,7 +176,11 @@ describe("buildTradePayload — degradatie (nooit stil gokken)", () => {
   it("werkt zonder prijzen (handmatige modus): geen planned_rr, wel geldige trade", () => {
     const result = buildTradePayload(baseInput({ prices: null }));
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.payload.planned_rr).toBeNull();
+    if (result.ok) {
+      expect(result.payload.planned_rr).toBeNull();
+      expect(result.payload.entry_price).toBeNull();
+      expect(result.payload.stop_price).toBeNull();
+    }
   });
 
   it("pruned de custom-bag vóór validatie", () => {
