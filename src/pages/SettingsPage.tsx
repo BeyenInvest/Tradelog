@@ -14,6 +14,7 @@ import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { JournalOverview } from "@/components/settings/JournalOverview";
 import { AdvancedAnalysisSettings } from "@/components/settings/AdvancedAnalysisSettings";
+import { ExtensionLinkCard } from "@/components/settings/ExtensionLinkCard";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { ENTRIES, RESULT_UNITS, TRADE_CONCEPTS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
@@ -132,6 +133,10 @@ export default function SettingsPage() {
             title={t("settings.sectionAccount")}
             description={t("settings.sectionAccountDescription")}
           />
+
+          {/* F1c: koppelt de TradingView-extensie aan dit account. Rendert zichzelf
+              weg buiten de beta-gate. */}
+          <ExtensionLinkCard />
 
           <SupportSettings />
 

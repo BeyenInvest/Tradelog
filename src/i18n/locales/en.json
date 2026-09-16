@@ -1085,7 +1085,20 @@
     "dataExportBusy": "Exporting...",
     "dataExportDone": "{{count}} trades exported.",
     "dataExportEmpty": "No trades to export yet.",
-    "dataExportFailed": "Export failed."
+    "dataExportFailed": "Export failed.",
+    "extensionLink": "Connect TradingView extension",
+    "extensionLinkDescription": "Link the Chrome extension to your account and log trades straight from your TradingView chart. The extension is in beta.",
+    "extensionLinkCta": "Generate link code",
+    "extensionLinkRegenerate": "Generate a new link code",
+    "extensionLinkBusy": "Working...",
+    "extensionLinkCodeLabel": "Link code",
+    "extensionLinkCopy": "Copy",
+    "extensionLinkCopied": "Copied",
+    "extensionLinkCopyFailed": "Copying failed — select the code and copy it manually.",
+    "extensionLinkHint": "This code works once and expires quickly. Paste it straight into the \"Verbind\" field in the extension popup.",
+    "extensionLinkErrorBeta": "The TradingView extension is beta-accounts only for now.",
+    "extensionLinkErrorRate": "Too many requests — try again in a moment.",
+    "extensionLinkErrorGeneric": "Could not generate a link code. Please try again later."
   },
   "methodology": {
     "title": "Journal & fields",

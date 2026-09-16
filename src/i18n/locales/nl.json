@@ -1085,7 +1085,20 @@
     "dataExportBusy": "Exporteren...",
     "dataExportDone": "{{count}} trades geëxporteerd.",
     "dataExportEmpty": "Nog geen trades om te exporteren.",
-    "dataExportFailed": "Export mislukt."
+    "dataExportFailed": "Export mislukt.",
+    "extensionLink": "Verbind TradingView-extensie",
+    "extensionLinkDescription": "Koppel de Chrome-extensie aan je account en log trades rechtstreeks vanaf je TradingView-chart. De extensie is beta.",
+    "extensionLinkCta": "Genereer koppelcode",
+    "extensionLinkRegenerate": "Genereer nieuwe koppelcode",
+    "extensionLinkBusy": "Bezig...",
+    "extensionLinkCodeLabel": "Koppelcode",
+    "extensionLinkCopy": "Kopieer",
+    "extensionLinkCopied": "Gekopieerd",
+    "extensionLinkCopyFailed": "Kopiëren lukte niet — selecteer de code en kopieer hem handmatig.",
+    "extensionLinkHint": "Deze code werkt één keer en vervalt snel. Plak hem meteen in het \"Verbind\"-veld van de extensie-popup.",
+    "extensionLinkErrorBeta": "De TradingView-extensie is voorlopig alleen voor beta-accounts.",
+    "extensionLinkErrorRate": "Te veel verzoeken — probeer het zo weer.",
+    "extensionLinkErrorGeneric": "Koppelcode genereren mislukt. Probeer het later opnieuw."
   },
   "methodology": {
     "title": "Journal & velden",
