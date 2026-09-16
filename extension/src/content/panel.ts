@@ -19,7 +19,11 @@ function mount(): void {
   const host = document.createElement("div");
   host.id = HOST_ID;
   host.style.cssText = "position:fixed;top:72px;right:16px;z-index:2147483000;";
-  const root = host.attachShadow({ mode: "open" });
+  // "closed": de TV-pagina (vijandige wereld) kan de root dan niet via
+  // host.shadowRoot bereiken — geen uitlezen van journal-labels/notities en
+  // geen synthetische clicks op "Log trade" (security-review F4a). De referentie
+  // leeft alleen in deze closure.
+  const root = host.attachShadow({ mode: "closed" });
 
   const style = document.createElement("style");
   style.textContent = `${themeCss}\n${panelCss}`;

@@ -77,7 +77,7 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
 
 async function findChartTab(): Promise<chrome.tabs.Tab | undefined> {
   const isChartTab = (t: chrome.tabs.Tab | undefined) =>
-    !!t?.id && !!t.url && /^https:\/\/[^/]*tradingview\.com\/chart\//.test(t.url);
+    !!t?.id && !!t.url && /^https:\/\/([^/]+\.)?tradingview\.com\/chart\//.test(t.url); // geen lookalike-suffixdomeinen
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (isChartTab(active)) return active;
   const candidates = await chrome.tabs.query({ url: "https://*.tradingview.com/chart/*" });
