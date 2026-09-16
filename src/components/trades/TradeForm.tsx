@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { normalizeInstrument } from "@/lib/instruments";
 import { missingRequiredCustomFields } from "@/lib/methodologyFields";
 import { getLastInstrument, getLastRisk, setLastInstrument, setLastRisk } from "@/lib/tradeMemory";
+import { pruneCustom } from "@/lib/tradePayload";
 import { PAIRS } from "@/lib/constants";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
@@ -122,17 +123,6 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     custom: trade.custom ?? {},
     methodology_id: trade.methodology_id,
   };
-}
-
-/** Drop empty/in-progress values so trades.custom only stores answered fields (string|number|boolean). */
-function pruneCustom(raw: Record<string, unknown>): Record<string, string | number | boolean> {
-  const out: Record<string, string | number | boolean> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (v === null || v === undefined || v === "") continue;
-    if (typeof v === "number" && Number.isNaN(v)) continue;
-    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") out[k] = v;
-  }
-  return out;
 }
 
 export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialDate }: TradeFormProps) {
