@@ -116,6 +116,6 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "api/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "api/**/*.test.ts", "extension/src/**/*.test.ts"],
   },
 });

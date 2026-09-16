@@ -1,0 +1,53 @@
+// Smal contract tussen de flows (linkFlow, straks tradePayload) en Supabase.
+// De flows kennen alleen dit interface — unit-tests faken het zonder
+// supabase-js te hoeven mocken; supabaseDb.ts is de echte implementatie.
+
+export interface SessionInfo {
+  userId: string;
+  email: string;
+  /** ISO-timestamp waarop het access-token verloopt. */
+  expiresAt: string | null;
+}
+
+export interface ProfileInfo {
+  /** beta_features || role === 'admin' — zelfde regel als useAuth().betaFeatures. */
+  beta: boolean;
+  /** Actief live-journal (profiles.methodology_id); null = nog geen journal. */
+  methodologyId: string | null;
+  timezone: string;
+}
+
+export interface JournalField {
+  fieldKey: string;
+  label: string;
+  labelKey: string | null;
+  fieldType: "boolean" | "enum" | "text" | "number" | "date";
+  options: unknown;
+  required: boolean;
+  isComputed: boolean;
+  groupLabel: string | null;
+  sortOrder: number;
+}
+
+export interface JournalSchema {
+  id: string;
+  naam: string;
+  assetClass: string | null;
+  trackExit: boolean;
+  fields: JournalField[];
+}
+
+export interface ExtensionDb {
+  /** verifyOtp(magiclink token_hash) → user, of een foutmelding. */
+  verifyLinkToken(tokenHash: string): Promise<{ user: { id: string; email: string } | null; error?: string }>;
+  /** Lokale sessie weggooien (scope 'local' — raakt de web-app-sessie niet). */
+  signOutLocal(): Promise<void>;
+  /** Huidige sessie, of null. Refresht on-demand als het token verlopen is. */
+  getSessionInfo(): Promise<SessionInfo | null>;
+  /** Expliciete token-rotatie (chrome.alarms-pad). */
+  refreshSession(): Promise<{ error?: string }>;
+  /** Eigen profiel (altijd met .eq('id', uid) — een admin ziet anders álle rijen). */
+  getProfile(userId: string): Promise<ProfileInfo | null>;
+  /** Journal + velden van één methodology (RLS beperkt tot eigen journals). */
+  getJournalSchema(methodologyId: string): Promise<JournalSchema | null>;
+}
