@@ -15,7 +15,7 @@ const SCREENSHOT_FIELDS: { key: keyof Pick<Trade, "w_screenshot" | "d_screenshot
   { key: "w_screenshot", label: "Weekly" },
   { key: "d_screenshot", label: "Daily" },
   { key: "h4_screenshot", label: "H4" },
-  { key: "h2_screenshot", label: "H2" },
+  { key: "h2_screenshot", label: "Extra" },
 ];
 
 function Row({ label, value }: { label: string; value: string | number | null | undefined }) {

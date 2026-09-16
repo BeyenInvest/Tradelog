@@ -44,7 +44,8 @@ export function TechnicalSection() {
       {isLegacyMethodology && !hideFase && <FaseKenmerkenSection />}
 
       {/* The four screenshot slots are universal, but their timeframe labels
-          (Weekly/Daily/4H/2H) are Weekly-Phase-Method jargon. Only the legacy
+          (Weekly/Daily/4H/Extra) are Weekly-Phase-Method jargon. The 4th slot is
+          a neutral "Extra" because the entry timeframe varies (2H/1H/30M). Only the legacy
           journal gets those; every other journal (blank/futures/crypto) sees
           neutral "Screenshot 1-4" so the labels never lie about a timeframe. */}
       <div className="grid grid-cols-2 gap-4">
