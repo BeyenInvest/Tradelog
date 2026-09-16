@@ -150,11 +150,13 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 | F2b domein-modules | ✅ live op main | `src/lib/{symbolNormalize,priceMath,tradePayload}.ts` |
 | F2c migratie 0058 | ✅ code klaar — **⚠️ migratie moet op prod draaien VÓÓR de volgende main-push** | branch-lijn `tv-ext-f2c`+ |
 | F2a chart-adapter | ✅ code klaar (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
-| F2d paneel | prep ✅ (schrijfpad, thema, targets/log-trade); UI door Opus-agent | `tradeFlow.ts`, `theme.css`, `content/panel.ts` |
+| F2d paneel | ✅ code klaar (prep Fable + UI Opus: shadow-DOM-paneel in beyen-thema, dynamische form incl. show_when, doel/modus, overrides met "via TradingView"-badges) | `extension/src/content/ui/` |
 | F3a snapshots | ✅ code klaar (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
-| F3b snapshot-UI | na F2d-UI (Opus) | — |
-| F4a hardening | deels (protocol-fuzz); security-review op het eindpakket | — |
-| F4b polish/Store | open | — |
+| F3b snapshot-UI | ✅ code klaar (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming) | `content/ui/snapshotState.ts` e.o. |
+| F4a hardening | ✅ protocol-fuzz + security-review gedraaid; fixes: **closed** shadow root (Medium-bevinding: open root = pagina kan paneel lezen/besturen), activeTab-permission hersteld, host-regex zonder lookalikes | b7b478c |
+| F4b polish/Store | open (copy/EN, Web-Store-pakket + listing, privacy-alinea) | — |
+
+**Owner-testchecklist (echte Chrome, ná migratie 0058 + main-push):** `npm run build:ext` → extensie herladen → Settings-kaart → koppelcode → popup "Verbind" → TV-chart met position-tool → paneel: chart lezen, doel/modus kiezen, custom velden, "Log trade" → trade verschijnt in de app (open trade in journal / gesloten in project) → snapshots: eerst één klik op het extensie-icoon (activeTab), dan "Maak snapshots" → paden op de trade.
 
 Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-key** (nieuwe key-stijl) als `SUPABASE_SECRET_KEY` op Vercel — functioneel gelijk aan de service-role-key uit het plan. En op §3/F2d: een backtest-trade draagt óók het actieve journal (zoals de web-form), het project komt er als `backtest_project_id` bovenop.
 
