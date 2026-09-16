@@ -5,6 +5,7 @@ import type { ChartState } from "./adapter/parse";
 import type { BacktestProjectInfo, JournalInfo } from "./db";
 import type { FlowError, JournalDump, LinkOk, StatusInfo } from "./linkFlow";
 import type { LogEntry } from "./storage";
+import type { SnapshotCycleResult, SnapshotSlot } from "./snapshots";
 import type { LogTradeRequest, LogTradeResult } from "./tradeFlow";
 
 export type ExtRequest =
@@ -15,7 +16,9 @@ export type ExtRequest =
   | { type: "diag-log" }
   | { type: "chart-state" }
   | { type: "targets" }
-  | { type: "log-trade"; request: LogTradeRequest };
+  | { type: "log-trade"; request: LogTradeRequest }
+  | { type: "snapshot-cycle"; slots: SnapshotSlot[] }
+  | { type: "delete-screenshots"; paths: string[] };
 
 export interface TargetsInfo {
   ok: true;
@@ -33,6 +36,8 @@ export interface ExtResponses {
   "chart-state": { ok: true; state: ChartState } | FlowError;
   targets: TargetsInfo | FlowError;
   "log-trade": LogTradeResult;
+  "snapshot-cycle": ({ ok: true } & SnapshotCycleResult) | FlowError;
+  "delete-screenshots": { ok: true };
 }
 
 export function sendToSw<T extends ExtRequest["type"]>(

@@ -76,4 +76,8 @@ export interface ExtensionDb {
   listBacktestProjects(): Promise<BacktestProjectInfo[]>;
   /** Insert via PostgREST; unique-violation op import_ref = idempotente retry. */
   insertTrade(payload: Record<string, unknown>): Promise<InsertTradeResult>;
+  /** PNG naar de screenshots-bucket ({uid}/{uuid}.png — RLS eist het uid-prefix, 0039). */
+  uploadScreenshot(image: Blob): Promise<{ ok: true; path: string } | { ok: false; error: string }>;
+  /** Wees-uploads opruimen wanneer de user de log-poging annuleert (spiegel cleanupUnsavedUploads). */
+  removeScreenshots(paths: string[]): Promise<void>;
 }

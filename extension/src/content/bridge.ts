@@ -36,6 +36,22 @@ interface BridgeMessage {
   resolution?: unknown;
 }
 
+/** Chart-container-rect voor de snapshot-crop (F3a). Zelfde selector-ladder als
+ * de S0-spike; viewport-fallback zodat een TV-DOM-wijziging degradeert i.p.v.
+ * crasht (de crop wordt dan ruimer, nooit fout gepositioneerd). */
+function measureChartRect(): { x: number; y: number; w: number; h: number; dpr: number; selector: string } {
+  for (const selector of [".chart-container.active", ".chart-container", ".chart-markup-table", ".layout__area--center"]) {
+    const el = document.querySelector(selector);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 200 && r.height > 200) {
+        return { x: r.x, y: r.y, w: r.width, h: r.height, dpr: window.devicePixelRatio || 1, selector };
+      }
+    }
+  }
+  return { x: 0, y: 0, w: innerWidth, h: innerHeight, dpr: window.devicePixelRatio || 1, selector: "viewport-fallback" };
+}
+
 chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse) => {
   if (msg?.type === "tv-page-read") {
     askPage({ cmd: "read-state" }).then(sendResponse);
@@ -44,6 +60,10 @@ chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse)
   if (msg?.type === "tv-page-set-resolution" && typeof msg.resolution === "string") {
     askPage({ cmd: "set-resolution", resolution: msg.resolution }).then(sendResponse);
     return true;
+  }
+  if (msg?.type === "tv-chart-rect") {
+    sendResponse(measureChartRect());
+    return false;
   }
   return false;
 });

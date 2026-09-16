@@ -23,6 +23,8 @@ export interface LogTradeRequest {
   custom: Record<string, unknown>;
   notes?: string | null;
   clientUuid: string;
+  /** Storage-paden uit de snapshot-cyclus (F3a) voor de vier vaste slots. */
+  screenshots?: Partial<Record<"w" | "d" | "h4" | "h2", string | null>> | null;
 }
 
 export type LogTradeResult =
@@ -74,6 +76,15 @@ export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): 
     notes: req.notes ?? null,
   });
   if (!built.ok) return { ok: false, stage: "build", error: built.error, detail: built.detail };
+
+  // Snapshot-paden ná validatie in de payload prikken: het zijn dezelfde vier
+  // kolommen als de web-form (w_/d_/h4_/h2_screenshot, plan C4).
+  if (req.screenshots) {
+    built.payload.w_screenshot = req.screenshots.w ?? null;
+    built.payload.d_screenshot = req.screenshots.d ?? null;
+    built.payload.h4_screenshot = req.screenshots.h4 ?? null;
+    built.payload.h2_screenshot = req.screenshots.h2 ?? null;
+  }
 
   const inserted = await db.insertTrade(built.payload);
   if (!inserted.ok) return { ok: false, stage: "insert", error: inserted.code, detail: inserted.error };

@@ -122,6 +122,16 @@ describe("logTradeFromChart", () => {
     expect(await logTradeFromChart(db, req())).toMatchObject({ ok: false, stage: "insert", error: "missing-column" });
   });
 
+  it("zet snapshot-paden in de vier vaste kolommen", async () => {
+    const db = makeDb();
+    await logTradeFromChart(db, req({ screenshots: { w: "u1/a.png", h4: "u1/b.png" } }));
+    const payload = (db.insertTrade as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.w_screenshot).toBe("u1/a.png");
+    expect(payload.h4_screenshot).toBe("u1/b.png");
+    expect(payload.d_screenshot).toBeNull();
+    expect(payload.h2_screenshot).toBeNull();
+  });
+
   it("niet-forex journal: vrij instrument, ES1! mag wel", async () => {
     const db = makeDb({
       getJournalSchema: vi.fn(async () => ({ ...LEGACY_JOURNAL, assetClass: "futures", fields: [] })),

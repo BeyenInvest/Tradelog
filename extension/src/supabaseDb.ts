@@ -119,6 +119,24 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
       return data.map((p) => ({ id: p.id, naam: p.naam }));
     },
 
+    async uploadScreenshot(image) {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return { ok: false, error: "geen sessie" };
+      const path = `${uid}/${crypto.randomUUID()}.png`;
+      const { error } = await client.storage.from("screenshots").upload(path, image, {
+        contentType: "image/png",
+        upsert: false,
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, path };
+    },
+
+    async removeScreenshots(paths) {
+      if (paths.length === 0) return;
+      await client.storage.from("screenshots").remove(paths);
+    },
+
     async insertTrade(payload) {
       const { data, error } = await client.from("trades").insert(payload).select("id").single();
       if (!error) return { ok: true, tradeId: (data as { id: string }).id, duplicate: false };
