@@ -2,7 +2,7 @@
 
 Chrome-extensie (MV3) die het Beyen-journal aan TradingView koppelt. Leidend plan: `docs/plan-tv-extensie-engines.md`; go/no-go-bewijs: `docs/spike-tv-extensie.md`.
 
-**Status: F2a** — skelet + auth + journal-schema-dump + chart-adapter (leest symbol/resolution/tick/position-tool via de page-world; "Lees chart" in de popup). Nog géén paneel-UI (F2d, Opus), writes of snapshots (F3).
+**Status: F3a** — skelet + auth + chart-adapter + schrijfpad (`tradeFlow`: paneel → `buildTradePayload` → idempotente insert) + snapshot-pipeline (W/D/4H/2H-cyclus met timeframe-herstel, crop, upload naar de bestaande bucket). Paneel-UI (F2d) en snapshot-UI (F3b) zijn Opus-werk. ⚠️ Writes vereisen migratie **0058** op de DB; en `captureVisibleTab` vereist één klik op het extensie-icoon per tab (activeTab-gebaar — S0-bevinding).
 
 ## Architectuur (kort)
 
