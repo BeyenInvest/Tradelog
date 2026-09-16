@@ -1,6 +1,7 @@
 // MV3 service worker — auth-eigenaar van de extensie (plan §2.6). Houdt de
 // Supabase-sessie in chrome.storage, ververst via chrome.alarms en beantwoordt
 // popup-berichten. Geen writes naar trades in F1b.
+import { parseChartState } from "./adapter/parse";
 import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
@@ -48,6 +49,36 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
       return fetchJournalDump(db);
     case "diag-log":
       return { entries: await readLog() };
+    case "chart-state":
+      return readChartState();
+  }
+}
+
+/** Vraag de bridge op een open TV-chart-tab om de chart-state en parseer die
+ * over de vertrouwensgrens heen (F2a). Actieve tab eerst, anders de eerste
+ * TV-chart-tab; leesfouten gaan het diagnose-log in (telemetrie-haak F4a). */
+async function readChartState(): Promise<ExtResponses["chart-state"]> {
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const isChartTab = (t: chrome.tabs.Tab | undefined) =>
+    !!t?.id && !!t.url && /^https:\/\/[^/]*tradingview\.com\/chart\//.test(t.url);
+  let tab = isChartTab(active) ? active : undefined;
+  if (!tab) {
+    const candidates = await chrome.tabs.query({ url: "https://*.tradingview.com/chart/*" });
+    tab = candidates.find(isChartTab);
+  }
+  if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
+  try {
+    const payload: unknown = await chrome.tabs.sendMessage(tab.id, { type: "tv-page-read" });
+    const state = parseChartState(payload);
+    const failures = [state.symbol, state.resolution, state.tick, state.positions]
+      .filter((r) => !r.ok)
+      .map((r) => (r.ok ? "" : r.reason));
+    if (failures.length > 0) await appendLog("chart-read-degraded", failures.join(" | "));
+    return { ok: true, state };
+  } catch (e) {
+    const detail = String((e instanceof Error && e.message) || e);
+    await appendLog("chart-read-error", detail);
+    return { ok: false, error: "Chart-tab antwoordt niet — herlaad de TradingView-pagina" };
   }
 }
 

@@ -2,7 +2,7 @@
 
 Chrome-extensie (MV3) die het Beyen-journal aan TradingView koppelt. Leidend plan: `docs/plan-tv-extensie-engines.md`; go/no-go-bewijs: `docs/spike-tv-extensie.md`.
 
-**Status: F1b** — skelet + auth + journal-schema-dump. Nog géén chart-integratie (F2a), paneel-UI (F2d, Opus) of snapshots (F3).
+**Status: F2a** — skelet + auth + journal-schema-dump + chart-adapter (leest symbol/resolution/tick/position-tool via de page-world; "Lees chart" in de popup). Nog géén paneel-UI (F2d, Opus), writes of snapshots (F3).
 
 ## Architectuur (kort)
 
@@ -10,7 +10,8 @@ Chrome-extensie (MV3) die het Beyen-journal aan TradingView koppelt. Leidend pla
 - `src/db.ts` — smal `ExtensionDb`-contract; `src/supabaseDb.ts` is de echte implementatie, tests faken het interface.
 - `src/linkFlow.ts` — koppel-/status-/dump-flows (pure functies over `ExtensionDb`, unit-getest).
 - `src/messages.ts` — getypeerd berichtenschema popup ⇄ SW.
-- `popup.html` + `src/popup.ts` — tijdelijke F1b-popup (status, koppelcode, journal-dump, diagnose-log, koppel los).
+- `popup.html` + `src/popup.ts` — tijdelijke popup (status, koppelcode, chart-lezen, journal-dump, diagnose-log, koppel los).
+- `src/adapter/` — de vertrouwensgrens (F2a): `protocol.ts` (envelope-validatie page ⇄ isolated), `parse.ts` (unknown → typed `ChartState` met per-veld-degradatie, contract-getest tegen de S0-fixture). `src/content/tvMain.ts` (MAIN world, enige plek die `window.TradingViewApi` aanraakt; leest alleen, plus `setResolution` voor de latere snapshot-cyclus) en `src/content/bridge.ts` (isolated relay) worden apart als IIFE gebundeld — content scripts zijn classic scripts, geen ESM.
 - Auth-flow: de app (F1a: `api/extension-link.ts`) geeft een eenmalige magiclink-`token_hash`; de extensie wisselt die om via `verifyOtp` → eigen sessie met eigen refresh-token-familie. Beta-gate (`beta_features || admin`) wordt bij het koppelen afgedwongen: niet-beta wordt direct weer uitgelogd.
 
 ## Bouwen & laden
