@@ -139,4 +139,25 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 ---
 
+## 6. Bouwlog (bijgewerkt 2026-09-16/17, nachtsessie Fable)
+
+| Blok | Status | Waar |
+|---|---|---|
+| S0 spike | ✅ alle 4 GO, runtime owner-getest | `docs/spike-tv-extensie.md` |
+| F1a koppel-endpoint | ✅ **live op prod** (smoke-test 401 = env OK) | `api/extension-link.ts`, main |
+| F1b skelet + auth | ✅ live op main | `extension/`, main |
+| F1c Settings-kaart | ✅ live op main (Opus) | `ExtensionLinkCard.tsx`, main |
+| F2b domein-modules | ✅ live op main | `src/lib/{symbolNormalize,priceMath,tradePayload}.ts` |
+| F2c migratie 0058 | ✅ code klaar — **⚠️ migratie moet op prod draaien VÓÓR de volgende main-push** | branch-lijn `tv-ext-f2c`+ |
+| F2a chart-adapter | ✅ code klaar (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
+| F2d paneel | prep ✅ (schrijfpad, thema, targets/log-trade); UI door Opus-agent | `tradeFlow.ts`, `theme.css`, `content/panel.ts` |
+| F3a snapshots | ✅ code klaar (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
+| F3b snapshot-UI | na F2d-UI (Opus) | — |
+| F4a hardening | deels (protocol-fuzz); security-review op het eindpakket | — |
+| F4b polish/Store | open | — |
+
+Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-key** (nieuwe key-stijl) als `SUPABASE_SECRET_KEY` op Vercel — functioneel gelijk aan de service-role-key uit het plan. En op §3/F2d: een backtest-trade draagt óók het actieve journal (zoals de web-form), het project komt er als `backtest_project_id` bovenop.
+
+---
+
 *Verificatiebronnen: `supabase/schema.sql` (trades 231-332, methodologies 384-424, RLS 1735-1854, storage 1664-1712, trigger 739/901), `src/hooks/useTrades.ts`, `src/hooks/useAuth.tsx`, `src/hooks/useMethodology.tsx`, `src/lib/{supabase,validation,quickLog,instruments,lotSize,methodologyFields}.ts`, `src/lib/storage/*`, `src/components/trades/TradeForm.tsx`, `api/ff-calendar.ts`, `vercel.json`, `docs/fixplan-2026-09.md`, `docs/launchplan-groei-2026-09.md`.*
