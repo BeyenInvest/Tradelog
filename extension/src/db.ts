@@ -37,6 +37,21 @@ export interface JournalSchema {
   fields: JournalField[];
 }
 
+export interface JournalInfo {
+  id: string;
+  naam: string;
+  assetClass: string | null;
+}
+
+export interface BacktestProjectInfo {
+  id: string;
+  naam: string;
+}
+
+export type InsertTradeResult =
+  | { ok: true; tradeId: string | null; duplicate: boolean }
+  | { ok: false; error: string; code: "missing-column" | "constraint" | "other" };
+
 export interface ExtensionDb {
   /** verifyOtp(magiclink token_hash) → user, of een foutmelding. */
   verifyLinkToken(tokenHash: string): Promise<{ user: { id: string; email: string } | null; error?: string }>;
@@ -50,4 +65,10 @@ export interface ExtensionDb {
   getProfile(userId: string): Promise<ProfileInfo | null>;
   /** Journal + velden van één methodology (RLS beperkt tot eigen journals). */
   getJournalSchema(methodologyId: string): Promise<JournalSchema | null>;
+  /** Eigen journals (geen system-templates) voor de doel-kiezer. */
+  listJournals(): Promise<JournalInfo[]>;
+  /** Eigen backtest-projecten voor de doel-kiezer (plan M2). */
+  listBacktestProjects(): Promise<BacktestProjectInfo[]>;
+  /** Insert via PostgREST; unique-violation op import_ref = idempotente retry. */
+  insertTrade(payload: Record<string, unknown>): Promise<InsertTradeResult>;
 }

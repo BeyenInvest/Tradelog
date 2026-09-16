@@ -16,7 +16,7 @@
     },
     {
       "matches": ["https://*.tradingview.com/chart/*"],
-      "js": ["dist/content/bridge.js"],
+      "js": ["dist/content/bridge.js", "dist/content/panel.js"],
       "run_at": "document_idle"
     }
   ]

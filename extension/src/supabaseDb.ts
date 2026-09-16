@@ -96,5 +96,36 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         fields: mapped,
       };
     },
+
+    async listJournals() {
+      const { data, error } = await client
+        .from("methodologies")
+        .select("id, naam, asset_class")
+        .eq("is_system", false)
+        .order("created_at", { ascending: true });
+      if (error || !data) return [];
+      return data.map((m) => ({ id: m.id, naam: m.naam, assetClass: m.asset_class ?? null }));
+    },
+
+    async listBacktestProjects() {
+      const { data, error } = await client
+        .from("backtest_projects")
+        .select("id, naam")
+        .order("created_at", { ascending: true });
+      if (error || !data) return [];
+      return data.map((p) => ({ id: p.id, naam: p.naam }));
+    },
+
+    async insertTrade(payload) {
+      const { data, error } = await client.from("trades").insert(payload).select("id").single();
+      if (!error) return { ok: true, tradeId: (data as { id: string }).id, duplicate: false };
+      // 23505 = unique violation op trades_user_import_ref_unique → deze trade
+      // is al gelogd (retry na netwerkfout) — dat is succes, geen fout (plan C6).
+      if (error.code === "23505") return { ok: true, tradeId: null, duplicate: true };
+      // 42703 = kolom bestaat niet → migratie 0058 draait nog niet op deze DB.
+      if (error.code === "42703") return { ok: false, error: error.message, code: "missing-column" };
+      if (error.code === "23514") return { ok: false, error: error.message, code: "constraint" };
+      return { ok: false, error: error.message, code: "other" };
+    },
   };
 }

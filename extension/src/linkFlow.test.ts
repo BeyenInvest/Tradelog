@@ -35,6 +35,9 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     refreshSession: vi.fn(async () => ({})),
     getProfile: vi.fn(async () => BETA_PROFILE),
     getJournalSchema: vi.fn(async () => JOURNAL),
+    listJournals: vi.fn(async () => []),
+    listBacktestProjects: vi.fn(async () => []),
+    insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     ...overrides,
   };
 }

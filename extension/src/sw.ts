@@ -7,6 +7,7 @@ import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
 import { appendLog, readLog } from "./storage";
 import { createExtensionClient, createSupabaseDb } from "./supabaseDb";
+import { logTradeFromChart } from "./tradeFlow";
 
 const db = createSupabaseDb(createExtensionClient());
 
@@ -51,6 +52,18 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
       return { entries: await readLog() };
     case "chart-state":
       return readChartState();
+    case "targets": {
+      const session = await db.getSessionInfo();
+      if (!session) return { ok: false, error: "Niet gekoppeld" };
+      const profile = await db.getProfile(session.userId);
+      const [journals, projects] = await Promise.all([db.listJournals(), db.listBacktestProjects()]);
+      return { ok: true, activeJournalId: profile?.methodologyId ?? null, journals, projects };
+    }
+    case "log-trade": {
+      const result = await logTradeFromChart(db, req.request);
+      await appendLog("log-trade", result.ok ? `ok${result.duplicate ? " (duplicate)" : ""}` : `${result.stage}: ${result.error}`);
+      return result;
+    }
   }
 }
 

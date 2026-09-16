@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "build:ext": "vite build --config vite.extension.config.ts && esbuild extension/src/content/tvMain.ts extension/src/content/bridge.ts --bundle --format=iife --target=chrome111 --outdir=extension/dist/content",
+    "build:ext": "vite build --config vite.extension.config.ts && esbuild extension/src/content/tvMain.ts extension/src/content/bridge.ts extension/src/content/panel.ts --bundle --format=iife --target=chrome111 --loader:.css=text --outdir=extension/dist/content",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit && tsc -p extension/tsconfig.json"
