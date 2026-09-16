@@ -71,12 +71,13 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
 
       const { data: fields, error: fieldsErr } = await client
         .from("methodology_fields")
-        .select("field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order")
+        .select("id, field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order, show_when_field_id, show_when_values")
         .eq("methodology_id", methodologyId)
         .order("sort_order", { ascending: true });
       if (fieldsErr) return null;
 
       const mapped: JournalField[] = (fields ?? []).map((f) => ({
+        id: f.id,
         fieldKey: f.field_key,
         label: f.label,
         labelKey: f.label_key ?? null,
@@ -86,6 +87,8 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         isComputed: f.is_computed === true,
         groupLabel: f.group_label ?? null,
         sortOrder: f.sort_order,
+        showWhenFieldId: f.show_when_field_id ?? null,
+        showWhenValues: f.show_when_values ?? null,
       }));
 
       return {

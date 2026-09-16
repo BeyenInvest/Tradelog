@@ -12,6 +12,7 @@ const JOURNAL: JournalSchema = {
   trackExit: false,
   fields: [
     {
+      id: "f-entry-type",
       fieldKey: "entry_type",
       label: "Entry type",
       labelKey: null,
@@ -21,6 +22,8 @@ const JOURNAL: JournalSchema = {
       isComputed: false,
       groupLabel: null,
       sortOrder: 1,
+      showWhenFieldId: null,
+      showWhenValues: null,
     },
   ],
 };

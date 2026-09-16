@@ -12,6 +12,7 @@ const LEGACY_JOURNAL: JournalSchema = {
   trackExit: false,
   fields: [
     {
+      id: "f-fase",
       fieldKey: "fase",
       label: "Fase",
       labelKey: null,
@@ -21,6 +22,8 @@ const LEGACY_JOURNAL: JournalSchema = {
       isComputed: false,
       groupLabel: null,
       sortOrder: 0,
+      showWhenFieldId: null,
+      showWhenValues: null,
     },
   ],
 };

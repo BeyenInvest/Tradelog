@@ -18,6 +18,7 @@ export interface ProfileInfo {
 }
 
 export interface JournalField {
+  id: string;
   fieldKey: string;
   label: string;
   labelKey: string | null;
@@ -27,6 +28,10 @@ export interface JournalField {
   isComputed: boolean;
   groupLabel: string | null;
   sortOrder: number;
+  /** Conditionele zichtbaarheid: toon dit veld alleen als het veld met dit id
+   * één van showWhenValues heeft (zelfde contract als de web-form, plan M6). */
+  showWhenFieldId: string | null;
+  showWhenValues: unknown;
 }
 
 export interface JournalSchema {
