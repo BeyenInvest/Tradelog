@@ -1,0 +1,167 @@
+// Unit-tests voor de pure paneel-laag (F2d): formattering, foutcopy en de
+// beslisregels van de dynamische form. De DOM-kant (form.ts/panelApp.ts) wordt
+// hier bewust niet getest — die is handmatig owner-getest in echte Chrome.
+import { describe, expect, it } from "vitest";
+import type { JournalField } from "../../db";
+import { humanizeSchemaDetail, logTradeErrorCopy } from "./errors";
+import {
+  customFromValues, faseValue, formFields, groupFields, isVisible, missingRequired,
+  skippedLegacyFields,
+} from "./fields";
+import { formatPrice, formatRR, formatResolution } from "./format";
+
+function field(partial: Partial<JournalField> & { fieldKey: string }): JournalField {
+  return {
+    id: partial.fieldKey,
+    label: partial.fieldKey,
+    labelKey: null,
+    fieldType: "text",
+    options: null,
+    required: false,
+    isComputed: false,
+    groupLabel: null,
+    sortOrder: 0,
+    showWhenFieldId: null,
+    showWhenValues: null,
+    ...partial,
+  };
+}
+
+describe("formatResolution", () => {
+  it("vertaalt TV-resoluties naar trader-notatie", () => {
+    expect(formatResolution("240")).toBe("4H");
+    expect(formatResolution("60")).toBe("1H");
+    expect(formatResolution("15")).toBe("15m");
+    expect(formatResolution("D")).toBe("D");
+    expect(formatResolution("W")).toBe("W");
+    expect(formatResolution("30S")).toBe("30s");
+    expect(formatResolution("1440")).toBe("1D");
+  });
+
+  it("laat onbekende vormen staan in plaats van te gokken", () => {
+    expect(formatResolution("3M")).toBe("3M");
+    expect(formatResolution("")).toBe("—");
+  });
+});
+
+describe("formatPrice / formatRR", () => {
+  it("toont prijzen zonder nul-staart en met puntdecimaal", () => {
+    expect(formatPrice(1.23456)).toBe("1.23456");
+    expect(formatPrice(158.5)).toBe("158.5");
+    expect(formatPrice(null)).toBe("—");
+    expect(formatPrice(Number.NaN)).toBe("—");
+  });
+
+  it("schrijft R:R zoals de app", () => {
+    expect(formatRR(2.4)).toBe("1 : 2.4");
+    expect(formatRR(null)).toBe("—");
+  });
+});
+
+describe("formFields", () => {
+  const legacy = [
+    field({ fieldKey: "fase", options: ["Fase 2", "Fase 1"] }),
+    field({ fieldKey: "structuur", sortOrder: 2 }),
+    field({ fieldKey: "eigen_veld", sortOrder: 1 }),
+    field({ fieldKey: "berekend", sortOrder: 3, isComputed: true }),
+  ];
+
+  it("laat fase, computed en legacy-WPM-kenmerken weg op een legacy journal", () => {
+    expect(formFields(legacy).map((f) => f.fieldKey)).toEqual(["eigen_veld"]);
+    expect(skippedLegacyFields(legacy).map((f) => f.fieldKey)).toEqual(["structuur"]);
+  });
+
+  it("houdt dezelfde sleutel wél op een niet-legacy journal", () => {
+    const modern = [field({ fieldKey: "structuur" }), field({ fieldKey: "notitie", sortOrder: 1 })];
+    expect(formFields(modern).map((f) => f.fieldKey)).toEqual(["structuur", "notitie"]);
+    expect(skippedLegacyFields(modern)).toEqual([]);
+  });
+
+  it("gebruikt de eerste fase-optie als fase-waarde (zoals tradeFlow.firstFaseOf)", () => {
+    expect(faseValue(legacy)).toBe("Fase 2");
+    expect(faseValue([])).toBe("Fase 1");
+  });
+});
+
+describe("isVisible (show_when)", () => {
+  const parent = field({ fieldKey: "setup", id: "p1", fieldType: "enum", options: ["A", "B"] });
+  const child = field({ fieldKey: "detail", showWhenFieldId: "p1", showWhenValues: ["A"] });
+  const all = [parent, child];
+
+  it("toont het kind alleen bij de gevraagde ouder-waarde", () => {
+    expect(isVisible(child, all, { setup: "A" })).toBe(true);
+    expect(isVisible(child, all, { setup: "B" })).toBe(false);
+    expect(isVisible(child, all, {})).toBe(false);
+  });
+
+  it("toont altijd bij een verweesde of lege voorwaarde", () => {
+    expect(isVisible(field({ fieldKey: "x", showWhenFieldId: "weg", showWhenValues: ["A"] }), all, {})).toBe(true);
+    expect(isVisible(field({ fieldKey: "x", showWhenFieldId: "p1", showWhenValues: [] }), all, {})).toBe(true);
+  });
+
+  it("rekent voor een fase-ouder met de fase die de server meestuurt", () => {
+    const fase = field({ fieldKey: "fase", id: "f", options: ["Fase 1", "Fase 2"] });
+    const kind = field({ fieldKey: "k", showWhenFieldId: "f", showWhenValues: ["Fase 1"] });
+    expect(isVisible(kind, [fase, kind], {})).toBe(true);
+  });
+});
+
+describe("missingRequired / customFromValues", () => {
+  const parent = field({ fieldKey: "setup", id: "p1", fieldType: "enum", options: ["A", "B"] });
+  const child = field({ fieldKey: "detail", id: "c1", required: true, showWhenFieldId: "p1", showWhenValues: ["A"] });
+  const all = [parent, child];
+  const list = formFields(all);
+
+  it("blokkeert alleen op zichtbare, lege verplichte velden", () => {
+    expect(missingRequired(list, all, { setup: "A" }).map((f) => f.fieldKey)).toEqual(["detail"]);
+    expect(missingRequired(list, all, { setup: "B" })).toEqual([]);
+    expect(missingRequired(list, all, { setup: "A", detail: "x" })).toEqual([]);
+  });
+
+  it("telt false als een echt boolean-antwoord", () => {
+    const bool = field({ fieldKey: "b", fieldType: "boolean", required: true });
+    expect(missingRequired([bool], [bool], { b: false })).toEqual([]);
+    expect(missingRequired([bool], [bool], { b: null }).map((f) => f.fieldKey)).toEqual(["b"]);
+  });
+
+  it("stuurt geen antwoorden mee uit een dichtgeklapte tak", () => {
+    expect(customFromValues(list, all, { setup: "B", detail: "oud antwoord" })).toEqual({ setup: "B" });
+    expect(customFromValues(list, all, { setup: "A", detail: "x" })).toEqual({ setup: "A", detail: "x" });
+  });
+});
+
+describe("groupFields", () => {
+  it("zet opeenvolgende velden met hetzelfde kopje bij elkaar", () => {
+    const groups = groupFields([
+      field({ fieldKey: "a", groupLabel: "Setup" }),
+      field({ fieldKey: "b", groupLabel: "Setup" }),
+      field({ fieldKey: "c", groupLabel: null }),
+    ]);
+    expect(groups.map((g) => [g.label, g.fields.length])).toEqual([["Setup", 2], [null, 1]]);
+  });
+});
+
+describe("logTradeErrorCopy", () => {
+  it("geeft elke bekende faalcode eigen NL-copy", () => {
+    expect(logTradeErrorCopy({ ok: false, stage: "auth", error: "not-linked" }).message).toContain("popup");
+    expect(logTradeErrorCopy({ ok: false, stage: "profile", error: "not-beta" }).message).toContain("beta");
+    expect(
+      logTradeErrorCopy({ ok: false, stage: "build", error: "symbol-not-in-pairs", detail: "XAUUSD" }).message
+    ).toContain("XAUUSD");
+    expect(logTradeErrorCopy({ ok: false, stage: "insert", error: "missing-column" }).message).toContain("0058");
+  });
+
+  it("degradeert netjes op een onbekende code", () => {
+    const copy = logTradeErrorCopy({ ok: false, stage: "insert", error: "other", detail: "boem" });
+    expect(copy.message).toBe("Loggen is niet gelukt.");
+    expect(copy.detail).toBe("boem");
+  });
+
+  it("vertaalt zod-sleutels naar leesbare zinnen", () => {
+    expect(humanizeSchemaDetail("resultaat_pct: tradeForm.lossMustBeNegative")).toBe(
+      "Resultaat % hoort bij een Loss negatief te zijn"
+    );
+    expect(humanizeSchemaDetail("iets.raars")).toBe("iets.raars");
+    expect(humanizeSchemaDetail(undefined)).toBeUndefined();
+  });
+});
