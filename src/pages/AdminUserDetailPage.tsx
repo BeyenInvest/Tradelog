@@ -10,12 +10,15 @@ import { ReadOnlyProjectModal } from "@/components/admin/ReadOnlyProjectModal";
 import { ReadOnlyWeeklyReviewModal } from "@/components/admin/ReadOnlyWeeklyReviewModal";
 import { ReadOnlyPeriodicReviewModal } from "@/components/admin/ReadOnlyPeriodicReviewModal";
 import { ReadOnlyAccountList } from "@/components/admin/ReadOnlyAccountList";
+import { ReadOnlyHabitsViewer } from "@/components/admin/ReadOnlyHabitsViewer";
+import { ReadOnlyDailyJournalViewer } from "@/components/admin/ReadOnlyDailyJournalViewer";
 import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { PeriodicReviewList } from "@/components/reviews/PeriodicReviewList";
 import {
   getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser,
   getBacktestProjectsForUser, getPropAccountsForUser, getMethodologyViewForUser,
+  getHabitsForUser, getDailyJournalForUser,
 } from "@/lib/admin/adminQueries";
 import { takenTrades, closedTrades, round2 } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
@@ -23,9 +26,9 @@ import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDispla
 import type { PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
-import type { BacktestProject, MethodologyView, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
+import type { BacktestProject, DailyJournalEntry, Habit, HabitDay, MethodologyView, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
 
-type MainTab = "journal" | "backtesting" | "reviews" | "accounts";
+type MainTab = "journal" | "backtesting" | "reviews" | "accounts" | "habits" | "daily";
 type ReviewTab = "week" | PeriodType;
 
 const MAIN_TABS: { key: MainTab; labelKey: string }[] = [
@@ -33,6 +36,8 @@ const MAIN_TABS: { key: MainTab; labelKey: string }[] = [
   { key: "backtesting", labelKey: "nav.backtesting" },
   { key: "reviews", labelKey: "nav.reviews" },
   { key: "accounts", labelKey: "nav.accounts" },
+  { key: "habits", labelKey: "nav.habits" },
+  { key: "daily", labelKey: "nav.dailyJournal" },
 ];
 
 const REVIEW_TABS: { key: ReviewTab; labelKey: string }[] = [
@@ -70,6 +75,9 @@ function AdminUserDetailPageInner() {
   const [projects, setProjects] = useState<BacktestProject[]>([]);
   const [accounts, setAccounts] = useState<PropAccount[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitDays, setHabitDays] = useState<HabitDay[]>([]);
+  const [dailyEntries, setDailyEntries] = useState<DailyJournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,8 +100,10 @@ function AdminUserDetailPageInner() {
       getPeriodicReviewsForUser(userId),
       getBacktestProjectsForUser(userId),
       getPropAccountsForUser(userId),
+      getHabitsForUser(userId),
+      getDailyJournalForUser(userId),
     ])
-      .then(async ([p, t, wr, pr, bp, pa]) => {
+      .then(async ([p, t, wr, pr, bp, pa, hb, dj]) => {
         if (cancelled) return;
         setProfile(p);
         setTrades(t);
@@ -102,6 +112,9 @@ function AdminUserDetailPageInner() {
         setProjects(bp);
         setAccounts(pa.accounts);
         setPayouts(pa.payouts);
+        setHabits(hb.habits);
+        setHabitDays(hb.days);
+        setDailyEntries(dj);
         // The Analyse breakdowns are journal-type-specific: load the viewed user's
         // active-journal view so they don't follow the admin's own journal (H2).
         const mv = await getMethodologyViewForUser(p?.methodology_id ?? null);
@@ -296,6 +309,10 @@ function AdminUserDetailPageInner() {
           )}
 
           {mainTab === "accounts" && <ReadOnlyAccountList accounts={accounts} payouts={payouts} />}
+
+          {mainTab === "habits" && <ReadOnlyHabitsViewer habits={habits} days={habitDays} />}
+
+          {mainTab === "daily" && <ReadOnlyDailyJournalViewer entries={dailyEntries} />}
         </div>
       )}
 

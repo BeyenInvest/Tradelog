@@ -53,7 +53,7 @@ export function ReadOnlyProjectModal({
           </div>
 
           {tab === "journal" ? (
-            <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} />
+            <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} allowSessions />
           ) : (
             <BacktestingAnalysisView trades={trades} hideFaseOverride={hideFaseOverride} methodologyOverride={methodologyOverride} />
           )}

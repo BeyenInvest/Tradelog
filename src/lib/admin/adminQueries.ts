@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchAllPages } from "@/lib/fetchAll";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import type {
-  BacktestProject, Methodology, MethodologyField, MethodologyView,
+  BacktestProject, DailyJournalEntry, Habit, HabitDay, Methodology, MethodologyField, MethodologyView,
   PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview,
 } from "@/lib/types";
 
@@ -155,4 +155,53 @@ export async function getPropAccountsForUser(userId: string): Promise<{ accounts
   );
 
   return { accounts, payouts };
+}
+
+/**
+ * The viewed user's habit tracker (migrations 0054/0056). Habits are life-level,
+ * NOT journal-scoped, so — unlike trades — there's no active-journal filter here;
+ * every habit and tick of that user is returned. Needs the is_admin() SELECT
+ * carve-out on `habits` + `habit_days` (both added with their own migrations).
+ * `habits` includes archived rows so the admin can still see a definition behind
+ * historical ticks; the viewer decides what to surface.
+ */
+export async function getHabitsForUser(userId: string): Promise<{ habits: Habit[]; days: HabitDay[] }> {
+  const [habits, days] = await Promise.all([
+    allRows<Habit>((from, to) =>
+      supabase
+        .from("habits")
+        .select("*")
+        .eq("user_id", userId)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    ),
+    allRows<HabitDay>((from, to) =>
+      supabase
+        .from("habit_days")
+        .select("*")
+        .eq("user_id", userId)
+        .order("day", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
+  ]);
+  return { habits, days };
+}
+
+/**
+ * The viewed user's dagboek entries (migration 0055). Global per user, one row per
+ * (user_id, entry_date), newest first. Needs the is_admin() SELECT carve-out on
+ * `daily_journal_entries`.
+ */
+export async function getDailyJournalForUser(userId: string): Promise<DailyJournalEntry[]> {
+  return allRows<DailyJournalEntry>((from, to) =>
+    supabase
+      .from("daily_journal_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .order("entry_date", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }

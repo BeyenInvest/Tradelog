@@ -1248,7 +1248,15 @@
     "backtestProjects": "Backtest projects ({{count}})",
     "journalTradesTitle": "Journal trades",
     "ccSessie": "CC / Session",
-    "screenshots": "Screenshots"
+    "screenshots": "Screenshots",
+    "habitsNoData": "This user has no habits or check-in history yet.",
+    "habitsCalendarTitle": "Day by day",
+    "habitsRecentStrip": "Last 14 days (floor)",
+    "habitsConfig": "This user's habits",
+    "habitsNoConfig": "No habits defined.",
+    "habitsArchived": "Archived",
+    "dailyNoEntries": "This user has no dagboek entries yet.",
+    "dailyEntriesHeading": "Entries ({{count}})"
   },
   "deleteAccount": {
     "confirmPhrase": "DELETE",
