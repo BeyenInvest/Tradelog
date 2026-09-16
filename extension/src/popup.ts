@@ -44,6 +44,13 @@ el<HTMLButtonElement>("linkBtn").addEventListener("click", () => {
   })();
 });
 
+el<HTMLButtonElement>("chartBtn").addEventListener("click", () => {
+  void (async () => {
+    const result = await sendToSw({ type: "chart-state" });
+    showOutput(result);
+  })();
+});
+
 el<HTMLButtonElement>("dumpBtn").addEventListener("click", () => {
   void (async () => {
     const dump = await sendToSw({ type: "journal-dump" });

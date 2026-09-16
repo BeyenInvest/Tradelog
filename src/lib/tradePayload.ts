@@ -5,10 +5,10 @@
 // profiel-tijdzone (M4) + open/post-hoc-modus (M1) + import_ref-idempotentie
 // (C6), gevalideerd met dezelfde tradeSchema als de web-form.
 //
-// NB (F2c): entry-/stop-/target-PRIJZEN hebben nog geen trades-kolommen — tot
-// migratie F2c gedraaid is landen alleen de afgeleiden (planned_rr, direction,
-// risk_pct) in de payload; de prijzen komen apart terug in `derived` zodat het
-// paneel ze kan tonen.
+// Prijzen landen sinds F2c (migratie 0058) in echte kolommen
+// (entry_price/stop_price/target_price; exit_price = F5-haak). ⚠️ 0058 moet op
+// prod gedraaid zijn vóórdat code die buildTradePayload aanroept deployt —
+// anders weigert PostgREST de onbekende kolommen (0043-les).
 import { type Direction, type Outcome } from "./constants";
 import { directionFromPrices, plannedRR } from "./priceMath";
 import { quickLogDefaults } from "./quickLog";
@@ -171,6 +171,9 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
     }
     values.direction = input.direction ?? implied;
     values.planned_rr = target != null ? plannedRR(entry, stop, target) : null;
+    values.entry_price = entry;
+    values.stop_price = stop;
+    values.target_price = target;
   }
 
   // M1: open-trade-constraint (0043) — open ⇒ outcome/resultaat/evaluatie/MAE/MFE
