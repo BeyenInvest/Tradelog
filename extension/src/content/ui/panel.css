@@ -246,6 +246,32 @@
 
 textarea.by-input { resize: vertical; min-height: 58px; font: 13px/1.45 var(--font-body); }
 
+/* ── Snapshots (F3b) ─────────────────────────────────────────────────────── */
+.by-snap-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.by-snap { padding: 6px 0; }
+.by-snap + .by-snap { border-top: 1px dashed rgb(var(--color-border-soft)); }
+.by-snap-row { display: flex; align-items: center; gap: 6px; }
+.by-snap-toggle { flex: 1; text-align: left; padding-left: 9px; }
+.by-icon.is-on {
+  color: rgb(var(--color-gold));
+  border-color: rgb(var(--color-gold) / 0.45);
+  background: rgb(var(--color-gold) / 0.12);
+}
+.by-snap-link { margin-top: 6px; }
+.by-snap-status {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: rgb(var(--color-faint));
+  overflow-wrap: anywhere;
+}
+.by-snap-status.is-ok { color: rgb(var(--color-win)); }
+.by-snap-status.is-ok::before { content: "✓ "; }
+.by-snap-status.is-link { color: rgb(var(--color-muted)); }
+.by-snap-status.is-error,
+.by-snap-status.is-gesture { color: rgb(var(--color-loss)); }
+.by-snap-status.is-error::before,
+.by-snap-status.is-gesture::before { content: "⚠ "; }
+
 /* ── Meldingen ───────────────────────────────────────────────────────────── */
 .by-note {
   display: flex;
@@ -269,6 +295,8 @@ textarea.by-input { resize: vertical; min-height: 58px; font: 13px/1.45 var(--fo
   background: rgb(var(--color-gold) / 0.08);
 }
 .by-note-icon { flex: none; }
+/* Melding met een eigen knop eronder (bv. het activeTab-gebaar). */
+.by-note.is-stack { flex-direction: column; align-items: flex-start; gap: 8px; }
 
 .by-btn-block { width: 100%; justify-content: center; }
 .by-btn-sm { padding: 4px 9px; font-size: 11px; }

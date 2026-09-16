@@ -25,6 +25,7 @@ import {
   formatBarTime, formatPrice, formatResolution, formatRR, newClientUuid, parseNumberInput,
 } from "./format";
 import { ICON_CHECK, ICON_CLOSE, ICON_EXTERNAL, ICON_PENCIL, ICON_REFRESH, markSvg } from "./icons";
+import { renderSnapshotsSection } from "./snapshotsSection";
 
 const JOURNAL_URL = "https://www.beyen.app/journal";
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
@@ -201,6 +202,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const modeSec = sectionEl("Modus");
   const journalSec = sectionEl("Journal-velden");
   const extraSec = sectionEl("Extra");
+  const snapshotsSec = renderSnapshotsSection();
 
   const submitBtn = el("button", { class: "by-btn by-btn-block", text: "Log trade", attrs: { type: "button" } });
   on(submitBtn, "click", () => void submit());
@@ -219,8 +221,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     body.appendChild(modeSec.section);
     body.appendChild(journalSec.section);
     body.appendChild(extraSec.section);
-    // F3b vult deze sectie met de snapshot-knoppen (W/D/4H/2H).
-    body.appendChild(el("div", { attrs: { id: "snapshots-slot" } }));
+    body.appendChild(snapshotsSec.element);
 
     foot.appendChild(errorBox);
     foot.appendChild(submitBtn);
@@ -708,6 +709,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         custom: journal ? customFromValues(formFieldList, journal.fields, values) : {},
         notes: notes.trim() ? notes.trim() : null,
         clientUuid,
+        screenshots: snapshotsSec.screenshots(),
       },
     };
   }
@@ -741,6 +743,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     try {
       const result = await sendToSw({ type: "log-trade", request: built.request });
       if (result.ok) {
+        // Alleen bij een échte insert zitten de snapshots in een trade; bij een
+        // duplicate is er niets weggeschreven, dus zijn onze uploads wezen.
+        if (result.duplicate) snapshotsSec.reset();
+        else snapshotsSec.consume();
         showSuccess(result.duplicate);
         return;
       }
@@ -793,6 +799,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     notes = "";
     manualDate = "";
     manualTime = "";
+    // Verse snapshot-staat; wat er nog niet in een trade zit, wordt hier
+    // opgeruimd (na een geslaagde log is die lijst al leeg — zie submit()).
+    snapshotsSec.reset();
     // Doel en modus blijven staan: wie vijf backtest-trades logt, wil die keuze
     // niet vijf keer opnieuw maken.
   }
@@ -849,6 +858,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   return {
     element: panel,
     destroy() {
+      // Sluiten met niet-gelogde snapshots = wezen in de bucket; die gaan mee weg.
+      snapshotsSec.dispose();
       panel.remove();
     },
   };

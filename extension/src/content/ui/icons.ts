@@ -29,4 +29,8 @@ export const ICON_CLOSE = stroke('<path d="M18 6 6 18M6 6l12 12"/>', 15);
 export const ICON_PENCIL = stroke('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>', 13);
 export const ICON_REFRESH = stroke('<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>', 13);
 export const ICON_CHECK = stroke('<path d="M20 6 9 17l-5-5"/>', 22);
+export const ICON_LINK = stroke(
+  '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  13
+);
 export const ICON_EXTERNAL = stroke('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>', 13);
