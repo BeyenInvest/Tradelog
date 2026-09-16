@@ -42,6 +42,7 @@
 .by-gold { color: rgb(var(--color-gold)); }
 .by-win { color: rgb(var(--color-win)); }
 .by-loss { color: rgb(var(--color-loss)); }
+.by-be { color: rgb(var(--color-be)); }
 
 .by-btn {
   display: inline-flex;

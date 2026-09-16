@@ -1,3 +1,10 @@
+// Popup: status, koppelen, diagnose. Presentatie draait op hetzelfde
+// beyen-thema als het in-page paneel (F2d) — vandaar de css-imports hier: in de
+// Vite-bundel zijn dat echte stylesheets (in de esbuild-content-bundel is een
+// css-import tekst, zie css.d.ts).
+import "./theme.css";
+import "./popup.css";
+import { markSvg } from "./content/ui/icons";
 import { sendToSw } from "./messages";
 
 function el<T extends HTMLElement>(id: string): T {
@@ -12,6 +19,8 @@ const linkedSection = el<HTMLElement>("linkedSection");
 const tokenInput = el<HTMLInputElement>("token");
 const out = el<HTMLPreElement>("out");
 
+el<HTMLSpanElement>("mark").innerHTML = markSvg(18);
+
 function showOutput(value: unknown): void {
   out.hidden = false;
   out.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -21,10 +30,10 @@ async function refreshStatus(): Promise<void> {
   const status = await sendToSw({ type: "status" });
   if (status.linked) {
     statusEl.textContent = `Gekoppeld als ${status.email}`;
-    statusEl.classList.add("linked");
+    statusEl.classList.add("is-linked");
   } else {
     statusEl.textContent = "Niet gekoppeld";
-    statusEl.classList.remove("linked");
+    statusEl.classList.remove("is-linked");
   }
   linkSection.hidden = status.linked;
   linkedSection.hidden = !status.linked;
