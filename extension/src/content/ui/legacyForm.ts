@@ -10,6 +10,7 @@
 //     en wat er bij submit meegaat komt uit fields.ts; hier staat alleen DOM.
 //  2. Alleen het kenmerken-blok wordt herbouwd (bij een fase-wissel). De rest
 //     blijft staan, zodat een wissel geen focus of antwoord kost.
+import { HIDE_FASE_KENMERKEN } from "../../../../src/lib/constants";
 import type { LegacyTradeColumn } from "../../../../src/lib/tradePayload";
 import type { JournalField } from "../../db";
 import { t } from "../../i18nExt";
@@ -102,7 +103,10 @@ export function renderLegacyForm(options: {
 
   function paintKenmerken(): void {
     clear(kenmerkenBody);
-    if (hideFase) {
+    // Globale kill-switch (HIDE_FASE_KENMERKEN) verbergt de kenmerk-vragen voor
+    // iedereen, net als de web-form (TechnicalSection) — bovenop de per-user
+    // hideFase-toggle. legacyKenmerkFields blijft puur; enkel de render valt weg.
+    if (hideFase || HIDE_FASE_KENMERKEN) {
       kenmerken.hidden = true;
       return;
     }

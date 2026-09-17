@@ -192,3 +192,13 @@ export const FASE_KENMERKEN: FaseKenmerkConfig[] = [
   { fase: "Fase 3", field: "fase3_structuur", label: "Structuur", values: STRUCTUREN },
   { fase: "Fase 4", field: "fase4_weekly_bevestigingscandle", label: "Weekly bevestigingscandle?", values: "boolean" },
 ];
+
+/**
+ * Tijdelijke globale kill-switch (owner-besluit 2026-09-17): verberg de
+ * fase-kenmerk-vragen (de FASE_KENMERKEN-invoervelden in het trade-formulier)
+ * voor *iedereen*, ongeacht de per-user `profiles.hide_fase`-toggle. Bewust een
+ * losse vlag i.p.v. hide_fase, zodat "tot nader order" met één regel terug te
+ * draaien is (zet op false) zonder ieders persoonlijke voorkeur te raken.
+ * De rest van het fase-systeem (fase-veld/-kolom/-breakdowns) blijft ongemoeid.
+ */
+export const HIDE_FASE_KENMERKEN = true;
