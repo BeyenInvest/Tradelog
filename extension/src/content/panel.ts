@@ -8,6 +8,7 @@
 // afvuren en scrollen zou de chart zoomen).
 import themeCss from "../theme.css";
 import panelCss from "./ui/panel.css";
+import { ensureLang, onLangChange, t } from "../i18nExt";
 import { markSvg } from "./ui/icons";
 import { mountPanelApp, type PanelApp } from "./ui/panelApp";
 
@@ -35,10 +36,18 @@ function mount(): void {
   const launcher = document.createElement("button");
   launcher.className = "by-launcher";
   launcher.type = "button";
-  launcher.title = "Beyen — trade loggen";
-  launcher.setAttribute("aria-label", "Beyen — trade loggen");
   launcher.innerHTML = markSvg(20);
   root.appendChild(launcher);
+
+  // De taal staat in chrome.storage; ze is er ruim voor de eerste klik op de
+  // launcher, dus het paneel opent nooit in de verkeerde taal.
+  function paintLauncher(): void {
+    launcher.title = t("panel.launcher");
+    launcher.setAttribute("aria-label", t("panel.launcher"));
+  }
+  paintLauncher();
+  void ensureLang().then(paintLauncher);
+  onLangChange(paintLauncher);
 
   let app: PanelApp | null = null;
 

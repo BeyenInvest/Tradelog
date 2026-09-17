@@ -1,6 +1,7 @@
 // Renderer van de dynamische form (F2d): methodology_fields → invoervelden.
 // Bouwt de rijen één keer op en verbergt/toont ze daarna alleen nog (show_when),
 // zodat typen nooit focus verliest. Alle beslissingen komen uit fields.ts.
+import { t } from "../../i18nExt";
 import type { JournalField } from "../../db";
 import { el, on } from "./dom";
 import {
@@ -31,7 +32,9 @@ function booleanControl(field: JournalField, values: FormValues, changed: () => 
       btn.classList.toggle("is-active", values[field.fieldKey] === isYes);
     }
   };
-  for (const [text, value] of [["Ja", true], ["Nee", false]] as const) {
+  // De veldlabels zelf komen uit het journal van de user (die kiest z'n eigen
+  // taal daar) — alleen de knoppen zijn van ons.
+  for (const [text, value] of [[t("form.yes"), true], [t("form.no"), false]] as const) {
     const btn = el("button", {
       class: "by-toggle-btn",
       text,
@@ -52,7 +55,7 @@ function booleanControl(field: JournalField, values: FormValues, changed: () => 
 
 function enumControl(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
   const select = el("select", { class: "by-select" });
-  select.appendChild(el("option", { text: "— kies —", attrs: { value: "" } }));
+  select.appendChild(el("option", { text: t("form.choose"), attrs: { value: "" } }));
   for (const option of fieldOptions(field)) {
     select.appendChild(el("option", { text: option, attrs: { value: option } }));
   }

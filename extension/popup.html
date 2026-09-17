@@ -5,32 +5,37 @@
   <title>Beyen voor TradingView</title>
 </head>
 <body>
+  <!-- Copy staat niet in deze HTML maar in i18nExt (F4b): elk element met
+       data-i18n / data-i18n-placeholder krijgt z'n tekst van popup.ts, in de
+       taal uit chrome.storage.local. Wat hier wél staat is de structuur. -->
   <header class="popup-head">
     <span class="popup-mark" id="mark"></span>
     <span class="popup-title">Beyen</span>
     <span class="by-badge">beta</span>
+    <span class="popup-spacer"></span>
+    <div class="popup-lang" id="lang" role="group"></div>
   </header>
 
   <main class="popup-main">
-    <div id="status" class="popup-status">Status ophalen…</div>
+    <div id="status" class="popup-status" data-i18n="popup.statusLoading"></div>
 
     <section id="linkSection" class="popup-stack" hidden>
       <div>
-        <label class="by-label" for="token">Koppelcode</label>
-        <input id="token" class="by-input" placeholder="Plak hier je koppelcode" autocomplete="off" />
+        <label class="by-label" for="token" data-i18n="popup.codeLabel"></label>
+        <input id="token" class="by-input" data-i18n-placeholder="popup.codePlaceholder" autocomplete="off" />
       </div>
-      <button id="linkBtn" class="by-btn by-btn-block">Verbind</button>
-      <p class="by-hint" style="margin:0;">Genereer de koppelcode in Beyen → Instellingen → "Verbind TradingView-extensie" en plak 'm hier binnen een paar minuten.</p>
+      <button id="linkBtn" class="by-btn by-btn-block" data-i18n="popup.connect"></button>
+      <p class="by-hint" style="margin:0;" data-i18n="popup.linkHint"></p>
     </section>
 
     <section id="linkedSection" class="popup-stack" hidden>
       <div class="popup-actions">
-        <button id="chartBtn" class="by-btn by-btn-ghost">Lees chart</button>
-        <button id="dumpBtn" class="by-btn by-btn-ghost">Journal-schema</button>
-        <button id="logBtn" class="by-btn by-btn-ghost">Diagnose-log</button>
-        <button id="unlinkBtn" class="by-btn by-btn-ghost by-btn-danger">Koppel los</button>
+        <button id="chartBtn" class="by-btn by-btn-ghost" data-i18n="popup.readChart"></button>
+        <button id="dumpBtn" class="by-btn by-btn-ghost" data-i18n="popup.journalSchema"></button>
+        <button id="logBtn" class="by-btn by-btn-ghost" data-i18n="popup.diagLog"></button>
+        <button id="unlinkBtn" class="by-btn by-btn-ghost by-btn-danger" data-i18n="popup.unlink"></button>
       </div>
-      <p class="by-hint" style="margin:0;">Loggen doe je in het paneel op je TradingView-chart — klik daar rechtsboven op het Beyen-knopje.</p>
+      <p class="by-hint" style="margin:0;" data-i18n="popup.linkedHint"></p>
     </section>
 
     <pre id="out" class="popup-out by-mono" hidden></pre>
