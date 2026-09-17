@@ -20,7 +20,7 @@ import {
 } from "@/lib/stats";
 import { useAnalyseLayout } from "@/hooks/useAnalyseLayout";
 import { breakdownDimensionsFor, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
-import { FASE_KENMERKEN, FASES, OUTCOMES } from "@/lib/constants";
+import { FASE_KENMERKEN, FASES, HIDE_FASE_KENMERKEN, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -468,8 +468,10 @@ export function BacktestingAnalysisView({
             </div>
           )}
 
-          {/* Fase-kenmerken */}
-          {showFase && (
+          {/* Fase-kenmerken — globale kill-switch (HIDE_FASE_KENMERKEN) verbergt de
+              kenmerk-breakdown voor iedereen, net als de trade-form-vragen. De
+              bredere fase-/setup-breakdowns hierboven blijven (showFase). */}
+          {showFase && !HIDE_FASE_KENMERKEN && (
             <div className="flex flex-col gap-4">
               <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
               {FASES.map((fase) => {

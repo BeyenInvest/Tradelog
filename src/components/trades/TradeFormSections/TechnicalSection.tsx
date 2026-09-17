@@ -7,6 +7,7 @@ import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
 import { ScreenshotUploadField } from "./ScreenshotUploadField";
+import { HIDE_FASE_KENMERKEN } from "@/lib/constants";
 import { FaseKenmerkenSection } from "./FaseKenmerkenSection";
 
 export function TechnicalSection() {
@@ -41,7 +42,7 @@ export function TechnicalSection() {
         </div>
       )}
 
-      {isLegacyMethodology && !hideFase && <FaseKenmerkenSection />}
+      {isLegacyMethodology && !hideFase && !HIDE_FASE_KENMERKEN && <FaseKenmerkenSection />}
 
       {/* The four screenshot slots are universal, but their timeframe labels
           (Weekly/Daily/4H/Extra) are Weekly-Phase-Method jargon. The 4th slot is
