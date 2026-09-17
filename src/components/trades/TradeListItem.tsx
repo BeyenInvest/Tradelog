@@ -65,7 +65,12 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const rowProps = onEdit
     ? {
         tabIndex: 0,
-        onClick: () => onEdit(trade),
+        onClick: () => {
+          // Slepen-om-te-kopiëren eindigt óók in een click op de rij — wie net
+          // tekst selecteerde wil kopiëren, niet de trade openen.
+          if (window.getSelection()?.toString()) return;
+          onEdit(trade);
+        },
         onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           // Space would scroll the page; Enter would re-fire on a focused child.

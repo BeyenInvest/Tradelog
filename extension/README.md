@@ -29,6 +29,8 @@ Web-Store-pakket (F4b): `npm run pack:ext` (ná `build:ext`) maakt `extension-bu
 
 Checks: `npm run lint` dekt ook `extension/` (eigen tsconfig met chrome-types); `npm run test` draait ook `extension/src/**/*.test.ts`.
 
+Dev-harnas: `npm run build:ext:dev` bouwt daarnaast `dist-dev/content/panel.js` met een **open** shadow root (compile-time define `__BEYEN_HARNESS__`; de echte build blijft closed) voor `extension/dev/harness.html` — het paneel draait dan met gestubde chrome-API's in een gewone tab (server: `node scripts/serve-ext-harness.mjs`). ⚠️ De esbuild-vlaggen van `build:ext:dev` moeten gelijk blijven aan die van `build:ext` (JSON kent geen comments — dit is de herinnering).
+
 ## Koppelcode genereren (tot de Settings-kaart er is — F1c)
 
 Optie 1 — via het gedeployde endpoint (met je eigen app-JWT):

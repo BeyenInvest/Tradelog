@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Eye, X, ImageOff, ExternalLink } from "lucide-react";
 import { useFormContext } from "react-hook-form";
@@ -50,21 +50,60 @@ export function UrlPreviewField({ name, label }: UrlPreviewFieldProps) {
 export function ImagePreviewModal({ src, label, onClose }: { src: string; label: string; onClose: () => void }) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    // The portal takes the lightbox out of the parent modal's DOM subtree, so
+    // useModalGuard's Tab-trap no longer sees these controls — without our own
+    // focus handling a keyboard user could never reach the close button (and
+    // native Tab order could even walk focus behind the backdrop). Same "X1"
+    // pattern as the discard prompt in useModalGuard: own trap root, and focus
+    // restored to whatever opened us.
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      // Capture phase + stopPropagation: the lightbox is opened from *inside* other
-      // modals (TradeForm, DayTradesModal, ReadOnlyTradeDetailModal) whose useModalGuard
-      // listens for Escape on window in the bubble phase. A capture listener on window
-      // runs first, and stopping propagation there keeps the same Escape from also
-      // raising the trade form's discard prompt / closing the parent modal — one
-      // Escape closes exactly one layer, the topmost.
+      if (e.key === "Escape") {
+        // Capture phase + stopPropagation: the lightbox is opened from *inside* other
+        // modals (TradeForm, DayTradesModal, ReadOnlyTradeDetailModal) whose useModalGuard
+        // listens for Escape on window in the bubble phase. A capture listener on window
+        // runs first, and stopping propagation there keeps the same Escape from also
+        // raising the trade form's discard prompt / closing the parent modal — one
+        // Escape closes exactly one layer, the topmost.
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = overlayRef.current;
+      if (!root) return;
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
+      );
+      if (focusable.length === 0) return;
+      // Also in the capture phase: the parent modal's own Tab-trap would otherwise
+      // bounce focus around the form underneath while the lightbox is on top.
       e.stopPropagation();
-      onClose();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !root.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
   }, [onClose]);
 
   // Portalled to <body> on purpose — three separate problems this solves, none of them
@@ -86,6 +125,7 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
   // must keep stopping propagation.
   const overlay = (
     <div
+      ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={label}
@@ -107,6 +147,7 @@ export function ImagePreviewModal({ src, label, onClose }: { src: string; label:
           <ExternalLink size={18} />
         </a>
         <button
+          ref={closeBtnRef}
           onClick={(e) => {
             e.stopPropagation();
             onClose();

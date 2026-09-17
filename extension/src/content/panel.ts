@@ -84,7 +84,11 @@ function mount(): void {
   });
   window.addEventListener("resize", reclamp);
 
-  let dragged = false;
+  /** Alleen de klik die een LAUNCHER-sleep afsluit mag het paneel niet openen;
+   * een titelbalk-sleep zet deze vlag dus nooit. Reset in de click-handler én
+   * bij elke nieuwe pointerdown, zodat een toetsenbord-klik (Enter/Spatie, géén
+   * pointerdown vooraf) nooit door een oude sleep opgeslokt wordt. */
+  let suppressLauncherClick = false;
 
   /** Sleep de host aan `handle`. Geldt voor het bolletje én (via de titelbalk)
    * het geopende paneel — één mechaniek, één opgeslagen positie. */
@@ -93,7 +97,8 @@ function mount(): void {
     const rect = host.getBoundingClientRect();
     const offset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const start = { x: event.clientX, y: event.clientY };
-    dragged = false;
+    let dragged = false;
+    suppressLauncherClick = false;
     try {
       handle.setPointerCapture(event.pointerId);
     } catch {
@@ -121,6 +126,7 @@ function mount(): void {
       if (dragged && customPos) {
         void chrome.storage.local.set({ [LAUNCHER_POS_KEY]: customPos });
       }
+      suppressLauncherClick = dragged && handle === launcher;
     };
     handle.addEventListener("pointermove", onMove);
     handle.addEventListener("pointerup", onUp);
@@ -158,9 +164,9 @@ function mount(): void {
 
   launcher.addEventListener("click", (event) => {
     // De klik die een sleep afsluit mag het paneel niet openen.
-    if (dragged) {
+    if (suppressLauncherClick) {
       event.preventDefault();
-      dragged = false;
+      suppressLauncherClick = false;
       return;
     }
     open();

@@ -35,6 +35,9 @@
     ],
   };
 
+  // ⚠️ Deze sleutels spiegelen de ExtRequest-union in extension/src/messages.ts
+  // (plain JS, dus buiten tsc): komt daar een type bij of hernoemt er één, werk
+  // dan deze map mee bij — anders valt het harnas stil terug op "onbekend type".
   const responses = {
     status: { linked: true, email: "beyenchesney@outlook.com", expiresAt: null },
     "journal-dump": {
