@@ -26,8 +26,9 @@ function mount(): void {
   // "closed": de TV-pagina (vijandige wereld) kan de root dan niet via
   // host.shadowRoot bereiken — geen uitlezen van journal-labels/notities en
   // geen synthetische clicks op "Log trade" (security-review F4a). De referentie
-  // leeft alleen in deze closure.
-  const root = host.attachShadow({ mode: "closed" });
+  // leeft alleen in deze closure. Alleen de dev-harnas-build (build:ext:dev,
+  // compile-time define — dood pad in prod) opent 'm voor DOM-inspectie.
+  const root = host.attachShadow({ mode: __BEYEN_HARNESS__ ? "open" : "closed" });
 
   const style = document.createElement("style");
   style.textContent = `${themeCss}\n${panelCss}`;
@@ -93,7 +94,12 @@ function mount(): void {
     const offset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const start = { x: event.clientX, y: event.clientY };
     dragged = false;
-    handle.setPointerCapture(event.pointerId);
+    try {
+      handle.setPointerCapture(event.pointerId);
+    } catch {
+      // geen actieve pointer (bv. synthetische events) — slepen kan dan niet,
+      // maar de klik mag nooit sneuvelen
+    }
 
     const onMove = (ev: PointerEvent): void => {
       if (!dragged && !isDrag(ev.clientX - start.x, ev.clientY - start.y)) return;
