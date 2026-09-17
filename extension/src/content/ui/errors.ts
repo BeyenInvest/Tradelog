@@ -1,7 +1,13 @@
-// NL-copy voor elke faalcode van het schrijfpad (F2d). Pure map — het paneel
-// toont nooit een rauwe code en nooit een `alert`: elke fout krijgt een zin die
-// zegt wat de trader nú kan doen. De codes komen uit tradeFlow/tradePayload en
-// InsertTradeResult; onbekende codes degraderen naar een generieke zin + detail.
+// Copy voor elke faalcode van het schrijfpad (F2d), NL én EN (F4b). Pure map —
+// het paneel toont nooit een rauwe code en nooit een `alert`: elke fout krijgt
+// een zin die zegt wat de trader nú kan doen. De codes komen uit
+// tradeFlow/tradePayload en InsertTradeResult; onbekende codes degraderen naar
+// een generieke zin + detail.
+//
+// `detail` blijft bewust onvertaald: dat is de technische bijzin uit de service
+// worker (Postgres-kolom, adapter-reden). Die willen we letterlijk kunnen
+// terugzoeken in de diagnose-log, niet in twee varianten.
+import { t, type MessageKey } from "../../i18nExt";
 import type { LogTradeResult } from "../../tradeFlow";
 
 export type LogTradeFailure = Extract<LogTradeResult, { ok: false }>;
@@ -13,32 +19,32 @@ export interface ErrorCopy {
   detail?: string;
 }
 
-/** Zod-boodschappen zijn i18n-sleutels (de web-app vertaalt ze); de extensie
- * heeft geen i18n-infra, dus hier een kleine NL-woordenlijst. */
-const SCHEMA_MESSAGES: Record<string, string> = {
-  "tradeForm.required": "is verplicht",
-  "tradeForm.closeBeforeOpen": "ligt vóór de opening",
-  "tradeForm.riskMustBePositive": "moet groter dan 0 zijn",
-  "tradeForm.excursionMustBePositive": "mag niet negatief zijn",
-  "tradeForm.lossMustBeNegative": "hoort bij een Loss negatief te zijn",
-  "tradeForm.winMustBePositive": "hoort bij een Win positief te zijn",
+/** Zod-boodschappen zijn i18n-sleutels van de web-app (die vertaalt ze met
+ * i18next); de extensie mapt ze op haar eigen woordenlijst. */
+const SCHEMA_MESSAGES: Record<string, MessageKey> = {
+  "tradeForm.required": "err.schema.required",
+  "tradeForm.closeBeforeOpen": "err.schema.closeBeforeOpen",
+  "tradeForm.riskMustBePositive": "err.schema.riskMustBePositive",
+  "tradeForm.excursionMustBePositive": "err.schema.excursionMustBePositive",
+  "tradeForm.lossMustBeNegative": "err.schema.lossMustBeNegative",
+  "tradeForm.winMustBePositive": "err.schema.winMustBePositive",
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  resultaat_pct: "Resultaat %",
-  risk_pct: "Risico %",
-  outcome: "Uitkomst",
-  direction: "Richting",
-  datum_open: "Datum",
-  tijd_open: "Tijd",
-  datum_sluiting: "Sluitdatum",
-  planned_rr: "R:R",
-  entry_price: "Entry",
-  stop_price: "Stop",
-  target_price: "Target",
-  pair: "Pair",
-  instrument: "Instrument",
-  fase: "Fase",
+const FIELD_LABELS: Record<string, MessageKey> = {
+  resultaat_pct: "err.field.resultaat_pct",
+  risk_pct: "err.field.risk_pct",
+  outcome: "err.field.outcome",
+  direction: "err.field.direction",
+  datum_open: "err.field.datum_open",
+  tijd_open: "err.field.tijd_open",
+  datum_sluiting: "err.field.datum_sluiting",
+  planned_rr: "err.field.planned_rr",
+  entry_price: "err.field.entry_price",
+  stop_price: "err.field.stop_price",
+  target_price: "err.field.target_price",
+  pair: "err.field.pair",
+  instrument: "err.field.instrument",
+  fase: "err.field.fase",
 };
 
 /** "resultaat_pct: tradeForm.lossMustBeNegative" → "Resultaat % hoort bij een Loss negatief te zijn". */
@@ -49,46 +55,40 @@ export function humanizeSchemaDetail(detail: string | undefined): string | undef
   const path = detail.slice(0, idx).trim();
   const message = detail.slice(idx + 1).trim();
   const key = path.split(".").pop() ?? path;
-  const label = FIELD_LABELS[key];
-  const text = SCHEMA_MESSAGES[message];
-  if (!label && !text) return detail;
-  return `${label ?? key} ${text ?? message}`;
+  const labelKey = FIELD_LABELS[key];
+  const messageKey = SCHEMA_MESSAGES[message];
+  if (!labelKey && !messageKey) return detail;
+  return `${labelKey ? t(labelKey) : key} ${messageKey ? t(messageKey) : message}`;
 }
 
 export function logTradeErrorCopy(failure: LogTradeFailure): ErrorCopy {
   const { error, detail } = failure;
   switch (error) {
     case "not-linked":
-      return { message: "Niet gekoppeld — open de extensie-popup en verbind je Beyen-account." };
+      return { message: t("err.notLinked") };
     case "not-beta":
-      return { message: "De TradingView-extensie is nog beta-only voor dit account." };
+      return { message: t("err.notBeta") };
     case "profile-unreadable":
-      return { message: "Je Beyen-profiel is niet leesbaar — koppel de extensie opnieuw." };
+      return { message: t("err.profileUnreadable") };
     case "symbol-not-in-pairs":
-      return {
-        message: `${detail ?? "Dit symbool"} zit niet in de forex-lijst van dit journal — kies handmatig of log in een ander journal.`,
-      };
+      return { message: t("err.symbolNotInPairs", { symbol: detail ?? t("err.symbolFallback") }) };
     case "symbol-unreadable":
-      return { message: "Het symbool van deze chart is onleesbaar.", detail };
+      return { message: t("err.symbolUnreadable"), detail };
     case "direction-price-mismatch":
-      return {
-        message:
-          "Richting en prijzen spreken elkaar tegen: bij een Long hoort de stop ónder de entry, bij een Short erboven. Pas de richting of de prijzen aan.",
-        detail,
-      };
+      return { message: t("err.directionMismatch"), detail };
     case "stop-equals-entry":
-      return { message: "Stop en entry zijn gelijk — zonder risico-afstand is er geen R te berekenen." };
+      return { message: t("err.stopEqualsEntry") };
     case "no-entry-time":
-      return { message: "Geen tijd gevonden bij de position-tool — vul datum en tijd handmatig in." };
+      return { message: t("err.noEntryTime") };
     case "empty-client-uuid":
-      return { message: "Interne fout: geen idempotentie-sleutel. Sluit het paneel en probeer opnieuw." };
+      return { message: t("err.emptyClientUuid") };
     case "missing-column":
-      return { message: "De database mist nog migratie 0058 — draai die eerst.", detail };
+      return { message: t("err.missingColumn"), detail };
     case "constraint":
-      return { message: "De database weigerde deze trade.", detail };
+      return { message: t("err.constraint"), detail };
     case "schema-invalid":
-      return { message: "De trade komt niet door de controles.", detail: humanizeSchemaDetail(detail) };
+      return { message: t("err.schemaInvalid"), detail: humanizeSchemaDetail(detail) };
     default:
-      return { message: "Loggen is niet gelukt.", detail: detail ?? error };
+      return { message: t("err.generic"), detail: detail ?? error };
   }
 }

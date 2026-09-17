@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { runSnapshotCycle, SNAPSHOT_MAX_BYTES, type SnapshotDeps } from "./snapshots";
+import {
+  bytesToBase64, runSnapshotCycle, SNAPSHOT_MAX_BYTES, THUMB_MAX_CHARS, type SnapshotDeps,
+} from "./snapshots";
 
 function makeDeps(overrides: Partial<SnapshotDeps> = {}) {
   let resolution = "240";
@@ -73,6 +75,24 @@ describe("runSnapshotCycle", () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
+  it("neemt een preview-thumb mee in een geslaagd slot", async () => {
+    const { deps } = makeDeps({ thumbnail: vi.fn(async () => "data:image/jpeg;base64,abc") });
+    const result = await runSnapshotCycle(deps, ["d"]);
+    expect(result.slots.d).toMatchObject({ ok: true, thumb: "data:image/jpeg;base64,abc" });
+  });
+
+  it("een falende of te grote thumbnail laat het slot gewoon slagen, zonder thumb", async () => {
+    const failing = makeDeps({ thumbnail: vi.fn(async () => { throw new Error("canvas kapot"); }) });
+    const failed = await runSnapshotCycle(failing.deps, ["d"]);
+    expect(failed.slots.d?.ok).toBe(true);
+    if (failed.slots.d?.ok) expect(failed.slots.d.thumb).toBeUndefined();
+
+    const huge = makeDeps({ thumbnail: vi.fn(async () => "x".repeat(THUMB_MAX_CHARS + 1)) });
+    const capped = await runSnapshotCycle(huge.deps, ["d"]);
+    expect(capped.slots.d?.ok).toBe(true);
+    if (capped.slots.d?.ok) expect(capped.slots.d.thumb).toBeUndefined();
+  });
+
   it("geeft upload-fouten per slot door en herstelt daarna alsnog", async () => {
     const { deps, calls } = makeDeps({
       upload: vi.fn(async () => ({ ok: false as const, error: "bucket vol" })),
@@ -81,5 +101,14 @@ describe("runSnapshotCycle", () => {
     expect(result.slots.w).toMatchObject({ ok: false });
     if (result.slots.w && !result.slots.w.ok) expect(result.slots.w.error).toContain("bucket vol");
     expect(calls[calls.length - 1]).toBe("set:240");
+  });
+});
+
+describe("bytesToBase64", () => {
+  it("codeert correct, ook over de chunk-grens heen", () => {
+    const small = new TextEncoder().encode("beyen");
+    expect(atob(bytesToBase64(small))).toBe("beyen");
+    const big = new Uint8Array(0x8000 + 17).fill(65); // net over één chunk
+    expect(atob(bytesToBase64(big))).toBe("A".repeat(0x8000 + 17));
   });
 });

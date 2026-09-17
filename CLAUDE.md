@@ -11,7 +11,7 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 
 - **Leidend plan = `docs/fixplan-2026-09.md`** (blokken A–H, n.a.v. `docs/meta-audit-2026-09.md`). Het vervangt masterplan-launch.md. Werk nooit uit een ander plandocument zonder het fixplan te checken.
 - **Totale feature-freeze tot na de beta-launch** (owner-besluit 2026-09-09): geen nieuwe features, geen nieuwe migraties buiten het fixplan. Bevroren oppervlakken (ook geen "kleine" commits): Habits, Dagboek, Review-PDF, MAE/MFE-laag, EN-copy-uitbreiding. Ontdooien = expliciete owner-beslissing in het fixplan.
-- **Uitzondering (owner-besluit 2026-09-15/16): de TradingView-extensie.** Leidend plan = `docs/plan-tv-extensie-engines.md` (bouwlog in §6); S0 ✅ + **F1a–F4a code-compleet** (nachtsessie 16/17-09): koppel-endpoint (`api/extension-link.ts`, live), Settings-kaart, MV3-extensie in `extension/` (auth, chart-adapter, log-paneel, snapshots; `npm run build:ext`, laden = unpacked op `extension/`), migratie **0058** (prijzen — ⚠️ eerst draaien vóór een main-push van deze lijn), security-review gedaan (closed shadow root). Open: F4b polish/Store + owner-test in echte Chrome. Alles achter `betaFeatures`; model-per-fase geldt (Fable: auth/adapter/migraties/security, Opus: UI).
+- **Uitzondering (owner-besluit 2026-09-15/16): de TradingView-extensie.** Leidend plan = `docs/plan-tv-extensie-engines.md` (bouwlog in §6); S0 ✅ + **F1a–F4a GEMERGED op main + live** (PR #9, 2026-09-17; migratie **0058** gedraaid op prod): koppel-endpoint (`api/extension-link.ts`), Settings-kaart, MV3-extensie in `extension/` (auth, chart-adapter, log-paneel, snapshots; `npm run build:ext`, laden = unpacked op `extension/`), security-review gedaan (closed shadow root). Open: owner-test in echte Chrome (checklist plan-doc §6) + F4b polish/Store. Alles achter `betaFeatures`; model-per-fase geldt (Fable: auth/adapter/migraties/security, Opus: UI).
 - **"Klaar" = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt in het fixplan** — niet "code groen op een branch". Eén sessie = één branch = één blok; max 1 open werkstroom tegelijk.
 - Migratienummers: nooit hergebruiken; elke migratie werkt `supabase/schema.sql` mee bij. Eerstvolgend vrij nummer staat in het fixplan (nu **0058** — 0057 draaide op prod).
 
@@ -63,5 +63,6 @@ Terms/Privacy pages carry full drafted copy but are **not yet legally reviewed**
 
 - Only commit/push when the user explicitly asks — even mid-feature-work, don't assume approval carries forward.
 - Prefer `git revert` over `git reset --hard` on shared branches; never force-push to `main`.
+- **Directe pushes naar `main` kunnen niet meer** (branch protection sinds 2026-09-17: required status check "ci"): elke main-merge gaat via een PR waarvan CI groen is. `git push origin <branch>:main` is dood; de deploy-stap = branch pushen → PR (owner klikt, `gh` is niet geïnstalleerd) → CI groen → owner merget.
 - Before any risky/destructive git operation, create and push a backup branch first if there's any chance of losing work.
 - Run `npm run lint` (`tsc --noEmit`), `npm run test`, and `npm run build` clean before considering a change done.

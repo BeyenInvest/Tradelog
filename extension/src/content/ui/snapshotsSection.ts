@@ -9,13 +9,14 @@
 // Opruimen is hier de belangrijkste onzichtbare taak: elk pad dat we uploadden
 // en dat niet in een gelogde trade terechtkomt, gaat via `delete-screenshots`
 // weer weg. Geplakte links raken we nooit aan — die zijn niet van ons.
+import { onLangChange, t } from "../../i18nExt";
 import { sendToSw } from "../../messages";
 import { SNAPSHOT_SLOTS, type SnapshotSlot } from "../../snapshots";
 import { clear, el, on } from "./dom";
 import { ICON_LINK, ICON_REFRESH } from "./icons";
 import {
-  applyCycle, autoSlots, GESTURE_COPY, initialState, linkValue, needsGesture, parseEnabled, pathOf,
-  screenshotsForRequest, serializeEnabled, slotStatus, SLOT_LABELS, uploadedPaths,
+  applyCycle, autoSlots, initialState, linkValue, needsGesture, parseEnabled, pathOf,
+  screenshotsForRequest, serializeEnabled, slotStatus, SLOT_LABELS, thumbOf, uploadedPaths,
   type SnapshotState,
 } from "./snapshotState";
 
@@ -68,33 +69,28 @@ export function renderSnapshotsSection(): SnapshotsSection {
   let state: SnapshotState = initialState(readEnabled());
   let busy = false;
   let restored = true;
-  let cycleError: string | null = null;
+  /** Eigen copy bewaren we als sleutel (die hertaalt bij een taalwissel), een
+   * reden uit de service worker als rauwe tekst. */
+  let cycleError: { key: "panel.reload.retry" } | { raw: string } | null = null;
 
   const rows = new Map<SnapshotSlot, SlotRow>();
   const list = el("div", { class: "by-snap-list" });
   const notes = el("div", { class: "by-stack", style: "margin-top:10px;" });
 
-  const runBtn = el("button", {
-    class: "by-btn by-btn-ghost by-btn-block",
-    text: "Maak snapshots",
-    attrs: { type: "button" },
-  });
+  const runBtn = el("button", { class: "by-btn by-btn-ghost by-btn-block", attrs: { type: "button" } });
   on(runBtn, "click", () => void runCycle(autoSlots(state)));
 
-  const busyLine = el("p", {
-    class: "by-hint",
-    style: "margin:6px 0 0;",
-    text: "Snapshots maken — de chart wisselt even van timeframe…",
-  });
+  const busyLine = el("p", { class: "by-hint", style: "margin:6px 0 0;" });
   busyLine.hidden = true;
 
+  // Elke zin die van taal kan veranderen wordt in paint() gezet, niet hier —
+  // zo is een taalwissel gewoon één extra paint (zie onLangChange onderaan).
+  const title = el("h3", { class: "by-sec-title" });
+  const intro = el("p", { class: "by-hint", style: "margin:0 0 8px;" });
+
   const element = el("section", { class: "by-sec" }, [
-    el("div", { class: "by-sec-head" }, [el("h3", { class: "by-sec-title", text: "Snapshots" })]),
-    el("p", {
-      class: "by-hint",
-      style: "margin:0 0 8px;",
-      text: "Beyen zet de chart even op elk aangezet timeframe, maakt een beeld en zet je eigen timeframe daarna terug.",
-    }),
+    el("div", { class: "by-sec-head" }, [title]),
+    intro,
     list,
     runBtn,
     busyLine,
@@ -137,10 +133,10 @@ export function renderSnapshotsSection(): SnapshotsSection {
         restored = result.restored;
         deletePaths(applied.stale); // het vervangen pad hoort niet te blijven zweven
       } else {
-        cycleError = result.error;
+        cycleError = { raw: result.error };
       }
     } catch {
-      cycleError = "De extensie is herladen — ververs deze TradingView-pagina en probeer opnieuw.";
+      cycleError = { key: "panel.reload.retry" };
     } finally {
       busy = false;
       paint();
@@ -160,15 +156,11 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
     const linkInput = el("input", {
       class: "by-input by-snap-link",
-      attrs: { type: "url", inputmode: "url", placeholder: "https://… (TradingView-snapshot)" },
+      attrs: { type: "url", inputmode: "url" },
     });
     on(linkInput, "input", () => setLink(slot, linkInput.value));
 
-    const linkBtn = el("button", {
-      class: "by-icon",
-      unsafeHtml: ICON_LINK,
-      attrs: { type: "button", title: "Link plakken", "aria-label": `Link plakken voor ${SLOT_LABELS[slot]}` },
-    });
+    const linkBtn = el("button", { class: "by-icon", unsafeHtml: ICON_LINK, attrs: { type: "button" } });
     on(linkBtn, "click", () => {
       linkOpen = !linkOpen;
       // Dichtklappen = de link intrekken; dit slot gaat weer mee in de cyclus.
@@ -181,23 +173,21 @@ export function renderSnapshotsSection(): SnapshotsSection {
       if (linkOpen) linkInput.focus();
     });
 
-    const retryBtn = el("button", {
-      class: "by-icon",
-      unsafeHtml: ICON_REFRESH,
-      attrs: {
-        type: "button",
-        title: "Alleen dit timeframe opnieuw",
-        "aria-label": `Snapshot opnieuw maken voor ${SLOT_LABELS[slot]}`,
-      },
-    });
+    const retryBtn = el("button", { class: "by-icon", unsafeHtml: ICON_REFRESH, attrs: { type: "button" } });
     on(retryBtn, "click", () => void runCycle([slot]));
 
     const status = el("p", { class: "by-snap-status" });
+
+    // Preview van de laatste geslaagde capture (F3b-spec); puur decoratief,
+    // het pad in de statusregel blijft de bron van waarheid.
+    const thumbImg = el("img", { class: "by-snap-thumb", attrs: { alt: "" } }) as HTMLImageElement;
+    thumbImg.hidden = true;
 
     const rowEl = el("div", { class: "by-snap", attrs: { "data-slot": slot } }, [
       el("div", { class: "by-snap-row" }, [toggle, linkBtn, retryBtn]),
       linkInput,
       status,
+      thumbImg,
     ]);
 
     return {
@@ -205,6 +195,12 @@ export function renderSnapshotsSection(): SnapshotsSection {
       update() {
         const current = state[slot];
         const hasLink = linkValue(current) !== null;
+
+        linkInput.setAttribute("placeholder", t("snap.linkPlaceholder"));
+        linkBtn.setAttribute("title", t("snap.linkTitle"));
+        linkBtn.setAttribute("aria-label", t("snap.linkAria", { slot: SLOT_LABELS[slot] }));
+        retryBtn.setAttribute("title", t("snap.retryTitle"));
+        retryBtn.setAttribute("aria-label", t("snap.retryAria", { slot: SLOT_LABELS[slot] }));
 
         toggle.classList.toggle("is-active", current.enabled);
         toggle.setAttribute("aria-pressed", String(current.enabled));
@@ -220,6 +216,11 @@ export function renderSnapshotsSection(): SnapshotsSection {
         status.hidden = !current.enabled;
         status.className = `by-snap-status is-${info.kind}${info.kind === "ok" ? " by-mono" : ""}`;
         status.textContent = info.text;
+
+        const thumb = current.enabled ? thumbOf(current) : null;
+        thumbImg.hidden = !thumb;
+        if (thumb && thumbImg.src !== thumb) thumbImg.src = thumb;
+        else if (!thumb && thumbImg.src) thumbImg.removeAttribute("src");
       },
       clearLink() {
         linkOpen = false;
@@ -236,52 +237,50 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
   // ── Tekenen ─────────────────────────────────────────────────────────────
   function paint(): void {
+    title.textContent = t("snap.title");
+    intro.textContent = t("snap.intro");
+    busyLine.textContent = t("snap.busyLine");
+
     for (const row of rows.values()) row.update();
 
     const auto = autoSlots(state);
     runBtn.disabled = busy || auto.length === 0;
-    runBtn.textContent = busy ? "Snapshots maken…" : "Maak snapshots";
+    runBtn.textContent = busy ? t("snap.runBusy") : t("snap.run");
     busyLine.hidden = !busy;
 
     clear(notes);
     if (cycleError) {
-      notes.appendChild(el("div", { class: "by-note is-warn", text: cycleError }));
+      notes.appendChild(
+        el("div", { class: "by-note is-warn", text: "key" in cycleError ? t(cycleError.key) : cycleError.raw })
+      );
     }
     if (needsGesture(state)) {
       const retry = el("button", {
         class: "by-btn by-btn-ghost by-btn-sm",
-        text: "Opnieuw",
+        text: t("snap.retry"),
         attrs: { type: "button" },
       });
       retry.disabled = busy || auto.length === 0;
       on(retry, "click", () => void runCycle(autoSlots(state)));
       notes.appendChild(
         el("div", { class: "by-note is-gold is-stack" }, [
-          el("span", { text: `${GESTURE_COPY}.` }),
+          el("span", { text: `${t("snap.gesture")}.` }),
           retry,
         ])
       );
     }
     if (!restored) {
-      notes.appendChild(
-        el("div", {
-          class: "by-note is-warn",
-          text: "Het timeframe van de chart is niet teruggezet — zet 'm zelf terug voor je verder kijkt.",
-        })
-      );
+      notes.appendChild(el("div", { class: "by-note is-warn", text: t("snap.notRestored") }));
     }
     if (!busy && auto.length === 0 && !cycleError) {
-      notes.appendChild(
-        el("p", {
-          class: "by-hint",
-          style: "margin:0;",
-          text: "Geen enkel slot staat op automatisch — zet er één aan, of plak links.",
-        })
-      );
+      notes.appendChild(el("p", { class: "by-hint", style: "margin:0;", text: t("snap.noneAuto") }));
     }
   }
 
   paint();
+  // Taalwissel in de popup → deze sectie hertekent zichzelf; het abonnement
+  // eindigt bij dispose(), samen met de rest van het paneel.
+  const stopLangWatch = onLangChange(() => paint());
 
   // ── Haakjes voor panelApp ───────────────────────────────────────────────
   function fresh(): void {
@@ -301,6 +300,7 @@ export function renderSnapshotsSection(): SnapshotsSection {
       fresh();
     },
     dispose() {
+      stopLangWatch();
       deletePaths(uploadedPaths(state));
     },
   };

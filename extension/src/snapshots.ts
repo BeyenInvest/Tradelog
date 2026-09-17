@@ -31,7 +31,13 @@ export interface ChartRect {
   dpr: number;
 }
 
-export type SlotResult = { ok: true; path: string; bytes: number } | { ok: false; error: string; code?: "needs-gesture" };
+export type SlotResult =
+  | { ok: true; path: string; bytes: number; thumb?: string }
+  | { ok: false; error: string; code?: "needs-gesture" };
+
+/** Bovengrens voor een preview-data-URL in het cyclus-resultaat: berichten
+ * popup ⇄ SW zijn JSON, dus we houden previews klein (±35 KB base64). */
+export const THUMB_MAX_CHARS = 48_000;
 
 export interface SnapshotCycleResult {
   slots: Partial<Record<SnapshotSlot, SlotResult>>;
@@ -50,6 +56,10 @@ export interface SnapshotDeps {
   upload(image: Blob): Promise<{ ok: true; path: string } | { ok: false; error: string }>;
   /** Wachten tot TV het nieuwe timeframe gerenderd heeft. */
   settle(): Promise<void>;
+  /** Optioneel: kleine preview-data-URL van de gecropte snapshot voor de UI.
+   * Mag falen — een preview is nice-to-have, nooit een reden om het slot te
+   * laten mislukken. */
+  thumbnail?(image: Blob): Promise<string | null>;
 }
 
 function isGestureError(message: string): boolean {
@@ -79,7 +89,16 @@ async function captureSlot(deps: SnapshotDeps): Promise<SlotResult> {
   }
   const uploaded = await deps.upload(image);
   if (!uploaded.ok) return { ok: false, error: `upload: ${uploaded.error}` };
-  return { ok: true, path: uploaded.path, bytes: image.size };
+  let thumb: string | undefined;
+  if (deps.thumbnail) {
+    try {
+      const t = await deps.thumbnail(image);
+      if (t && t.length <= THUMB_MAX_CHARS) thumb = t;
+    } catch {
+      // preview mislukt → slot blijft gewoon geslaagd
+    }
+  }
+  return { ok: true, path: uploaded.path, bytes: image.size, thumb };
 }
 
 export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]): Promise<SnapshotCycleResult> {
@@ -114,6 +133,32 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
     }
   }
   return { slots: results, restored };
+}
+
+/** Uint8Array → base64 zonder de call-stack op te blazen (chunked fromCharCode). */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
+/** Preview in de service worker: schaal de gecropte snapshot naar ±200 px breed
+ * en lever 'm als JPEG-data-URL voor de slot-UI (F3b-spec: preview-thumbnail). */
+export async function thumbnailDataUrl(image: Blob, maxWidth = 200): Promise<string | null> {
+  const bmp = await createImageBitmap(image);
+  const scale = Math.min(1, maxWidth / bmp.width);
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = new OffscreenCanvas(w, h);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(bmp, 0, 0, w, h);
+  const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.7 });
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return `data:image/jpeg;base64,${bytesToBase64(bytes)}`;
 }
 
 /** Crop in de service worker: createImageBitmap + OffscreenCanvas (S0-bewezen). */

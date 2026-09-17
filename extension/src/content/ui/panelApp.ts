@@ -8,11 +8,17 @@
 //  2. Secties die van data veranderen worden herbouwd; alles waar de user in
 //     typt (form-rijen, overrides) wordt op z'n plek bijgewerkt — een rebuild
 //     zou focus en caret weggooien.
+//
+// Copy loopt sinds F4b via i18nExt: de taal wordt één keer opgehaald vóór de
+// eerste render (boot) en een wissel in de popup hertekent de huidige weergave
+// (currentView). De ingevulde waarden leven in deze closure, niet in de DOM,
+// dus zo'n hertekening kost geen invoer.
 import type { Direction, Outcome } from "../../../../src/lib/constants";
 import { plannedRR } from "../../../../src/lib/priceMath";
 import type { WallClock } from "../../../../src/lib/tradePayload";
 import type { ChartState, PositionState } from "../../adapter/parse";
 import type { JournalField, JournalSchema } from "../../db";
+import { ensureLang, onLangChange, t, type MessageKey } from "../../i18nExt";
 import { sendToSw, type TargetsInfo } from "../../messages";
 import type { LogTradeRequest } from "../../tradeFlow";
 import { clear, el, on } from "./dom";
@@ -25,6 +31,7 @@ import {
   formatBarTime, formatPrice, formatResolution, formatRR, newClientUuid, parseNumberInput,
 } from "./format";
 import { ICON_CHECK, ICON_CLOSE, ICON_EXTERNAL, ICON_PENCIL, ICON_REFRESH, markSvg } from "./icons";
+import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
 
 const JOURNAL_URL = "https://www.beyen.app/journal";
@@ -47,23 +54,31 @@ function readFail(reason: string): HTMLElement {
   return el("p", { class: "by-error by-readfail", text: `⚠ ${reason}` });
 }
 
-function sectionEl(title: string, extra?: HTMLElement): { section: HTMLElement; body: HTMLElement } {
-  const head = el("div", { class: "by-sec-head" }, [
-    el("h3", { class: "by-sec-title", text: title }),
-    el("span", { class: "by-spacer" }),
-    extra,
-  ]);
+interface Section {
+  section: HTMLElement;
+  body: HTMLElement;
+  /** Kopje van de sectie; de tekst wordt bij elke (her)opbouw gezet, zodat een
+   * taalwissel niet met stale koppen achterblijft. */
+  title: HTMLElement;
+  titleKey: MessageKey;
+}
+
+function sectionEl(titleKey: MessageKey, extra?: HTMLElement): Section {
+  const title = el("h3", { class: "by-sec-title" });
+  const head = el("div", { class: "by-sec-head" }, [title, el("span", { class: "by-spacer" }), extra]);
   const body = el("div");
-  return { section: el("section", { class: "by-sec" }, [head, body]), body };
+  return { section: el("section", { class: "by-sec" }, [head, body]), body, title, titleKey };
 }
 
 export function mountPanelApp(host: HTMLElement, options: { onClose: () => void }): PanelApp {
   // ── Data ────────────────────────────────────────────────────────────────
   let chart: ChartState | null = null;
-  let chartError: string | null = null;
+  // Meldingen bewaren we als sleutel + gegevens, niet als afgewerkte zin: een
+  // taalwissel hertekent dan ook een fout die al op het scherm stond.
+  let chartError: { key: "panel.reload.short" } | { raw: string } | null = null;
   let chartLoading = false;
   let journal: JournalSchema | null = null;
-  let journalNote: string | null = null;
+  let journalNote: { kind: "missing" } | { kind: "load-failed"; error: string } | null = null;
   let targets: TargetsInfo | null = null;
 
   // ── Keuzes van de user ──────────────────────────────────────────────────
@@ -83,13 +98,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
   let form: DynamicForm | null = null;
   let formFieldList: JournalField[] = [];
+  /** Eerste-run-hint: pas tonen als de storage-lezing terug is (boot). */
+  let showOnboarding = false;
 
   // ── Skelet ──────────────────────────────────────────────────────────────
-  const closeBtn = el("button", {
-    class: "by-icon",
-    unsafeHtml: ICON_CLOSE,
-    attrs: { type: "button", title: "Paneel sluiten", "aria-label": "Paneel sluiten" },
-  });
+  const closeBtn = el("button", { class: "by-icon", unsafeHtml: ICON_CLOSE, attrs: { type: "button" } });
   on(closeBtn, "click", () => options.onClose());
 
   const head = el("div", { class: "by-head" }, [
@@ -101,10 +114,16 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   ]);
   const body = el("div", { class: "by-body" });
   const foot = el("div", { class: "by-foot" });
-  const panel = el("div", { class: "by-panel by-card", attrs: { role: "dialog", "aria-label": "Beyen — trade loggen" } }, [
-    head, body, foot,
-  ]);
+  const panel = el("div", { class: "by-panel by-card", attrs: { role: "dialog" } }, [head, body, foot]);
   host.appendChild(panel);
+
+  /** Alles wat buiten body/foot leeft en toch taal draagt. */
+  function paintChrome(): void {
+    panel.setAttribute("aria-label", t("panel.launcher"));
+    closeBtn.setAttribute("title", t("panel.close"));
+    closeBtn.setAttribute("aria-label", t("panel.close"));
+  }
+  paintChrome();
 
   // ── Hulpjes ─────────────────────────────────────────────────────────────
   function storedTarget(): string {
@@ -154,6 +173,15 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   // ── Volledige staten (loading / niet gekoppeld / succes) ────────────────
+  /** De weergave die nu op het scherm staat, als functie — een taalwissel roept
+   * 'm gewoon opnieuw aan (de ingevulde waarden staan in deze closure). */
+  let currentView: () => void = () => {};
+
+  function showView(view: () => void): void {
+    currentView = view;
+    view();
+  }
+
   function showState(node: HTMLElement): void {
     clear(body);
     clear(foot);
@@ -171,40 +199,35 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   function notLinkedState(): HTMLElement {
-    const retry = el("button", { class: "by-btn by-btn-ghost", text: "Opnieuw controleren", attrs: { type: "button" } });
+    const retry = el("button", {
+      class: "by-btn by-btn-ghost",
+      text: t("panel.notLinked.retry"),
+      attrs: { type: "button" },
+    });
     on(retry, "click", () => void boot());
-    return simpleState(
-      "Nog niet gekoppeld",
-      "Open de extensie-popup (het Beyen-icoon in je Chrome-werkbalk) en plak daar de koppelcode uit Beyen → Instellingen. Daarna log je vanaf deze chart rechtstreeks in je journal.",
-      retry
-    );
+    return simpleState(t("panel.notLinked.title"), t("panel.notLinked.text"), retry);
   }
 
   function reloadState(): HTMLElement {
-    return simpleState(
-      "Extensie herladen",
-      "De achtergrond van de extensie is opnieuw gestart. Ververs deze TradingView-pagina om het paneel weer te verbinden."
-    );
+    return simpleState(t("panel.reload.title"), t("panel.reload.text"));
   }
 
   // ── Secties ─────────────────────────────────────────────────────────────
-  const refreshBtn = el("button", {
-    class: "by-btn by-btn-ghost by-btn-sm",
-    attrs: { type: "button", title: "Chart opnieuw lezen" },
-  });
+  const refreshBtn = el("button", { class: "by-btn by-btn-ghost by-btn-sm", attrs: { type: "button" } });
   refreshBtn.appendChild(el("span", { unsafeHtml: ICON_REFRESH }));
-  refreshBtn.appendChild(el("span", { text: "Ververs chart" }));
+  const refreshLabel = el("span");
+  refreshBtn.appendChild(refreshLabel);
   on(refreshBtn, "click", () => void refreshChart());
 
-  const chartSec = sectionEl("Chart", refreshBtn);
-  const positionSec = sectionEl("Position-tool");
-  const targetSec = sectionEl("Doel");
-  const modeSec = sectionEl("Modus");
-  const journalSec = sectionEl("Journal-velden");
-  const extraSec = sectionEl("Extra");
+  const chartSec = sectionEl("panel.sec.chart", refreshBtn);
+  const positionSec = sectionEl("panel.sec.position");
+  const targetSec = sectionEl("panel.sec.target");
+  const modeSec = sectionEl("panel.sec.mode");
+  const journalSec = sectionEl("panel.sec.journal");
+  const extraSec = sectionEl("panel.sec.extra");
   const snapshotsSec = renderSnapshotsSection();
 
-  const submitBtn = el("button", { class: "by-btn by-btn-block", text: "Log trade", attrs: { type: "button" } });
+  const submitBtn = el("button", { class: "by-btn by-btn-block", attrs: { type: "button" } });
   on(submitBtn, "click", () => void submit());
   const errorBox = el("div", { class: "by-note is-warn" });
   errorBox.hidden = true;
@@ -214,6 +237,25 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     clear(body);
     clear(foot);
     foot.hidden = false;
+
+    // Vaste copy die buiten de render-functies leeft: hier zetten, zodat één
+    // buildForm() na een taalwissel het hele paneel klopt.
+    paintChrome();
+    for (const sec of [chartSec, positionSec, targetSec, modeSec, journalSec, extraSec]) {
+      sec.title.textContent = t(sec.titleKey);
+    }
+    refreshBtn.setAttribute("title", t("panel.refreshTitle"));
+    refreshLabel.textContent = t("panel.refresh");
+    submitBtn.textContent = t("panel.submit");
+
+    if (showOnboarding) {
+      body.appendChild(
+        renderOnboardingCard(() => {
+          showOnboarding = false;
+          buildForm();
+        })
+      );
+    }
 
     body.appendChild(chartSec.section);
     body.appendChild(positionSec.section);
@@ -241,11 +283,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     clear(chartSec.body);
     refreshBtn.disabled = chartLoading;
     if (chartLoading) {
-      chartSec.body.appendChild(el("p", { class: "by-muted", text: "Chart lezen…" }));
+      chartSec.body.appendChild(el("p", { class: "by-muted", text: t("panel.chartLoading") }));
       return;
     }
     if (chartError) {
-      chartSec.body.appendChild(note(chartError, "is-warn"));
+      chartSec.body.appendChild(note("key" in chartError ? t(chartError.key) : chartError.raw, "is-warn"));
       return;
     }
     if (!chart) return;
@@ -275,20 +317,21 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
     const list = positions();
     if (list.length === 0) {
-      positionSec.body.appendChild(
-        note("Teken een long- of short-position-tool op de chart en ververs — dan vult Beyen richting, entry, stop, target en R:R vanzelf in.")
-      );
+      positionSec.body.appendChild(note(t("panel.noPositions")));
       renderManualTime();
       return;
     }
     if (!list.some((p) => p.id === selectedPositionId)) selectedPositionId = list[0]?.id ?? null;
 
     if (list.length > 1) {
-      const select = el("select", { class: "by-select", attrs: { "aria-label": "Kies de position-tool" } });
+      const select = el("select", { class: "by-select", attrs: { "aria-label": t("panel.positionSelectLabel") } });
       for (const position of list) {
         select.appendChild(
           el("option", {
-            text: `${position.direction} · entry ${formatPrice(position.prices?.entry ?? position.entry)}`,
+            text: t("panel.positionOption", {
+              direction: position.direction,
+              price: formatPrice(position.prices?.entry ?? position.entry),
+            }),
             attrs: { value: position.id },
           })
         );
@@ -302,7 +345,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       });
       positionSec.body.appendChild(
         el("div", { style: "margin-bottom:8px;" }, [
-          el("p", { class: "by-hint", style: "margin:0 0 5px;", text: `${list.length} position-tools op deze chart — kies er één.` }),
+          el("p", {
+            class: "by-hint",
+            style: "margin:0 0 5px;",
+            text: t("panel.positionPick", { count: list.length }),
+          }),
           select,
         ])
       );
@@ -334,7 +381,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         const pencil = el("button", {
           class: "by-icon",
           unsafeHtml: ICON_PENCIL,
-          attrs: { type: "button", title: `${label} handmatig invullen`, "aria-label": `${label} handmatig invullen` },
+          attrs: {
+            type: "button",
+            title: t("panel.editTitle", { label }),
+            "aria-label": t("panel.editTitle", { label }),
+          },
         });
         on(pencil, "click", () => {
           const wrap = editWrap;
@@ -358,13 +409,15 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     };
 
     addMetric(
-      "Richting",
+      t("panel.metric.direction"),
       () => {
         const direction = effDirection();
         return {
+          // Long/Short blijven de rauwe enum-waarde: trading-leenwoorden die in
+          // beide talen hetzelfde zijn (zoals in de web-app).
           text: direction ?? "—",
           cls: direction === "Long" ? "by-win" : direction === "Short" ? "by-loss" : "by-faint",
-          src: overrides.direction ? "handmatig" : "via TradingView",
+          src: overrides.direction ? t("panel.src.manual") : t("panel.src.tv"),
           manual: !!overrides.direction,
         };
       },
@@ -395,13 +448,18 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         () => ({
           text: formatPrice(effPrice(key)),
           cls: "by-mono",
-          src: overrides[key] != null ? "handmatig" : "via TradingView",
+          src: overrides[key] != null ? t("panel.src.manual") : t("panel.src.tv"),
           manual: overrides[key] != null,
         }),
         () => {
           const input = el("input", {
             class: "by-input",
-            attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: `${label} handmatig` },
+            attrs: {
+              type: "number",
+              step: "any",
+              inputmode: "decimal",
+              placeholder: t("panel.editPlaceholder", { label }),
+            },
           });
           const current = overrides[key];
           if (current != null) input.value = String(current);
@@ -413,30 +471,28 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         }
       );
 
-    priceRow("Entry", "entry");
-    priceRow("Stop", "stop");
-    priceRow("Target", "target");
+    priceRow(t("panel.metric.entry"), "entry");
+    priceRow(t("panel.metric.stop"), "stop");
+    priceRow(t("panel.metric.target"), "target");
 
-    addMetric("R:R", () => ({
+    addMetric(t("panel.metric.rr"), () => ({
       text: formatRR(effRR()),
       cls: "by-mono",
-      src: "berekend",
+      src: t("panel.src.computed"),
       manual: false,
     }));
 
     const position = selectedPosition();
     if (position?.entryTimeSec != null) {
-      addMetric("Tijd", () => ({
+      addMetric(t("panel.metric.time"), () => ({
         text: formatBarTime(position.entryTimeSec),
         cls: "by-mono",
-        src: "via TradingView",
+        src: t("panel.src.tv"),
         manual: false,
       }));
     }
     if (position && !position.prices) {
-      positionSec.body.appendChild(
-        readFail("Prijzen niet berekenbaar (tick-size onbekend) — vul entry en stop handmatig in.")
-      );
+      positionSec.body.appendChild(readFail(t("panel.noTickPrices")));
     }
     renderManualTime();
   }
@@ -459,25 +515,26 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     positionSec.body.appendChild(
       el("div", { style: "margin-top:10px;" }, [
         el("span", { class: "by-label" }, [
-          document.createTextNode("Datum en tijd van de entry"),
+          document.createTextNode(t("panel.manualTimeLabel")),
           el("span", { class: "by-req", text: " *" }),
         ]),
         el("div", { class: "by-row" }, [dateInput, timeInput]),
-        el("p", {
-          class: "by-hint",
-          style: "margin:5px 0 0;",
-          text: "De chart geeft hier geen bar-tijd — vul 'm zelf in (in je eigen tijdzone uit Beyen).",
-        }),
+        el("p", { class: "by-hint", style: "margin:5px 0 0;", text: t("panel.manualTimeHint") }),
       ])
     );
   }
 
   function renderTarget(): void {
     clear(targetSec.body);
-    const select = el("select", { class: "by-select", attrs: { "aria-label": "Waar komt deze trade terecht" } });
-    select.appendChild(el("option", { text: "Journal (live)", attrs: { value: "live" } }));
+    const select = el("select", { class: "by-select", attrs: { "aria-label": t("panel.targetSelectLabel") } });
+    select.appendChild(el("option", { text: t("panel.targetLive"), attrs: { value: "live" } }));
     for (const project of targets?.projects ?? []) {
-      select.appendChild(el("option", { text: `Backtest: ${project.naam}`, attrs: { value: `project:${project.id}` } }));
+      select.appendChild(
+        el("option", {
+          text: t("panel.targetProject", { name: project.naam }),
+          attrs: { value: `project:${project.id}` },
+        })
+      );
     }
     const known = Array.from(select.options).some((o) => o.value === targetKey);
     if (!known) targetKey = "live";
@@ -497,12 +554,16 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       targets?.journals.find((j) => j.id === targets?.activeJournalId)?.naam ?? journal?.naam ?? null;
     if (activeName) {
       targetSec.body.appendChild(
-        el("p", { class: "by-hint", style: "margin:6px 0 0;", text: `Actief journal: ${activeName}` })
+        el("p", {
+          class: "by-hint",
+          style: "margin:6px 0 0;",
+          text: t("panel.activeJournal", { name: activeName }),
+        })
       );
     }
     if (!targets) {
       targetSec.body.appendChild(
-        el("p", { class: "by-hint", style: "margin:6px 0 0;", text: "Backtest-projecten konden niet geladen worden." })
+        el("p", { class: "by-hint", style: "margin:6px 0 0;", text: t("panel.targetsFailed") })
       );
     }
   }
@@ -513,8 +574,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     clear(modeSec.body);
     clear(modeExtra);
 
-    const seg = el("div", { class: "by-seg", attrs: { role: "group", "aria-label": "Modus" } });
-    for (const [key, label] of [["live", "Live (open trade)"], ["backtest", "Backtest (met resultaat)"]] as const) {
+    const seg = el("div", { class: "by-seg", attrs: { role: "group", "aria-label": t("panel.modeLabel") } });
+    for (const [key, label] of [
+      ["live", t("panel.modeLive")],
+      ["backtest", t("panel.modeBacktest")],
+    ] as const) {
       const btn = el("button", { class: "by-seg-btn", text: label, attrs: { type: "button" } });
       btn.classList.toggle("is-active", mode === key);
       on(btn, "click", () => {
@@ -528,9 +592,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     modeSec.body.appendChild(modeExtra);
 
     if (mode === "live") {
-      modeExtra.appendChild(
-        el("p", { class: "by-hint", style: "margin:0;", text: "De trade komt als lopend in je journal; het resultaat vul je later in Beyen aan." })
-      );
+      modeExtra.appendChild(el("p", { class: "by-hint", style: "margin:0;", text: t("panel.modeLiveHint") }));
       return;
     }
 
@@ -552,7 +614,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
     const resultInput = el("input", {
       class: "by-input",
-      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: "bv. 1.8 of -0.5" },
+      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.resultPlaceholder") },
     });
     resultInput.value = resultPct;
     on(resultInput, "input", () => {
@@ -564,7 +626,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     modeExtra.appendChild(
       el("div", { style: "margin-top:8px;" }, [
         el("span", { class: "by-label" }, [
-          document.createTextNode("Resultaat %"),
+          document.createTextNode(t("panel.resultLabel")),
           el("span", { class: "by-req", text: " *" }),
         ]),
         resultInput,
@@ -576,7 +638,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     clear(journalSec.body);
     form = null;
 
-    if (journalNote) journalSec.body.appendChild(note(journalNote, "is-gold"));
+    if (journalNote) {
+      const text =
+        journalNote.kind === "missing"
+          ? t("panel.journalMissing")
+          : t("panel.journalLoadFailed", { error: journalNote.error });
+      journalSec.body.appendChild(note(text, "is-gold"));
+    }
     if (!journal) return;
 
     formFieldList = formFields(journal.fields);
@@ -593,7 +661,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       journalSec.body.appendChild(form.element);
     } else if (!journalNote) {
       journalSec.body.appendChild(
-        el("p", { class: "by-hint", style: "margin:0;", text: "Dit journal heeft geen eigen velden." })
+        el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
       );
     }
 
@@ -603,7 +671,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         el("p", {
           class: "by-hint",
           style: "margin:10px 0 0;",
-          text: `De WPM-kenmerken (${skipped.map((f) => f.label).join(", ")}) vul je na het loggen in Beyen aan — die horen bij vaste kolommen, niet bij de custom velden.`,
+          text: t("panel.legacySkipped", { fields: skipped.map((f) => f.label).join(", ") }),
         })
       );
     }
@@ -614,7 +682,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
     const risk = el("input", {
       class: "by-input",
-      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: "standaard 1%" },
+      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
     });
     risk.value = riskPct;
     on(risk, "input", () => {
@@ -622,18 +690,19 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       updatePending();
     });
 
-    const notesInput = el("textarea", { class: "by-input", attrs: { rows: "3", placeholder: "Wat zag je hier?" } });
+    const notesInput = el("textarea", {
+      class: "by-input",
+      attrs: { rows: "3", placeholder: t("panel.notesPlaceholder") },
+    });
     notesInput.value = notes;
     on(notesInput, "input", () => {
       notes = notesInput.value;
     });
 
-    extraSec.body.appendChild(
-      el("div", {}, [el("span", { class: "by-label", text: "Risico %" }), risk])
-    );
+    extraSec.body.appendChild(el("div", {}, [el("span", { class: "by-label", text: t("panel.riskLabel") }), risk]));
     extraSec.body.appendChild(
       el("div", { style: "margin-top:8px;" }, [
-        el("span", { class: "by-label", text: "Notities" }),
+        el("span", { class: "by-label", text: t("panel.notesLabel") }),
         notesInput,
       ])
     );
@@ -645,40 +714,30 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     | { ok: false; message: string; missingKeys?: string[] };
 
   function buildRequest(): Built {
-    if (!chart || !chart.symbol.ok) {
-      return { ok: false, message: "Zonder symbool kan er niets gelogd worden — ververs de chart." };
-    }
+    if (!chart || !chart.symbol.ok) return { ok: false, message: t("panel.v.noSymbol") };
 
     const position = selectedPosition();
     const direction = position ? effDirection() : null;
     const entry = position ? effPrice("entry") : null;
     const stop = position ? effPrice("stop") : null;
     const target = position ? effPrice("target") : null;
-    if ((entry == null) !== (stop == null)) {
-      return { ok: false, message: "Vul entry én stop in — met maar één van de twee valt er geen R te berekenen." };
-    }
+    if ((entry == null) !== (stop == null)) return { ok: false, message: t("panel.v.entryStopPair") };
     const prices = entry != null && stop != null ? { entry, stop, target } : null;
 
     const entryTimeUtcSec = position?.entryTimeSec ?? null;
     let manualDateTime: WallClock | null = null;
     if (entryTimeUtcSec == null) {
-      if (!manualDate || !manualTime) {
-        return { ok: false, message: "Vul de datum en tijd van de entry in." };
-      }
+      if (!manualDate || !manualTime) return { ok: false, message: t("panel.v.needDateTime") };
       manualDateTime = { date: manualDate, time: manualTime };
     }
 
     let tradeMode: LogTradeRequest["mode"] = { kind: "live-open" };
     if (mode === "backtest") {
-      if (!outcome) return { ok: false, message: "Kies Win, Loss of BE." };
+      if (!outcome) return { ok: false, message: t("panel.v.pickOutcome") };
       const pct = parseNumberInput(resultPct);
-      if (pct == null) return { ok: false, message: "Vul het resultaat in % in." };
-      if (outcome === "Loss" && pct > 0) {
-        return { ok: false, message: "Een Loss hoort een negatief resultaat te hebben." };
-      }
-      if (outcome === "Win" && pct < 0) {
-        return { ok: false, message: "Een Win hoort een positief resultaat te hebben." };
-      }
+      if (pct == null) return { ok: false, message: t("panel.v.needResult") };
+      if (outcome === "Loss" && pct > 0) return { ok: false, message: t("panel.v.lossNegative") };
+      if (outcome === "Win" && pct < 0) return { ok: false, message: t("panel.v.winPositive") };
       tradeMode = { kind: "post-hoc", outcome, resultaatPct: pct };
     }
 
@@ -686,14 +745,14 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (missing.length > 0) {
       return {
         ok: false,
-        message: `Nog verplicht: ${missing.map((f) => f.label).join(", ")}.`,
+        message: t("panel.v.missingRequired", { fields: missing.map((f) => f.label).join(", ") }),
         missingKeys: missing.map((f) => f.fieldKey),
       };
     }
 
     const risk = parseNumberInput(riskPct);
-    if (riskPct.trim() && risk == null) return { ok: false, message: "Risico % is geen getal." };
-    if (risk != null && risk <= 0) return { ok: false, message: "Risico % moet groter dan 0 zijn." };
+    if (riskPct.trim() && risk == null) return { ok: false, message: t("panel.v.riskNaN") };
+    if (risk != null && risk <= 0) return { ok: false, message: t("panel.v.riskPositive") };
 
     return {
       ok: true,
@@ -739,7 +798,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     showError(null);
     submitBtn.disabled = true;
-    submitBtn.textContent = "Loggen…";
+    submitBtn.textContent = t("panel.submitBusy");
     try {
       const result = await sendToSw({ type: "log-trade", request: built.request });
       if (result.ok) {
@@ -747,15 +806,15 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         // duplicate is er niets weggeschreven, dus zijn onze uploads wezen.
         if (result.duplicate) snapshotsSec.reset();
         else snapshotsSec.consume();
-        showSuccess(result.duplicate);
+        showView(() => showSuccess(result.duplicate));
         return;
       }
       showError(logTradeErrorCopy(result));
     } catch {
-      showError({ message: "De extensie is herladen — ververs deze TradingView-pagina en probeer opnieuw." });
+      showError({ message: t("panel.reload.retry") });
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Log trade";
+      submitBtn.textContent = t("panel.submit");
     }
   }
 
@@ -764,25 +823,26 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       class: "by-link",
       attrs: { href: JOURNAL_URL, target: "_blank", rel: "noopener noreferrer" },
     });
-    link.appendChild(el("span", { text: "Open in Beyen" }));
+    link.appendChild(el("span", { text: t("panel.success.open") }));
     link.appendChild(el("span", { unsafeHtml: ICON_EXTERNAL }));
 
-    const again = el("button", { class: "by-btn", text: "Nog één loggen", attrs: { type: "button" } });
+    const again = el("button", { class: "by-btn", text: t("panel.success.again"), attrs: { type: "button" } });
     on(again, "click", () => {
       resetForm();
-      buildForm();
+      showView(buildForm);
       void refreshChart();
     });
 
     showState(
       el("div", { class: "by-state" }, [
         el("div", { class: "by-state-icon is-win", unsafeHtml: ICON_CHECK }),
-        el("p", { class: "by-state-title", text: duplicate ? "Deze trade was al gelogd" : "Trade gelogd" }),
+        el("p", {
+          class: "by-state-title",
+          text: duplicate ? t("panel.duplicate.title") : t("panel.success.title"),
+        }),
         el("p", {
           class: "by-state-text",
-          text: duplicate
-            ? "Dezelfde chart-trade stond al in je journal — er is niets dubbel aangemaakt."
-            : "De trade staat in je Beyen-journal.",
+          text: duplicate ? t("panel.duplicate.text") : t("panel.success.text"),
         }),
         el("div", { class: "by-stack", style: "align-items:center;gap:12px;" }, [link, again]),
       ])
@@ -815,10 +875,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     try {
       const result = await sendToSw({ type: "chart-state" });
       chart = result.ok ? result.state : null;
-      chartError = result.ok ? null : result.error;
+      chartError = result.ok ? null : { raw: result.error };
     } catch {
       chart = null;
-      chartError = "De extensie is herladen — ververs deze TradingView-pagina.";
+      chartError = { key: "panel.reload.short" };
     }
     chartLoading = false;
     renderChart();
@@ -827,37 +887,47 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   async function boot(): Promise<void> {
-    showState(simpleState("Verbinden…", "Even je Beyen-account controleren."));
+    // Taal vóór de eerste zin op het scherm; de rest van het paneel leest 'm
+    // daarna synchroon via t().
+    await ensureLang();
+    showView(() => showState(simpleState(t("panel.booting.title"), t("panel.booting.text"))));
     try {
       const status = await sendToSw({ type: "status" });
       if (!status.linked) {
-        showState(notLinkedState());
+        showView(() => showState(notLinkedState()));
         return;
       }
-      const [dump, targetsResult] = await Promise.all([
+      const [dump, targetsResult, onboardingDone] = await Promise.all([
         sendToSw({ type: "journal-dump" }),
         sendToSw({ type: "targets" }),
+        isOnboardingDismissed(),
       ]);
       if (dump.ok) {
         journal = dump.journal;
-        journalNote = journal ? null : "Je hebt nog geen actief journal in Beyen — de trade wordt zonder journal-velden gelogd.";
+        journalNote = journal ? null : { kind: "missing" };
       } else {
         journal = null;
-        journalNote = `Journal-velden konden niet geladen worden (${dump.error}) — loggen kan wel.`;
+        journalNote = { kind: "load-failed", error: dump.error };
       }
       targets = targetsResult.ok ? targetsResult : null;
-      buildForm();
+      showOnboarding = !onboardingDone;
+      showView(buildForm);
       await refreshChart();
     } catch {
-      showState(reloadState());
+      showView(() => showState(reloadState()));
     }
   }
+
+  // Taalwissel in de popup: dezelfde weergave nog eens tekenen. De ingevulde
+  // waarden staan in deze closure, dus dat kost geen invoer.
+  const stopLangWatch = onLangChange(() => currentView());
 
   void boot();
 
   return {
     element: panel,
     destroy() {
+      stopLangWatch();
       // Sluiten met niet-gelogde snapshots = wezen in de bucket; die gaan mee weg.
       snapshotsSec.dispose();
       panel.remove();

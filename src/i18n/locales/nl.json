@@ -336,6 +336,7 @@
     "toolsHeading": "De tools",
     "customizeHeading": "Zelf aanpassen",
     "conceptsHeading": "Goed om te weten",
+    "extensionHeading": "TradingView-extensie (beta)",
     "contactHeading": "Nog iets onduidelijk?",
     "contactBody": "Stuur ons gerust een bericht — we helpen je graag op weg.",
     "items": {
@@ -357,7 +358,10 @@
       "resultUnit": { "title": "Resultaat in %, R of $", "body": "Kies hoe je je resultaat wilt zien. R meet winst en verlies in veelvouden van je risico — 2R betekent twee keer je risico verdiend." },
       "evaluation": { "title": "Uitvoering vs uitkomst", "body": "De trade-evaluatie (goede trade, emotionele fout, technische fout) meet hóe je handelde; de uitkomst (winst, verlies, break-even) meet het geld. Een winstgevende trade kan alsnog een slechte trade zijn." },
       "missed": { "title": "Gemiste trades", "body": "Een setup die je zag maar niet nam, hypothetisch gelogd. Telt nooit mee in je echte statistieken — puur om te zien welke kansen je laat liggen." },
-      "settings": { "title": "Instellingen", "body": "Je naam en tijdzone, licht of donker thema, taal, je data exporteren naar CSV, en je account verwijderen." }
+      "settings": { "title": "Instellingen", "body": "Je naam en tijdzone, licht of donker thema, taal, je data exporteren naar CSV, en je account verwijderen." },
+      "extension": { "title": "Loggen vanaf je chart", "body": "Een Chrome-extensie die een Beyen-paneel op je TradingView-chart zet. Teken je gewone long- of short-position-tool en het paneel leest richting, entry, stop, target en R:R er rechtstreeks uit; je journal-velden vul je in hetzelfde paneel in. De trade landt in je live journal (als lopende trade) of in een backtestproject. De extensie is beta: ze verandert nog en is voorlopig alleen voor beta-accounts." },
+      "extensionLink": { "title": "De extensie koppelen", "body": "Installeer de extensie, ga naar Instellingen → “Verbind TradingView-extensie” en genereer een koppelcode. Plak die code in de extensie-popup bij “Verbind”. De code werkt één keer en vervalt snel; daarna heeft de extensie haar eigen sessie met exact jouw rechten. Loskoppelen doe je in de popup met “Koppel los”." },
+      "extensionSnapshots": { "title": "Snapshots per timeframe", "body": "Het paneel kan per slot (W, D, 4H en een extra) een beeld van je chart maken en aan de trade hangen — of je plakt zelf een TradingView-snapshotlink. Chrome vereist hiervoor eerst één klik op het Beyen-icoon in je werkbalk, per tab; het paneel zegt het als die klik nog ontbreekt. Je eigen timeframe wordt na de ronde teruggezet." }
     }
   },
   "import": {

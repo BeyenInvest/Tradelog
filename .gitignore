@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-ssr
+extension-build
 *.local
 .env.local
 .env

@@ -20,6 +20,35 @@ body {
 }
 .popup-mark { display: flex; color: rgb(var(--color-gold)); }
 .popup-title { font-family: var(--font-display); font-size: 17px; line-height: 1; }
+.popup-spacer { flex: 1; }
+
+/* NL/EN-schakelaar (F4b) — dezelfde segmented-vorm als de modus-keuze in het
+ * paneel, maar in het klein: dit is een voorkeur, geen hoofdkeuze. */
+.popup-lang {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: rgb(var(--color-bg));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 999px;
+}
+.popup-lang-btn {
+  padding: 3px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: rgb(var(--color-muted));
+  font: 600 10px/1.2 var(--font-body);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.popup-lang-btn:hover { color: rgb(var(--color-ink)); }
+.popup-lang-btn.is-active {
+  color: rgb(var(--color-gold));
+  background: rgb(var(--color-gold) / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(var(--color-gold) / 0.35);
+}
+.popup-lang-btn:focus-visible { outline: 2px solid rgb(var(--color-gold)); outline-offset: 1px; }
 
 .popup-main { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
 

@@ -139,7 +139,9 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 ---
 
-## 6. Bouwlog (bijgewerkt 2026-09-16/17, nachtsessie Fable)
+## 6. Bouwlog (bijgewerkt 2026-09-17 — **F1–F4a gemerged op main + live**)
+
+**2026-09-17 ochtend:** migratie 0058 gedraaid op prod (read-only geverifieerd: 4 prijskolommen, 3 checks, registry-rij, share-RPC schoon) → PR #9 (`tv-ext-integration` → `main`, CI groen, gemerged = 42dcdf7) → Vercel-deploy geverifieerd (bundle bevat de prijsvelden-code; endpoint 401-smoke OK). Directe main-pushes zijn sindsdien onmogelijk (required check "ci"): elke volgende deploy gaat via PR.
 
 | Blok | Status | Waar |
 |---|---|---|
@@ -148,15 +150,15 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 | F1b skelet + auth | ✅ live op main | `extension/`, main |
 | F1c Settings-kaart | ✅ live op main (Opus) | `ExtensionLinkCard.tsx`, main |
 | F2b domein-modules | ✅ live op main | `src/lib/{symbolNormalize,priceMath,tradePayload}.ts` |
-| F2c migratie 0058 | ✅ code klaar — **⚠️ migratie moet op prod draaien VÓÓR de volgende main-push** | branch-lijn `tv-ext-f2c`+ |
-| F2a chart-adapter | ✅ code klaar (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
-| F2d paneel | ✅ code klaar (prep Fable + UI Opus: shadow-DOM-paneel in beyen-thema, dynamische form incl. show_when, doel/modus, overrides met "via TradingView"-badges) | `extension/src/content/ui/` |
-| F3a snapshots | ✅ code klaar (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
-| F3b snapshot-UI | ✅ code klaar (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming) | `content/ui/snapshotState.ts` e.o. |
+| F2c migratie 0058 | ✅ **gedraaid op prod** (2026-09-17, read-only geverifieerd) | `supabase/migrations/0058_trade_prices.sql`, main |
+| F2a chart-adapter | ✅ op main (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
+| F2d paneel | ✅ op main (prep Fable + UI Opus: shadow-DOM-paneel in beyen-thema, dynamische form incl. show_when, doel/modus, overrides met "via TradingView"-badges) | `extension/src/content/ui/` |
+| F3a snapshots | ✅ op main (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
+| F3b snapshot-UI | ✅ op main (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming); preview-thumbnails toegevoegd 17-09 (SW maakt een kleine JPEG-data-URL per geslaagd slot, paneel toont 'm) | `content/ui/snapshotState.ts` e.o. |
 | F4a hardening | ✅ protocol-fuzz + security-review gedraaid; fixes: **closed** shadow root (Medium-bevinding: open root = pagina kan paneel lezen/besturen), activeTab-permission hersteld, host-regex zonder lookalikes | b7b478c |
-| F4b polish/Store | open (copy/EN, Web-Store-pakket + listing, privacy-alinea) | — |
+| F4b polish/Store | ✅ code klaar 17-09 (Fable: iconen 16/48/128 uit het BY-merk, manifest-polish, `npm run pack:ext` → Web-Store-zip met spec-correcte paden, `build:ext` in CI. Opus: NL/EN-mini-i18n `i18nExt.ts` met taalschakelaar in de popup, eerste-run-onboarding in het paneel, Gids-sectie, privacy-alinea §10 [EN-tegenhanger in de listing-doc, juridische review open], `docs/store-listing-tv-extensie.md` incl. permission-justificaties). Open: owner — screenshots voor de listing, developer-account, upload | branch-lijn `tv-ext-f4b-*` |
 
-**Owner-testchecklist (echte Chrome, ná migratie 0058 + main-push):** `npm run build:ext` → extensie herladen → Settings-kaart → koppelcode → popup "Verbind" → TV-chart met position-tool → paneel: chart lezen, doel/modus kiezen, custom velden, "Log trade" → trade verschijnt in de app (open trade in journal / gesloten in project) → snapshots: eerst één klik op het extensie-icoon (activeTab), dan "Maak snapshots" → paden op de trade.
+**Owner-testchecklist (echte Chrome — migratie + deploy staan live, kan meteen):** `npm run build:ext` → extensie herladen → Settings-kaart → koppelcode → popup "Verbind" → TV-chart met position-tool → paneel: chart lezen, doel/modus kiezen, custom velden, "Log trade" → trade verschijnt in de app (open trade in journal / gesloten in project) → snapshots: eerst één klik op het extensie-icoon (activeTab), dan "Maak snapshots" → paden op de trade.
 
 Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-key** (nieuwe key-stijl) als `SUPABASE_SECRET_KEY` op Vercel — functioneel gelijk aan de service-role-key uit het plan. En op §3/F2d: een backtest-trade draagt óók het actieve journal (zoals de web-form), het project komt er als `backtest_project_id` bovenop.
 

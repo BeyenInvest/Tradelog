@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import {
   BookOpen, LineChart, Target, NotebookPen, Wallet, CalendarClock, Calculator,
-  Layers, Percent, Scale, EyeOff, Settings, Mail,
+  Layers, Percent, Scale, EyeOff, Settings, Mail, CandlestickChart, Link2, Camera,
   SlidersHorizontal, Sparkles, FolderPlus, ListChecks, Palette, Landmark, type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { useAuth } from "@/hooks/useAuth";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 
 /**
@@ -34,6 +35,18 @@ const CUSTOMIZE: { id: string; icon: LucideIcon }[] = [
   { id: "instruments", icon: Landmark },
 ];
 
+/**
+ * TradingView-extensie (F4b). Alleen zichtbaar voor beta-accounts, net als de
+ * koppelkaart in Instellingen (ExtensionLinkCard) — uitleg tonen over een kaart
+ * die je niet kunt vinden, is erger dan geen uitleg. Un-gaten gebeurt samen met
+ * de rest van de extensie.
+ */
+const EXTENSION: { id: string; icon: LucideIcon }[] = [
+  { id: "extension", icon: CandlestickChart },
+  { id: "extensionLink", icon: Link2 },
+  { id: "extensionSnapshots", icon: Camera },
+];
+
 const CONCEPTS: { id: string; icon: LucideIcon }[] = [
   { id: "journals", icon: Layers },
   { id: "resultUnit", icon: Percent },
@@ -44,6 +57,7 @@ const CONCEPTS: { id: string; icon: LucideIcon }[] = [
 
 export default function HelpPage() {
   const { t } = useTranslation();
+  const { betaFeatures } = useAuth();
 
   return (
     <div className="max-w-3xl">
@@ -55,6 +69,7 @@ export default function HelpPage() {
 
       <Section heading={t("help.toolsHeading")} entries={TOOLS} />
       <Section heading={t("help.customizeHeading")} entries={CUSTOMIZE} />
+      {betaFeatures && <Section heading={t("help.extensionHeading")} entries={EXTENSION} />}
       <Section heading={t("help.conceptsHeading")} entries={CONCEPTS} />
 
       <Card className="mt-8 flex flex-col gap-2">
