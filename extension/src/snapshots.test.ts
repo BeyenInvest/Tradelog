@@ -13,12 +13,10 @@ function makeDeps(overrides: Partial<SnapshotDeps> = {}) {
       resolution = r;
       return true;
     }),
-    getChartRect: vi.fn(async () => ({ x: 0, y: 0, w: 100, h: 100, dpr: 1 })),
-    captureVisible: vi.fn(async () => {
+    capture: vi.fn(async () => {
       calls.push(`capture:${resolution}`);
-      return new Blob(["png"]);
+      return { ok: true as const, image: new Blob(["png"]) };
     }),
-    crop: vi.fn(async (b: Blob) => b),
     upload: vi.fn(async () => ({ ok: true as const, path: `u1/${calls.length}.png` })),
     settle: vi.fn(async () => {}),
     ...overrides,
@@ -45,11 +43,13 @@ describe("runSnapshotCycle", () => {
     expect(calls).toEqual(["capture:240"]); // geen set, geen herstel nodig
   });
 
-  it("stopt vroeg en markeert needs-gesture bij een activeTab-permissiefout", async () => {
+  it("stopt vroeg en markeert needs-gesture bij een activeTab-permissiefout (fallback-pad)", async () => {
     const { deps } = makeDeps({
-      captureVisible: vi.fn(async () => {
-        throw new Error("Either the '<all_urls>' or 'activeTab' permission is required.");
-      }),
+      capture: vi.fn(async () => ({
+        ok: false as const,
+        error: "Either the '<all_urls>' or 'activeTab' permission is required.",
+        code: "needs-gesture" as const,
+      })),
     });
     const result = await runSnapshotCycle(deps, ["w", "d"]);
     expect(result.slots.w).toMatchObject({ ok: false, code: "needs-gesture" });
@@ -69,7 +69,7 @@ describe("runSnapshotCycle", () => {
   it("weigert een snapshot boven de bucket-limiet vóór de upload", async () => {
     const big = { size: SNAPSHOT_MAX_BYTES + 1 } as Blob;
     const upload = vi.fn(async () => ({ ok: true as const, path: "x" }));
-    const { deps } = makeDeps({ crop: vi.fn(async () => big), upload });
+    const { deps } = makeDeps({ capture: vi.fn(async () => ({ ok: true as const, image: big })), upload });
     const result = await runSnapshotCycle(deps, ["d"]);
     expect(result.slots.d?.ok).toBe(false);
     expect(upload).not.toHaveBeenCalled();

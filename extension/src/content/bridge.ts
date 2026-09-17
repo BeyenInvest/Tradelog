@@ -5,6 +5,8 @@
 import { isPageResponse, makeRequest, type PageCommand } from "../adapter/protocol";
 
 const PAGE_TIMEOUT_MS = 3000;
+/** Screenshot rendert een canvas van de hele chart — gun 'm meer tijd dan een leesactie. */
+const SCREENSHOT_TIMEOUT_MS = 10_000;
 
 const pending = new Map<string, { resolve: (payload: unknown) => void; timer: number }>();
 
@@ -19,13 +21,13 @@ window.addEventListener("message", (ev: MessageEvent) => {
   entry.resolve(data.payload);
 });
 
-function askPage(command: PageCommand): Promise<unknown> {
+function askPage(command: PageCommand, timeoutMs = PAGE_TIMEOUT_MS): Promise<unknown> {
   return new Promise((resolve) => {
     const id = crypto.randomUUID();
     const timer = window.setTimeout(() => {
       pending.delete(id);
       resolve({ bridgeTimeout: true });
-    }, PAGE_TIMEOUT_MS);
+    }, timeoutMs);
     pending.set(id, { resolve, timer });
     window.postMessage(makeRequest(id, command), location.origin);
   });
@@ -64,6 +66,10 @@ chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse)
   if (msg?.type === "tv-chart-rect") {
     sendResponse(measureChartRect());
     return false;
+  }
+  if (msg?.type === "tv-page-screenshot") {
+    askPage({ cmd: "take-screenshot" }, SCREENSHOT_TIMEOUT_MS).then(sendResponse);
+    return true;
   }
   return false;
 });

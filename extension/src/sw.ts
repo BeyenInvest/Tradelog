@@ -6,12 +6,13 @@ import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
 import {
-  cropToRect, runSnapshotCycle, thumbnailDataUrl,
-  type ChartRect, type SnapshotDeps, type SnapshotSlot,
+  cropToRect, isGestureError, runSnapshotCycle, thumbnailDataUrl,
+  type CaptureResult, type ChartRect, type SnapshotDeps, type SnapshotSlot,
 } from "./snapshots";
 import { appendLog, readLog } from "./storage";
+import { closeTradeFromChart, listOpenTradesForSymbol } from "./closeFlow";
 import { createExtensionClient, createSupabaseDb } from "./supabaseDb";
-import { logTradeFromChart } from "./tradeFlow";
+import { logTradeFromChart, updateLoggedTradeByRef } from "./tradeFlow";
 
 const db = createSupabaseDb(createExtensionClient());
 
@@ -88,6 +89,18 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
     case "delete-screenshots":
       await db.removeScreenshots(req.paths.filter((p) => typeof p === "string" && p.length < 200));
       return { ok: true };
+    case "open-trades":
+      return listOpenTradesForSymbol(db, req.symbolRaw);
+    case "close-trade": {
+      const result = await closeTradeFromChart(db, req.request);
+      await appendLog("close-trade", result.ok ? `ok ${result.outcome} ${result.resultaatPct}%` : `${result.stage}: ${result.error}`);
+      return result;
+    }
+    case "update-trade": {
+      const result = await updateLoggedTradeByRef(db, req.request);
+      await appendLog("update-trade", result.ok ? "ok" : `${result.stage}: ${result.error}`);
+      return result;
+    }
   }
 }
 
@@ -109,6 +122,36 @@ async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snaps
   const tabId = tab.id;
   const windowId = tab.windowId;
 
+  // Primair beeld-pad: TV's eigen takeClientScreenshot via de page-world —
+  // chart-only canvas, geen activeTab-gebaar, geen crop. Elke afwijking
+  // (oude TV-build, drift, timeout) valt terug op captureVisibleTab + crop,
+  // waar de S0-gebaar-beperking nog wél geldt.
+  async function capture(): Promise<CaptureResult> {
+    try {
+      const shot: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-screenshot" });
+      const s = typeof shot === "object" && shot !== null ? (shot as { ok?: unknown; dataUrl?: unknown; error?: unknown }) : null;
+      if (s?.ok === true && typeof s.dataUrl === "string" && s.dataUrl.startsWith("data:image/png")) {
+        return { ok: true, image: await (await fetch(s.dataUrl)).blob() };
+      }
+      await appendLog("snapshot-page-shot-degraded", typeof s?.error === "string" ? s.error : "onbruikbaar antwoord");
+    } catch (e) {
+      await appendLog("snapshot-page-shot-degraded", String((e instanceof Error && e.message) || e));
+    }
+    try {
+      const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+      const full = await (await fetch(dataUrl)).blob();
+      const rect: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-chart-rect" });
+      const r = typeof rect === "object" && rect !== null ? (rect as Partial<ChartRect>) : null;
+      if (!r || [r.x, r.y, r.w, r.h, r.dpr].some((v) => typeof v !== "number")) {
+        return { ok: false, error: "chart-rect onbepaalbaar" };
+      }
+      return { ok: true, image: await cropToRect(full, r as ChartRect) };
+    } catch (e) {
+      const msg = String((e instanceof Error && e.message) || e);
+      return isGestureError(msg) ? { ok: false, error: msg, code: "needs-gesture" } : { ok: false, error: msg };
+    }
+  }
+
   const deps: SnapshotDeps = {
     async getResolution() {
       const payload: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-read" });
@@ -119,18 +162,7 @@ async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snaps
       const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-set-resolution", resolution });
       return typeof res === "object" && res !== null && (res as { ok?: unknown }).ok === true;
     },
-    async getChartRect() {
-      const rect: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-chart-rect" });
-      if (typeof rect !== "object" || rect === null) return null;
-      const r = rect as Partial<ChartRect>;
-      if ([r.x, r.y, r.w, r.h, r.dpr].some((v) => typeof v !== "number")) return null;
-      return r as ChartRect;
-    },
-    async captureVisible() {
-      const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
-      return (await fetch(dataUrl)).blob();
-    },
-    crop: cropToRect,
+    capture,
     upload: (image) => db.uploadScreenshot(image),
     settle: () => new Promise((resolve) => setTimeout(resolve, 1500)),
     thumbnail: thumbnailDataUrl,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  directionFromPrices, pipsBetween, plannedRR, positionPrices, tickSize, tickSizeFromFormatted,
+  directionFromPrices, pipsBetween, plannedRR, positionPrices, realizedR, resultaatPctFromExit,
+  tickSize, tickSizeFromFormatted,
 } from "./priceMath";
 
 describe("tickSize", () => {
@@ -80,5 +81,48 @@ describe("pipsBetween", () => {
   it("rondt op 1 decimaal, null bij pipSize ≤ 0", () => {
     expect(pipsBetween(1.10005, 1.1, 0.0001)).toBe(0.5);
     expect(pipsBetween(1, 2, 0)).toBeNull();
+  });
+});
+
+describe("realizedR", () => {
+  it("S0-fixture: Long 110.33/SL 109.83, exit op de TP = +2R; exit op de SL = -1R", () => {
+    expect(realizedR("Long", 110.33, 109.83, 111.33)).toBeCloseTo(2, 10);
+    expect(realizedR("Long", 110.33, 109.83, 109.83)).toBeCloseTo(-1, 10);
+  });
+
+  it("Short gespiegeld: winst onder entry, verlies erboven", () => {
+    expect(realizedR("Short", 110.33, 110.83, 109.33)).toBeCloseTo(2, 10);
+    expect(realizedR("Short", 110.33, 110.83, 110.83)).toBeCloseTo(-1, 10);
+  });
+
+  it("weigert richting-inconsistentie en stop op entry (geen stille correctie)", () => {
+    expect(realizedR("Short", 110.33, 109.83, 111.33)).toBeNull(); // SL onder entry = Long
+    expect(realizedR("Long", 110.33, 110.33, 111.33)).toBeNull();
+  });
+
+  it("weigert een onbruikbare exit (≤ 0, NaN — DB-check prices_positive)", () => {
+    expect(realizedR("Long", 110.33, 109.83, 0)).toBeNull();
+    expect(realizedR("Long", 110.33, 109.83, Number.NaN)).toBeNull();
+  });
+});
+
+describe("resultaatPctFromExit", () => {
+  it("R × risk%, afgerond op 2 decimalen (numeric(7,2))", () => {
+    expect(resultaatPctFromExit("Long", 110.33, 109.83, 111.33, 1)).toBe(2);
+    expect(resultaatPctFromExit("Long", 110.33, 109.83, 111.33, 0.5)).toBe(1);
+    expect(resultaatPctFromExit("Long", 100, 99, 101.333, 1)).toBe(1.33);
+  });
+
+  it("lege risk_pct volgt de app-brede 1%-default (R ≡ resultaat_pct)", () => {
+    expect(resultaatPctFromExit("Long", 110.33, 109.83, 111.33, null)).toBe(2);
+    expect(resultaatPctFromExit("Long", 110.33, 109.83, 111.33, 0)).toBe(2); // niet-positief = default
+  });
+
+  it("exit exact op entry is 0, nooit -0 (round2-conventie)", () => {
+    expect(Object.is(resultaatPctFromExit("Short", 110.33, 110.83, 110.33, 1), 0)).toBe(true);
+  });
+
+  it("degradeert mee met realizedR", () => {
+    expect(resultaatPctFromExit("Short", 110.33, 109.83, 111.33, 1)).toBeNull();
   });
 });

@@ -33,7 +33,7 @@ export interface LogTradeRequest {
 
 export type LogTradeResult =
   | { ok: true; tradeId: string | null; duplicate: boolean }
-  | { ok: false; stage: "auth" | "profile" | "build" | "insert"; error: string; detail?: string };
+  | { ok: false; stage: "auth" | "profile" | "build" | "insert" | "update"; error: string; detail?: string };
 
 /** Eerste fase-optie van een legacy journal (het `fase`-veld draagt z'n opties);
  * anders dezelfde stille "Fase 1"-default als quick-log (plan M3). */
@@ -54,7 +54,13 @@ export function resolveFase(journal: JournalSchema | null, requested: string | n
   return firstFaseOf(journal);
 }
 
-export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): Promise<LogTradeResult> {
+type PreparedTrade =
+  | { ok: true; payload: Record<string, unknown> }
+  | Extract<LogTradeResult, { ok: false }>;
+
+/** Gedeelde bouw voor loggen (insert) én bijwerken (update, F5): dezelfde
+ * poortwachters, dezelfde payload — de aanroeper kiest alleen het schrijfpad. */
+async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promise<PreparedTrade> {
   const session = await db.getSessionInfo();
   if (!session) return { ok: false, stage: "auth", error: "not-linked" };
 
@@ -101,7 +107,29 @@ export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): 
     built.payload.h2_screenshot = req.screenshots.h2 ?? null;
   }
 
-  const inserted = await db.insertTrade(built.payload);
+  return { ok: true, payload: built.payload };
+}
+
+export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): Promise<LogTradeResult> {
+  const prepared = await prepareTradePayload(db, req);
+  if (!prepared.ok) return prepared;
+  const inserted = await db.insertTrade(prepared.payload);
   if (!inserted.ok) return { ok: false, stage: "insert", error: inserted.code, detail: inserted.error };
   return { ok: true, tradeId: inserted.tradeId, duplicate: inserted.duplicate };
+}
+
+/** F5: de laatst gelogde trade van deze tab bijwerken vóór hij "af" is — het
+ * paneel onthoudt de clientUuid, wij vinden de rij terug op z'n import_ref en
+ * schrijven exact dezelfde payload als een verse log (geen generieke editor,
+ * de web-app blijft dé plek voor echte edits). */
+export async function updateLoggedTradeByRef(db: ExtensionDb, req: LogTradeRequest): Promise<LogTradeResult> {
+  const prepared = await prepareTradePayload(db, req);
+  if (!prepared.ok) return prepared;
+  const importRef = prepared.payload.import_ref;
+  if (typeof importRef !== "string" || !importRef) {
+    return { ok: false, stage: "build", error: "empty-client-uuid" };
+  }
+  const updated = await db.updateTrade({ importRef }, prepared.payload);
+  if (!updated.ok) return { ok: false, stage: "update", error: updated.code, detail: updated.error };
+  return { ok: true, tradeId: updated.tradeId, duplicate: false };
 }

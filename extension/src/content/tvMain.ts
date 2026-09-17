@@ -61,6 +61,10 @@ function readState(): unknown {
       priceFormatter?: () => unknown;
       getAllShapes?: () => Array<{ id: unknown; name: unknown }>;
       getShapeById?: (id: unknown) => { getPoints?: () => unknown; getProperties?: () => unknown };
+      getSeries?: () => {
+        data?: () => { bars?: () => { last?: () => unknown } };
+        isInReplay?: () => { value?: () => unknown };
+      };
     };
   };
 
@@ -104,7 +108,38 @@ function readState(): unknown {
       return f?.format?.(1.2345678);
     }),
     shapes,
+    // F5 (S1-bewezen): laatste bar van de hoofdserie — [timeSec, o, h, l, c, ...]
+    // — voor exit-prefill + replay-veilige sluitdatum. getSeries().data().bars()
+    // is intern-vormig (zelfde risicoprofiel als de formatter-props): elke
+    // TV-drift degradeert hier naar een safe-fout, het paneel valt dan terug op
+    // handmatige invoer.
+    lastBar: safe(() => {
+      const s = chart.getSeries?.();
+      if (!s) throw new Error("getSeries() niet beschikbaar");
+      const last = s.data?.()?.bars?.()?.last?.();
+      if (!last) throw new Error("geen laatste bar");
+      const inReplay = safe(() => s.isInReplay?.()?.value?.());
+      return { last: ser(last), inReplay: inReplay.ok ? ser(inReplay.value) : null };
+    }),
   };
+}
+
+/** F3a-fix: TV's eigen client-side screenshot (chart-only canvas) — geen
+ * activeTab-gebaar en geen crop nodig. Elke afwijking van het verwachte
+ * canvas-contract is een nette fout; de SW valt dan terug op captureVisibleTab. */
+async function takeScreenshot(): Promise<unknown> {
+  const w = window as unknown as { TradingViewApi?: { takeClientScreenshot?: () => unknown } };
+  try {
+    const api = w.TradingViewApi;
+    if (!api?.takeClientScreenshot) return { ok: false, error: "takeClientScreenshot niet beschikbaar" };
+    const canvas = await Promise.resolve(api.takeClientScreenshot());
+    if (!(canvas instanceof HTMLCanvasElement)) return { ok: false, error: "geen canvas teruggekregen" };
+    const dataUrl = canvas.toDataURL("image/png");
+    if (!dataUrl.startsWith("data:image/png")) return { ok: false, error: "toDataURL gaf geen PNG" };
+    return { ok: true, dataUrl, width: canvas.width, height: canvas.height };
+  } catch (e) {
+    return { ok: false, error: String((e instanceof Error && e.message) || e) };
+  }
 }
 
 function setResolution(resolution: string): unknown {
@@ -117,12 +152,14 @@ function setResolution(resolution: string): unknown {
   });
 }
 
-function run(command: PageCommand): unknown {
+function run(command: PageCommand): unknown | Promise<unknown> {
   switch (command.cmd) {
     case "read-state":
       return readState();
     case "set-resolution":
       return setResolution(command.resolution);
+    case "take-screenshot":
+      return takeScreenshot();
   }
 }
 
@@ -130,11 +167,10 @@ window.addEventListener("message", (ev: MessageEvent) => {
   if (ev.source !== window) return;
   const data: unknown = ev.data;
   if (!isPageRequest(data)) return;
-  let payload: unknown;
-  try {
-    payload = run(data.command);
-  } catch (e) {
-    payload = { fatal: String((e instanceof Error && e.message) || e) };
-  }
-  window.postMessage(makeResponse(data.id, payload), location.origin);
+  // take-screenshot is async — via Promise.resolve loopt sync en async door
+  // hetzelfde antwoordpad (de bridge heeft toch een eigen timeout).
+  Promise.resolve()
+    .then(() => run(data.command))
+    .catch((e: unknown) => ({ fatal: String((e instanceof Error && e.message) || e) }))
+    .then((payload) => window.postMessage(makeResponse(data.id, payload), location.origin));
 });

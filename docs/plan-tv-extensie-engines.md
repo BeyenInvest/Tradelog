@@ -139,7 +139,9 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 ---
 
-## 6. Bouwlog (bijgewerkt 2026-09-17 — **F1–F4a gemerged op main + live**)
+## 6. Bouwlog (bijgewerkt 2026-09-18 — **F1–F4b + legacy-velden live; F5 in aanbouw na owner-go**)
+
+**2026-09-18 — snapshot-gebaar-fix + F5a (owner-go "bouw F5", branch `tv-ext-f5`):** (1) **Het activeTab-gebaar per tab is uit de snapshot-flow** — owner-frustratie ("telkens bij een nieuwe sessie"). Runtime-spike in de browser-pane bewees dat `TradingViewApi.takeClientScreenshot()` een Promise<HTMLCanvasElement> van alléén de chart teruggeeft (niet tainted, `toDataURL` werkt). Dat is nu het primaire beeld-pad: page-world-commando `take-screenshot` (tvMain → bridge, eigen 10s-timeout) → PNG-data-URL → SW. Geen permissie-gebaar, geen crop. `captureVisibleTab`+crop blijft als fallback bij TV-drift; alleen dáár bestaat "needs-gesture" nog. `SnapshotDeps` versimpeld naar één `capture()`-dep. (2) **S1-spike = GO:** `activeChart().getSeries().data().bars().last()` levert `[timeSec, o, h, l, c, vol]` (close matcht de live koers exact) en `isInReplay` is leesbaar → `ChartState.lastBar` (per-veld-degradatie zoals altijd). (3) **F5a gebouwd** (Fable): `realizedR`/`resultaatPctFromExit` in priceMath (richting-symmetrische formule, harde weigering bij SL-verkeerde-kant; lege risk_pct volgt de app-brede 1%-default i.p.v. §7.1's strengere eis — R ≡ resultaat% voor de vlakke-1%-workflow), `deriveOutcome` hergebruikt uit de import-laag (mét de gedeelde BE-epsilon 0.005 — §7.1 zei "exact 0", de gedeelde helper wint), `listOpenTrades`/`updateTrade` in ExtensionDb (expliciete user_id-filter), `closeFlow.ts` (listOpenTradesForSymbol, closeTradeFromChart met missed-trade-weigering + close-before-open-guard + replay-veilige sluitdatum uit bar-tijd, previewClose voor de UI), `updateLoggedTradeByRef` (gedeelde payloadbouw met logTradeFromChart), 3 nieuwe SW-berichten. esbuild-panelbuild kent nu de `@`-alias (nodig voor gedeelde modules; build:ext(:dev) in sync gehouden). 613 tests groen. F5b (paneel-UI) loopt bij de Opus-engine.
 
 **2026-09-17 ochtend:** migratie 0058 gedraaid op prod (read-only geverifieerd: 4 prijskolommen, 3 checks, registry-rij, share-RPC schoon) → PR #9 (`tv-ext-integration` → `main`, CI groen, gemerged = 42dcdf7) → Vercel-deploy geverifieerd (bundle bevat de prijsvelden-code; endpoint 401-smoke OK). Directe main-pushes zijn sindsdien onmogelijk (required check "ci"): elke volgende deploy gaat via PR.
 
@@ -157,7 +159,7 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 | F2c migratie 0058 | ✅ **gedraaid op prod** (2026-09-17, read-only geverifieerd) | `supabase/migrations/0058_trade_prices.sql`, main |
 | F2a chart-adapter | ✅ op main (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
 | F2d paneel | ✅ op main (prep Fable + UI Opus: shadow-DOM-paneel in beyen-thema, dynamische form incl. show_when, doel/modus, overrides met "via TradingView"-badges) | `extension/src/content/ui/` |
-| F3a snapshots | ✅ op main (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
+| F3a snapshots | ✅ op main (cyclus+upload+herstel); 18-09: primair beeld-pad = TV's `takeClientScreenshot` (geen gebaar, geen crop), captureVisibleTab+crop alleen nog als fallback | `extension/src/snapshots.ts` |
 | F3b snapshot-UI | ✅ op main (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming); preview-thumbnails toegevoegd 17-09 (SW maakt een kleine JPEG-data-URL per geslaagd slot, paneel toont 'm) | `content/ui/snapshotState.ts` e.o. |
 | F4a hardening | ✅ protocol-fuzz + security-review gedraaid; fixes: **closed** shadow root (Medium-bevinding: open root = pagina kan paneel lezen/besturen), activeTab-permission hersteld, host-regex zonder lookalikes | b7b478c |
 | F4b polish/Store | ✅ code klaar 17-09 (Fable: iconen 16/48/128 uit het BY-merk, manifest-polish, `npm run pack:ext` → Web-Store-zip met spec-correcte paden, `build:ext` in CI. Opus: NL/EN-mini-i18n `i18nExt.ts` met taalschakelaar in de popup, eerste-run-onboarding in het paneel, Gids-sectie, privacy-alinea §10 [EN-tegenhanger in de listing-doc, juridische review open], `docs/store-listing-tv-extensie.md` incl. permission-justificaties). Open: owner — screenshots voor de listing, developer-account, upload | branch-lijn `tv-ext-f4b-*` |
@@ -168,9 +170,9 @@ Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-k
 
 ---
 
-## 7. F5-ontwerp — close-from-chart & bewerken (design-only, 2026-09-17)
+## 7. F5-ontwerp — close-from-chart & bewerken (owner-go 2026-09-18: "bouw F5")
 
-**Status: ONTWERP — bouwen pas na expliciete owner-go** (plan-regel: F5 na beta-feedback op F1–F4). Uitgeschreven zodat het blok bouwklaar is; geen code, geen migratie nodig (`exit_price` bestaat al sinds 0058).
+**Status: IN AANBOUW op branch `tv-ext-f5`** — S1-let ✅ GO (18-09, runtime: `getSeries().data().bars().last()` + `isInReplay`), F5a ✅ code-compleet + unit-getest (rekenpad, open-trades, close, edit-by-import_ref), F5b (paneel-UI, Opus) in uitvoering. Geen migratie nodig (`exit_price` bestaat al sinds 0058). Bouwafwijkingen t.o.v. het ontwerp hieronder: (a) outcome via de gedeelde `deriveOutcome` mét de app-brede BE-epsilon (0.005), niet "exact 0" — één bron van waarheid wint; (b) lege `risk_pct` blokkeert het exit-prijs-pad níet maar volgt de app-brede 1%-default (zelfde conventie als riskPct() in stats/core) — zonder prijzen blijft alleen handmatig resultaat over; (c) MAE/MFE alleen zichtbaar als het journal `track_exit` heeft (zelfde opt-in als de web-form) — dat beantwoordt open beslispunt 2.
 
 **Scope v1:** (a) een **open** trade van dit symbool sluiten vanaf de chart; (b) daarbij evaluatie + optioneel MAE/MFE invullen; (c) de laatst gelogde trade van deze tab nog eens openen en bijwerken vóór hij "af" is. **Buiten scope:** partial closes, fees/slippage, sluiten van andermans of niet-extensie-trades met prijslogica als de prijzen ontbreken (die kunnen wél gewoon dicht met handmatig resultaat).
 

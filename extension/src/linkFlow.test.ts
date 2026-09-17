@@ -44,6 +44,8 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     uploadScreenshot: vi.fn(async () => ({ ok: true as const, path: "u1/x.png" })),
     removeScreenshots: vi.fn(async () => {}),
+    listOpenTrades: vi.fn(async () => []),
+    updateTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1" })),
     ...overrides,
   };
 }
