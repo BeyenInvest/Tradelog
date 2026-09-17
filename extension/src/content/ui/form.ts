@@ -23,13 +23,18 @@ function labelNode(field: JournalField): HTMLElement {
   return label;
 }
 
-function booleanControl(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
+/**
+ * Ja/Nee-toggle op één values-sleutel. Op sleutel en niet op JournalField, zodat
+ * de legacy-WPM-rijen (legacyForm.ts) dezelfde knoppen en dezelfde tri-state
+ * krijgen als de journal-velden.
+ */
+export function booleanControl(fieldKey: string, values: FormValues, changed: () => void): HTMLElement {
   const wrap = el("div", { class: "by-toggle" });
   const buttons: HTMLButtonElement[] = [];
   const paint = () => {
     for (const btn of buttons) {
       const isYes = btn.dataset.value === "true";
-      btn.classList.toggle("is-active", values[field.fieldKey] === isYes);
+      btn.classList.toggle("is-active", values[fieldKey] === isYes);
     }
   };
   // De veldlabels zelf komen uit het journal van de user (die kiest z'n eigen
@@ -42,7 +47,7 @@ function booleanControl(field: JournalField, values: FormValues, changed: () => 
     });
     on(btn, "click", () => {
       // Nog een keer op het actieve antwoord = terug naar onbeantwoord.
-      values[field.fieldKey] = values[field.fieldKey] === value ? null : value;
+      values[fieldKey] = values[fieldKey] === value ? null : value;
       paint();
       changed();
     });
@@ -53,15 +58,27 @@ function booleanControl(field: JournalField, values: FormValues, changed: () => 
   return wrap;
 }
 
-function enumControl(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
+/**
+ * Keuzelijst met lege placeholder (niets kiezen = niet invullen) op één
+ * values-sleutel; de opties komen van de call-site, zodat zowel een
+ * journal-enum als een vaste legacy-lijst hier doorheen kan.
+ */
+export function enumControl(
+  fieldKey: string,
+  options: readonly string[],
+  values: FormValues,
+  changed: () => void,
+  /** Uit voor een veld dat altijd een waarde hééft (de fase is `not null`). */
+  withPlaceholder = true
+): HTMLElement {
   const select = el("select", { class: "by-select" });
-  select.appendChild(el("option", { text: t("form.choose"), attrs: { value: "" } }));
-  for (const option of fieldOptions(field)) {
+  if (withPlaceholder) select.appendChild(el("option", { text: t("form.choose"), attrs: { value: "" } }));
+  for (const option of options) {
     select.appendChild(el("option", { text: option, attrs: { value: option } }));
   }
-  select.value = typeof values[field.fieldKey] === "string" ? String(values[field.fieldKey]) : "";
+  select.value = typeof values[fieldKey] === "string" ? String(values[fieldKey]) : "";
   on(select, "change", () => {
-    values[field.fieldKey] = select.value || null;
+    values[fieldKey] = select.value || null;
     changed();
   });
   return select;
@@ -85,9 +102,17 @@ function inputControl(field: JournalField, values: FormValues, changed: () => vo
 }
 
 function control(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
-  if (field.fieldType === "boolean") return booleanControl(field, values, changed);
-  if (field.fieldType === "enum") return enumControl(field, values, changed);
+  if (field.fieldType === "boolean") return booleanControl(field.fieldKey, values, changed);
+  if (field.fieldType === "enum") return enumControl(field.fieldKey, fieldOptions(field), values, changed);
   return inputControl(field, values, changed);
+}
+
+/** Één invoerrij: label boven de control, zelfde opbouw als de journal-velden. */
+export function fieldRow(fieldKey: string, label: string, control: HTMLElement): HTMLElement {
+  return el("div", { class: "by-field", attrs: { "data-field": fieldKey } }, [
+    el("span", { class: "by-label", text: label }),
+    control,
+  ]);
 }
 
 export function renderDynamicForm(options: {

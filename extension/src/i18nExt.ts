@@ -145,8 +145,30 @@ const NL = {
   "panel.noJournalFields": "Dit journal heeft geen eigen velden.",
   "panel.journalMissing": "Je hebt nog geen actief journal in Beyen — de trade wordt zonder journal-velden gelogd.",
   "panel.journalLoadFailed": "Journal-velden konden niet geladen worden ({error}) — loggen kan wel.",
-  "panel.legacySkipped":
-    "De WPM-kenmerken ({fields}) vul je na het loggen in Beyen aan — die horen bij vaste kolommen, niet bij de custom velden.",
+
+  // Paneel — legacy-WPM-velden (labels = letterlijk de web-form)
+  "legacy.sec.entry": "Entry",
+  "legacy.sec.technical": "Technical analysis",
+  "legacy.sec.kenmerken": "Fase-specifieke kenmerken — {fase}",
+  "legacy.fase": "Fase",
+  "legacy.cc": "4H Candle Close (CC)",
+  "legacy.tradeConcept": "Trade concept",
+  "legacy.entry": "Entry",
+  "legacy.weeklyCriteria": "Weekly criteria",
+  "legacy.weeklyKenmerk": "Weekly kenmerk",
+  "legacy.nieuws": "Nieuws nabij trade?",
+  "legacy.wConfirm": "Weekly richting mee?",
+  "legacy.dConfirm": "Daily richting mee?",
+  "legacy.h4Confirm": "4H richting mee?",
+  "legacy.extraDConf": "Extra Daily confirmatie?",
+  "legacy.k.fase1_daily_respecteert_zone": "Daily respecteert zone?",
+  "legacy.k.fase1_spelers_verleden": "Al spelers in verleden (W)?",
+  "legacy.k.fase2_daily_respecteert_zone": "Daily respecteert zone?",
+  "legacy.k.fase2_structuur": "Structuur",
+  "legacy.k.fase3_zone_min_2_touches": "Zone met min. 2 vorige touches?",
+  "legacy.k.fase3_engulfing_candle": "Engulfing candle?",
+  "legacy.k.fase3_structuur": "Structuur",
+  "legacy.k.fase4_weekly_bevestigingscandle": "Weekly bevestigingscandle?",
 
   // Paneel — extra
   "panel.riskLabel": "Risico %",
@@ -346,8 +368,30 @@ const EN: Record<MessageKey, string> = {
   "panel.journalMissing":
     "You don't have an active journal in Beyen yet — the trade is logged without journal fields.",
   "panel.journalLoadFailed": "Journal fields could not be loaded ({error}) — logging still works.",
-  "panel.legacySkipped":
-    "You add the WPM characteristics ({fields}) in Beyen after logging — those belong to fixed columns, not to the custom fields.",
+
+  // Panel — legacy WPM fields (EN from the app's own locales)
+  "legacy.sec.entry": "Entry",
+  "legacy.sec.technical": "Technical analysis",
+  "legacy.sec.kenmerken": "Phase-specific characteristics — {fase}",
+  "legacy.fase": "Phase",
+  "legacy.cc": "4H Candle Close (CC)",
+  "legacy.tradeConcept": "Trade concept",
+  "legacy.entry": "Entry",
+  "legacy.weeklyCriteria": "Weekly criteria",
+  "legacy.weeklyKenmerk": "Weekly characteristic",
+  "legacy.nieuws": "News near trade?",
+  "legacy.wConfirm": "Weekly direction aligned?",
+  "legacy.dConfirm": "Daily direction aligned?",
+  "legacy.h4Confirm": "4H direction aligned?",
+  "legacy.extraDConf": "Extra Daily confirmation?",
+  "legacy.k.fase1_daily_respecteert_zone": "Daily respects zone?",
+  "legacy.k.fase1_spelers_verleden": "Players in the past (W)?",
+  "legacy.k.fase2_daily_respecteert_zone": "Daily respects zone?",
+  "legacy.k.fase2_structuur": "Structure",
+  "legacy.k.fase3_zone_min_2_touches": "Zone with min. 2 prior touches?",
+  "legacy.k.fase3_engulfing_candle": "Engulfing candle?",
+  "legacy.k.fase3_structuur": "Structure",
+  "legacy.k.fase4_weekly_bevestigingscandle": "Weekly confirmation candle?",
 
   // Panel — extra
   "panel.riskLabel": "Risk %",
