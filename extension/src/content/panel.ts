@@ -84,18 +84,21 @@ function mount(): void {
   window.addEventListener("resize", reclamp);
 
   let dragged = false;
-  launcher.addEventListener("pointerdown", (event) => {
+
+  /** Sleep de host aan `handle`. Geldt voor het bolletje én (via de titelbalk)
+   * het geopende paneel — één mechaniek, één opgeslagen positie. */
+  function startDrag(event: PointerEvent, handle: HTMLElement): void {
     if (event.button !== 0) return;
     const rect = host.getBoundingClientRect();
     const offset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const start = { x: event.clientX, y: event.clientY };
     dragged = false;
-    launcher.setPointerCapture(event.pointerId);
+    handle.setPointerCapture(event.pointerId);
 
     const onMove = (ev: PointerEvent): void => {
       if (!dragged && !isDrag(ev.clientX - start.x, ev.clientY - start.y)) return;
       dragged = true;
-      launcher.classList.add("is-dragging");
+      handle.classList.add("is-dragging");
       applyPos(
         clampLauncherPos(
           { x: ev.clientX - offset.x, y: ev.clientY - offset.y },
@@ -105,17 +108,29 @@ function mount(): void {
       );
     };
     const onUp = (): void => {
-      launcher.removeEventListener("pointermove", onMove);
-      launcher.removeEventListener("pointerup", onUp);
-      launcher.removeEventListener("pointercancel", onUp);
-      launcher.classList.remove("is-dragging");
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      handle.classList.remove("is-dragging");
       if (dragged && customPos) {
         void chrome.storage.local.set({ [LAUNCHER_POS_KEY]: customPos });
       }
     };
-    launcher.addEventListener("pointermove", onMove);
-    launcher.addEventListener("pointerup", onUp);
-    launcher.addEventListener("pointercancel", onUp);
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  }
+
+  launcher.addEventListener("pointerdown", (event) => startDrag(event, launcher));
+
+  // Het open paneel sleept aan zijn titelbalk (.by-head), maar niet aan de
+  // knoppen erin — die houden hun klik. Gedelegeerd op de slot zodat het blijft
+  // werken als panelApp de kop opnieuw tekent.
+  slot.addEventListener("pointerdown", (event) => {
+    const target = event.target as Element | null;
+    const head = target?.closest?.(".by-head");
+    if (!head || target?.closest?.("button, a, input, select, textarea")) return;
+    startDrag(event, head as HTMLElement);
   });
 
   function open(): void {
