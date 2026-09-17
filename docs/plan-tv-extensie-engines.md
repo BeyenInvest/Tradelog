@@ -154,9 +154,9 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 | F2a chart-adapter | ✅ op main (bridge, parser, S0-contractfixture) | `extension/src/{adapter,content}` |
 | F2d paneel | ✅ op main (prep Fable + UI Opus: shadow-DOM-paneel in beyen-thema, dynamische form incl. show_when, doel/modus, overrides met "via TradingView"-badges) | `extension/src/content/ui/` |
 | F3a snapshots | ✅ op main (cyclus+crop+upload+herstel; activeTab-gebaar vereist) | `extension/src/snapshots.ts` |
-| F3b snapshot-UI | ✅ op main (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming) | `content/ui/snapshotState.ts` e.o. |
+| F3b snapshot-UI | ✅ op main (Opus: slots W/D/4H/Extra, link-plakken, wees-opruiming); preview-thumbnails toegevoegd 17-09 (SW maakt een kleine JPEG-data-URL per geslaagd slot, paneel toont 'm) | `content/ui/snapshotState.ts` e.o. |
 | F4a hardening | ✅ protocol-fuzz + security-review gedraaid; fixes: **closed** shadow root (Medium-bevinding: open root = pagina kan paneel lezen/besturen), activeTab-permission hersteld, host-regex zonder lookalikes | b7b478c |
-| F4b polish/Store | open (copy/EN, Web-Store-pakket + listing, privacy-alinea) | — |
+| F4b polish/Store | ✅ code klaar 17-09 (Fable: iconen 16/48/128 uit het BY-merk, manifest-polish, `npm run pack:ext` → Web-Store-zip met spec-correcte paden, `build:ext` in CI. Opus: NL/EN-mini-i18n `i18nExt.ts` met taalschakelaar in de popup, eerste-run-onboarding in het paneel, Gids-sectie, privacy-alinea §10 [EN-tegenhanger in de listing-doc, juridische review open], `docs/store-listing-tv-extensie.md` incl. permission-justificaties). Open: owner — screenshots voor de listing, developer-account, upload | branch-lijn `tv-ext-f4b-*` |
 
 **Owner-testchecklist (echte Chrome — migratie + deploy staan live, kan meteen):** `npm run build:ext` → extensie herladen → Settings-kaart → koppelcode → popup "Verbind" → TV-chart met position-tool → paneel: chart lezen, doel/modus kiezen, custom velden, "Log trade" → trade verschijnt in de app (open trade in journal / gesloten in project) → snapshots: eerst één klik op het extensie-icoon (activeTab), dan "Maak snapshots" → paden op de trade.
 

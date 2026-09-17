@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { SnapshotCycleResult } from "../../snapshots";
 import {
   applyCycle, autoSlots, DEFAULT_ENABLED, initialState, isExternalLink, needsGesture, parseEnabled,
-  pathTail, screenshotsForRequest, serializeEnabled, slotStatus, uploadedPaths,
+  pathTail, screenshotsForRequest, serializeEnabled, slotStatus, thumbOf, uploadedPaths,
   type SnapshotState,
 } from "./snapshotState";
 
@@ -108,6 +108,26 @@ describe("applyCycle", () => {
     expect(needsGesture(state)).toBe(true);
     expect(slotStatus(state.d)).toMatchObject({ kind: "error" });
     expect(slotStatus(state.d).text).toContain("niet uitgevoerd");
+  });
+});
+
+describe("thumbOf", () => {
+  const ok = { ok: true as const, path: "u1/a.png", bytes: 10 };
+
+  it("geeft de preview van een geslaagd auto-slot", () => {
+    const slot = { enabled: true, link: "", result: { ...ok, thumb: "data:image/jpeg;base64,abc" } };
+    expect(thumbOf(slot)).toBe("data:image/jpeg;base64,abc");
+  });
+
+  it("niets zonder thumb, bij een fout, of als een link het slot overneemt", () => {
+    expect(thumbOf({ enabled: true, link: "", result: ok })).toBeNull();
+    expect(thumbOf({ enabled: true, link: "", result: { ok: false, error: "x" } })).toBeNull();
+    expect(thumbOf({ enabled: true, link: "https://tv.com/x/1", result: { ...ok, thumb: "data:image/jpeg;base64,abc" } })).toBeNull();
+  });
+
+  it("weigert een thumb die geen image-data-URL is", () => {
+    const slot = { enabled: true, link: "", result: { ...ok, thumb: "https://evil.example/x.png" } };
+    expect(thumbOf(slot)).toBeNull();
   });
 });
 

@@ -16,7 +16,7 @@ import { clear, el, on } from "./dom";
 import { ICON_LINK, ICON_REFRESH } from "./icons";
 import {
   applyCycle, autoSlots, initialState, linkValue, needsGesture, parseEnabled, pathOf,
-  screenshotsForRequest, serializeEnabled, slotStatus, SLOT_LABELS, uploadedPaths,
+  screenshotsForRequest, serializeEnabled, slotStatus, SLOT_LABELS, thumbOf, uploadedPaths,
   type SnapshotState,
 } from "./snapshotState";
 
@@ -178,10 +178,16 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
     const status = el("p", { class: "by-snap-status" });
 
+    // Preview van de laatste geslaagde capture (F3b-spec); puur decoratief,
+    // het pad in de statusregel blijft de bron van waarheid.
+    const thumbImg = el("img", { class: "by-snap-thumb", attrs: { alt: "" } }) as HTMLImageElement;
+    thumbImg.hidden = true;
+
     const rowEl = el("div", { class: "by-snap", attrs: { "data-slot": slot } }, [
       el("div", { class: "by-snap-row" }, [toggle, linkBtn, retryBtn]),
       linkInput,
       status,
+      thumbImg,
     ]);
 
     return {
@@ -210,6 +216,11 @@ export function renderSnapshotsSection(): SnapshotsSection {
         status.hidden = !current.enabled;
         status.className = `by-snap-status is-${info.kind}${info.kind === "ok" ? " by-mono" : ""}`;
         status.textContent = info.text;
+
+        const thumb = current.enabled ? thumbOf(current) : null;
+        thumbImg.hidden = !thumb;
+        if (thumb && thumbImg.src !== thumb) thumbImg.src = thumb;
+        else if (!thumb && thumbImg.src) thumbImg.removeAttribute("src");
       },
       clearLink() {
         linkOpen = false;

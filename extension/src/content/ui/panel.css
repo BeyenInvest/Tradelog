@@ -302,6 +302,13 @@ textarea.by-input { resize: vertical; min-height: 58px; font: 13px/1.45 var(--fo
 .by-snap-status.is-gesture { color: rgb(var(--color-loss)); }
 .by-snap-status.is-error::before,
 .by-snap-status.is-gesture::before { content: "⚠ "; }
+.by-snap-thumb {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid rgb(var(--color-border-soft));
+  border-radius: 6px;
+}
 
 /* ── Meldingen ───────────────────────────────────────────────────────────── */
 .by-note {

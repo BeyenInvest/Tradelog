@@ -125,6 +125,16 @@ export function pathTail(path: string): string {
   return `…/${name}`;
 }
 
+/** De preview-data-URL van een slot, alleen voor een geslaagd auto-slot. Een
+ * geplakte link wint (dan tonen we niets van ons oude pad), en we accepteren
+ * uitsluitend image-data-URLs — de waarde stak de SW→content-berichtgrens over. */
+export function thumbOf(slot: SlotState): string | null {
+  if (slot.link.trim()) return null;
+  const result = slot.result;
+  if (!result?.ok || !result.thumb) return null;
+  return result.thumb.startsWith("data:image/") ? result.thumb : null;
+}
+
 export interface SlotStatus {
   kind: "auto" | "link" | "ok" | "error" | "gesture";
   text: string;
