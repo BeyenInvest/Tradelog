@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { Pencil, Trash2, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Trade } from "@/lib/types";
@@ -50,7 +51,40 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   );
   // Last column is wider than the rest so the open-trade actions (pencil + "Sluiten")
   // fit fully to the right of RESULTAAT instead of spilling left over its value.
-  const gridClass = `grid ${showFase ? "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group`;
+  const gridClass = `grid ${showFase ? "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group${
+    onEdit ? " cursor-pointer hover:bg-ink/5 transition-colors" : ""
+  }`;
+
+  // Clicking anywhere on the row opens the trade — the same action as the pencil.
+  // Only where an edit handler exists: the read-only variant (reviews, share views)
+  // stays a plain, non-clickable row. Deliberately no role="button": the row carries
+  // its own buttons (pencil, "Sluiten", delete), and interactive content inside a
+  // role="button" is invalid ARIA — a focusable row with Enter/Space is the honest
+  // equivalent here. Every button inside the row stops propagation, so its own action
+  // never doubles up with (or gets replaced by) the row's open.
+  const rowProps = onEdit
+    ? {
+        tabIndex: 0,
+        onClick: () => {
+          // Slepen-om-te-kopiëren eindigt óók in een click op de rij — wie net
+          // tekst selecteerde wil kopiëren, niet de trade openen.
+          if (window.getSelection()?.toString()) return;
+          onEdit(trade);
+        },
+        onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          // Space would scroll the page; Enter would re-fire on a focused child.
+          if (e.target !== e.currentTarget) return;
+          e.preventDefault();
+          onEdit(trade);
+        },
+      }
+    : {};
+  // Buttons inside the row: run their own handler and nothing else.
+  const stop = (fn: (trade: Trade) => void) => (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    fn(trade);
+  };
 
   // The two middle cells: universal Richting/R for a modern journal, the legacy
   // WPM Concept/Entry otherwise. R is "—" for a still-running trade (no result).
@@ -75,7 +109,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   // it), so nothing here formats a % or R.
   if (open) {
     return (
-      <div className={gridClass}>
+      <div className={gridClass} {...rowProps}>
         {dateCell}
         <span className="text-ink">{trade.instrument ?? trade.pair}</span>
         {showFase && (
@@ -99,7 +133,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
             {onEdit && (
               <>
                 <button
-                  onClick={() => onEdit(trade)}
+                  onClick={stop(onEdit)}
                   title={t("list.editTrade")}
                   aria-label={t("list.editTrade")}
                   className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink"
@@ -107,7 +141,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
                   <Pencil size={13} />
                 </button>
                 <button
-                  onClick={() => onEdit(trade)}
+                  onClick={stop(onEdit)}
                   className="font-body text-[11px] px-2 py-0.5 rounded border border-gold/50 text-gold hover:bg-gold/10 transition-colors"
                 >
                   {t("list.closeTrade")}
@@ -116,7 +150,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
             )}
             {onDelete && (
               <button
-                onClick={() => onDelete(trade)}
+                onClick={stop(onDelete)}
                 className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 size={13} />
@@ -139,7 +173,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   const shownResult = resultDisplayValue(resultaat_pct, resultUnit, resultCtx);
   const rValue = `${rAssumed ? "~" : ""}${resultCtx.rMultiple > 0 ? "+" : ""}${resultCtx.rMultiple.toFixed(2)}R`;
   return (
-    <div className={gridClass}>
+    <div className={gridClass} {...rowProps}>
       {dateCell}
       <span className="text-ink">{trade.instrument ?? trade.pair}</span>
       {!hideFase && (
@@ -174,12 +208,12 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
       {!readOnly && (
         <span className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {onEdit && (
-            <button onClick={() => onEdit(trade)} title={t("list.editTrade")} aria-label={t("list.editTrade")} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
+            <button onClick={stop(onEdit)} title={t("list.editTrade")} aria-label={t("list.editTrade")} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-ink">
               <Pencil size={13} />
             </button>
           )}
           {onDelete && (
-            <button onClick={() => onDelete(trade)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
+            <button onClick={stop(onDelete)} className="p-1 rounded hover:bg-ink/5 text-muted hover:text-loss">
               <Trash2 size={13} />
             </button>
           )}

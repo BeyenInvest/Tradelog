@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { acquireDirtyForm } from "@/lib/dirtyFormRegistry";
 
@@ -104,7 +105,12 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
     };
   }, [confirmingDiscard]);
 
-  const discardDialog: ReactNode = confirmingDiscard ? (
+  // Portalled to <body> for the same reason as the screenshot lightbox
+  // (ImagePreviewModal): rendered in-tree it lives inside the host modal's own
+  // `fixed z-50` stacking context, where any later-mounted top-level layer can
+  // paint over it and swallow its clicks. Focus handling keeps working — the
+  // Tab-trap above already targets discardRef directly, portal or not.
+  const discardDialog: ReactNode = confirmingDiscard ? createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
       onClick={() => setConfirmingDiscard(false)}
@@ -143,7 +149,8 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   ) : null;
 
   return { requestClose, containerRef, discardDialog };

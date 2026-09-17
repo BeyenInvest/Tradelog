@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>Beyen TV-paneel — dev-harnas</title>
+  <style>
+    /* Nep-TradingView-achtergrond zodat het paneel-contrast realistisch oogt. */
+    body { margin: 0; min-height: 100vh; background: #131722; color: #b2b5be; font: 14px/1.4 system-ui, sans-serif; }
+    .fake-chart { padding: 24px; }
+    .fake-chart h1 { color: #d1d4dc; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="fake-chart">
+    <h1>AUDJPY · 4H · OANDA (harnas)</h1>
+    <p>Dit is het dev-harnas: <code>chromeStub.js</code> speelt de service worker na,
+      daarna draait de dev-build <code>dist-dev/content/panel.js</code> (open shadow
+      root voor inspectie). Herbouw eerst met <code>npm run build:ext:dev</code>.</p>
+  </div>
+  <script src="./chromeStub.js"></script>
+  <script src="../dist-dev/content/panel.js"></script>
+</body>
+</html>

@@ -58,7 +58,11 @@
   padding: 10px 12px;
   border-bottom: 1px solid rgb(var(--color-border-soft));
   background: linear-gradient(rgb(var(--color-surface-2)), rgb(var(--color-surface)));
+  cursor: grab; /* het paneel sleept aan zijn titelbalk */
+  touch-action: none;
+  user-select: none;
 }
+.by-head.is-dragging { cursor: grabbing; }
 .by-head .by-mark { display: flex; color: rgb(var(--color-gold)); }
 .by-head .by-title { font-size: 17px; line-height: 1; }
 .by-spacer { flex: 1; }

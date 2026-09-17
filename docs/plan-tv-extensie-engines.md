@@ -143,6 +143,8 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 **2026-09-17 ochtend:** migratie 0058 gedraaid op prod (read-only geverifieerd: 4 prijskolommen, 3 checks, registry-rij, share-RPC schoon) → PR #9 (`tv-ext-integration` → `main`, CI groen, gemerged = 42dcdf7) → Vercel-deploy geverifieerd (bundle bevat de prijsvelden-code; endpoint 401-smoke OK). Directe main-pushes zijn sindsdien onmogelijk (required check "ci"): elke volgende deploy gaat via PR.
 
+**2026-09-17 avond — autonome afronding:** owner mergede PR #11 zelf en hertestte ✅ (velden + snapshots werken). Daarna op `tv-ext-legacy-fields`: paneel-venster versleepbaar (titelbalk), dev-harnas (`build:ext:dev` + `extension/dev/` — paneel runtime end-to-end geverifieerd buiten Chrome, incl. correcte fase+legacy in de log-trade-request), lightbox-fix (portal naar body; root cause = stacking-context van de geneste modals) + rij-klik-opent-trade (beide owner-verzoeken), F5-ontwerp in §7, en een 8-hoeken-code-review met 4 gefixte bevindingen (lightbox-focus-trap, launcher-Enter-klik, klik-na-tekstselectie, discard-dialog-portal). 582 tests groen.
+
 **2026-09-17 middag — eerste owner-Chrome-test (stap 1-3 ✅, stap 4-5 ⚠):** koppelen, chart lezen en het paneel werken. Twee bevindingen, gefixt op branch `tv-ext-legacy-fields`: (1) **legacy-WPM-velden ontbraken** — het paneel sloeg entry/trade concept/cc/weekly criteria+kenmerk/nieuws/confirms/fase-kenmerken bewust over; nu volwaardig, spiegel van de web-form: `LEGACY_TRADE_COLUMNS`-whitelist in buildTradePayload (echte kolommen, schema-bewaakt), fase als echte keuze (`resolveFase`, hide_fase gerespecteerd, kenmerken volgen de fase live), custom_options voor entry/concept meegeladen (Fable dataketen + Opus paneel-UI `legacyForm.ts`). (2) **launcher versleepbaar** (pointer-drag, klik/sleep-drempel, viewport-klem, positie in chrome.storage). Snapshots-melding bleek de verwachte needs-gesture-staat (icoon-klik per tab nog niet gedaan) — geen bug, wél her-testen.
 
 | Blok | Status | Waar |
@@ -163,6 +165,42 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 **Owner-testchecklist (echte Chrome — migratie + deploy staan live, kan meteen):** `npm run build:ext` → extensie herladen → Settings-kaart → koppelcode → popup "Verbind" → TV-chart met position-tool → paneel: chart lezen, doel/modus kiezen, custom velden, "Log trade" → trade verschijnt in de app (open trade in journal / gesloten in project) → snapshots: eerst één klik op het extensie-icoon (activeTab), dan "Maak snapshots" → paden op de trade.
 
 Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-key** (nieuwe key-stijl) als `SUPABASE_SECRET_KEY` op Vercel — functioneel gelijk aan de service-role-key uit het plan. En op §3/F2d: een backtest-trade draagt óók het actieve journal (zoals de web-form), het project komt er als `backtest_project_id` bovenop.
+
+---
+
+## 7. F5-ontwerp — close-from-chart & bewerken (design-only, 2026-09-17)
+
+**Status: ONTWERP — bouwen pas na expliciete owner-go** (plan-regel: F5 na beta-feedback op F1–F4). Uitgeschreven zodat het blok bouwklaar is; geen code, geen migratie nodig (`exit_price` bestaat al sinds 0058).
+
+**Scope v1:** (a) een **open** trade van dit symbool sluiten vanaf de chart; (b) daarbij evaluatie + optioneel MAE/MFE invullen; (c) de laatst gelogde trade van deze tab nog eens openen en bijwerken vóór hij "af" is. **Buiten scope:** partial closes, fees/slippage, sluiten van andermans of niet-extensie-trades met prijslogica als de prijzen ontbreken (die kunnen wél gewoon dicht met handmatig resultaat).
+
+### 7.1 Rekenpad (Fable, pure functies in `src/lib/priceMath.ts`)
+
+- `realizedR(direction, entry, stop, exit)` = `(exit − entry) / (entry − stop)` voor Long (noemer > 0), gespiegeld voor Short. Tekenfouten zijn hier onmogelijk te "corrigeren" — bij `stop === entry` of richting-inconsistentie: expliciete fout, geen gok (zelfde filosofie als `directionFromPrices`).
+- `resultaatPctFromExit(...) = realizedR × risk_pct` — vereist een gevulde `risk_pct`; zonder risk_pct kan alleen handmatig resultaat.
+- Outcome-afleiding: hergebruik `deriveOutcome` (quick-log): teken van resultaat_pct; exact 0 = BE. Geen eigen epsilon.
+- `datum_sluiting`: wall-clock-datum in `profiles.timezone` uit de **bar-time van het sluitmoment** als de chart die levert, anders de door de user ingevulde datum — nooit stil `Date.now()` (replay-regel M4).
+
+### 7.2 Dataflow (Fable)
+
+- `ExtensionDb.listOpenTrades(filter)`: `trades` met `is_open = true`, RLS-gescoped, gefilterd op het genormaliseerde symbool (pair óf instrument via `symbolNormalize`) + journal; teruggeven: id, datum/tijd, direction, entry/stop/target_price, risk_pct, import_ref.
+- `closeTradeFromChart(db, req)` (spiegel van `logTradeFromChart`): update-by-id via PostgREST met `is_open=false`, `outcome`, `resultaat_pct`, `exit_price`, `datum_sluiting`, `trade_evaluation` (optioneel), `mae_pct`/`mfe_pct` (optioneel). De 0043-check (`trades_open_result_chk`) bewaakt de overgang server-side; 23514 → nette foutcode. **"Missed trade" is hier nooit kiesbaar** (missed-trade-contract: alleen via de volledige web-form).
+- Bewerken (c): het paneel onthoudt per tab de `import_ref` van de laatst gelogde trade; "Nog aanpassen" haalt die op (select op import_ref), toont de eigen velden opnieuw en doet een update. Geen generieke trade-editor — dat blijft de web-app.
+- Exit-prijsbron: v1 = handmatig veld, met prefill uit de chart als de adapter een laatste koersprijs kan leveren. **Spike-let S1 (½ dag, vóór F5a):** kan `TradingViewApi` de last-bar-close leveren? Zo nee: alleen handmatig, geen DOM-scraping.
+
+### 7.3 Paneel-UI (Opus)
+
+Nieuwe sectie "Open trades op dit symbool" (alleen zichtbaar als er ≥1 open trade matcht): rij per trade (datum, richting, entry→SL, R-plan) → "Sluit" opent een compact sluit-formulier: exit-prijs (of handmatig resultaat als prijzen/risk ontbreken), afgeleide R + resultaat% live getoond, outcome-badge (afgeleid, niet kiesbaar), evaluatie-select (zonder Missed trade), optioneel MAE/MFE, datum. Succes → trade-link naar de app. Copy NL/EN via i18nExt.
+
+### 7.4 Blokken
+
+| Blok | Inhoud | Engine | Omvang |
+|---|---|---|---|
+| S1-let | last-price uit TradingViewApi bewijzen (go/no-go) | Fable | ½ dag |
+| F5a | rekenpad + listOpenTrades + closeTradeFromChart + edit-by-import_ref, volledig unit-getest | Fable | 1-1½ dag |
+| F5b | paneel-sectie + sluit-formulier + copy | Opus | 1 dag |
+
+**Open owner-beslissingen vóór de bouw:** (1) go voor F5 überhaupt (na beta-feedback); (2) MAE/MFE in het sluit-formulier of weglaten (het is een beta-laag); (3) de kenmerken/CC-vraag van 17-09 (zie bouwlog) — als die velden sneuvelen, wordt het sluit-formulier nóg kleiner.
 
 ---
 
