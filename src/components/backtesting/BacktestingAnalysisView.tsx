@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { FaseBarChart } from "@/components/charts/FaseBarChart";
@@ -282,16 +283,36 @@ export function BacktestingAnalysisView({
             }
           />
           <StatCard label={t("backtestingAnalysis.maxDrawdown")} value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`} tone="down" />
-          <StatCard label={t("backtestingAnalysis.maxLosingStreak")} value={kpis.maxLosingStreak} tone="down" />
-          <StatCard label={t("backtestingAnalysis.maxWinningStreak")} value={kpis.maxWinningStreak} tone="up" />
-          <StatCard
-            label={t("backtestingAnalysis.currentStreak")}
-            value={
-              kpis.currentStreak.type === "none"
-                ? "—"
-                : `${kpis.currentStreak.count} ${t(`journal.streakType_${kpis.currentStreak.type}`)}`
-            }
-          />
+          {/* Streaks in één kaart, identiek aan de Journal-overzichtskaart (owner-wens:
+              schoner dan drie losse StatCards). Hergebruikt dezelfde journal.*-teksten. */}
+          <Card className="flex items-center gap-3">
+            <Flame size={16} className="text-loss" />
+            <div className="min-w-0">
+              <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.statStreaks")}</p>
+              <p className="font-mono text-sm mt-1 text-ink">
+                {t("journal.maxLoss")} <span className="text-loss">{kpis.maxLosingStreak}</span> · {t("journal.maxWin")}{" "}
+                <span className="text-win">{kpis.maxWinningStreak}</span>
+              </p>
+              <p className="font-mono text-xs mt-1 text-muted">
+                {t("journal.currentStreak")}:{" "}
+                {kpis.currentStreak.type === "none" ? (
+                  <span className="text-faint">—</span>
+                ) : (
+                  <span
+                    className={
+                      kpis.currentStreak.type === "Win"
+                        ? "text-win"
+                        : kpis.currentStreak.type === "Loss"
+                          ? "text-loss"
+                          : "text-be"
+                    }
+                  >
+                    {kpis.currentStreak.count} {t(`journal.streakType_${kpis.currentStreak.type}`)}
+                  </span>
+                )}
+              </p>
+            </div>
+          </Card>
           <StatCard
             label={t("backtestingAnalysis.winLossRatio")}
             value={kpis.winLossRatio != null ? kpis.winLossRatio.toFixed(2) : "—"}
