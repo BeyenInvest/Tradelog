@@ -25,16 +25,12 @@ import {
   computeOverviewKpis,
   computeDisciplineCurve,
   computeDisciplineStats,
-  computeExtremes,
   computeRDistribution,
-  computeAvgRiskPct,
   lastNChronological,
-  round2,
   takenTrades,
   closedTrades,
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
-import { formatAggregate, resultInUnit, tradesInResultUnit } from "@/lib/format";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
 import { AvgRStatCard, MaxDrawdownStatCard, ProfitFactorStatCard, ResultStatCard } from "@/components/trades/JournalKpiCards";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -133,25 +129,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const kpis = useMemo(() => computeOverviewKpis(windowedTrades), [windowedTrades]);
   // Extra KPI-cards (Fase S1) — computed from the same windowed set as the KPI row,
   // straight from the R-fase stats-motor (no new math here, only wiring).
-  // In R-modus selecteren de extremen op R-basis: per-trade risk verschilt, dus
-  // de grootste %-trade is niet per se de grootste R-trade (audit B2). % en €
-  // delen dezelfde ordening (lineaire schaal), daar blijft de %-selectie correct.
-  const extremes = useMemo(
-    () => computeExtremes(resultUnit === "R" ? tradesInResultUnit(windowedTrades, "R") : windowedTrades),
-    [windowedTrades, resultUnit]
-  );
   const rDist = useMemo(() => computeRDistribution(windowedTrades), [windowedTrades]);
-  const avgRiskPct = useMemo(() => computeAvgRiskPct(windowedTrades), [windowedTrades]);
-  // Largest win/loss shown in the chosen result-eenheid: the extreme is a single
-  // trade's %, so re-read that exact trade through resultInUnit (R needs its own risk).
-  const largestWinVal = useMemo(() => {
-    const tr = extremes.largestWinTradeId ? windowedTrades.find((t) => t.id === extremes.largestWinTradeId) : null;
-    return tr ? round2(resultInUnit(tr, resultUnit, saldo)) : null;
-  }, [extremes.largestWinTradeId, windowedTrades, resultUnit, saldo]);
-  const largestLossVal = useMemo(() => {
-    const tr = extremes.largestLossTradeId ? windowedTrades.find((t) => t.id === extremes.largestLossTradeId) : null;
-    return tr ? round2(resultInUnit(tr, resultUnit, saldo)) : null;
-  }, [extremes.largestLossTradeId, windowedTrades, resultUnit, saldo]);
   const disciplineData = useMemo(() => computeDisciplineCurve(realTrades), [realTrades]);
   const disciplineStats = useMemo(() => computeDisciplineStats(realTrades), [realTrades]);
   const selectedDayTrades = useMemo(
@@ -387,26 +365,6 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
                 </p>
               </div>
             </Card>
-
-            {/* Extremes: largest single win & loss in one card (Fase S1). */}
-            <Card>
-              <p className="font-body text-xs uppercase tracking-wider text-muted">{t("journal.statExtremes")}</p>
-              <p className="font-mono text-sm mt-2 text-ink">
-                <span className="text-win">
-                  {largestWinVal != null ? formatAggregate(largestWinVal, resultUnit) : "—"}
-                </span>{" "}
-                <span className="text-faint">/</span>{" "}
-                <span className="text-loss">
-                  {largestLossVal != null ? formatAggregate(largestLossVal, resultUnit) : "—"}
-                </span>
-              </p>
-              <p className="font-body text-xs mt-1 text-muted">{t("journal.statExtremesSub")}</p>
-            </Card>
-
-            <StatCard
-              label={t("journal.statAvgRisk")}
-              value={avgRiskPct != null ? `${avgRiskPct}%` : "—"}
-            />
 
             {/* System Quality Number + spread of the R-distribution (always R-based,
                 the metric is defined on R-multiples). Part of the advanced-analysis
