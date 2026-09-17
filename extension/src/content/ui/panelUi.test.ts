@@ -3,7 +3,9 @@
 // hier bewust niet getest — die is handmatig owner-getest in echte Chrome.
 import { describe, expect, it } from "vitest";
 import type { JournalField } from "../../db";
+import { setLang } from "../../i18nExt";
 import { humanizeSchemaDetail, logTradeErrorCopy } from "./errors";
+import { slotStatus } from "./snapshotState";
 import {
   customFromValues, faseValue, formFields, groupFields, isVisible, missingRequired,
   skippedLegacyFields,
@@ -163,5 +165,40 @@ describe("logTradeErrorCopy", () => {
     );
     expect(humanizeSchemaDetail("iets.raars")).toBe("iets.raars");
     expect(humanizeSchemaDetail(undefined)).toBeUndefined();
+  });
+
+  it("volgt de taalkeuze van de extensie (F4b)", () => {
+    setLang("en");
+    try {
+      expect(logTradeErrorCopy({ ok: false, stage: "auth", error: "not-linked" }).message).toBe(
+        "Not connected — open the extension popup and connect your Beyen account."
+      );
+      expect(
+        logTradeErrorCopy({ ok: false, stage: "build", error: "symbol-not-in-pairs", detail: "XAUUSD" }).message
+      ).toContain("XAUUSD");
+      // Zonder detail valt hij terug op de vertaalde omschrijving, niet op "undefined".
+      expect(
+        logTradeErrorCopy({ ok: false, stage: "build", error: "symbol-not-in-pairs" }).message
+      ).toContain("This symbol");
+      expect(humanizeSchemaDetail("resultaat_pct: tradeForm.lossMustBeNegative")).toBe(
+        "Result % should be negative on a Loss"
+      );
+    } finally {
+      setLang("nl");
+    }
+  });
+});
+
+describe("slotStatus-copy (F4b)", () => {
+  it("volgt dezelfde taalkeuze als de rest van het paneel", () => {
+    const slot = { enabled: true, link: "", result: null };
+    expect(slotStatus(slot).text).toBe("Wordt meegenomen bij 'Maak snapshots'.");
+    setLang("en");
+    try {
+      expect(slotStatus(slot).text).toBe("Will be included with 'Take snapshots'.");
+      expect(slotStatus({ ...slot, link: "abc" }).text).toContain("https://");
+    } finally {
+      setLang("nl");
+    }
   });
 });

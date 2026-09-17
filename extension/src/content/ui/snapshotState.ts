@@ -9,6 +9,7 @@
 //     geplakte links — die zijn van TradingView, niet van ons.
 //  3. Een retry vervangt altijd het oude pad: het oude gaat weg (stale), het
 //     nieuwe resultaat komt ervoor in de plaats, ook als de retry faalde.
+import { t } from "../../i18nExt";
 import { SNAPSHOT_SLOTS, type SlotResult, type SnapshotCycleResult, type SnapshotSlot } from "../../snapshots";
 
 export interface SlotState {
@@ -21,6 +22,8 @@ export interface SlotState {
 
 export type SnapshotState = Record<SnapshotSlot, SlotState>;
 
+/** Timeframe-namen: in beide talen hetzelfde (trading-leenwoorden, zoals
+ * Win/Loss/BE in de web-app) — daarom géén i18n-sleutel. */
 export const SLOT_LABELS: Record<SnapshotSlot, string> = {
   w: "Weekly (W)",
   d: "Daily (D)",
@@ -30,9 +33,6 @@ export const SLOT_LABELS: Record<SnapshotSlot, string> = {
 
 /** Default: de drie vaste tijdframes aan, het extra slot uit (plan C4). */
 export const DEFAULT_ENABLED: Record<SnapshotSlot, boolean> = { w: true, d: true, h4: true, h2: false };
-
-export const GESTURE_COPY =
-  "Chrome vraagt eerst een klik op het Beyen-icoon in je werkbalk (eenmalig per tab) — klik daar en probeer opnieuw";
 
 export function initialState(enabled: Record<SnapshotSlot, boolean> = DEFAULT_ENABLED): SnapshotState {
   const state = {} as SnapshotState;
@@ -106,8 +106,7 @@ export function applyCycle(
     if (!requested.includes(slot)) continue;
     const previous = pathOf(state, slot);
     if (previous) stale.push(previous);
-    const result: SlotResult =
-      cycle.slots[slot] ?? { ok: false, error: "niet uitgevoerd — de cyclus stopte eerder" };
+    const result: SlotResult = cycle.slots[slot] ?? { ok: false, error: t("snap.notRun") };
     next[slot] = { ...state[slot], result };
   }
   return { state: next, stale };
@@ -136,13 +135,15 @@ export function slotStatus(slot: SlotState): SlotStatus {
   const trimmed = slot.link.trim();
   if (trimmed) {
     return isExternalLink(trimmed)
-      ? { kind: "link", text: "Geplakte link gaat mee — dit slot doet niet mee met de cyclus." }
-      : { kind: "error", text: "Geen geldige link — plak een adres dat met https:// begint." };
+      ? { kind: "link", text: t("snap.status.link") }
+      : { kind: "error", text: t("snap.status.badLink") };
   }
   const result = slot.result;
-  if (!result) return { kind: "auto", text: "Wordt meegenomen bij 'Maak snapshots'." };
+  if (!result) return { kind: "auto", text: t("snap.status.auto") };
   if (result.ok) return { kind: "ok", text: pathTail(result.path) };
-  if (result.code === "needs-gesture") return { kind: "gesture", text: GESTURE_COPY };
+  if (result.code === "needs-gesture") return { kind: "gesture", text: t("snap.gesture") };
+  // De rauwe reden komt uit de service worker (snapshots.ts) en blijft
+  // onvertaald — technisch detail, net als `detail` in errors.ts.
   return { kind: "error", text: result.error };
 }
 
