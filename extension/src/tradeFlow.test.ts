@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ExtensionDb, JournalSchema, ProfileInfo, SessionInfo } from "./db";
-import { firstFaseOf, logTradeFromChart, type LogTradeRequest } from "./tradeFlow";
+import { firstFaseOf, logTradeFromChart, resolveFase, type LogTradeRequest } from "./tradeFlow";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
 const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
@@ -67,6 +67,32 @@ describe("firstFaseOf", () => {
   it("valt terug op de quick-log-default zonder fase-veld", () => {
     expect(firstFaseOf({ ...LEGACY_JOURNAL, fields: [] })).toBe("Fase 1");
     expect(firstFaseOf(null)).toBe("Fase 1");
+  });
+});
+
+describe("resolveFase", () => {
+  it("accepteert een gekozen fase alleen als die een journal-optie is", () => {
+    expect(resolveFase(LEGACY_JOURNAL, "Fase 3")).toBe("Fase 3");
+    expect(resolveFase(LEGACY_JOURNAL, "Fase 9")).toBe("Fase 2"); // terug naar de eerste
+    expect(resolveFase(LEGACY_JOURNAL, null)).toBe("Fase 2");
+    expect(resolveFase(null, "Fase 3")).toBe("Fase 1");
+  });
+});
+
+describe("logTradeFromChart — legacy-doorvoer", () => {
+  it("stuurt gekozen fase en legacy-kolommen mee in de insert", async () => {
+    const insertTrade = vi.fn(async (_payload: Record<string, unknown>) => ({ ok: true as const, tradeId: "t-1", duplicate: false }));
+    const db = makeDb({ insertTrade });
+    const result = await logTradeFromChart(
+      db,
+      req({ fase: "Fase 3", legacy: { cc: "15", entry: "Decel", fase3_engulfing_candle: true } })
+    );
+    expect(result.ok).toBe(true);
+    const payload = insertTrade.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload.fase).toBe("Fase 3");
+    expect(payload.cc).toBe("15");
+    expect(payload.entry).toBe("Decel");
+    expect(payload.fase3_engulfing_candle).toBe(true);
   });
 });
 
