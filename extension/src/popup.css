@@ -1,0 +1,56 @@
+/* Popup-layout. De bouwstenen (by-card/by-btn/by-input/by-label/...) komen uit
+ * theme.css, net als in het paneel — dit bestand zet ze alleen in de popup-vorm
+ * neer zodat popup en in-page paneel één familie zijn. */
+
+body {
+  width: 340px;
+  margin: 0;
+  background: rgb(var(--color-bg));
+  color: rgb(var(--color-ink));
+  font: 13px/1.5 var(--font-body);
+}
+
+.popup-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgb(var(--color-border-soft));
+  background: linear-gradient(rgb(var(--color-surface-2)), rgb(var(--color-surface)));
+}
+.popup-mark { display: flex; color: rgb(var(--color-gold)); }
+.popup-title { font-family: var(--font-display); font-size: 17px; line-height: 1; }
+
+.popup-main { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+
+.popup-status {
+  padding: 7px 9px;
+  border-radius: calc(var(--radius) - 0.35rem);
+  background: rgb(var(--color-surface-2));
+  border: 1px solid rgb(var(--color-border));
+  color: rgb(var(--color-muted));
+  font-size: 12px;
+}
+.popup-status.is-linked { color: rgb(var(--color-win)); border-color: rgb(var(--color-win) / 0.35); }
+
+.popup-stack { display: flex; flex-direction: column; gap: 8px; }
+.popup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.popup-actions .by-btn { justify-content: center; }
+
+.by-btn-block { width: 100%; justify-content: center; }
+
+.popup-out {
+  margin: 0;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  color: rgb(var(--color-muted));
+  background: rgb(var(--color-bg));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: calc(var(--radius) - 0.25rem);
+}
+
+[hidden] { display: none !important; }

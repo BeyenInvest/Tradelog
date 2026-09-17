@@ -18,6 +18,7 @@ export interface ProfileInfo {
 }
 
 export interface JournalField {
+  id: string;
   fieldKey: string;
   label: string;
   labelKey: string | null;
@@ -27,6 +28,10 @@ export interface JournalField {
   isComputed: boolean;
   groupLabel: string | null;
   sortOrder: number;
+  /** Conditionele zichtbaarheid: toon dit veld alleen als het veld met dit id
+   * één van showWhenValues heeft (zelfde contract als de web-form, plan M6). */
+  showWhenFieldId: string | null;
+  showWhenValues: unknown;
 }
 
 export interface JournalSchema {
@@ -36,6 +41,21 @@ export interface JournalSchema {
   trackExit: boolean;
   fields: JournalField[];
 }
+
+export interface JournalInfo {
+  id: string;
+  naam: string;
+  assetClass: string | null;
+}
+
+export interface BacktestProjectInfo {
+  id: string;
+  naam: string;
+}
+
+export type InsertTradeResult =
+  | { ok: true; tradeId: string | null; duplicate: boolean }
+  | { ok: false; error: string; code: "missing-column" | "constraint" | "other" };
 
 export interface ExtensionDb {
   /** verifyOtp(magiclink token_hash) → user, of een foutmelding. */
@@ -50,4 +70,14 @@ export interface ExtensionDb {
   getProfile(userId: string): Promise<ProfileInfo | null>;
   /** Journal + velden van één methodology (RLS beperkt tot eigen journals). */
   getJournalSchema(methodologyId: string): Promise<JournalSchema | null>;
+  /** Eigen journals (geen system-templates) voor de doel-kiezer. */
+  listJournals(): Promise<JournalInfo[]>;
+  /** Eigen backtest-projecten voor de doel-kiezer (plan M2). */
+  listBacktestProjects(): Promise<BacktestProjectInfo[]>;
+  /** Insert via PostgREST; unique-violation op import_ref = idempotente retry. */
+  insertTrade(payload: Record<string, unknown>): Promise<InsertTradeResult>;
+  /** PNG naar de screenshots-bucket ({uid}/{uuid}.png — RLS eist het uid-prefix, 0039). */
+  uploadScreenshot(image: Blob): Promise<{ ok: true; path: string } | { ok: false; error: string }>;
+  /** Wees-uploads opruimen wanneer de user de log-poging annuleert (spiegel cleanupUnsavedUploads). */
+  removeScreenshots(paths: string[]): Promise<void>;
 }

@@ -1,11 +1,16 @@
 // MV3 service worker — auth-eigenaar van de extensie (plan §2.6). Houdt de
 // Supabase-sessie in chrome.storage, ververst via chrome.alarms en beantwoordt
 // popup-berichten. Geen writes naar trades in F1b.
+import { parseChartState } from "./adapter/parse";
 import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
+import {
+  cropToRect, runSnapshotCycle, type ChartRect, type SnapshotDeps, type SnapshotSlot,
+} from "./snapshots";
 import { appendLog, readLog } from "./storage";
 import { createExtensionClient, createSupabaseDb } from "./supabaseDb";
+import { logTradeFromChart } from "./tradeFlow";
 
 const db = createSupabaseDb(createExtensionClient());
 
@@ -48,6 +53,102 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
       return fetchJournalDump(db);
     case "diag-log":
       return { entries: await readLog() };
+    case "chart-state":
+      return readChartState();
+    case "targets": {
+      const session = await db.getSessionInfo();
+      if (!session) return { ok: false, error: "Niet gekoppeld" };
+      const profile = await db.getProfile(session.userId);
+      const [journals, projects] = await Promise.all([db.listJournals(), db.listBacktestProjects()]);
+      return { ok: true, activeJournalId: profile?.methodologyId ?? null, journals, projects };
+    }
+    case "log-trade": {
+      const result = await logTradeFromChart(db, req.request);
+      await appendLog("log-trade", result.ok ? `ok${result.duplicate ? " (duplicate)" : ""}` : `${result.stage}: ${result.error}`);
+      return result;
+    }
+    case "snapshot-cycle":
+      return snapshotCycle(req.slots);
+    case "delete-screenshots":
+      await db.removeScreenshots(req.paths.filter((p) => typeof p === "string" && p.length < 200));
+      return { ok: true };
+  }
+}
+
+async function findChartTab(): Promise<chrome.tabs.Tab | undefined> {
+  const isChartTab = (t: chrome.tabs.Tab | undefined) =>
+    !!t?.id && !!t.url && /^https:\/\/([^/]+\.)?tradingview\.com\/chart\//.test(t.url); // geen lookalike-suffixdomeinen
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (isChartTab(active)) return active;
+  const candidates = await chrome.tabs.query({ url: "https://*.tradingview.com/chart/*" });
+  return candidates.find(isChartTab);
+}
+
+/** F3a: de W/D/4H/2H-cyclus met echte Chrome/TV/Supabase-deps rond de pure
+ * runSnapshotCycle. Fouten per slot; het oorspronkelijke timeframe wordt
+ * altijd hersteld (garantie uit runSnapshotCycle zelf). */
+async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snapshot-cycle"]> {
+  const tab = await findChartTab();
+  if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
+  const tabId = tab.id;
+  const windowId = tab.windowId;
+
+  const deps: SnapshotDeps = {
+    async getResolution() {
+      const payload: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-read" });
+      const state = parseChartState(payload);
+      return state.resolution.ok ? state.resolution.value : null;
+    },
+    async setResolution(resolution) {
+      const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-set-resolution", resolution });
+      return typeof res === "object" && res !== null && (res as { ok?: unknown }).ok === true;
+    },
+    async getChartRect() {
+      const rect: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-chart-rect" });
+      if (typeof rect !== "object" || rect === null) return null;
+      const r = rect as Partial<ChartRect>;
+      if ([r.x, r.y, r.w, r.h, r.dpr].some((v) => typeof v !== "number")) return null;
+      return r as ChartRect;
+    },
+    async captureVisible() {
+      const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+      return (await fetch(dataUrl)).blob();
+    },
+    crop: cropToRect,
+    upload: (image) => db.uploadScreenshot(image),
+    settle: () => new Promise((resolve) => setTimeout(resolve, 1500)),
+  };
+
+  try {
+    const result = await runSnapshotCycle(deps, slots);
+    const failed = Object.entries(result.slots).filter(([, r]) => r && !r.ok);
+    if (failed.length > 0) await appendLog("snapshot-degraded", failed.map(([s, r]) => `${s}: ${r && !r.ok ? r.error : ""}`).join(" | "));
+    return { ok: true, ...result };
+  } catch (e) {
+    const detail = String((e instanceof Error && e.message) || e);
+    await appendLog("snapshot-error", detail);
+    return { ok: false, error: detail };
+  }
+}
+
+/** Vraag de bridge op een open TV-chart-tab om de chart-state en parseer die
+ * over de vertrouwensgrens heen (F2a). Actieve tab eerst, anders de eerste
+ * TV-chart-tab; leesfouten gaan het diagnose-log in (telemetrie-haak F4a). */
+async function readChartState(): Promise<ExtResponses["chart-state"]> {
+  const tab = await findChartTab();
+  if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
+  try {
+    const payload: unknown = await chrome.tabs.sendMessage(tab.id, { type: "tv-page-read" });
+    const state = parseChartState(payload);
+    const failures = [state.symbol, state.resolution, state.tick, state.positions]
+      .filter((r) => !r.ok)
+      .map((r) => (r.ok ? "" : r.reason));
+    if (failures.length > 0) await appendLog("chart-read-degraded", failures.join(" | "));
+    return { ok: true, state };
+  } catch (e) {
+    const detail = String((e instanceof Error && e.message) || e);
+    await appendLog("chart-read-error", detail);
+    return { ok: false, error: "Chart-tab antwoordt niet — herlaad de TradingView-pagina" };
   }
 }
 

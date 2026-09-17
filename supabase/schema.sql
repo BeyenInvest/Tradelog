@@ -280,6 +280,33 @@ create table trades (
     not is_open or (mae_pct is null and mfe_pct is null)
   ),
 
+  -- Chart-prijzen (TV-extensie F2c, 0058) — entry/SL/TP zoals ingetekend in de
+  -- position-tool; exit_price is de F5-haak (close-from-chart), nu altijd null.
+  -- Set-regel: alles null, óf entry+stop beide gevuld; richting-consistentie
+  -- (Long ⇒ stop < entry) hard in de DB — een SL aan de verkeerde kant is de
+  -- stille R-corruptor. Bewust NIET in de share-RPC-allow-lists (geen absolute
+  -- prijsniveaus in coach-links).
+  entry_price numeric(18,8),
+  stop_price numeric(18,8),
+  target_price numeric(18,8),
+  exit_price numeric(18,8),
+  constraint trades_prices_positive_chk check (
+    coalesce(entry_price, 1) > 0
+    and coalesce(stop_price, 1) > 0
+    and coalesce(target_price, 1) > 0
+    and coalesce(exit_price, 1) > 0
+  ),
+  constraint trades_prices_pair_chk check (
+    (entry_price is null and stop_price is null and target_price is null and exit_price is null)
+    or (entry_price is not null and stop_price is not null and stop_price <> entry_price)
+  ),
+  constraint trades_prices_direction_chk check (
+    entry_price is null
+    or direction is null
+    or (direction = 'Long'  and stop_price < entry_price)
+    or (direction = 'Short' and stop_price > entry_price)
+  ),
+
   weekly_criteria weekly_criteria_enum,
   weekly_kenmerk weekly_kenmerk_enum,
   trade_concept text, -- fixed TRADE_CONCEPTS list + per-user custom_options, not a native enum (see custom_options below)
@@ -1922,4 +1949,5 @@ insert into schema_migrations (filename) values
   ('0054_habits.sql'),
   ('0055_daily_journal.sql'),
   ('0056_configurable_habits.sql'),
-  ('0057_registry_fork_track_exit.sql');
+  ('0057_registry_fork_track_exit.sql'),
+  ('0058_trade_prices.sql');

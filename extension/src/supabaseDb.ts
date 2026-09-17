@@ -71,12 +71,13 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
 
       const { data: fields, error: fieldsErr } = await client
         .from("methodology_fields")
-        .select("field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order")
+        .select("id, field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order, show_when_field_id, show_when_values")
         .eq("methodology_id", methodologyId)
         .order("sort_order", { ascending: true });
       if (fieldsErr) return null;
 
       const mapped: JournalField[] = (fields ?? []).map((f) => ({
+        id: f.id,
         fieldKey: f.field_key,
         label: f.label,
         labelKey: f.label_key ?? null,
@@ -86,6 +87,8 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         isComputed: f.is_computed === true,
         groupLabel: f.group_label ?? null,
         sortOrder: f.sort_order,
+        showWhenFieldId: f.show_when_field_id ?? null,
+        showWhenValues: f.show_when_values ?? null,
       }));
 
       return {
@@ -95,6 +98,55 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         trackExit: journal.track_exit === true,
         fields: mapped,
       };
+    },
+
+    async listJournals() {
+      const { data, error } = await client
+        .from("methodologies")
+        .select("id, naam, asset_class")
+        .eq("is_system", false)
+        .order("created_at", { ascending: true });
+      if (error || !data) return [];
+      return data.map((m) => ({ id: m.id, naam: m.naam, assetClass: m.asset_class ?? null }));
+    },
+
+    async listBacktestProjects() {
+      const { data, error } = await client
+        .from("backtest_projects")
+        .select("id, naam")
+        .order("created_at", { ascending: true });
+      if (error || !data) return [];
+      return data.map((p) => ({ id: p.id, naam: p.naam }));
+    },
+
+    async uploadScreenshot(image) {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return { ok: false, error: "geen sessie" };
+      const path = `${uid}/${crypto.randomUUID()}.png`;
+      const { error } = await client.storage.from("screenshots").upload(path, image, {
+        contentType: "image/png",
+        upsert: false,
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, path };
+    },
+
+    async removeScreenshots(paths) {
+      if (paths.length === 0) return;
+      await client.storage.from("screenshots").remove(paths);
+    },
+
+    async insertTrade(payload) {
+      const { data, error } = await client.from("trades").insert(payload).select("id").single();
+      if (!error) return { ok: true, tradeId: (data as { id: string }).id, duplicate: false };
+      // 23505 = unique violation op trades_user_import_ref_unique → deze trade
+      // is al gelogd (retry na netwerkfout) — dat is succes, geen fout (plan C6).
+      if (error.code === "23505") return { ok: true, tradeId: null, duplicate: true };
+      // 42703 = kolom bestaat niet → migratie 0058 draait nog niet op deze DB.
+      if (error.code === "42703") return { ok: false, error: error.message, code: "missing-column" };
+      if (error.code === "23514") return { ok: false, error: error.message, code: "constraint" };
+      return { ok: false, error: error.message, code: "other" };
     },
   };
 }

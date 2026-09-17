@@ -84,6 +84,11 @@ export function dealToImportRow(
     mae_pct: null,
     mfe_pct: null,
     planned_rr: null,
+    // Chart-prijzen (0058) komen alleen uit de TV-extensie; broker-CSV's laten ze leeg.
+    entry_price: null,
+    stop_price: null,
+    target_price: null,
+    exit_price: null,
     weekly_criteria: null,
     weekly_kenmerk: null,
     trade_concept: null,

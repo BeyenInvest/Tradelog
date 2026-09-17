@@ -67,6 +67,15 @@ export const tradeSchema = z
     mae_pct: nullableNumber.optional().default(null),
     mfe_pct: nullableNumber.optional().default(null),
     planned_rr: nullableNumber.optional().default(null),
+    // Chart-prijzen (F2c, 0058). Bewust alleen nullable numbers hier: de
+    // cross-field-regels (entry+stop-paar, stop<>entry, richting-consistentie)
+    // leven al in de DB-checks én in buildTradePayload — een derde kopie in
+    // zod zou drie plekken synchroon moeten houden. De web-form toont deze
+    // velden pas in F2d/F5.
+    entry_price: nullableNumber.optional().default(null),
+    stop_price: nullableNumber.optional().default(null),
+    target_price: nullableNumber.optional().default(null),
+    exit_price: nullableNumber.optional().default(null),
     weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
     weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
     // Deliberate exception to "one shared enum, no free text" above (same as `entry` below):

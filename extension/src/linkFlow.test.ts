@@ -12,6 +12,7 @@ const JOURNAL: JournalSchema = {
   trackExit: false,
   fields: [
     {
+      id: "f-entry-type",
       fieldKey: "entry_type",
       label: "Entry type",
       labelKey: null,
@@ -21,6 +22,8 @@ const JOURNAL: JournalSchema = {
       isComputed: false,
       groupLabel: null,
       sortOrder: 1,
+      showWhenFieldId: null,
+      showWhenValues: null,
     },
   ],
 };
@@ -35,6 +38,11 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     refreshSession: vi.fn(async () => ({})),
     getProfile: vi.fn(async () => BETA_PROFILE),
     getJournalSchema: vi.fn(async () => JOURNAL),
+    listJournals: vi.fn(async () => []),
+    listBacktestProjects: vi.fn(async () => []),
+    insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
+    uploadScreenshot: vi.fn(async () => ({ ok: true as const, path: "u1/x.png" })),
+    removeScreenshots: vi.fn(async () => {}),
     ...overrides,
   };
 }

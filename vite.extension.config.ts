@@ -9,6 +9,11 @@ const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
   root: "extension",
+  resolve: {
+    // Zelfde "@"-alias als de web-app, zodat gedeelde src/lib-modules
+    // (quickLog → validation → constants) ongewijzigd meebundelen (plan §2.5).
+    alias: { "@": r("./src") },
+  },
   // Relatieve asset-paden: de popup leeft op chrome-extension://<id>/dist/popup.html,
   // een absolute "/popup.js" zou buiten dist/ wijzen.
   base: "./",
