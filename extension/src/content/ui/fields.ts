@@ -8,6 +8,7 @@ import {
 } from "../../../../src/lib/constants";
 import type { LegacyTradeColumn } from "../../../../src/lib/tradePayload";
 import type { JournalField } from "../../db";
+import type { MessageKey } from "../../i18nExt";
 
 export type FormValues = Record<string, unknown>;
 
@@ -67,14 +68,6 @@ export function formFields(allFields: JournalField[]): JournalField[] {
 // web-form, en hun antwoorden landen via LogTradeRequest.legacy in echte
 // trades.*-kolommen. `fase3_beide` is computed en doet dus niet mee.
 
-/** @deprecated sinds de legacy-velden echt renderen; verdwijnt met de uitleg-zin. */
-export function skippedLegacyFields(allFields: JournalField[]): JournalField[] {
-  if (!isLegacyJournal(allFields)) return [];
-  return allFields.filter(
-    (f) => !f.isComputed && f.fieldKey !== "fase" && LEGACY_METHODOLOGY_FIELD_KEYS.has(f.fieldKey)
-  );
-}
-
 export type LegacyFieldSpec =
   | { key: LegacyTradeColumn; kind: "enum"; options: readonly string[] }
   | { key: LegacyTradeColumn; kind: "addable"; options: readonly string[] }
@@ -113,6 +106,57 @@ export function legacyKenmerkFields(fase: string): (LegacyFieldSpec & { label: s
 }
 
 /**
+ * De i18n-sleutel van elk legacy-veld. Een volledige Record over
+ * LegacyTradeColumn: een kolom die erbij komt zonder label is een compile-fout,
+ * geen rij met een rauwe kolomnaam als label. De NL-zinnen zijn letterlijk de
+ * labels van de web-form (de tradeForm- en faseKenmerken-sleutels).
+ */
+const LEGACY_LABEL_KEYS: Record<LegacyTradeColumn, MessageKey> = {
+  cc: "legacy.cc",
+  trade_concept: "legacy.tradeConcept",
+  entry: "legacy.entry",
+  weekly_criteria: "legacy.weeklyCriteria",
+  weekly_kenmerk: "legacy.weeklyKenmerk",
+  nieuws: "legacy.nieuws",
+  w_confirm: "legacy.wConfirm",
+  d_confirm: "legacy.dConfirm",
+  h4_confirm: "legacy.h4Confirm",
+  extra_d_conf: "legacy.extraDConf",
+  fase1_daily_respecteert_zone: "legacy.k.fase1_daily_respecteert_zone",
+  fase1_spelers_verleden: "legacy.k.fase1_spelers_verleden",
+  fase2_daily_respecteert_zone: "legacy.k.fase2_daily_respecteert_zone",
+  fase2_structuur: "legacy.k.fase2_structuur",
+  fase3_zone_min_2_touches: "legacy.k.fase3_zone_min_2_touches",
+  fase3_engulfing_candle: "legacy.k.fase3_engulfing_candle",
+  fase3_structuur: "legacy.k.fase3_structuur",
+  fase4_weekly_bevestigingscandle: "legacy.k.fase4_weekly_bevestigingscandle",
+};
+
+export function legacyLabelKey(key: LegacyTradeColumn): MessageKey {
+  return LEGACY_LABEL_KEYS[key];
+}
+
+/**
+ * De keuzelijst van een addable-veld: de gedeelde vaste lijst plus de eigen
+ * custom_options van de user, in die volgorde en zonder dubbels — zelfde merge
+ * als AddableSelect in de web-form. Toevoegen/verwijderen blijft daar; het
+ * paneel toont alleen wat er al is.
+ */
+export function addableOptions(base: readonly string[], custom: readonly string[]): string[] {
+  const out: string[] = [...base];
+  for (const value of custom) {
+    if (typeof value === "string" && value !== "" && !out.includes(value)) out.push(value);
+  }
+  return out;
+}
+
+/** De fase die het paneel toont en meestuurt: de keuze van de user, anders de default. */
+export function selectedFase(allFields: JournalField[], values: FormValues): string {
+  const chosen = values["fase"];
+  return typeof chosen === "string" && chosen !== "" ? chosen : faseValue(allFields);
+}
+
+/**
  * Wat er als `legacy` de payload in gaat: alle beantwoorde legacy-velden, maar
  * kenmerken alléén van de gekozen fase — een antwoord van een eerder gekozen
  * fase mag niet stilletjes meeliften.
@@ -141,7 +185,7 @@ export function isVisible(field: JournalField, allFields: JournalField[], values
   // De fase is sinds de legacy-velden een echte keuze in het paneel; zolang er
   // (nog) geen keuze in values zit geldt de default.
   const value =
-    parent.fieldKey === "fase" ? (values["fase"] ?? faseValue(allFields)) : values[parent.fieldKey];
+    parent.fieldKey === "fase" ? selectedFase(allFields, values) : values[parent.fieldKey];
   return wanted.includes(String(value ?? ""));
 }
 
