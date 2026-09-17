@@ -3,7 +3,7 @@ import type { ExtensionDb, JournalSchema, ProfileInfo, SessionInfo } from "./db"
 import { firstFaseOf, logTradeFromChart, type LogTradeRequest } from "./tradeFlow";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
-const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
+const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
 
 const LEGACY_JOURNAL: JournalSchema = {
   id: "m-1",
@@ -38,6 +38,7 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     getJournalSchema: vi.fn(async () => LEGACY_JOURNAL),
     listJournals: vi.fn(async () => []),
     listBacktestProjects: vi.fn(async () => []),
+    listCustomOptions: vi.fn(async () => []),
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     ...overrides,
   } as ExtensionDb;

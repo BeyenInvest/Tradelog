@@ -17,6 +17,7 @@ export type ExtRequest =
   | { type: "chart-state" }
   | { type: "targets" }
   | { type: "log-trade"; request: LogTradeRequest }
+  | { type: "custom-options" }
   | { type: "snapshot-cycle"; slots: SnapshotSlot[] }
   | { type: "delete-screenshots"; paths: string[] };
 
@@ -25,6 +26,15 @@ export interface TargetsInfo {
   activeJournalId: string | null;
   journals: JournalInfo[];
   projects: BacktestProjectInfo[];
+  /** profiles.hide_fase — het paneel verbergt dan de fase-select (display-only). */
+  hideFase: boolean;
+}
+
+/** Eigen custom_options voor de twee legacy AddableSelect-velden. */
+export interface CustomOptionsInfo {
+  ok: true;
+  entry: string[];
+  tradeConcept: string[];
 }
 
 export interface ExtResponses {
@@ -36,6 +46,7 @@ export interface ExtResponses {
   "chart-state": { ok: true; state: ChartState } | FlowError;
   targets: TargetsInfo | FlowError;
   "log-trade": LogTradeResult;
+  "custom-options": CustomOptionsInfo | FlowError;
   "snapshot-cycle": ({ ok: true } & SnapshotCycleResult) | FlowError;
   "delete-screenshots": { ok: true };
 }

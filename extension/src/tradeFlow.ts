@@ -5,7 +5,7 @@
 import type { Direction } from "../../src/lib/constants";
 import { normalizeTvSymbol } from "../../src/lib/symbolNormalize";
 import {
-  buildTradePayload, type TradeMode, type WallClock,
+  buildTradePayload, type LegacyTradeColumn, type TradeMode, type WallClock,
 } from "../../src/lib/tradePayload";
 import type { ExtensionDb, JournalSchema } from "./db";
 
@@ -21,6 +21,10 @@ export interface LogTradeRequest {
   manualDateTime?: WallClock | null;
   riskPct: number | null;
   custom: Record<string, unknown>;
+  /** Door de user gekozen fase (legacy journal); null/afwezig = eerste fase. */
+  fase?: string | null;
+  /** Antwoorden op de legacy-WPM-velden → echte kolommen (whitelist in tradePayload). */
+  legacy?: Partial<Record<LegacyTradeColumn, unknown>> | null;
   notes?: string | null;
   clientUuid: string;
   /** Storage-paden uit de snapshot-cyclus (F3a) voor de vier vaste slots. */
@@ -38,6 +42,16 @@ export function firstFaseOf(journal: JournalSchema | null): string {
   const options = faseField?.options;
   if (Array.isArray(options) && typeof options[0] === "string" && options[0]) return options[0];
   return "Fase 1";
+}
+
+/** De fase die de payload in gaat: de keuze van de user als die één van de
+ * journal-opties is, anders de eerste fase (zelfde default als quick-log). */
+export function resolveFase(journal: JournalSchema | null, requested: string | null | undefined): string {
+  if (requested) {
+    const options = journal?.fields.find((f) => f.fieldKey === "fase")?.options;
+    if (Array.isArray(options) && options.includes(requested)) return requested;
+  }
+  return firstFaseOf(journal);
 }
 
 export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): Promise<LogTradeResult> {
@@ -64,7 +78,7 @@ export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): 
         ? { type: "project", projectId: req.target.projectId, methodologyId: profile.methodologyId }
         : { type: "live", methodologyId: profile.methodologyId },
     timezone: profile.timezone,
-    fase: firstFaseOf(journal),
+    fase: resolveFase(journal, req.fase),
     entryTimeUtcMs: req.entryTimeUtcSec != null ? req.entryTimeUtcSec * 1000 : null,
     manualDateTime: req.manualDateTime ?? null,
     mode: req.mode,
@@ -72,6 +86,7 @@ export async function logTradeFromChart(db: ExtensionDb, req: LogTradeRequest): 
     prices: req.prices,
     riskPct: req.riskPct,
     custom: req.custom,
+    legacy: req.legacy ?? undefined,
     clientUuid: req.clientUuid,
     notes: req.notes ?? null,
   });

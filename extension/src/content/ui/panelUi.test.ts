@@ -202,3 +202,56 @@ describe("slotStatus-copy (F4b)", () => {
     }
   });
 });
+
+// ── Legacy-WPM-velden (spiegel web-form) ────────────────────────────────────
+import { legacyConfirmFields, legacyEntryFields, legacyFromValues, legacyKenmerkFields, faseOptions } from "./fields";
+
+describe("legacyConfirmFields", () => {
+  it("levert de vier confirms als booleans", () => {
+    expect(legacyConfirmFields().map((f) => f.key)).toEqual(["w_confirm", "d_confirm", "h4_confirm", "extra_d_conf"]);
+    expect(legacyConfirmFields().every((f) => f.kind === "boolean")).toBe(true);
+  });
+});
+
+describe("legacy-veldspecs", () => {
+  it("entry-blok volgt de web-form: cc, concept, entry, weekly criteria/kenmerk, nieuws", () => {
+    expect(legacyEntryFields().map((f) => f.key)).toEqual([
+      "cc", "trade_concept", "entry", "weekly_criteria", "weekly_kenmerk", "nieuws",
+    ]);
+    expect(legacyEntryFields().find((f) => f.key === "trade_concept")?.kind).toBe("addable");
+  });
+
+  it("kenmerken volgen de gekozen fase en slaan computed over", () => {
+    expect(legacyKenmerkFields("Fase 3").map((f) => f.key)).toEqual([
+      "fase3_zone_min_2_touches", "fase3_engulfing_candle", "fase3_structuur",
+    ]);
+    expect(legacyKenmerkFields("Fase 4").map((f) => f.key)).toEqual(["fase4_weekly_bevestigingscandle"]);
+    expect(legacyKenmerkFields("Onbekend")).toEqual([]);
+  });
+
+  it("legacyFromValues neemt alleen beantwoorde velden van de gekozen fase mee", () => {
+    const values = {
+      cc: "15",
+      entry: "",
+      nieuws: false,
+      fase2_structuur: "Inner",
+      fase3_engulfing_candle: true,
+      niet_legacy: "x",
+    };
+    expect(legacyFromValues("Fase 2", values)).toEqual({
+      cc: "15",
+      nieuws: false,
+      fase2_structuur: "Inner",
+    });
+    // zelfde values, andere fase: het fase-2-antwoord lift niet mee
+    expect(legacyFromValues("Fase 3", values)).toEqual({
+      cc: "15",
+      nieuws: false,
+      fase3_engulfing_candle: true,
+    });
+  });
+
+  it("faseOptions leest de opties van het gezaaide fase-veld", () => {
+    expect(faseOptions([])).toEqual([]);
+  });
+});
