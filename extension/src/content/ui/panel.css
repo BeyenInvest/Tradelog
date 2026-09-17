@@ -316,6 +316,66 @@ textarea.by-input { resize: vertical; min-height: 58px; font: 13px/1.45 var(--fo
   border-radius: 6px;
 }
 
+/* ── Open trades sluiten (F5) ────────────────────────────────────────────── */
+.by-close-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+.by-close-row + .by-close-row,
+.by-close-form + .by-close-row { border-top: 1px dashed rgb(var(--color-border-soft)); }
+.by-close-main { flex: 1; min-width: 0; }
+.by-close-head { display: flex; align-items: baseline; gap: 7px; }
+.by-close-when { font-size: 12px; }
+.by-close-dir { font: 600 11px/1.2 var(--font-body); }
+.by-close-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgb(var(--color-muted));
+  overflow-wrap: anywhere;
+}
+.by-close-rr { color: rgb(var(--color-faint)); }
+
+.by-close-form {
+  margin: 2px 0 8px;
+  padding: 9px 11px;
+  background: rgb(var(--color-surface-2));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: calc(var(--radius) - 0.35rem);
+}
+
+/* Preview: afgeleide R + % met de outcome-badge ernaast (nooit kiesbaar). */
+.by-close-preview { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.by-close-preview-value { flex: 1; font-size: 13px; min-width: 0; }
+.by-close-preview-value.is-empty { font-size: 11px; color: rgb(var(--color-faint)); }
+.by-outcome {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 11px/1.3 var(--font-body);
+  border: 1px solid rgb(var(--color-border));
+  color: rgb(var(--color-muted));
+}
+.by-outcome[data-outcome="Win"] {
+  color: rgb(var(--color-win));
+  border-color: rgb(var(--color-win) / 0.6);
+  background: rgb(var(--color-win) / 0.14);
+}
+.by-outcome[data-outcome="Loss"] {
+  color: rgb(var(--color-loss));
+  border-color: rgb(var(--color-loss) / 0.6);
+  background: rgb(var(--color-loss) / 0.14);
+}
+.by-outcome[data-outcome="BE"] {
+  color: rgb(var(--color-be));
+  border-color: rgb(var(--color-be) / 0.6);
+  background: rgb(var(--color-be) / 0.14);
+}
+
+.by-close-done { margin-bottom: 10px; color: rgb(var(--color-win)); border-color: rgb(var(--color-win) / 0.35); background: rgb(var(--color-win) / 0.1); }
+.by-close-done-icon { display: inline-flex; flex: none; }
+/* ICON_CHECK is op 22px getekend (succes-staat); in deze melding mag hij mee
+ * met de tekst. */
+.by-close-done-icon svg { width: 15px; height: 15px; }
+
 /* ── Meldingen ───────────────────────────────────────────────────────────── */
 .by-note {
   display: flex;

@@ -14,6 +14,7 @@ import { directionFromPrices, plannedRR } from "./priceMath";
 import { quickLogDefaults } from "./quickLog";
 import { type NormalizedSymbol } from "./symbolNormalize";
 import { tradeSchema, type TradeFormValues } from "./validation";
+import { wallClockInTimezone, type WallClock } from "./wallClock";
 
 /** Verwijder lege/onaffe waarden zodat trades.custom alleen beantwoorde velden
  * bevat (string|number|boolean). Gedeeld met TradeForm — niet dupliceren. */
@@ -27,39 +28,10 @@ export function pruneCustom(raw: Record<string, unknown>): Record<string, string
   return out;
 }
 
-export interface WallClock {
-  /** "YYYY-MM-DD" in de doel-tijdzone. */
-  date: string;
-  /** "HH:MM" in de doel-tijdzone. */
-  time: string;
-}
-
-/**
- * UTC-instant → wall-clock in een IANA-tijdzone (M4). `datum_open`/`tijd_open`
- * zijn wall-clock in profiles.timezone — de sessie-trigger rekent daarmee, dus
- * een fout hier vervuilt de sessie-breakdown onzichtbaar. Null bij een
- * onbruikbare timestamp of onbekende tijdzone.
- */
-export function wallClockInTimezone(utcMs: number, timeZone: string): WallClock | null {
-  if (!Number.isFinite(utcMs)) return null;
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).formatToParts(new Date(utcMs));
-    const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value;
-    const [y, mo, d, h, mi] = [get("year"), get("month"), get("day"), get("hour"), get("minute")];
-    if (!y || !mo || !d || !h || !mi) return null;
-    return { date: `${y}-${mo}-${d}`, time: `${h}:${mi}` };
-  } catch {
-    return null; // onbekende/kapotte tijdzone-string
-  }
-}
+// Verhuisd naar een eigen mini-module (wallClock.ts) zodat closeFlow — en dus
+// de paneel-bundle — 'm kan importeren zonder validation.ts/zod mee te slepen;
+// re-export zodat bestaande importeurs (tradeFlow, tests) niets merken.
+export { wallClockInTimezone, type WallClock } from "./wallClock";
 
 /**
  * De legacy-WPM-kolommen die het paneel op een legacy journal als echte velden

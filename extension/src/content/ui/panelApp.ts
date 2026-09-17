@@ -20,7 +20,10 @@ import type { ChartState, PositionState } from "../../adapter/parse";
 import type { JournalField, JournalSchema } from "../../db";
 import { ensureLang, onLangChange, t, type MessageKey } from "../../i18nExt";
 import { sendToSw, type TargetsInfo } from "../../messages";
+import type { SnapshotSlot } from "../../snapshots";
 import type { LogTradeRequest } from "../../tradeFlow";
+import { renderCloseSection } from "./closeSection";
+import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
@@ -30,13 +33,12 @@ import {
 import { renderDynamicForm, type DynamicForm } from "./form";
 import { renderLegacyForm, type LegacyCustomOptions } from "./legacyForm";
 import {
-  formatBarTime, formatPrice, formatResolution, formatRR, newClientUuid, parseNumberInput,
+  formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
 import { ICON_CHECK, ICON_CLOSE, ICON_EXTERNAL, ICON_PENCIL, ICON_REFRESH, markSvg } from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
 
-const JOURNAL_URL = "https://www.beyen.app/journal";
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
 const TARGET_KEY = "beyen-tv-ext:target";
 
@@ -99,6 +101,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let values: FormValues = {};
   /** Eén keer per formulier-sessie; blijft gelijk bij een retry (idempotentie). */
   let clientUuid = newClientUuid();
+  /** "Nog aanpassen" (F5): dezelfde clientUuid, maar het schrijfpad wordt een
+   * update van de zojuist gelogde rij in plaats van een nieuwe insert. */
+  let editingLogged = false;
+  /** De snapshot-paden die mét de log meegingen; een bewerking mag ze niet
+   * leegvegen (de sectie zelf is na een geslaagde log alweer vers). */
+  let loggedScreenshots: Partial<Record<SnapshotSlot, string | null>> | null = null;
 
   let form: DynamicForm | null = null;
   let formFieldList: JournalField[] = [];
@@ -230,6 +238,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const journalSec = sectionEl("panel.sec.journal");
   const extraSec = sectionEl("panel.sec.extra");
   const snapshotsSec = renderSnapshotsSection();
+  const closeSec = renderCloseSection();
 
   const submitBtn = el("button", { class: "by-btn by-btn-block", attrs: { type: "button" } });
   on(submitBtn, "click", () => void submit());
@@ -250,7 +259,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     refreshBtn.setAttribute("title", t("panel.refreshTitle"));
     refreshLabel.textContent = t("panel.refresh");
-    submitBtn.textContent = t("panel.submit");
+    submitBtn.textContent = t(editingLogged ? "panel.submitUpdate" : "panel.submit");
 
     if (showOnboarding) {
       body.appendChild(
@@ -261,7 +270,14 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       );
     }
 
+    if (editingLogged) {
+      body.appendChild(note(t("panel.editHint"), "is-gold"));
+    }
+
     body.appendChild(chartSec.section);
+    // Sluiten staat vlak onder de chart: "je hebt hier nog iets open" hoort de
+    // eerste vraag te zijn, niet iets onderaan het log-formulier.
+    body.appendChild(closeSec.element);
     body.appendChild(positionSec.section);
     body.appendChild(targetSec.section);
     body.appendChild(modeSec.section);
@@ -818,14 +834,22 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     showError(null);
     submitBtn.disabled = true;
-    submitBtn.textContent = t("panel.submitBusy");
+    submitBtn.textContent = t(editingLogged ? "panel.submitUpdateBusy" : "panel.submitBusy");
+    // Bij een bewerking gaat exact dezelfde payload mee, mét de screenshots van
+    // de log erin — anders zou de update die kolommen leegschrijven.
+    const request: LogTradeRequest = editingLogged
+      ? { ...built.request, screenshots: mergeScreenshots(loggedScreenshots, snapshotsSec.screenshots()) }
+      : built.request;
     try {
-      const result = await sendToSw({ type: "log-trade", request: built.request });
+      const result = editingLogged
+        ? await sendToSw({ type: "update-trade", request })
+        : await sendToSw({ type: "log-trade", request });
       if (result.ok) {
-        // Alleen bij een échte insert zitten de snapshots in een trade; bij een
-        // duplicate is er niets weggeschreven, dus zijn onze uploads wezen.
+        // Alleen bij een échte schrijfactie zitten de snapshots in een trade; bij
+        // een duplicate is er niets weggeschreven, dus zijn onze uploads wezen.
         if (result.duplicate) snapshotsSec.reset();
         else snapshotsSec.consume();
+        if (!result.duplicate) loggedScreenshots = request.screenshots ?? null;
         showView(() => showSuccess(result.duplicate));
         return;
       }
@@ -834,7 +858,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       showError({ message: t("panel.reload.retry") });
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = t("panel.submit");
+      submitBtn.textContent = t(editingLogged ? "panel.submitUpdate" : "panel.submit");
     }
   }
 
@@ -853,24 +877,40 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       void refreshChart();
     });
 
+    // "Nog aanpassen": terug naar hetzelfde formulier met alle waarden intact
+    // (die leven in deze closure) en dezelfde clientUuid — opslaan wordt dan een
+    // update van precies die rij (import_ref), geen tweede trade.
+    const edit = el("button", {
+      class: "by-btn by-btn-ghost",
+      text: t("panel.success.edit"),
+      attrs: { type: "button" },
+    });
+    on(edit, "click", () => {
+      editingLogged = true;
+      showView(buildForm);
+    });
+
+    const updated = editingLogged && !duplicate;
     showState(
       el("div", { class: "by-state" }, [
         el("div", { class: "by-state-icon is-win", unsafeHtml: ICON_CHECK }),
         el("p", {
           class: "by-state-title",
-          text: duplicate ? t("panel.duplicate.title") : t("panel.success.title"),
+          text: duplicate ? t("panel.duplicate.title") : updated ? t("panel.updated.title") : t("panel.success.title"),
         }),
         el("p", {
           class: "by-state-text",
-          text: duplicate ? t("panel.duplicate.text") : t("panel.success.text"),
+          text: duplicate ? t("panel.duplicate.text") : updated ? t("panel.updated.text") : t("panel.success.text"),
         }),
-        el("div", { class: "by-stack", style: "align-items:center;gap:12px;" }, [link, again]),
+        el("div", { class: "by-stack", style: "align-items:center;gap:12px;" }, [link, edit, again]),
       ])
     );
   }
 
   function resetForm(): void {
     clientUuid = newClientUuid();
+    editingLogged = false;
+    loggedScreenshots = null;
     values = {};
     overrides = {};
     outcome = null;
@@ -904,6 +944,17 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     renderChart();
     renderPosition();
     updatePending();
+    syncCloseSection();
+  }
+
+  /** De sluit-sectie leeft op dezelfde chart-lezing: symbool (welke trades),
+   * laatste bar (exit-prefill + sluitdatum) en de journal-instelling voor MAE/MFE. */
+  function syncCloseSection(): void {
+    closeSec.setContext({
+      symbolRaw: chart?.symbol.ok ? chart.symbol.value : null,
+      bar: chart?.lastBar.ok ? chart.lastBar.value : null,
+      trackExit: journal?.trackExit === true,
+    });
   }
 
   /** Eén keer per paneel-mount; mislukt de lezing, dan blijven de basisopties over. */
@@ -962,6 +1013,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     element: panel,
     destroy() {
       stopLangWatch();
+      closeSec.dispose();
       // Sluiten met niet-gelogde snapshots = wezen in de bucket; die gaan mee weg.
       snapshotsSec.dispose();
       panel.remove();

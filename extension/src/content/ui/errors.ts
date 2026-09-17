@@ -7,10 +7,12 @@
 // `detail` blijft bewust onvertaald: dat is de technische bijzin uit de service
 // worker (Postgres-kolom, adapter-reden). Die willen we letterlijk kunnen
 // terugzoeken in de diagnose-log, niet in twee varianten.
+import type { CloseTradeResult } from "../../closeFlow";
 import { t, type MessageKey } from "../../i18nExt";
 import type { LogTradeResult } from "../../tradeFlow";
 
 export type LogTradeFailure = Extract<LogTradeResult, { ok: false }>;
+export type CloseTradeFailure = Extract<CloseTradeResult, { ok: false }>;
 
 export interface ErrorCopy {
   /** Wat er mis is, in één zin. */
@@ -61,8 +63,12 @@ export function humanizeSchemaDetail(detail: string | undefined): string | undef
   return `${labelKey ? t(labelKey) : key} ${messageKey ? t(messageKey) : message}`;
 }
 
-export function logTradeErrorCopy(failure: LogTradeFailure): ErrorCopy {
-  const { error, detail } = failure;
+/**
+ * De codes die het log- én het sluitpad delen: dezelfde poortwachters (sessie,
+ * beta-profiel), dezelfde symbool-normalisatie, dezelfde DB-weigeringen. null =
+ * deze code is van één pad; de aanroeper vertaalt 'm zelf.
+ */
+function sharedErrorCopy(error: string, detail: string | undefined): ErrorCopy | null {
   switch (error) {
     case "not-linked":
       return { message: t("err.notLinked") };
@@ -70,25 +76,67 @@ export function logTradeErrorCopy(failure: LogTradeFailure): ErrorCopy {
       return { message: t("err.notBeta") };
     case "profile-unreadable":
       return { message: t("err.profileUnreadable") };
-    case "symbol-not-in-pairs":
-      return { message: t("err.symbolNotInPairs", { symbol: detail ?? t("err.symbolFallback") }) };
     case "symbol-unreadable":
       return { message: t("err.symbolUnreadable"), detail };
     case "direction-price-mismatch":
       return { message: t("err.directionMismatch"), detail };
+    case "missing-column":
+      return { message: t("err.missingColumn"), detail };
+    case "constraint":
+      return { message: t("err.constraint"), detail };
+    default:
+      return null;
+  }
+}
+
+export function logTradeErrorCopy(failure: LogTradeFailure): ErrorCopy {
+  const { error, detail } = failure;
+  const shared = sharedErrorCopy(error, detail);
+  if (shared) return shared;
+  switch (error) {
+    case "symbol-not-in-pairs":
+      return { message: t("err.symbolNotInPairs", { symbol: detail ?? t("err.symbolFallback") }) };
     case "stop-equals-entry":
       return { message: t("err.stopEqualsEntry") };
     case "no-entry-time":
       return { message: t("err.noEntryTime") };
     case "empty-client-uuid":
       return { message: t("err.emptyClientUuid") };
-    case "missing-column":
-      return { message: t("err.missingColumn"), detail };
-    case "constraint":
-      return { message: t("err.constraint"), detail };
     case "schema-invalid":
       return { message: t("err.schemaInvalid"), detail: humanizeSchemaDetail(detail) };
+    // Alleen het update-pad (F5, "Nog aanpassen"): de rij is intussen weg.
+    case "not-found":
+      return { message: t("err.notFound") };
     default:
       return { message: t("err.generic"), detail: detail ?? error };
+  }
+}
+
+/** Copy voor elke faalcode van het sluitpad (F5a: closeTradeFromChart). Zelfde
+ * afspraak als hierboven: nooit een rauwe code, `detail` blijft onvertaald. */
+export function closeTradeErrorCopy(failure: CloseTradeFailure): ErrorCopy {
+  const { error, detail } = failure;
+  const shared = sharedErrorCopy(error, detail);
+  if (shared) return shared;
+  switch (error) {
+    case "missed-not-selectable":
+      return { message: t("close.err.missedNotSelectable") };
+    case "invalid-evaluation":
+      return { message: t("close.err.invalidEvaluation"), detail };
+    case "exit-price-invalid":
+      return { message: t("close.err.exitInvalid"), detail };
+    case "result-invalid":
+      return { message: t("close.err.resultInvalid") };
+    case "invalid-excursion":
+      return { message: t("close.err.invalidExcursion") };
+    case "no-close-time":
+      return { message: t("close.err.noCloseTime") };
+    case "close-before-open":
+      return { message: t("close.err.closeBeforeOpen"), detail };
+    // De web-app was sneller: de trade is daar al gesloten of verwijderd.
+    case "not-found":
+      return { message: t("close.err.notFound") };
+    default:
+      return { message: t("close.err.generic"), detail: detail ?? error };
   }
 }

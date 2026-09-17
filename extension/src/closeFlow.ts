@@ -10,7 +10,9 @@ import { deriveOutcome } from "../../src/lib/import/mapToTrade";
 import { plannedRR, realizedR, resultaatPctFromExit } from "../../src/lib/priceMath";
 import { round2 } from "../../src/lib/stats/core";
 import { normalizeTvSymbol } from "../../src/lib/symbolNormalize";
-import { wallClockInTimezone } from "../../src/lib/tradePayload";
+// Bewust uit de mini-module, niet uit tradePayload: die zou validation/zod de
+// paneel-bundle in trekken (previewClose wordt door het content-script gebruikt).
+import { wallClockInTimezone } from "../../src/lib/wallClock";
 import type { ExtensionDb, OpenTradeInfo, ProfileInfo, SessionInfo } from "./db";
 
 /** Open trade + wat het paneel alleen maar hoeft te tonen (nooit rekenen). */
