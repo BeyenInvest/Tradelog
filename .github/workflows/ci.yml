@@ -26,3 +26,5 @@ jobs:
       # Geen VITE_*-secrets nodig: de build leest env alleen in als inline
       # strings; de app zelf draait hier niet.
       - run: npm run build
+      # TV-extensie (F-lijn): ook de extensiebundel moet bouwen vóór een merge.
+      - run: npm run build:ext
