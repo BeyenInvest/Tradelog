@@ -11,8 +11,16 @@ import { LogoLockup } from "@/components/ui/Logo";
  * verwijderen kan self-service in Instellingen (DeleteAccountModal + useAuth.
  * deleteAccount, RPC 0006). Contact = info@beyen.app. Aanbevolen: juridische/GDPR-
  * review vóór de betaalde launch. Houd in sync met TermsPage.tsx.
+ *
+ * ⚠️ Punt 10 (TradingView-extensie, F4b 2026-09-17) is net als de rest van deze
+ * pagina NIET juridisch nagekeken. Het beschrijft wat de extensie feitelijk doet
+ * (extension/: chart-adapter leest symbool/timeframe/position-tool, snapshots via
+ * captureVisibleTab naar de eigen Supabase-bucket, sessie in chrome.storage via
+ * een eenmalige koppelcode uit api/extension-link.ts). Dit punt moet mee in de
+ * juridische review, en moet live staan vóór de eerste externe installatie uit de
+ * Web Store — de Store-listing verwijst naar deze pagina als privacy-policy-URL.
  */
-const LAST_UPDATED = "11 september 2026";
+const LAST_UPDATED = "17 september 2026";
 const PROVIDER_NAME = "Chesney Beyen";
 const CONTACT_EMAIL = "info@beyen.app";
 
@@ -151,7 +159,41 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-ink font-medium mb-1">10. Beveiliging</h2>
+            <h2 className="text-ink font-medium mb-1">10. TradingView-extensie (beta)</h2>
+            <p>
+              Gebruik je onze Chrome-extensie voor TradingView, dan geldt daarvoor het volgende. De extensie is
+              optioneel: ze doet niets tot je haar zelf installeert en koppelt.
+            </p>
+            <ul className="list-disc pl-5 mt-1 flex flex-col gap-1">
+              <li>
+                <span className="text-ink">Wat ze leest:</span> uitsluitend op een TradingView-chartpagina, en
+                uitsluitend wat jij daar zelf hebt staan — het symbool, het timeframe en de prijzen en richting van je
+                eigen position-tool (entry, stop, target), plus de bijbehorende bar-tijd. Ze leest geen koersdata, geen
+                andere websites en niets buiten de chartpagina's van TradingView.
+              </li>
+              <li>
+                <span className="text-ink">Wat ze opslaat:</span> de trade die je zelf logt en de eventuele screenshots
+                die je laat maken, in jouw eigen Beyen-account — dezelfde tabellen, opslag en toegangscontrole (Row
+                Level Security) als wanneer je de trade in de webapp invoert. Een screenshot wordt bijgesneden tot het
+                chartgebied en pas geüpload wanneer jij daarom vraagt.
+              </li>
+              <li>
+                <span className="text-ink">Hoe de koppeling werkt:</span> je genereert in Instellingen een eenmalige,
+                kortlevende koppelcode en plakt die in de extensie. Daarmee krijgt de extensie een eigen sessie met
+                exact jouw rechten. Die sessie wordt lokaal in je browser bewaard (chrome.storage), samen met je
+                taalvoorkeur en een kleine technische log voor foutopsporing. In de extensie kun je op elk moment
+                “Koppel los” kiezen; dan wordt die lokale sessie gewist.
+              </li>
+              <li>
+                <span className="text-ink">Waar het naartoe gaat:</span> alleen naar Beyen (Supabase). De extensie
+                stuurt niets naar TradingView, naar ons of naar derden buiten die eigen opslag, bevat geen tracking of
+                advertenties, en verkoopt of deelt je gegevens niet.
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-ink font-medium mb-1">11. Beveiliging</h2>
             <p>
               De toegang tot je gegevens is op databaseniveau beperkt tot je eigen account via toegangscontrole (Row
               Level Security), zodat geen enkele andere gebruiker je gegevens kan inzien. Verkeer verloopt versleuteld
@@ -161,7 +203,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-ink font-medium mb-1">11. Minderjarigen</h2>
+            <h2 className="text-ink font-medium mb-1">12. Minderjarigen</h2>
             <p>
               Beyen is niet bedoeld voor personen jonger dan 16 jaar. We verzamelen niet bewust gegevens van personen
               onder die leeftijd.
@@ -169,7 +211,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-ink font-medium mb-1">12. Wijzigingen</h2>
+            <h2 className="text-ink font-medium mb-1">13. Wijzigingen</h2>
             <p>
               We kunnen dit beleid bijwerken. Belangrijke wijzigingen worden gecommuniceerd via de app of per e-mail;
               de datum bovenaan geeft de laatste versie aan.
