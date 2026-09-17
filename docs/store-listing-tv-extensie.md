@@ -207,9 +207,8 @@ vóór de betaalde launch gepland staat, en live zetten vóór de eerste externe
    4. de succes-staat ("Trade gelogd") met de link naar Beyen;
    5. de koppelkaart in Beyen → Instellingen.
    Gebruik een demo-journal zonder echte accountnamen of bedragen in beeld.
-3. **Store-icoon 128×128** — het bestaande Beyen-merkteken op een donkere achtergrond.
-4. **`extension/manifest.json`**: `name` en `description` staan er nog als F2a-bouwtekst
-   (`"Koppel je Beyen-journal aan TradingView. Beta — F2a: …"`). Die moeten vóór het inpakken gelijkgetrokken
-   worden met de listing hierboven (naam: "Beyen voor TradingView (beta)", description: de korte beschrijving).
-   *Niet gewijzigd in deze sessie: het manifest viel buiten de opdracht van dit blok.*
+3. ~~Store-icoon 128×128~~ — ✅ staat in `extension/icons/icon128.png` (BY-merk op donker, uit de app-assets).
+4. ~~`extension/manifest.json` gelijktrekken~~ — ✅ gedaan 17-09: naam ongewijzigd, `description` = de korte
+   NL-beschrijving hierboven, iconen 16/48/128 in het manifest. Het uploadpakket maak je met `npm run pack:ext`
+   (ná `npm run build:ext`) → `extension-build/beyen-tv-ext-v<versie>.zip`.
 5. **Versienummer** in het manifest verhogen bij elke upload naar de Store.
