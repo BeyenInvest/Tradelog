@@ -25,6 +25,8 @@ npm run build:ext
 
 Daarna in Chrome: `chrome://extensions` → Ontwikkelaarsmodus → "Uitgepakte extensie laden" → kies de map `extension/` (het manifest verwijst naar `dist/`). Na elke rebuild: ⟳ op de extensie-kaart.
 
+Web-Store-pakket (F4b): `npm run pack:ext` (ná `build:ext`) maakt `extension-build/beyen-tv-ext-v<versie>.zip` — alleen manifest + `icons/` + `dist/`, met spec-correcte forward-slash-paden. Listingtekst + permission-justificaties: `docs/store-listing-tv-extensie.md`.
+
 Checks: `npm run lint` dekt ook `extension/` (eigen tsconfig met chrome-types); `npm run test` draait ook `extension/src/**/*.test.ts`.
 
 ## Koppelcode genereren (tot de Settings-kaart er is — F1c)
