@@ -6,7 +6,8 @@ import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
 import {
-  cropToRect, runSnapshotCycle, type ChartRect, type SnapshotDeps, type SnapshotSlot,
+  cropToRect, runSnapshotCycle, thumbnailDataUrl,
+  type ChartRect, type SnapshotDeps, type SnapshotSlot,
 } from "./snapshots";
 import { appendLog, readLog } from "./storage";
 import { createExtensionClient, createSupabaseDb } from "./supabaseDb";
@@ -117,6 +118,7 @@ async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snaps
     crop: cropToRect,
     upload: (image) => db.uploadScreenshot(image),
     settle: () => new Promise((resolve) => setTimeout(resolve, 1500)),
+    thumbnail: thumbnailDataUrl,
   };
 
   try {
