@@ -166,4 +166,40 @@ Correctie op §2.2 t.o.v. de bouw: variant A draait live met een **`sb_secret`-k
 
 ---
 
+## 7. F5-ontwerp — close-from-chart & bewerken (design-only, 2026-09-17)
+
+**Status: ONTWERP — bouwen pas na expliciete owner-go** (plan-regel: F5 na beta-feedback op F1–F4). Uitgeschreven zodat het blok bouwklaar is; geen code, geen migratie nodig (`exit_price` bestaat al sinds 0058).
+
+**Scope v1:** (a) een **open** trade van dit symbool sluiten vanaf de chart; (b) daarbij evaluatie + optioneel MAE/MFE invullen; (c) de laatst gelogde trade van deze tab nog eens openen en bijwerken vóór hij "af" is. **Buiten scope:** partial closes, fees/slippage, sluiten van andermans of niet-extensie-trades met prijslogica als de prijzen ontbreken (die kunnen wél gewoon dicht met handmatig resultaat).
+
+### 7.1 Rekenpad (Fable, pure functies in `src/lib/priceMath.ts`)
+
+- `realizedR(direction, entry, stop, exit)` = `(exit − entry) / (entry − stop)` voor Long (noemer > 0), gespiegeld voor Short. Tekenfouten zijn hier onmogelijk te "corrigeren" — bij `stop === entry` of richting-inconsistentie: expliciete fout, geen gok (zelfde filosofie als `directionFromPrices`).
+- `resultaatPctFromExit(...) = realizedR × risk_pct` — vereist een gevulde `risk_pct`; zonder risk_pct kan alleen handmatig resultaat.
+- Outcome-afleiding: hergebruik `deriveOutcome` (quick-log): teken van resultaat_pct; exact 0 = BE. Geen eigen epsilon.
+- `datum_sluiting`: wall-clock-datum in `profiles.timezone` uit de **bar-time van het sluitmoment** als de chart die levert, anders de door de user ingevulde datum — nooit stil `Date.now()` (replay-regel M4).
+
+### 7.2 Dataflow (Fable)
+
+- `ExtensionDb.listOpenTrades(filter)`: `trades` met `is_open = true`, RLS-gescoped, gefilterd op het genormaliseerde symbool (pair óf instrument via `symbolNormalize`) + journal; teruggeven: id, datum/tijd, direction, entry/stop/target_price, risk_pct, import_ref.
+- `closeTradeFromChart(db, req)` (spiegel van `logTradeFromChart`): update-by-id via PostgREST met `is_open=false`, `outcome`, `resultaat_pct`, `exit_price`, `datum_sluiting`, `trade_evaluation` (optioneel), `mae_pct`/`mfe_pct` (optioneel). De 0043-check (`trades_open_result_chk`) bewaakt de overgang server-side; 23514 → nette foutcode. **"Missed trade" is hier nooit kiesbaar** (missed-trade-contract: alleen via de volledige web-form).
+- Bewerken (c): het paneel onthoudt per tab de `import_ref` van de laatst gelogde trade; "Nog aanpassen" haalt die op (select op import_ref), toont de eigen velden opnieuw en doet een update. Geen generieke trade-editor — dat blijft de web-app.
+- Exit-prijsbron: v1 = handmatig veld, met prefill uit de chart als de adapter een laatste koersprijs kan leveren. **Spike-let S1 (½ dag, vóór F5a):** kan `TradingViewApi` de last-bar-close leveren? Zo nee: alleen handmatig, geen DOM-scraping.
+
+### 7.3 Paneel-UI (Opus)
+
+Nieuwe sectie "Open trades op dit symbool" (alleen zichtbaar als er ≥1 open trade matcht): rij per trade (datum, richting, entry→SL, R-plan) → "Sluit" opent een compact sluit-formulier: exit-prijs (of handmatig resultaat als prijzen/risk ontbreken), afgeleide R + resultaat% live getoond, outcome-badge (afgeleid, niet kiesbaar), evaluatie-select (zonder Missed trade), optioneel MAE/MFE, datum. Succes → trade-link naar de app. Copy NL/EN via i18nExt.
+
+### 7.4 Blokken
+
+| Blok | Inhoud | Engine | Omvang |
+|---|---|---|---|
+| S1-let | last-price uit TradingViewApi bewijzen (go/no-go) | Fable | ½ dag |
+| F5a | rekenpad + listOpenTrades + closeTradeFromChart + edit-by-import_ref, volledig unit-getest | Fable | 1-1½ dag |
+| F5b | paneel-sectie + sluit-formulier + copy | Opus | 1 dag |
+
+**Open owner-beslissingen vóór de bouw:** (1) go voor F5 überhaupt (na beta-feedback); (2) MAE/MFE in het sluit-formulier of weglaten (het is een beta-laag); (3) de kenmerken/CC-vraag van 17-09 (zie bouwlog) — als die velden sneuvelen, wordt het sluit-formulier nóg kleiner.
+
+---
+
 *Verificatiebronnen: `supabase/schema.sql` (trades 231-332, methodologies 384-424, RLS 1735-1854, storage 1664-1712, trigger 739/901), `src/hooks/useTrades.ts`, `src/hooks/useAuth.tsx`, `src/hooks/useMethodology.tsx`, `src/lib/{supabase,validation,quickLog,instruments,lotSize,methodologyFields}.ts`, `src/lib/storage/*`, `src/components/trades/TradeForm.tsx`, `api/ff-calendar.ts`, `vercel.json`, `docs/fixplan-2026-09.md`, `docs/launchplan-groei-2026-09.md`.*
