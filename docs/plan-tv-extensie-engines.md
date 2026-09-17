@@ -143,6 +143,8 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 **2026-09-17 ochtend:** migratie 0058 gedraaid op prod (read-only geverifieerd: 4 prijskolommen, 3 checks, registry-rij, share-RPC schoon) → PR #9 (`tv-ext-integration` → `main`, CI groen, gemerged = 42dcdf7) → Vercel-deploy geverifieerd (bundle bevat de prijsvelden-code; endpoint 401-smoke OK). Directe main-pushes zijn sindsdien onmogelijk (required check "ci"): elke volgende deploy gaat via PR.
 
+**2026-09-17 middag — eerste owner-Chrome-test (stap 1-3 ✅, stap 4-5 ⚠):** koppelen, chart lezen en het paneel werken. Twee bevindingen, gefixt op branch `tv-ext-legacy-fields`: (1) **legacy-WPM-velden ontbraken** — het paneel sloeg entry/trade concept/cc/weekly criteria+kenmerk/nieuws/confirms/fase-kenmerken bewust over; nu volwaardig, spiegel van de web-form: `LEGACY_TRADE_COLUMNS`-whitelist in buildTradePayload (echte kolommen, schema-bewaakt), fase als echte keuze (`resolveFase`, hide_fase gerespecteerd, kenmerken volgen de fase live), custom_options voor entry/concept meegeladen (Fable dataketen + Opus paneel-UI `legacyForm.ts`). (2) **launcher versleepbaar** (pointer-drag, klik/sleep-drempel, viewport-klem, positie in chrome.storage). Snapshots-melding bleek de verwachte needs-gesture-staat (icoon-klik per tab nog niet gedaan) — geen bug, wél her-testen.
+
 | Blok | Status | Waar |
 |---|---|---|
 | S0 spike | ✅ alle 4 GO, runtime owner-getest | `docs/spike-tv-extensie.md` |
