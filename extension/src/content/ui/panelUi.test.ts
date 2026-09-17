@@ -8,7 +8,6 @@ import { humanizeSchemaDetail, logTradeErrorCopy } from "./errors";
 import { slotStatus } from "./snapshotState";
 import {
   customFromValues, faseValue, formFields, groupFields, isVisible, missingRequired,
-  skippedLegacyFields,
 } from "./fields";
 import { formatPrice, formatRR, formatResolution } from "./format";
 
@@ -69,14 +68,15 @@ describe("formFields", () => {
   ];
 
   it("laat fase, computed en legacy-WPM-kenmerken weg op een legacy journal", () => {
+    // `structuur` valt weg omdat het paneel 'm als fase-kenmerk rendert
+    // (fase2_structuur/fase3_structuur), niet als custom veld.
     expect(formFields(legacy).map((f) => f.fieldKey)).toEqual(["eigen_veld"]);
-    expect(skippedLegacyFields(legacy).map((f) => f.fieldKey)).toEqual(["structuur"]);
   });
 
   it("houdt dezelfde sleutel wél op een niet-legacy journal", () => {
     const modern = [field({ fieldKey: "structuur" }), field({ fieldKey: "notitie", sortOrder: 1 })];
     expect(formFields(modern).map((f) => f.fieldKey)).toEqual(["structuur", "notitie"]);
-    expect(skippedLegacyFields(modern)).toEqual([]);
+    expect(isLegacyJournal(modern)).toBe(false);
   });
 
   it("gebruikt de eerste fase-optie als fase-waarde (zoals tradeFlow.firstFaseOf)", () => {
@@ -197,6 +197,132 @@ describe("slotStatus-copy (F4b)", () => {
     try {
       expect(slotStatus(slot).text).toBe("Will be included with 'Take snapshots'.");
       expect(slotStatus({ ...slot, link: "abc" }).text).toContain("https://");
+    } finally {
+      setLang("nl");
+    }
+  });
+});
+
+// ── Legacy-WPM-velden (spiegel web-form) ────────────────────────────────────
+import {
+  addableOptions, faseOptions, isLegacyJournal, legacyConfirmFields, legacyEntryFields,
+  legacyFromValues, legacyKenmerkFields, legacyLabelKey, selectedFase,
+} from "./fields";
+import { LEGACY_TRADE_COLUMNS } from "../../../../src/lib/tradePayload";
+import { t } from "../../i18nExt";
+
+describe("legacyConfirmFields", () => {
+  it("levert de vier confirms als booleans", () => {
+    expect(legacyConfirmFields().map((f) => f.key)).toEqual(["w_confirm", "d_confirm", "h4_confirm", "extra_d_conf"]);
+    expect(legacyConfirmFields().every((f) => f.kind === "boolean")).toBe(true);
+  });
+});
+
+describe("legacy-veldspecs", () => {
+  it("entry-blok volgt de web-form: cc, concept, entry, weekly criteria/kenmerk, nieuws", () => {
+    expect(legacyEntryFields().map((f) => f.key)).toEqual([
+      "cc", "trade_concept", "entry", "weekly_criteria", "weekly_kenmerk", "nieuws",
+    ]);
+    expect(legacyEntryFields().find((f) => f.key === "trade_concept")?.kind).toBe("addable");
+  });
+
+  it("kenmerken volgen de gekozen fase en slaan computed over", () => {
+    expect(legacyKenmerkFields("Fase 3").map((f) => f.key)).toEqual([
+      "fase3_zone_min_2_touches", "fase3_engulfing_candle", "fase3_structuur",
+    ]);
+    expect(legacyKenmerkFields("Fase 4").map((f) => f.key)).toEqual(["fase4_weekly_bevestigingscandle"]);
+    expect(legacyKenmerkFields("Onbekend")).toEqual([]);
+  });
+
+  it("legacyFromValues neemt alleen beantwoorde velden van de gekozen fase mee", () => {
+    const values = {
+      cc: "15",
+      entry: "",
+      nieuws: false,
+      fase2_structuur: "Inner",
+      fase3_engulfing_candle: true,
+      niet_legacy: "x",
+    };
+    expect(legacyFromValues("Fase 2", values)).toEqual({
+      cc: "15",
+      nieuws: false,
+      fase2_structuur: "Inner",
+    });
+    // zelfde values, andere fase: het fase-2-antwoord lift niet mee
+    expect(legacyFromValues("Fase 3", values)).toEqual({
+      cc: "15",
+      nieuws: false,
+      fase3_engulfing_candle: true,
+    });
+  });
+
+  it("faseOptions leest de opties van het gezaaide fase-veld", () => {
+    expect(faseOptions([])).toEqual([]);
+    expect(faseOptions([field({ fieldKey: "fase", options: ["Fase 2", "Fase 4"] })])).toEqual([
+      "Fase 2", "Fase 4",
+    ]);
+  });
+});
+
+describe("selectedFase", () => {
+  const all = [field({ fieldKey: "fase", options: ["Fase 2", "Fase 1"] })];
+
+  it("volgt de keuze van de user", () => {
+    expect(selectedFase(all, { fase: "Fase 1" })).toBe("Fase 1");
+  });
+
+  it("valt zonder (bruikbare) keuze terug op de eerste journal-optie", () => {
+    // Zo blijft de fase-loze weergave (hide_fase) dezelfde stille default
+    // gebruiken als de server.
+    expect(selectedFase(all, {})).toBe("Fase 2");
+    expect(selectedFase(all, { fase: "" })).toBe("Fase 2");
+    expect(selectedFase(all, { fase: 3 })).toBe("Fase 2");
+    expect(selectedFase([], {})).toBe("Fase 1");
+  });
+});
+
+describe("addableOptions", () => {
+  it("zet de eigen waarden achter de gedeelde lijst, zonder dubbels", () => {
+    expect(addableOptions(["Decel", "Reclaim"], ["Eigen", "Decel"])).toEqual([
+      "Decel", "Reclaim", "Eigen",
+    ]);
+  });
+
+  it("negeert lege waarden en laat de basislijst ongemoeid", () => {
+    const base = ["A"] as const;
+    expect(addableOptions(base, ["", "B"])).toEqual(["A", "B"]);
+    expect(base).toEqual(["A"]);
+    expect(addableOptions(base, [])).toEqual(["A"]);
+  });
+});
+
+describe("legacyLabelKey", () => {
+  it("geeft elke legacy-kolom een ingevulde NL- én EN-zin", () => {
+    for (const column of LEGACY_TRADE_COLUMNS) {
+      const key = legacyLabelKey(column);
+      setLang("nl");
+      expect(t(key).length).toBeGreaterThan(0);
+      setLang("en");
+      expect(t(key).length).toBeGreaterThan(0);
+      setLang("nl");
+    }
+  });
+
+  it("houdt de trading-leenwoorden in beide talen gelijk", () => {
+    for (const column of ["entry", "trade_concept", "weekly_criteria", "cc"] as const) {
+      setLang("nl");
+      const nl = t(legacyLabelKey(column));
+      setLang("en");
+      expect(t(legacyLabelKey(column))).toBe(nl);
+      setLang("nl");
+    }
+  });
+
+  it("vertaalt wél wat een echte zin is", () => {
+    setLang("en");
+    try {
+      expect(t(legacyLabelKey("nieuws"))).toBe("News near trade?");
+      expect(t(legacyLabelKey("fase3_structuur"))).toBe("Structure");
     } finally {
       setLang("nl");
     }

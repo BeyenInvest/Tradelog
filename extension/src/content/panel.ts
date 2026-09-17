@@ -10,6 +10,9 @@ import themeCss from "../theme.css";
 import panelCss from "./ui/panel.css";
 import { ensureLang, onLangChange, t } from "../i18nExt";
 import { markSvg } from "./ui/icons";
+import {
+  clampLauncherPos, isDrag, LAUNCHER_POS_KEY, parseStoredPos, type LauncherPos,
+} from "./ui/launcherDrag";
 import { mountPanelApp, type PanelApp } from "./ui/panelApp";
 
 const HOST_ID = "beyen-tv-panel-host";
@@ -51,10 +54,77 @@ function mount(): void {
 
   let app: PanelApp | null = null;
 
+  // ── Versleepbaar bolletje ────────────────────────────────────────────────
+  // De positie geldt voor de hele host (bolletje én paneel) en wordt in
+  // chrome.storage.local bewaard, zodat hij op elke chart-tab hetzelfde staat.
+  let customPos: LauncherPos | null = null;
+
+  function applyPos(pos: LauncherPos): void {
+    customPos = pos;
+    host.style.left = `${pos.x}px`;
+    host.style.top = `${pos.y}px`;
+    host.style.right = "auto";
+  }
+
+  function reclamp(): void {
+    if (!customPos) return;
+    const rect = host.getBoundingClientRect();
+    applyPos(
+      clampLauncherPos(customPos, { w: rect.width, h: rect.height }, { w: window.innerWidth, h: window.innerHeight })
+    );
+  }
+
+  void chrome.storage.local.get(LAUNCHER_POS_KEY).then((stored) => {
+    const pos = parseStoredPos(stored[LAUNCHER_POS_KEY]);
+    if (pos) {
+      applyPos(pos);
+      reclamp(); // een kleiner venster dan bij het opslaan → terug in beeld
+    }
+  });
+  window.addEventListener("resize", reclamp);
+
+  let dragged = false;
+  launcher.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    const rect = host.getBoundingClientRect();
+    const offset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    const start = { x: event.clientX, y: event.clientY };
+    dragged = false;
+    launcher.setPointerCapture(event.pointerId);
+
+    const onMove = (ev: PointerEvent): void => {
+      if (!dragged && !isDrag(ev.clientX - start.x, ev.clientY - start.y)) return;
+      dragged = true;
+      launcher.classList.add("is-dragging");
+      applyPos(
+        clampLauncherPos(
+          { x: ev.clientX - offset.x, y: ev.clientY - offset.y },
+          { w: rect.width, h: rect.height },
+          { w: window.innerWidth, h: window.innerHeight }
+        )
+      );
+    };
+    const onUp = (): void => {
+      launcher.removeEventListener("pointermove", onMove);
+      launcher.removeEventListener("pointerup", onUp);
+      launcher.removeEventListener("pointercancel", onUp);
+      launcher.classList.remove("is-dragging");
+      if (dragged && customPos) {
+        void chrome.storage.local.set({ [LAUNCHER_POS_KEY]: customPos });
+      }
+    };
+    launcher.addEventListener("pointermove", onMove);
+    launcher.addEventListener("pointerup", onUp);
+    launcher.addEventListener("pointercancel", onUp);
+  });
+
   function open(): void {
     if (app) return;
     launcher.hidden = true;
     app = mountPanelApp(slot, { onClose: close });
+    // Het paneel is groter dan het bolletje: een versleepte host bij de rand
+    // zou het deels buiten beeld zetten — even opnieuw klemmen op paneelmaat.
+    requestAnimationFrame(reclamp);
   }
 
   function close(): void {
@@ -62,9 +132,18 @@ function mount(): void {
     app = null;
     launcher.hidden = false;
     launcher.focus();
+    requestAnimationFrame(reclamp);
   }
 
-  launcher.addEventListener("click", open);
+  launcher.addEventListener("click", (event) => {
+    // De klik die een sleep afsluit mag het paneel niet openen.
+    if (dragged) {
+      event.preventDefault();
+      dragged = false;
+      return;
+    }
+    open();
+  });
 
   // TV luistert op document-niveau mee: onze toetsen en ons scrollen blijven
   // binnen het paneel.

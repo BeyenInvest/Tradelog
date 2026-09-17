@@ -61,6 +61,23 @@ export function wallClockInTimezone(utcMs: number, timeZone: string): WallClock 
   }
 }
 
+/**
+ * De legacy-WPM-kolommen die het paneel op een legacy journal als echte velden
+ * aanbiedt (spiegel van EntrySection/TechnicalSection/FaseKenmerkenSection).
+ * Alleen déze sleutels mogen via `input.legacy` in top-level kolommen landen —
+ * al het andere hoort in de custom-bag. `fase` loopt apart (input.fase) en
+ * `fase3_beide` is computed en wordt nooit ingestuurd.
+ */
+export const LEGACY_TRADE_COLUMNS = [
+  "cc", "trade_concept", "entry", "weekly_criteria", "weekly_kenmerk", "nieuws",
+  "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf",
+  "fase1_daily_respecteert_zone", "fase1_spelers_verleden",
+  "fase2_daily_respecteert_zone", "fase2_structuur",
+  "fase3_zone_min_2_touches", "fase3_engulfing_candle", "fase3_structuur",
+  "fase4_weekly_bevestigingscandle",
+] as const;
+export type LegacyTradeColumn = (typeof LEGACY_TRADE_COLUMNS)[number];
+
 /** Doel van de trade: het live journal óf precies één backtest-project (M2). */
 export type TradeTarget =
   | { type: "live"; methodologyId: string | null }
@@ -92,6 +109,12 @@ export interface BuildTradeInput {
   riskPct: number | null;
   /** Rauwe antwoorden uit de dynamische form — wordt gepruned. */
   custom: Record<string, unknown>;
+  /**
+   * Antwoorden op de legacy-WPM-velden van een legacy journal — landen in echte
+   * trades.*-kolommen (whitelist LEGACY_TRADE_COLUMNS), niet in custom. Lege
+   * waarden laten de quickLog-default staan.
+   */
+  legacy?: Partial<Record<LegacyTradeColumn, unknown>>;
   /** Client-uuid voor idempotentie; wordt `import_ref = "tv-ext:<uuid>"` (C6). */
   clientUuid: string;
   notes?: string | null;
@@ -160,6 +183,17 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
   values.risk_pct = input.riskPct;
   values.notes = input.notes ?? null;
   values.custom = pruneCustom(input.custom);
+
+  // Legacy-WPM-antwoorden → echte kolommen, strikt via de whitelist. De typen
+  // bewaakt tradeSchema hieronder (cc/weekly_*/structuur zijn enums, confirms
+  // en kenmerken zijn tri-state booleans) — ongeldig = schema-invalid, geen gok.
+  if (input.legacy) {
+    for (const key of LEGACY_TRADE_COLUMNS) {
+      const v = input.legacy[key];
+      if (v === undefined || v === null || v === "") continue;
+      (values as Record<string, unknown>)[key] = v;
+    }
+  }
 
   if (input.prices) {
     const { entry, stop, target } = input.prices;

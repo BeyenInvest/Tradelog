@@ -24,9 +24,11 @@ import type { LogTradeRequest } from "../../tradeFlow";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  customFromValues, formFields, missingRequired, skippedLegacyFields, type FormValues,
+  customFromValues, formFields, isLegacyJournal, legacyFromValues, missingRequired, selectedFase,
+  type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
+import { renderLegacyForm, type LegacyCustomOptions } from "./legacyForm";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, newClientUuid, parseNumberInput,
 } from "./format";
@@ -80,6 +82,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let journal: JournalSchema | null = null;
   let journalNote: { kind: "missing" } | { kind: "load-failed"; error: string } | null = null;
   let targets: TargetsInfo | null = null;
+  /** Eigen extra waarden voor entry/trade concept; alleen een legacy journal haalt ze op. */
+  let customOptions: LegacyCustomOptions = { entry: [], tradeConcept: [] };
 
   // ── Keuzes van de user ──────────────────────────────────────────────────
   let selectedPositionId: string | null = null;
@@ -647,6 +651,25 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     if (!journal) return;
 
+    // Het legacy-WPM-blok staat bovenaan, net als in de web-form: eerst de
+    // vaste kolommen (fase, entry, confirms, kenmerken), dan de eigen velden.
+    const legacy = isLegacyJournal(journal.fields);
+    if (legacy) {
+      journalSec.body.appendChild(
+        renderLegacyForm({
+          allFields: journal.fields,
+          values,
+          hideFase: targets?.hideFase === true,
+          customOptions,
+          onChange: () => {
+            // Een fase-wissel kan een show_when-veld openen of dichtklappen.
+            form?.sync();
+            updatePending();
+          },
+        }).element
+      );
+    }
+
     formFieldList = formFields(journal.fields);
     if (formFieldList.length > 0) {
       form = renderDynamicForm({
@@ -659,20 +682,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         },
       });
       journalSec.body.appendChild(form.element);
-    } else if (!journalNote) {
+    } else if (!journalNote && !legacy) {
       journalSec.body.appendChild(
         el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
-      );
-    }
-
-    const skipped = skippedLegacyFields(journal.fields);
-    if (skipped.length > 0) {
-      journalSec.body.appendChild(
-        el("p", {
-          class: "by-hint",
-          style: "margin:10px 0 0;",
-          text: t("panel.legacySkipped", { fields: skipped.map((f) => f.label).join(", ") }),
-        })
       );
     }
   }
@@ -754,6 +766,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (riskPct.trim() && risk == null) return { ok: false, message: t("panel.v.riskNaN") };
     if (risk != null && risk <= 0) return { ok: false, message: t("panel.v.riskPositive") };
 
+    // Legacy journal: de getoonde fase scoopt de kenmerken die meegaan. Met
+    // hide_fase toont het paneel geen fase-keuze, dus gaat er ook geen keuze mee
+    // — de server houdt dan z'n stille default aan.
+    const legacy = journal && isLegacyJournal(journal.fields);
+    const shownFase = legacy && journal ? selectedFase(journal.fields, values) : null;
+
     return {
       ok: true,
       request: {
@@ -765,6 +783,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         entryTimeUtcSec,
         manualDateTime,
         riskPct: risk,
+        fase: shownFase && !targets?.hideFase ? shownFase : null,
+        legacy: shownFase ? legacyFromValues(shownFase, values) : null,
         custom: journal ? customFromValues(formFieldList, journal.fields, values) : {},
         notes: notes.trim() ? notes.trim() : null,
         clientUuid,
@@ -886,6 +906,17 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     updatePending();
   }
 
+  /** Eén keer per paneel-mount; mislukt de lezing, dan blijven de basisopties over. */
+  async function loadCustomOptions(): Promise<LegacyCustomOptions> {
+    try {
+      const result = await sendToSw({ type: "custom-options" });
+      if (result.ok) return { entry: result.entry, tradeConcept: result.tradeConcept };
+    } catch {
+      /* stil: alleen de gedeelde vaste lijsten */
+    }
+    return { entry: [], tradeConcept: [] };
+  }
+
   async function boot(): Promise<void> {
     // Taal vóór de eerste zin op het scherm; de rest van het paneel leest 'm
     // daarna synchroon via t().
@@ -910,6 +941,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         journalNote = { kind: "load-failed", error: dump.error };
       }
       targets = targetsResult.ok ? targetsResult : null;
+      // Alleen een legacy journal heeft de twee addable-velden; op elk ander
+      // journal zou dit een lege query voor niets zijn.
+      customOptions = journal && isLegacyJournal(journal.fields) ? await loadCustomOptions() : { entry: [], tradeConcept: [] };
       showOnboarding = !onboardingDone;
       showView(buildForm);
       await refreshChart();

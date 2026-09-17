@@ -28,6 +28,8 @@
 .by-launcher:hover { transform: translateY(-1px); filter: brightness(1.08); }
 .by-launcher:active { transform: translateY(0); }
 .by-launcher:focus-visible { outline: 2px solid rgb(var(--color-ink)); outline-offset: 2px; }
+.by-launcher { touch-action: none; } /* pointer-drag zonder dat de pagina meescrollt */
+.by-launcher.is-dragging { cursor: grabbing; transform: none; transition: none; }
 
 /* ── Paneel ──────────────────────────────────────────────────────────────── */
 .by-panel {

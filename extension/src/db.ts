@@ -15,6 +15,8 @@ export interface ProfileInfo {
   /** Actief live-journal (profiles.methodology_id); null = nog geen journal. */
   methodologyId: string | null;
   timezone: string;
+  /** profiles.hide_fase — verbergt fase-UI, ook in het paneel (display-only). */
+  hideFase: boolean;
 }
 
 export interface JournalField {
@@ -74,6 +76,9 @@ export interface ExtensionDb {
   listJournals(): Promise<JournalInfo[]>;
   /** Eigen backtest-projecten voor de doel-kiezer (plan M2). */
   listBacktestProjects(): Promise<BacktestProjectInfo[]>;
+  /** Eigen extra opties voor de custom_options-velden `entry`/`trade_concept`
+   * (legacy WPM) — spiegel van useCustomOptions in de web-app. */
+  listCustomOptions(field: "entry" | "trade_concept"): Promise<string[]>;
   /** Insert via PostgREST; unique-violation op import_ref = idempotente retry. */
   insertTrade(payload: Record<string, unknown>): Promise<InsertTradeResult>;
   /** PNG naar de screenshots-bucket ({uid}/{uuid}.png — RLS eist het uid-prefix, 0039). */
