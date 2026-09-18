@@ -11,8 +11,6 @@ interface AuthContextValue {
   /** The signed-in user's own profiles row (role, plan, display_name), fetched once alongside the session. */
   profile: Profile | null;
   isAdmin: boolean;
-  /** profile?.hide_fase — user opted out of the fixed 4-fasen system, so every fase-related field/breakdown hides in their own UI. */
-  hideFase: boolean;
   /**
    * The soft-launch gate for every in-development feature (multi-journal UI, presets, editor,
    * direction, Fase-E stats, onboarding, …). True when the user has `profile.beta_features` set,
@@ -51,7 +49,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string, captchaToken?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   sendPasswordReset: (email: string, captchaToken?: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -181,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut();
   }
 
-  async function updateProfile(patch: Partial<Pick<Profile, "hide_fase" | "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) {
+  async function updateProfile(patch: Partial<Pick<Profile, "display_name" | "timezone" | "methodology_id" | "result_unit" | "onboarded_at">>) {
     if (!session) throw new Error(i18n.t("auth.notLoggedIn"));
     const { data, error } = await supabase.from("profiles").update(patch).eq("id", session.user.id).select().single();
     if (error) throw error;
@@ -195,7 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         isAdmin: profile?.role === "admin",
-        hideFase: profile?.hide_fase ?? false,
         // De vroegere OWNER_BETA_EMAILS-hardcode is verwijderd (fixplan C6): het
         // owner-e-mailadres hoort niet in de publieke bundle. De owner heeft nu
         // gewoon profiles.beta_features = true in de DB (en is admin).

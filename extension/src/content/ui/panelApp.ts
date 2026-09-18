@@ -29,11 +29,9 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, isLegacyJournal, legacyFromValues, missingRequired,
-  selectedFase, type FormValues,
+  ccFromTime, customFromValues, formFields, missingRequired, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
-import { renderLegacyForm, type LegacyCustomOptions, type LegacyForm } from "./legacyForm";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
@@ -88,8 +86,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let journal: JournalSchema | null = null;
   let journalNote: { kind: "missing" } | { kind: "load-failed"; error: string } | null = null;
   let targets: TargetsInfo | null = null;
-  /** Eigen extra waarden voor entry/trade concept; alleen een legacy journal haalt ze op. */
-  let customOptions: LegacyCustomOptions = { entry: [], tradeConcept: [] };
 
   // ── Keuzes van de user ──────────────────────────────────────────────────
   let selectedPositionId: string | null = null;
@@ -124,9 +120,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let loggedScreenshots: Partial<Record<SnapshotSlot, string | null>> | null = null;
 
   let form: DynamicForm | null = null;
-  /** Het legacy-WPM-blok, zolang het gemount is: de CC-prefill zet een waarde in
-   * `values` en laat dit blok zichzelf bijwerken. */
-  let legacyBlock: LegacyForm | null = null;
   let formFieldList: JournalField[] = [];
   /** Eerste-run-hint: pas tonen als de storage-lezing terug is (boot). */
   let showOnboarding = false;
@@ -726,13 +719,21 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     paintResultHint();
   }
 
+  /** Het journal draagt een CC-veld (methodology_field met field_key "cc"); dan
+   * geldt de CC-prefill uit de entry-tijd. Sinds de fase-retirement is `cc` een
+   * gewoon custom veld i.p.v. een aparte WPM-kolom. */
+  function hasCcField(): boolean {
+    return journal?.fields.some((f) => f.fieldKey === "cc") === true;
+  }
+
   /**
-   * De CC-prefill van het legacy-WPM-blok: de 4H-candle waarin de entry valt,
-   * afgelezen in de profiel-tijdzone. Zelfde hygiëne als het resultaat-voorstel
-   * — een eigen keuze van de user wordt nooit overschreven.
+   * De CC-prefill: de 4H-candle waarin de entry valt, afgelezen in de
+   * profiel-tijdzone. Zelfde hygiëne als het resultaat-voorstel — een eigen
+   * keuze van de user wordt nooit overschreven. `cc` loopt via de generieke
+   * form, dus die krijgt de verse waarde te zien via form.sync().
    */
   function syncCc(): void {
-    if (ccTouched || !journal || !isLegacyJournal(journal.fields)) return;
+    if (ccTouched || !hasCcField()) return;
     const current = values["cc"];
     const filled = typeof current === "string" && current !== "";
     if (filled && current !== ccAuto) return;
@@ -741,13 +742,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (cc == null || cc === current) return;
     values["cc"] = cc;
     ccAuto = cc;
-    legacyBlock?.sync();
+    form?.sync();
   }
 
   function renderJournalFields(): void {
     clear(journalSec.body);
     form = null;
-    legacyBlock = null;
 
     if (journalNote) {
       const text =
@@ -758,27 +758,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     if (!journal) return;
 
-    // Het legacy-WPM-blok staat bovenaan, net als in de web-form: eerst de
-    // vaste kolommen (fase, entry, confirms, kenmerken), dan de eigen velden.
-    const legacy = isLegacyJournal(journal.fields);
-    if (legacy) {
-      legacyBlock = renderLegacyForm({
-        allFields: journal.fields,
-        values,
-        hideFase: targets?.hideFase === true,
-        customOptions,
-        onChange: () => {
-          // Een fase-wissel kan een show_when-veld openen of dichtklappen.
-          form?.sync();
-          // Wijkt de CC af van wat wij er zetten, dan koos (of wiste) de user
-          // 'm zelf — vanaf dan blijft de prefill eraf.
-          if (values["cc"] !== ccAuto) ccTouched = true;
-          updatePending();
-        },
-      });
-      journalSec.body.appendChild(legacyBlock.element);
-    }
-
+    // Alle methodology_fields lopen via het generieke pad — sinds de
+    // fase-retirement zijn fase/cc/weekly/confirms/kenmerken gewone velden.
     formFieldList = formFields(journal.fields);
     if (formFieldList.length > 0) {
       form = renderDynamicForm({
@@ -786,12 +767,17 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         fields: formFieldList,
         values,
         onChange: () => {
+          // Een keuze kan een show_when-veld openen of dichtklappen; sync werkt
+          // meteen ook de select-waarden bij (o.a. de CC-prefill).
           form?.sync();
+          // Wijkt de CC af van wat wij er zetten, dan koos (of wiste) de user
+          // 'm zelf — vanaf dan blijft de prefill eraf.
+          if (values["cc"] !== ccAuto) ccTouched = true;
           updatePending();
         },
       });
       journalSec.body.appendChild(form.element);
-    } else if (!journalNote && !legacy) {
+    } else if (!journalNote) {
       journalSec.body.appendChild(
         el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
       );
@@ -875,12 +861,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (riskPct.trim() && risk == null) return { ok: false, message: t("panel.v.riskNaN") };
     if (risk != null && risk <= 0) return { ok: false, message: t("panel.v.riskPositive") };
 
-    // Legacy journal: de getoonde fase scoopt de kenmerken die meegaan. Met
-    // hide_fase toont het paneel geen fase-keuze, dus gaat er ook geen keuze mee
-    // — de server houdt dan z'n stille default aan.
-    const legacy = journal && isLegacyJournal(journal.fields);
-    const shownFase = legacy && journal ? selectedFase(journal.fields, values) : null;
-
     return {
       ok: true,
       request: {
@@ -892,8 +872,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         entryTimeUtcSec,
         manualDateTime,
         riskPct: risk,
-        fase: shownFase && !targets?.hideFase ? shownFase : null,
-        legacy: shownFase ? legacyFromValues(shownFase, values) : null,
+        // Alle methodology-antwoorden (incl. fase/cc/…) gaan via de custom-bag.
         custom: journal ? customFromValues(formFieldList, journal.fields, values) : {},
         notes: notes.trim() ? notes.trim() : null,
         clientUuid,
@@ -1060,17 +1039,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     });
   }
 
-  /** Eén keer per paneel-mount; mislukt de lezing, dan blijven de basisopties over. */
-  async function loadCustomOptions(): Promise<LegacyCustomOptions> {
-    try {
-      const result = await sendToSw({ type: "custom-options" });
-      if (result.ok) return { entry: result.entry, tradeConcept: result.tradeConcept };
-    } catch {
-      /* stil: alleen de gedeelde vaste lijsten */
-    }
-    return { entry: [], tradeConcept: [] };
-  }
-
   async function boot(): Promise<void> {
     // Taal vóór de eerste zin op het scherm; de rest van het paneel leest 'm
     // daarna synchroon via t().
@@ -1095,9 +1063,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         journalNote = { kind: "load-failed", error: dump.error };
       }
       targets = targetsResult.ok ? targetsResult : null;
-      // Alleen een legacy journal heeft de twee addable-velden; op elk ander
-      // journal zou dit een lege query voor niets zijn.
-      customOptions = journal && isLegacyJournal(journal.fields) ? await loadCustomOptions() : { entry: [], tradeConcept: [] };
       showOnboarding = !onboardingDone;
       showView(buildForm);
       await refreshChart();

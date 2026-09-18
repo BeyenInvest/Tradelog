@@ -1,6 +1,6 @@
 import type {
-  CC, Currency, Direction, Outcome, Pair, PeriodType, PropFase, ResultUnit, Sessie,
-  Structuur, TradeEvaluation, WeeklyCriteria, WeeklyKenmerk,
+  Currency, Direction, Outcome, Pair, PeriodType, PropFase, ResultUnit, Sessie,
+  TradeEvaluation,
 } from "./constants";
 
 /** Mirrors the `trades` table in supabase/schema.sql 1:1. */
@@ -8,14 +8,6 @@ export interface Trade {
   id: string;
   user_id: string;
 
-  /**
-   * Fase. In de DB nog steeds de vaste Postgres-enum fase_enum ('Fase 1'..'Fase 4'),
-   * NIET vrije tekst (D7/M8-correctie — het oude commentaar beweerde het omgekeerde):
-   * de kolom blijft not null met default 'Fase 1' tot cyclus 10 de legacy-WPM-velden
-   * de-hardcodet. TS typt 'm als string omdat moderne journals fase alleen nog als
-   * verborgen default meesturen; de methodology-laag leeft in trades.custom.
-   */
-  fase: string;
   datum_open: string; // ISO date (yyyy-mm-dd)
   /**
    * Real open time next to datum_open (Fase S2, 0051) — wall-clock "HH:MM:SS"
@@ -68,40 +60,15 @@ export interface Trade {
   /** Reward:risk multiple planned at entry (e.g. 3 = a 3R target). Optional; unlike MAE/MFE it may be set while the trade is still open (it's the plan, not the outcome). */
   planned_rr: number | null;
 
-  weekly_criteria: WeeklyCriteria | null;
-  weekly_kenmerk: WeeklyKenmerk | null;
-  /** TRADE_CONCEPTS (constants.ts) or one of this user's own custom_options rows for field='trade_concept' — see useCustomOptions. */
-  trade_concept: string | null;
-  /** ENTRIES (constants.ts) or one of this user's own custom_options rows for field='entry' — see useCustomOptions. */
-  entry: string | null;
+  /** DB-maintained (tz-aware trigger, derived from tijd_open, else custom.cc — compute_sessie_at/0051, 0059), read-only. null when the trade carries neither a real open time nor a cc slot. */
+  sessie: Sessie | null;
 
-  cc: CC;
-  sessie: Sessie; // DB-maintained (tz-aware trigger, see compute_sessie/0019), read-only
-
-  nieuws: boolean;
-  w_confirm: boolean | null;
-  d_confirm: boolean | null;
-  h4_confirm: boolean | null;
   w_screenshot: string | null;
   d_screenshot: string | null;
   h4_screenshot: string | null;
   h2_screenshot: string | null;
-  extra_d_conf: boolean | null;
 
   notes: string | null;
-
-  fase1_daily_respecteert_zone: boolean | null;
-  fase1_spelers_verleden: boolean | null;
-
-  fase2_daily_respecteert_zone: boolean | null;
-  fase2_structuur: Structuur | null;
-
-  fase3_zone_min_2_touches: boolean | null;
-  fase3_engulfing_candle: boolean | null;
-  fase3_beide: boolean | null; // DB-generated, read-only
-  fase3_structuur: Structuur | null;
-
-  fase4_weekly_bevestigingscandle: boolean | null;
 
   weekly_review_id: string | null;
 
@@ -134,7 +101,7 @@ export interface Trade {
  */
 export type TradeInput = Omit<
   Trade,
-  | "id" | "user_id" | "duur_dagen" | "sessie" | "fase3_beide" | "created_at" | "updated_at"
+  | "id" | "user_id" | "duur_dagen" | "sessie" | "created_at" | "updated_at"
   | "weekly_review_id" | "import_ref"
 >;
 
@@ -349,10 +316,9 @@ export interface Profile {
   display_name: string | null;
   plan: string;
   role: "user" | "admin";
-  hide_fase: boolean;
-  /** IANA timezone the user reads candle-close (cc) times in — drives the tz-aware `trades.sessie` mapping (compute_sessie in the DB). Defaults to 'Europe/Brussels'. */
+  /** IANA timezone the trade open time is read in — drives the tz-aware `trades.sessie` mapping (compute_sessie_at in the DB). Defaults to 'Europe/Brussels'. */
   timezone: string;
-  /** Active methodology (Scope C). Defaults to the built-in Weekly Phase Method template; drives which fases/kenmerken the UI shows. See useMethodology. */
+  /** Active methodology / journal (Scope C). Defaults to the built-in Weekly Phase Method template; drives which custom fields the UI shows. See useMethodology. */
   methodology_id: string | null;
   /**
    * Soft-launch gate (0033): shows the multi-journal UI (journal-switcher, preset-
@@ -404,33 +370,22 @@ export interface Methodology {
 /**
  * The methodology-derived facts BacktestingAnalysisView needs to render the right
  * breakdowns (which are journal-type-specific): the field list (for custom-field
- * breakdowns), and whether the journal is the legacy Weekly-Phase-Method / a forex
- * journal. Normally read from the live `useMethodology()` context, but the admin
- * read-only view must pass the *viewed* user's journal instead of the viewer's —
- * see getMethodologyViewForUser + the `methodologyOverride` prop (H2).
+ * breakdowns), and whether the journal is a forex journal. Normally read from the
+ * live `useMethodology()` context, but the admin read-only view must pass the
+ * *viewed* user's journal instead of the viewer's — see getMethodologyViewForUser
+ * + the `methodologyOverride` prop (H2).
  */
 export interface MethodologyView {
   fields: MethodologyField[];
-  isLegacyMethodology: boolean;
   isForexJournal: boolean;
   /** Whether the viewed journal has the advanced-analysis layer on (0050) — gates the exit-analysis section. */
   trackExit: boolean;
-}
-
-/** One fase within a methodology (replaces the fixed FASES enum). */
-export interface MethodologyFase {
-  id: string;
-  methodology_id: string;
-  naam: string;
-  sort_order: number;
 }
 
 /** One custom field of a methodology/journal (replaces the fixed FASE_KENMERKEN config). See 0022. */
 export interface MethodologyField {
   id: string;
   methodology_id: string;
-  /** Legacy/transitional FK to methodology_fases; null on the new flat model where fase is itself a field (see 0023). */
-  fase_id: string | null;
   /** Stable key used inside the trades.custom jsonb bag. */
   field_key: string;
   label: string;
@@ -512,8 +467,6 @@ export interface SharedJournal {
   display_name: string | null;
   /** Owner's display unit — the share view honours % and R; currency falls back to % (no saldo without auth). */
   result_unit: ResultUnit;
-  /** Owner's hide_fase setting — the share view hides fase UI the same way the owner's own UI does. */
-  hide_fase: boolean;
   /** Field definitions of the shared journal (custom-veld labels); [] for the legacy/unscoped journal. */
   fields: SharedMethodologyField[];
   trades: Trade[];
@@ -534,7 +487,6 @@ export type SharedReview = {
   journal_name: string | null;
   display_name: string | null;
   result_unit: ResultUnit;
-  hide_fase: boolean;
   /**
    * The shared journal's custom review sections (Fase N5, 0048); [] when the
    * journal uses the built-in default set — the share view then resolves the

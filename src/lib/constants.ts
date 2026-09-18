@@ -2,9 +2,6 @@
  *  surface a "contact us" link (Settings, and later Terms/Privacy). */
 export const SUPPORT_EMAIL = "info@beyen.app";
 
-export const FASES = ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] as const;
-export type Fase = (typeof FASES)[number];
-
 export const OUTCOMES = ["Win", "Loss", "BE"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
@@ -13,32 +10,14 @@ export const DIRECTIONS = ["Long", "Short"] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
 /**
- * Field keys still owned by the hardcoded legacy Weekly Phase Method form + analysis
- * (the fase <select>, FaseKenmerkenSection and the per-fase breakdowns), backed by
- * real trades.* columns rather than the trades.custom bag. The dynamic form section
- * (CustomFieldsSection) and the config-driven breakdowns (breakdownDimensions) skip
- * these so WPM users never see them twice and their data path stays unchanged. This
- * bridge disappears in cyclus 10, when those columns are dropped and every field
- * becomes fully dynamic.
- */
-/**
  * Fixed id of the seeded Weekly Phase Method system template (0020). Used to pin
  * the no-active-journal fallback in useMethodology/useMethodologyEditor — since
  * the preset catalogue (0027/0028) there are ~11 is_system rows, so "any system
- * methodology" would be a non-deterministic pick.
+ * methodology" would be a non-deterministic pick. Since the fase-retirement (0059)
+ * the WPM template is a fully config-driven journal like any other — no hardcoded
+ * columns — so this id is now only the fallback pin, nothing special-cases it.
  */
 export const WPM_TEMPLATE_METHODOLOGY_ID = "00000000-0000-4000-8000-000000000001";
-
-export const LEGACY_METHODOLOGY_FIELD_KEYS = new Set([
-  "fase",
-  "daily_respecteert_zone",
-  "spelers_verleden",
-  "structuur",
-  "zone_min_2_touches",
-  "engulfing_candle",
-  "beide",
-  "weekly_bevestigingscandle",
-]);
 
 /**
  * Weergave-eenheid voor resultaten (Fase J / 0037) — puur een display-voorkeur
@@ -88,40 +67,15 @@ export function currenciesOfPair(pair: Pair): [Currency, Currency] {
 export const FOREX_PAIRS = PAIRS.filter((p) => p !== "XAGUSD" && p !== "XAUUSD");
 export type ForexPair = Exclude<Pair, "XAGUSD" | "XAUUSD">;
 
-export const WEEKLY_CRITERIA = ["Pattern", "High/Low", "IC", "Region"] as const;
-export type WeeklyCriteria = (typeof WEEKLY_CRITERIA)[number];
-
-export const WEEKLY_KENMERKEN = ["Trending market", "Corrective market", "Ranging market"] as const;
-export type WeeklyKenmerk = (typeof WEEKLY_KENMERKEN)[number];
-
-export const TRADE_CONCEPTS = [
-  "Reversal", "Continuation", "Daily retrace", "Pattern in Pattern",
-  "Push IC Push", "Weekly-4H", "Reclaim", "Small daily pattern",
-] as const;
-export type TradeConcept = (typeof TRADE_CONCEPTS)[number];
-
-export const ENTRIES = [
-  "Decel", "Reversal", "Continuation met ruimte", "Continuation zonder ruimte",
-  "2H Entry", "Reclaim", "100 Fib", "Instant limiet",
-] as const;
-export type Entry = (typeof ENTRIES)[number];
-
-export const CCS = ["03", "07", "11", "15", "19", "23"] as const;
-export type CC = (typeof CCS)[number];
-
 export const SESSIES = ["Asia", "London", "Overlap", "New York"] as const;
 export type Sessie = (typeof SESSIES)[number];
 
 // Sessie is timezone-aware and computed in the DB, never derived client-side.
-// The real open time (trades.tijd_open, 0051) wins when present — interpreted in
-// the user's profiles.timezone and bucketed against the reference zone
-// (compute_sessie_at); without it the legacy cc candle-close slot is bucketed the
-// same way (compute_sessie, 0019). On non-WPM journals cc sits on a hidden
-// default, so there sessie is only meaningful for trades that carry tijd_open —
-// breakdownDimensionsFor() encodes that client-side nuance.
-
-export const STRUCTUREN = ["Inner", "Outer"] as const;
-export type Structuur = (typeof STRUCTUREN)[number];
+// The real open time (trades.tijd_open, 0051) is interpreted in the user's
+// profiles.timezone and bucketed against the reference zone (compute_sessie_at).
+// A trade without tijd_open has no sessie, so the session/hour breakdowns only
+// cover trades that carry a real open time — breakdownDimensionsFor() encodes
+// that client-side nuance.
 
 /**
  * Account "type" (DB column `fase`, prop_fase_enum). Phase 1/2/Funded are the
@@ -168,37 +122,3 @@ export const DEFAULT_RISK_PCT = 1;
  */
 export const SANITY_RESULT_PCT = 20;
 
-/**
- * Fase-specifieke kenmerken (spec tabel 3.2), config-driven zodat de Backtesting
- * pagina elke fase-kenmerk-breakdown via één .map() rendert i.p.v. losse blokken.
- */
-export interface FaseKenmerkConfig {
-  fase: Fase;
-  field: string;
-  label: string;
-  values: "boolean" | readonly string[];
-  /** true for computed/read-only fields (e.g. fase3_beide) — not shown in the trade form. */
-  computed?: boolean;
-}
-
-export const FASE_KENMERKEN: FaseKenmerkConfig[] = [
-  { fase: "Fase 1", field: "fase1_daily_respecteert_zone", label: "Daily respecteert zone?", values: "boolean" },
-  { fase: "Fase 1", field: "fase1_spelers_verleden", label: "Al spelers in verleden (W)?", values: "boolean" },
-  { fase: "Fase 2", field: "fase2_daily_respecteert_zone", label: "Daily respecteert zone?", values: "boolean" },
-  { fase: "Fase 2", field: "fase2_structuur", label: "Structuur", values: STRUCTUREN },
-  { fase: "Fase 3", field: "fase3_zone_min_2_touches", label: "Zone met min. 2 vorige touches?", values: "boolean" },
-  { fase: "Fase 3", field: "fase3_engulfing_candle", label: "Engulfing candle?", values: "boolean" },
-  { fase: "Fase 3", field: "fase3_beide", label: "Beide?", values: "boolean", computed: true },
-  { fase: "Fase 3", field: "fase3_structuur", label: "Structuur", values: STRUCTUREN },
-  { fase: "Fase 4", field: "fase4_weekly_bevestigingscandle", label: "Weekly bevestigingscandle?", values: "boolean" },
-];
-
-/**
- * Tijdelijke globale kill-switch (owner-besluit 2026-09-17): verberg de
- * fase-kenmerk-vragen (de FASE_KENMERKEN-invoervelden in het trade-formulier)
- * voor *iedereen*, ongeacht de per-user `profiles.hide_fase`-toggle. Bewust een
- * losse vlag i.p.v. hide_fase, zodat "tot nader order" met één regel terug te
- * draaien is (zet op false) zonder ieders persoonlijke voorkeur te raken.
- * De rest van het fase-systeem (fase-veld/-kolom/-breakdowns) blijft ongemoeid.
- */
-export const HIDE_FASE_KENMERKEN = true;

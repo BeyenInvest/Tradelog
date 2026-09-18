@@ -20,14 +20,11 @@ import type { SharedMethodologyField, Trade } from "@/lib/types";
 export function ReadOnlyTradesViewer({
   trades,
   title,
-  hideFase,
   fields,
   allowSessions = false,
 }: {
   trades: Trade[];
   title?: string;
-  /** Share view (Fase M): honour the owner's hide_fase setting (the anonymous viewer has no profile of their own). */
-  hideFase?: boolean;
   /** Share view (0042): the shared journal's field definitions, so the detail modal can label trades.custom values. */
   fields?: SharedMethodologyField[];
   /** Backtest context only: offer the "Per sessie" grouping (trades bucketed by the day they were logged), mirroring the members' backtest journal. */
@@ -96,7 +93,7 @@ export function ReadOnlyTradesViewer({
         <CalendarView trades={closedTrades(taken)} missedTrades={closedTrades(missed)} openTrades={taken.filter((tr) => tr.is_open)} onDayClick={setSelectedDay} />
       ) : viewMode === "list" ? (
         <Card>
-          <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} hideFase={hideFase} />
+          <ReadOnlyTradeTable trades={trades} onRowClick={setSelectedTrade} />
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
@@ -119,7 +116,7 @@ export function ReadOnlyTradesViewer({
                       </span>
                     </div>
                   </div>
-                  <ReadOnlyTradeTable trades={g.trades} onRowClick={setSelectedTrade} hideFase={hideFase} />
+                  <ReadOnlyTradeTable trades={g.trades} onRowClick={setSelectedTrade} />
                 </Card>
               );
             })
@@ -137,7 +134,7 @@ export function ReadOnlyTradesViewer({
       )}
 
       {selectedTrade && (
-        <ReadOnlyTradeDetailModal trade={selectedTrade} hideFase={hideFase} fields={fields} onClose={() => setSelectedTrade(null)} />
+        <ReadOnlyTradeDetailModal trade={selectedTrade} fields={fields} onClose={() => setSelectedTrade(null)} />
       )}
     </>
   );

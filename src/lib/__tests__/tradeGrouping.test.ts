@@ -83,8 +83,8 @@ describe("matchesSearch", () => {
     expect(matchesSearch(makeTrade({ pair: "EURUSD" }), "")).toBe(true);
   });
 
-  it("matches case-insensitively against pair, fase, concept, entry and notes", () => {
-    const t = makeTrade({ pair: "GBPUSD", instrument: "GBPUSD", trade_concept: "Reversal", notes: "Sterke daily zone" });
+  it("matches case-insensitively against pair, notes and custom answers (e.g. concept)", () => {
+    const t = makeTrade({ pair: "GBPUSD", instrument: "GBPUSD", custom: { trade_concept: "Reversal" }, notes: "Sterke daily zone" });
     expect(matchesSearch(t, "gbpusd")).toBe(true);
     expect(matchesSearch(t, "reversal")).toBe(true);
     expect(matchesSearch(t, "daily zone")).toBe(true);
@@ -106,7 +106,7 @@ describe("matchesSearch", () => {
   });
 
   it("null fields don't crash the search", () => {
-    const t = makeTrade({ instrument: null, trade_concept: null, entry: null, notes: null, pair: "GBPUSD", fase: "Fase 1" });
+    const t = makeTrade({ instrument: null, notes: null, pair: "GBPUSD", custom: {} });
     expect(matchesSearch(t, "anything")).toBe(false);
   });
 });

@@ -204,7 +204,6 @@ describe("dealToImportRow", () => {
     expect(row.trade_evaluation).toBeNull(); // imports are never "Missed trade"
     expect(row.outcome).toBe("Win");
     expect(row.resultaat_pct).toBe(3.2);
-    expect(row.fase).toBe("Fase 1");
     expect(row.datum_open).toBe("2024-03-15");
   });
   it("falls back to close date when open date is missing", () => {

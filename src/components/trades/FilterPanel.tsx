@@ -7,7 +7,6 @@ import { PAIRS, DIRECTIONS, OUTCOMES, TRADE_EVALUATIONS, SESSIES } from "@/lib/c
 import { activeFilterCount, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { dynamicMethodologyFields } from "@/lib/methodologyFields";
 import { fieldLabel } from "@/lib/fieldBlocks";
-import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 
 interface FilterPanelProps {
@@ -24,12 +23,11 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false), open);
   const count = activeFilterCount(value);
-  const { hideFase } = useAuth();
-  const { faseNames, fields, isLegacyMethodology, isForexJournal } = useMethodology();
+  const { fields, isForexJournal } = useMethodology();
   // The active journal's own enum/boolean custom fields become filters (Scope C,
   // cyclus E) — the breakdown side already splits on these, this closes the loop.
-  // On a legacy WPM journal dynamicMethodologyFields excludes the seeded columns,
-  // so it keeps its hardcoded fase/sessie/news filters and shows no custom ones.
+  // Since the fase-retirement (0059) the former WPM fields (fase, cc, weekly_*,
+  // nieuws, …) are ordinary custom fields, so they appear here automatically.
   const customFilterFields = dynamicMethodologyFields(fields).filter(
     (f) => f.field_type === "enum" || f.field_type === "boolean"
   );
@@ -71,18 +69,6 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {/* fase filter: legacy WPM only + still per-user hideable (matches the form/analysis). */}
-            {isLegacyMethodology && !hideFase && (
-              <Field label={t("filters.fase")}>
-                <EnumSelect
-                  options={faseNames}
-                  value={value.fase ?? ""}
-                  onChange={(e) => onChange({ ...value, fase: e.target.value === "" ? undefined : e.target.value })}
-                  placeholder={t("filters.allFases")}
-                  className="w-full text-xs py-1.5"
-                />
-              </Field>
-            )}
             {/* Instrument: forex journal filters by the pair enum; any other journal by a free
                 instrument substring (cyclus 7). */}
             {isForexJournal ? (
@@ -124,21 +110,18 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            {/* sessie filter stays legacy-only: on other journals sessie is only real for
-                trades with tijd_open (0051) — a plain equality filter would wrongly match
-                every time-less trade via its hidden-cc-default sessie. Opening this up
-                needs the time-aware nuance (S2 follow-up, with the kruistabel views). */}
-            {isLegacyMethodology && (
-              <Field label={t("filters.sessie")}>
-                <EnumSelect
-                  options={SESSIES}
-                  value={value.sessie ?? ""}
-                  onChange={(e) => onChange({ ...value, sessie: e.target.value === "" ? undefined : (e.target.value as (typeof SESSIES)[number]) })}
-                  placeholder={t("filters.allSessions")}
-                  className="w-full text-xs py-1.5"
-                />
-              </Field>
-            )}
+            {/* sessie is derived from the real open time (tijd_open, else custom.cc on a
+                WPM journal); a trade without either has sessie=null and simply won't match,
+                so the filter is meaningful for every journal now (0059). */}
+            <Field label={t("filters.sessie")}>
+              <EnumSelect
+                options={SESSIES}
+                value={value.sessie ?? ""}
+                onChange={(e) => onChange({ ...value, sessie: e.target.value === "" ? undefined : (e.target.value as (typeof SESSIES)[number]) })}
+                placeholder={t("filters.allSessions")}
+                className="w-full text-xs py-1.5"
+              />
+            </Field>
             <Field label={t("filters.evaluation")}>
               <EnumSelect
                 options={TRADE_EVALUATIONS}
@@ -150,19 +133,7 @@ export function FilterPanel({ value, onChange }: FilterPanelProps) {
                 className="w-full text-xs py-1.5"
               />
             </Field>
-            {/* news (nieuws) is a legacy WPM field — gated out of the form for non-legacy journals too. */}
-            {isLegacyMethodology && (
-              <Field label={t("filters.news")}>
-                <EnumSelect
-                  options={NIEUWS_OPTIONS}
-                  value={value.nieuws === undefined ? "" : value.nieuws ? "Ja" : "Nee"}
-                  onChange={(e) => onChange({ ...value, nieuws: e.target.value === "" ? undefined : e.target.value === "Ja" })}
-                  placeholder={t("filters.all")}
-                  className="w-full text-xs py-1.5"
-                />
-              </Field>
-            )}
-            {/* The active journal's own enum/boolean custom fields. */}
+            {/* The active journal's own enum/boolean custom fields (incl. the former WPM fase/cc/nieuws/… since 0059). */}
             {customFilterFields.map((f) => {
               const current = value.custom?.[f.field_key];
               if (f.field_type === "boolean") {

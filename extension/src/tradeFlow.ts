@@ -4,10 +4,8 @@
 // een retry, zodat import_ref de dubbele insert idempotent maakt.
 import type { Direction } from "../../src/lib/constants";
 import { normalizeTvSymbol } from "../../src/lib/symbolNormalize";
-import {
-  buildTradePayload, type LegacyTradeColumn, type TradeMode, type WallClock,
-} from "../../src/lib/tradePayload";
-import type { ExtensionDb, JournalSchema } from "./db";
+import { buildTradePayload, type TradeMode, type WallClock } from "../../src/lib/tradePayload";
+import type { ExtensionDb } from "./db";
 
 export interface LogTradeRequest {
   /** Rauw TV-symbool ("OANDA:AUDJPY") — normalisatie gebeurt hier, niet in de UI. */
@@ -20,11 +18,8 @@ export interface LogTradeRequest {
   entryTimeUtcSec: number | null;
   manualDateTime?: WallClock | null;
   riskPct: number | null;
+  /** Alle methodology-antwoorden (incl. fase/cc/… op een WPM-journal) → trades.custom. */
   custom: Record<string, unknown>;
-  /** Door de user gekozen fase (legacy journal); null/afwezig = eerste fase. */
-  fase?: string | null;
-  /** Antwoorden op de legacy-WPM-velden → echte kolommen (whitelist in tradePayload). */
-  legacy?: Partial<Record<LegacyTradeColumn, unknown>> | null;
   notes?: string | null;
   clientUuid: string;
   /** Storage-paden uit de snapshot-cyclus (F3a) voor de vier vaste slots. */
@@ -34,25 +29,6 @@ export interface LogTradeRequest {
 export type LogTradeResult =
   | { ok: true; tradeId: string | null; duplicate: boolean }
   | { ok: false; stage: "auth" | "profile" | "build" | "insert" | "update"; error: string; detail?: string };
-
-/** Eerste fase-optie van een legacy journal (het `fase`-veld draagt z'n opties);
- * anders dezelfde stille "Fase 1"-default als quick-log (plan M3). */
-export function firstFaseOf(journal: JournalSchema | null): string {
-  const faseField = journal?.fields.find((f) => f.fieldKey === "fase");
-  const options = faseField?.options;
-  if (Array.isArray(options) && typeof options[0] === "string" && options[0]) return options[0];
-  return "Fase 1";
-}
-
-/** De fase die de payload in gaat: de keuze van de user als die één van de
- * journal-opties is, anders de eerste fase (zelfde default als quick-log). */
-export function resolveFase(journal: JournalSchema | null, requested: string | null | undefined): string {
-  if (requested) {
-    const options = journal?.fields.find((f) => f.fieldKey === "fase")?.options;
-    if (Array.isArray(options) && options.includes(requested)) return requested;
-  }
-  return firstFaseOf(journal);
-}
 
 type PreparedTrade =
   | { ok: true; payload: Record<string, unknown> }
@@ -84,7 +60,6 @@ async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promi
         ? { type: "project", projectId: req.target.projectId, methodologyId: profile.methodologyId }
         : { type: "live", methodologyId: profile.methodologyId },
     timezone: profile.timezone,
-    fase: resolveFase(journal, req.fase),
     entryTimeUtcMs: req.entryTimeUtcSec != null ? req.entryTimeUtcSec * 1000 : null,
     manualDateTime: req.manualDateTime ?? null,
     mode: req.mode,
@@ -92,7 +67,6 @@ async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promi
     prices: req.prices,
     riskPct: req.riskPct,
     custom: req.custom,
-    legacy: req.legacy ?? undefined,
     clientUuid: req.clientUuid,
     notes: req.notes ?? null,
   });

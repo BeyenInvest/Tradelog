@@ -8,12 +8,10 @@ import type { BacktestProject, MethodologyView, Trade } from "@/lib/types";
 
 /** Read-only equivalent of ProjectDashboardPage — Journal/Analyse tabs over a project's trades, for the admin debug view. */
 export function ReadOnlyProjectModal({
-  project, trades, hideFaseOverride, methodologyOverride, onClose,
+  project, trades, methodologyOverride, onClose,
 }: {
   project: BacktestProject;
   trades: Trade[];
-  /** The viewed profile's own hide_fase — see BacktestingAnalysisView. */
-  hideFaseOverride?: boolean;
   /** The viewed user's journal view, so breakdowns follow their methodology, not the admin's (H2). */
   methodologyOverride?: MethodologyView;
   onClose: () => void;
@@ -55,7 +53,7 @@ export function ReadOnlyProjectModal({
           {tab === "journal" ? (
             <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} allowSessions />
           ) : (
-            <BacktestingAnalysisView trades={trades} hideFaseOverride={hideFaseOverride} methodologyOverride={methodologyOverride} />
+            <BacktestingAnalysisView trades={trades} methodologyOverride={methodologyOverride} />
           )}
         </>
       )}

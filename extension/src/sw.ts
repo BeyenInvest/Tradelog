@@ -67,19 +67,9 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
         activeJournalId: profile?.methodologyId ?? null,
         journals,
         projects,
-        hideFase: profile?.hideFase === true,
         // Zelfde fallback als de sessie-trigger in de DB (schema.sql).
         timezone: profile?.timezone ?? "Europe/Brussels",
       };
-    }
-    case "custom-options": {
-      const session = await db.getSessionInfo();
-      if (!session) return { ok: false, error: "Niet gekoppeld" };
-      const [entry, tradeConcept] = await Promise.all([
-        db.listCustomOptions("entry"),
-        db.listCustomOptions("trade_concept"),
-      ]);
-      return { ok: true, entry, tradeConcept };
     }
     case "log-trade": {
       const result = await logTradeFromChart(db, req.request);

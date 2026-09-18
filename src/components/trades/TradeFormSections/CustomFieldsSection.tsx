@@ -56,13 +56,12 @@ export function CustomFieldsSection() {
     formState: { errors },
   } = useFormContext<TradeFormValues>();
 
-  const fase = watch("fase");
   const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
 
   // Shared with TradeForm's submit-time required-check and customFieldDimensions,
   // so what renders, what's enforced and what's analysed can never drift apart.
   const dynamicFields = dynamicMethodologyFields(fields);
-  const isVisible = (f: MethodologyField) => isFieldVisible(f, fields, fase, customVals);
+  const isVisible = (f: MethodologyField) => isFieldVisible(f, fields, customVals);
 
   // Clear the stored value of any field its condition currently hides, so a stale
   // answer from a now-hidden field is never saved to trades.custom.
@@ -74,7 +73,7 @@ export function CustomFieldsSection() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fase, JSON.stringify(customVals)]);
+  }, [JSON.stringify(customVals)]);
 
   // Inline field creation (add-while-logging): own journal only — a read-only
   // template can't take fields. Renders the section even with zero fields so a

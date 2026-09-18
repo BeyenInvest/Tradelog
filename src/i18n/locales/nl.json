@@ -249,15 +249,26 @@
       "targets": { "label": "Targets (R)" },
       "emotion": { "label": "Emotie", "options": ["Kalm/gedisciplineerd", "FOMO", "Angst", "Hebzucht", "Overmoed", "Revenge", "Verveling"] },
       "mistake": { "label": "Fout", "options": ["Geen", "Geen stop", "Stop verzet", "Oversized", "Chased entry", "Te vroeg uit", "Te laat uit", "Off-plan"] },
-      "followed_plan": { "label": "Volgde ik mijn plan?" }
+      "followed_plan": { "label": "Volgde ik mijn plan?" },
+      "fase": { "label": "Fase", "options": ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] },
+      "weekly_criteria": { "label": "Weekly criteria", "options": ["Pattern", "High/Low", "IC", "Region"] },
+      "trade_concept": { "label": "Trade concept", "options": ["Reversal", "Continuation", "Daily retrace", "Pattern in Pattern", "Push IC Push", "Weekly-4H", "Reclaim", "Small daily pattern"] },
+      "entry": { "label": "Entry", "options": ["Decel", "Reversal", "Continuation met ruimte", "Continuation zonder ruimte", "2H Entry", "Reclaim", "100 Fib", "Instant limiet"] },
+      "w_confirm": { "label": "Weekly richting mee?" },
+      "d_confirm": { "label": "Daily richting mee?" },
+      "h4_confirm": { "label": "4H richting mee?" },
+      "extra_d_conf": { "label": "Extra Daily confirmatie?" },
+      "weekly_kenmerk": { "label": "Weekly kenmerk", "options": ["Trending market", "Corrective market", "Ranging market"] },
+      "cc": { "label": "4H Candle Close (CC)", "options": ["03", "07", "11", "15", "19", "23"] },
+      "nieuws": { "label": "Nieuws nabij trade?" }
     }
   },
   "startsets": {
     "assets": { "forex": "Forex", "futures": "Futures", "stock": "Aandelen", "crypto": "Crypto" },
     "styles": { "scalp": "Scalp", "day": "Daytrade", "swing": "Swing" },
     "styleHints": { "scalp": "seconden–minuten", "day": "binnen de dag", "swing": "dagen–weken" },
-    "strategies": { "ict_smc": "ICT / SMC" },
-    "strategyHints": { "ict_smc": "smart-money concepts" },
+    "strategies": { "ict_smc": "ICT / SMC", "wpm": "Weekly Phase Method" },
+    "strategyHints": { "ict_smc": "smart-money concepts", "wpm": "het 4-fasen systeem" },
     "desc": {
       "forex_scalp": "Snelle in-en-uit trades; sessie, nieuws en emotie.",
       "forex_day": "Intraday op 1–60m; setup-kwaliteit en discipline.",
@@ -345,7 +356,7 @@
       "multiJournals": { "title": "Meerdere journals", "body": "Houd aparte journals aan per markt of strategie, elk met eigen velden en cijfers. Wissel bovenaan in de sidebar of maak er een nieuwe aan." },
       "reviewSections": { "title": "Je review op maat", "body": "Voeg eigen secties toe aan je wekelijkse en periodieke review, hernoem ze of zet ze in de volgorde die voor jou werkt." },
       "advancedAnalysis": { "title": "Geavanceerde analyse", "body": "Zet per journal de exit-analyse aan (MAE/MFE en geplande R:R) als je dieper op je uitvoering wil inzoomen — standaard uit om het simpel te houden." },
-      "display": { "title": "Weergave", "body": "Toon je resultaat in %, R of $, kies een licht of donker thema en je taal. Gebruik je geen fase-indeling? Verberg die velden volledig." },
+      "display": { "title": "Weergave", "body": "Kies een licht of donker thema en de taal van de app. Je persoonlijke voorkeuren staan in Instellingen." },
       "instruments": { "title": "Eigen instrumenten", "body": "Bepaal welke instrumenten of paren in je journal beschikbaar zijn, zodat je invoerlijst bij jouw markt past." },
       "journal": { "title": "Journal", "body": "Je live-handelsdagboek. Log elke trade met de velden die jij hebt gekozen; je statistieken, grafieken en kalender bouwen zich vanzelf op." },
       "analyse": { "title": "Analyse", "body": "De Analyse-tab naast je Journal: KPI's zoals resultaat, profit factor en drawdown, plus equity-curve, R-verdeling, kruistabellen en uitsplitsingen per setup, sessie of uur." },

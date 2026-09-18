@@ -2,8 +2,9 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0057 (gesynct in fixplan
--- blok C, 2026-09-09). ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0059 (gesynct in fixplan
+-- blok C, 2026-09-09; 0059 = WPM-sanering, 2026-09-18). ⚠️ CONVENTIE (hard
+-- sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij. Migratienummers nooit hergebruiken. (Historische voetnoot: 0020
 -- bestaat dubbel — twee bestanden, beide gedraaid; 0034 bestaat niet.)
@@ -11,7 +12,10 @@
 create extension if not exists pgcrypto;
 
 -- ---------- ENUM TYPES ----------
-create type fase_enum as enum ('Fase 1','Fase 2','Fase 3','Fase 4');
+-- Geen fase_enum / weekly_criteria_enum / weekly_kenmerk_enum / cc_enum /
+-- structuur_enum meer (0059): de Weekly Phase Method is een gewoon config-
+-- gedreven journal; zijn waarden leven in trades.custom, gevormd door
+-- methodology_fields (zie de WPM-seed verderop).
 create type outcome_enum as enum ('Win','Loss','BE');
 create type direction_enum as enum ('Long','Short'); -- universal core field (Scope C, cyclus 5 — see 0029)
 create type trade_evaluation_enum as enum ('Good trade','Emotional error','Technical error','Missed trade');
@@ -25,14 +29,8 @@ create type pair_enum as enum (
   'USDCAD','USDCHF','USDJPY',
   'XAGUSD','XAUUSD'
 );
-create type weekly_criteria_enum as enum ('Pattern','High/Low','IC','Region');
-create type weekly_kenmerk_enum as enum ('Trending market','Corrective market','Ranging market');
--- trade_concept intentionally has no enum type — it's plain text (fixed
--- TRADE_CONCEPTS list + per-user custom_options), same exception as `entry`
--- below. See 0018_custom_trade_concepts.sql / 0010_custom_entries.sql.
-create type cc_enum as enum ('03','07','11','15','19','23');
 create type sessie_enum as enum ('Asia','London','Overlap','New York');
-create type structuur_enum as enum ('Inner','Outer');
+-- Account-"Type" van prop_accounts — losse naamgenoot van de (verdwenen) WPM-fase.
 create type prop_fase_enum as enum ('Phase 1','Phase 2','Funded','Private');
 -- Weergave-eenheid voor resultaten (Fase J / 0037) — puur een display-voorkeur,
 -- alle opslag en stats blijven in % (resultaat_pct).
@@ -48,7 +46,8 @@ create table profiles (
   display_name text,
   plan text not null default 'free',
   role text not null default 'user' check (role in ('user', 'admin')),
-  hide_fase boolean not null default false,
+  -- (hide_fase — de per-user "fasen tonen"-toggle uit 0009 — is in 0059
+  -- gedropt: fase is een gewoon journal-veld, zichtbaarheid = journal-config.)
   -- Soft-launch gate (0033): shows the multi-journal UI (switcher, preset-picker,
   -- veld-editor, direction) only to flagged users. SQL-only, no UI toggle.
   beta_features boolean not null default false,
@@ -232,11 +231,14 @@ create table trades (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
 
-  fase fase_enum not null,
+  -- Sinds 0059 géén methodology-specifieke kolommen meer (fase, weekly_*,
+  -- trade_concept, entry, cc, nieuws, confirms, fase-kenmerken): alles wat een
+  -- journal-veld is, leeft in `custom` (jsonb, verderop toegevoegd), gevormd
+  -- door methodology_fields. Hieronder staat alleen de universele kern.
   datum_open date not null,
   -- Real open time next to the date (Fase S2, 0051) — wall-clock in the owner's
   -- own profiles.timezone, exactly as typed (naive on purpose, like datum_open
-  -- and cc). Nullable: null = time unknown (pre-0051 rows, quick-log, imports),
+  -- and the WPM cc slot). Nullable: null = time unknown (pre-0051 rows, quick-log, imports),
   -- the trade then sits out the time-based session/hour breakdowns.
   tijd_open time,
   datum_sluiting date,
@@ -307,45 +309,20 @@ create table trades (
     or (direction = 'Short' and stop_price > entry_price)
   ),
 
-  weekly_criteria weekly_criteria_enum,
-  weekly_kenmerk weekly_kenmerk_enum,
-  trade_concept text, -- fixed TRADE_CONCEPTS list + per-user custom_options, not a native enum (see custom_options below)
-  entry text, -- fixed ENTRIES list + per-user custom_options, not a native enum (see custom_options below)
-
-  cc cc_enum not null,
   -- Timezone-aware trading session, derived from the owner's profiles.timezone
-  -- plus the real open time (tijd_open, 0051) when present, else the legacy cc
-  -- slot (0019). Maintained by trg_trades_set_sessie (not a generated column:
-  -- the tz conversion isn't IMMUTABLE). See compute_sessie()/compute_sessie_at().
-  sessie sessie_enum not null,
+  -- plus the real open time (tijd_open, 0051) when present, else the WPM
+  -- candle-close slot in custom->>'cc' ("00".."23", 0059). Nullable since 0059:
+  -- a trade without either has no session (was a fake "London" from the
+  -- hidden cc default before). Maintained by trg_trades_set_sessie (not a
+  -- generated column: the tz conversion isn't IMMUTABLE). See compute_sessie_at().
+  sessie sessie_enum,
 
-  nieuws boolean not null default false,
-  w_confirm boolean,
-  d_confirm boolean,
-  h4_confirm boolean,
   w_screenshot text,
   d_screenshot text,
   h4_screenshot text,
   h2_screenshot text,
-  extra_d_conf boolean,
 
   notes text,
-
-  -- Fase 1
-  fase1_daily_respecteert_zone boolean,
-  fase1_spelers_verleden boolean,
-  -- Fase 2
-  fase2_daily_respecteert_zone boolean,
-  fase2_structuur structuur_enum,
-  -- Fase 3
-  fase3_zone_min_2_touches boolean,
-  fase3_engulfing_candle boolean,
-  fase3_beide boolean generated always as (
-    coalesce(fase3_zone_min_2_touches,false) and coalesce(fase3_engulfing_candle,false)
-  ) stored,
-  fase3_structuur structuur_enum,
-  -- Fase 4
-  fase4_weekly_bevestigingscandle boolean,
 
   weekly_review_id uuid references weekly_reviews(id) on delete set null,
   backtest_project_id uuid references backtest_projects(id) on delete cascade,
@@ -389,8 +366,12 @@ create table payouts (
 );
 
 -- ---------- CUSTOM OPTIONS ----------
--- Per-user extra values for a fixed-list form field (e.g. field='entry'), merged
--- client-side on top of the shared constant list — see useCustomOptions.
+-- Per-user extra values for a fixed-list form field (field='entry' /
+-- 'trade_concept'), historically merged client-side on top of the shared
+-- constant list (useCustomOptions). Since 0059 those two fields are ordinary
+-- enum fields of the WPM journal and every custom_options value was merged
+-- into the journal's methodology_fields.options; the table is kept until the
+-- app stops reading it (drop = a later migration).
 create table custom_options (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -401,12 +382,12 @@ create table custom_options (
 );
 
 -- ---------- CONFIGURABLE METHODOLOGY / JOURNAL (Scope C — see 0020, 0022) ----------
--- Per-user methodology definitions that replace the hard-coded FASES /
--- FASE_KENMERKEN (constants.ts). The built-in Weekly Phase Method template (user_id NULL,
--- is_system) is seeded below, world-readable and editable by no one; users own
--- and edit their own copies. Fase-kenmerken move off the fixed trades.fase*_
--- columns into the flexible trades.custom jsonb bag, shaped by the field
--- definitions here. Since 0022 a methodology also carries an asset_class +
+-- Per-user methodology definitions. The built-in Weekly Phase Method template
+-- (user_id NULL, is_system) is seeded below, world-readable and editable by no
+-- one; users own and edit their own copies. Every journal-specific trade value
+-- lives in the flexible trades.custom jsonb bag, shaped by the field definitions
+-- here (since 0059 that includes the WPM fields — no fixed trades.* columns are
+-- left). Since 0022 a methodology also carries an asset_class +
 -- instrument_config, i.e. it doubles as the user's "journal" (see design doc §3).
 create table methodologies (
   id uuid primary key default gen_random_uuid(),
@@ -423,24 +404,17 @@ create table methodologies (
   updated_at timestamptz not null default now()
 );
 
-create table methodology_fases (
-  id uuid primary key default gen_random_uuid(),
-  methodology_id uuid not null references methodologies(id) on delete cascade,
-  naam text not null,
-  sort_order integer not null default 0,
-  unique (methodology_id, naam)
-);
-
+-- (methodology_fases — the transitional per-methodology fase list from 0020 —
+-- and methodology_fields.fase_id were dropped in 0059: fase is just a field.)
 create table methodology_fields (
   id uuid primary key default gen_random_uuid(),
   methodology_id uuid not null references methodologies(id) on delete cascade,
-  fase_id uuid references methodology_fases(id) on delete cascade, -- legacy/transitional; fase is now a field (see 0023), null on the new flat model
   field_key text not null,             -- stable key inside the trades.custom jsonb bag
   label text not null,
   label_key text,                      -- catalogue block key for render-time label translation; null = custom field (see 0047)
   field_type text not null check (field_type in ('boolean', 'enum', 'text', 'number', 'date')),
   options jsonb,                       -- enum: ordered allowed values, e.g. '["Inner","Outer"]'
-  is_computed boolean not null default false, -- e.g. Fase 3 "Beide?" — derived, never stored in the bag
+  is_computed boolean not null default false, -- derived, never stored in the bag (no seeded computed field remains since 0059)
   group_label text,                    -- form section header (see 0022)
   group_key text,                      -- catalogue group key, group_label's counterpart of label_key (see 0047)
   required boolean not null default false,    -- mandatory on input (see 0022)
@@ -450,7 +424,6 @@ create table methodology_fields (
   unique (methodology_id, field_key) -- fase is now a field; field_key is unique per methodology (see 0023)
 );
 
-create index idx_methodology_fases_methodology on methodology_fases(methodology_id);
 create index idx_methodology_fields_methodology on methodology_fields(methodology_id);
 
 -- ---------- CONFIGURABLE REVIEW SECTIONS (Fase N5 — see 0048) ----------
@@ -482,38 +455,31 @@ create index idx_review_sections_methodology on review_sections(methodology_id);
 insert into methodologies (id, user_id, naam, is_system, asset_class)
 values ('00000000-0000-4000-8000-000000000001', null, 'Weekly Phase Method', true, 'forex');
 
-insert into methodology_fases (methodology_id, naam, sort_order) values
-  ('00000000-0000-4000-8000-000000000001', 'Fase 1', 1),
-  ('00000000-0000-4000-8000-000000000001', 'Fase 2', 2),
-  ('00000000-0000-4000-8000-000000000001', 'Fase 3', 3),
-  ('00000000-0000-4000-8000-000000000001', 'Fase 4', 4);
-
--- Fase is a field now (see 0023): a 'fase' enum field carries the fase list, and
--- the kenmerken are unified per field_key and shown conditionally via show_when.
--- (methodology_fases above is kept transitionally until the client stops reading it.)
-with fase_field as (
-  insert into methodology_fields
-    (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, sort_order)
-  values
-    ('00000000-0000-4000-8000-000000000001', null, 'fase', 'Fase', 'enum',
-     '["Fase 1","Fase 2","Fase 3","Fase 4"]'::jsonb, false, null, true, 1)
-  returning id
-)
+-- The WPM field contract (0059): 11 ordinary, unconditional fields — fase is
+-- just an enum field, and the former per-fase kenmerken (0023) are gone as
+-- fields (globally hidden since 2026-09-17; conditional fields don't fit the
+-- block-based startset). Their historical answers live on in trades.custom
+-- under the unified keys (daily_respecteert_zone, spelers_verleden, structuur,
+-- zone_min_2_touches, engulfing_candle, weekly_bevestigingscandle). label_key =
+-- field_key (catalogue blocks); group_key 'setup' | 'markt'.
 insert into methodology_fields
-  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, show_when_field_id, show_when_values, sort_order)
+  (methodology_id, field_key, label, label_key, field_type, options, is_computed, group_label, group_key, required, sort_order)
 select
-  '00000000-0000-4000-8000-000000000001', null,
-  v.field_key, v.label, v.field_type, v.options, v.is_computed, 'Kenmerken', false,
-  ff.id, v.show_when, v.sort_order
-from fase_field ff, (values
-  ('daily_respecteert_zone',    'Daily respecteert zone?',         'boolean', null::jsonb,                false, '["Fase 1","Fase 2"]'::jsonb, 2),
-  ('spelers_verleden',          'Al spelers in verleden (W)?',     'boolean', null::jsonb,                false, '["Fase 1"]'::jsonb,          3),
-  ('structuur',                 'Structuur',                       'enum',    '["Inner","Outer"]'::jsonb, false, '["Fase 2","Fase 3"]'::jsonb, 4),
-  ('zone_min_2_touches',        'Zone met min. 2 vorige touches?', 'boolean', null::jsonb,                false, '["Fase 3"]'::jsonb,          5),
-  ('engulfing_candle',          'Engulfing candle?',               'boolean', null::jsonb,                false, '["Fase 3"]'::jsonb,          6),
-  ('beide',                     'Beide?',                          'boolean', null::jsonb,                true,  '["Fase 3"]'::jsonb,          7),
-  ('weekly_bevestigingscandle', 'Weekly bevestigingscandle?',      'boolean', null::jsonb,                false, '["Fase 4"]'::jsonb,          8)
-) as v(field_key, label, field_type, options, is_computed, show_when, sort_order);
+  '00000000-0000-4000-8000-000000000001',
+  v.field_key, v.label, v.field_key, v.field_type, v.options, false, v.group_label, v.group_key, v.required, v.sort_order
+from (values
+  ('fase',            'Fase',                     'enum',    '["Fase 1","Fase 2","Fase 3","Fase 4"]'::jsonb,                                                                         'Setup', 'setup', true,   1),
+  ('weekly_criteria', 'Weekly criteria',          'enum',    '["Pattern","High/Low","IC","Region"]'::jsonb,                                                                          'Setup', 'setup', false,  2),
+  ('trade_concept',   'Trade concept',            'enum',    '["Reversal","Continuation","Daily retrace","Pattern in Pattern","Push IC Push","Weekly-4H","Reclaim","Small daily pattern"]'::jsonb, 'Setup', 'setup', false, 3),
+  ('entry',           'Entry',                    'enum',    '["Decel","Reversal","Continuation met ruimte","Continuation zonder ruimte","2H Entry","Reclaim","100 Fib","Instant limiet"]'::jsonb, 'Setup', 'setup', false, 4),
+  ('w_confirm',       'Weekly richting mee?',     'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  5),
+  ('d_confirm',       'Daily richting mee?',      'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  6),
+  ('h4_confirm',      '4H richting mee?',         'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  7),
+  ('extra_d_conf',    'Extra Daily confirmatie?', 'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  8),
+  ('weekly_kenmerk',  'Weekly kenmerk',           'enum',    '["Trending market","Corrective market","Ranging market"]'::jsonb,                                                      'Markt', 'markt', false,  9),
+  ('cc',              '4H Candle Close (CC)',     'enum',    '["03","07","11","15","19","23"]'::jsonb,                                                                               'Markt', 'markt', false, 10),
+  ('nieuws',          'Nieuws nabij trade?',      'boolean', null::jsonb,                                                                                                            'Markt', 'markt', false, 11)
+) as v(field_key, label, field_type, options, group_label, group_key, required, sort_order);
 
 -- Journal-presets catalogue (Scope C, cyclus 6 — see 0027 + docs/journal-presets.md).
 -- 8 is_system recipes = asset preset (instrument/sizing/asset fields) ∪ trader-style
@@ -543,9 +509,9 @@ insert into methodologies (id, user_id, naam, is_system, asset_class, instrument
      '{"unit":"coins","note":"24/7"}'::jsonb);
 
 insert into methodology_fields
-  (methodology_id, fase_id, field_key, label, field_type, options, is_computed, group_label, required, show_when_values, sort_order)
+  (methodology_id, field_key, label, field_type, options, is_computed, group_label, required, show_when_values, sort_order)
 select
-  v.methodology_id::uuid, null, v.field_key, v.label, v.field_type, v.options, false, v.group_label, false, v.show_when_values, v.sort_order
+  v.methodology_id::uuid, v.field_key, v.label, v.field_type, v.options, false, v.group_label, false, v.show_when_values, v.sort_order
 from (values
   ('00000000-0000-4000-8000-000000000010','setup','Setup','enum','["Breakout","Pullback","Reversal","Range","Trendcontinuatie"]'::jsonb,'Setup',null::jsonb,1),
   ('00000000-0000-4000-8000-000000000010','timeframe','Timeframe','enum','["1m","5m","15m","1H"]'::jsonb,'Setup',null::jsonb,2),
@@ -770,7 +736,6 @@ create trigger trg_trades_journal_ownership
 -- ---------- INDEXES ----------
 create index idx_trades_user on trades(user_id);
 create index idx_trades_datum_open on trades(datum_open);
-create index idx_trades_fase on trades(fase);
 create index idx_trades_methodology on trades(methodology_id);
 -- Hoofdleespad (0052): elke journal-gescopeerde fetch filtert op
 -- (user_id, methodology_id) en sorteert/vergelijkt op datum_open.
@@ -841,44 +806,13 @@ create trigger trg_methodology_fields_clear_stale_keys
   before update on methodology_fields
   for each row execute function methodology_fields_clear_stale_keys();
 
--- ---------- timezone-aware trading session mapping (see 0019 + 0051) ----------
--- (cc, date, tz) -> session, anchored to the reference zone the methodology was
--- authored in (Europe/Brussels). STABLE (depends on the tz database), so it can't
--- live in a generated column — a trigger maintains trades.sessie instead.
-create or replace function compute_sessie(p_cc cc_enum, p_datum date, p_tz text)
-returns sessie_enum
-language plpgsql
-stable
-as $$
-declare
-  brussels_hour int;
-begin
-  if p_cc is null or p_datum is null then
-    return null;
-  end if;
-
-  brussels_hour := extract(
-    hour from
-      ((p_datum::timestamp + make_interval(hours => p_cc::text::int))
-        at time zone coalesce(p_tz, 'Europe/Brussels'))
-        at time zone 'Europe/Brussels'
-  )::int;
-
-  return case
-    when brussels_hour between 0 and 7  then 'Asia'::sessie_enum
-    when brussels_hour between 8 and 15 then 'London'::sessie_enum
-    when brussels_hour between 16 and 19 then 'Overlap'::sessie_enum
-    else 'New York'::sessie_enum
-  end;
-end;
-$$;
-
--- 0036-conventie (zie delete_own_account): anon by name revoken.
-revoke execute on function compute_sessie(cc_enum, date, text) from public, anon;
-grant execute on function compute_sessie(cc_enum, date, text) to authenticated;
-
--- Time-based sibling (0051): (date, real open time, tz) -> session, same
--- Brussels-anchored buckets. Used when trades.tijd_open is filled in.
+-- ---------- timezone-aware trading session mapping (see 0019 + 0051 + 0059) ----------
+-- (date, local open time, tz) -> session, anchored to the reference zone the
+-- methodology was authored in (Europe/Brussels). STABLE (depends on the tz
+-- database), so it can't live in a generated column — a trigger maintains
+-- trades.sessie instead. (The cc_enum-based compute_sessie from 0019 was
+-- dropped in 0059; the cc slot goes through this one as make_time(cc, 0, 0),
+-- which is the identical computation.)
 create or replace function compute_sessie_at(p_datum date, p_tijd time, p_tz text)
 returns sessie_enum
 language plpgsql
@@ -910,33 +844,48 @@ $$;
 revoke execute on function compute_sessie_at(date, time, text) from public, anon;
 grant execute on function compute_sessie_at(date, time, text) to authenticated;
 
+-- Real open time wins; else the WPM candle-close slot in custom->>'cc' (strict
+-- "00".."23" — the int cast only runs after the regex matched, so a stray value
+-- in the client-controlled jsonb can't error); else keep the stored value on an
+-- UPDATE and leave a fresh INSERT at null (0059).
 create or replace function trades_set_sessie() returns trigger
 language plpgsql as $$
 declare
   v_tz text;
+  v_cc text;
 begin
   select timezone into v_tz from profiles where id = new.user_id;
+  v_tz := coalesce(v_tz, 'Europe/Brussels');
+  v_cc := new.custom ->> 'cc';
+
   if new.tijd_open is not null then
-    new.sessie := compute_sessie_at(new.datum_open, new.tijd_open, coalesce(v_tz, 'Europe/Brussels'));
+    new.sessie := compute_sessie_at(new.datum_open, new.tijd_open, v_tz);
+  elsif v_cc ~ '^(0[0-9]|1[0-9]|2[0-3])$' then
+    new.sessie := compute_sessie_at(new.datum_open, make_time(v_cc::int, 0, 0), v_tz);
+  elsif tg_op = 'UPDATE' then
+    new.sessie := old.sessie;
   else
-    new.sessie := compute_sessie(new.cc, new.datum_open, coalesce(v_tz, 'Europe/Brussels'));
+    new.sessie := null;
   end if;
   return new;
 end;
 $$;
 
 create trigger trg_trades_set_sessie
-  before insert or update of cc, datum_open, tijd_open on trades
+  before insert or update of datum_open, tijd_open, custom on trades
   for each row execute function trades_set_sessie();
 
--- Re-bucket a user's trades when they change their timezone (time-aware, 0051).
+-- Re-bucket a user's trades when they change their timezone (time-aware, 0051;
+-- cc via custom since 0059 — a trade without either keeps its stored value).
 create or replace function profiles_recompute_sessie() returns trigger
 language plpgsql as $$
 begin
   if new.timezone is distinct from old.timezone then
     update trades set sessie = case
       when tijd_open is not null then compute_sessie_at(datum_open, tijd_open, new.timezone)
-      else compute_sessie(cc, datum_open, new.timezone)
+      when (custom ->> 'cc') ~ '^(0[0-9]|1[0-9]|2[0-3])$'
+        then compute_sessie_at(datum_open, make_time((custom ->> 'cc')::int, 0, 0), new.timezone)
+      else sessie
     end
     where user_id = new.id;
   end if;
@@ -1083,10 +1032,11 @@ begin
     raise exception 'source methodology % not found or not visible', source_id;
   end if;
 
+  -- (fase_id viel weg in 0059 — body verder = 0057-eindstand.)
   insert into methodology_fields
-    (methodology_id, fase_id, field_key, label, label_key, field_type, options, is_computed,
+    (methodology_id, field_key, label, label_key, field_type, options, is_computed,
      group_label, group_key, required, show_when_values, sort_order)
-  select new_id, null, field_key, label, label_key, field_type, options, is_computed,
+  select new_id, field_key, label, label_key, field_type, options, is_computed,
          group_label, group_key, required, show_when_values, sort_order
   from methodology_fields where methodology_id = source_id;
 
@@ -1183,8 +1133,9 @@ create trigger trg_link_weekly_review_trades
 -- Transactional option rename: option list + sibling show_when conditions +
 -- every stored answer in trades.custom, in ONE call. SECURITY INVOKER: every
 -- UPDATE re-checks the caller's RLS. Mirrors the client-side guards it
--- replaced: own non-system methodology only, `fase` locked (legacy enum),
--- enum field, old value must exist, case-insensitive collision refuses.
+-- replaced: own non-system methodology only, enum field, old value must
+-- exist, case-insensitive collision refuses. (The `fase` lock from 0045 was
+-- removed in 0059 — fase is an ordinary enum field now.)
 create or replace function rename_field_option(p_field_id uuid, p_old_value text, p_new_value text)
 returns integer
 language plpgsql
@@ -1207,9 +1158,6 @@ begin
 
   if not found then
     raise exception 'field not found or not editable' using errcode = 'P0002';
-  end if;
-  if v_field.field_key = 'fase' then
-    raise exception 'legacy field is locked' using errcode = '23514';
   end if;
   if v_field.field_type <> 'enum' or v_field.options is null or not (v_field.options ? p_old_value) then
     raise exception 'option not found' using errcode = 'P0002';
@@ -1416,10 +1364,11 @@ create policy "share_links_owner_all" on share_links
 
 revoke all on table share_links from anon;
 
--- De ENE trade-allow-list voor alle share-RPC's (0042, eindstand 0052 incl.
--- is_open + tijd_open). Geen user_id/import_ref; screenshot-kolommen alleen
--- als externe URL (bucket-paden bevatten de owner-uuid en zijn voor anon toch
--- niet te signen). Een nieuwe trades-kolom delen = een bewuste wijziging hier.
+-- De ENE trade-allow-list voor alle share-RPC's (0042, eindstand 0059: de
+-- WPM-kolommen zijn weg, hun waarden reizen via 'custom'). Geen
+-- user_id/import_ref/prijzen; screenshot-kolommen alleen als externe URL
+-- (bucket-paden bevatten de owner-uuid en zijn voor anon toch niet te signen).
+-- Een nieuwe trades-kolom delen = een bewuste wijziging hier.
 -- Niet voor anon aanroepbaar — alleen de definer-RPC's gebruiken hem.
 create or replace function shared_trade_json(t trades)
 returns jsonb
@@ -1428,7 +1377,6 @@ stable
 as $$
   select jsonb_build_object(
     'id', t.id,
-    'fase', t.fase,
     'datum_open', t.datum_open,
     'tijd_open', t.tijd_open,
     'datum_sluiting', t.datum_sluiting,
@@ -1441,31 +1389,12 @@ as $$
     'resultaat_pct', t.resultaat_pct,
     'risk_pct', t.risk_pct,
     'trade_evaluation', t.trade_evaluation,
-    'weekly_criteria', t.weekly_criteria,
-    'weekly_kenmerk', t.weekly_kenmerk,
-    'trade_concept', t.trade_concept,
-    'entry', t.entry,
-    'cc', t.cc,
     'sessie', t.sessie,
-    'nieuws', t.nieuws,
-    'w_confirm', t.w_confirm,
-    'd_confirm', t.d_confirm,
-    'h4_confirm', t.h4_confirm,
     'w_screenshot', case when t.w_screenshot ~* '^https?://' then t.w_screenshot end,
     'd_screenshot', case when t.d_screenshot ~* '^https?://' then t.d_screenshot end,
     'h4_screenshot', case when t.h4_screenshot ~* '^https?://' then t.h4_screenshot end,
     'h2_screenshot', case when t.h2_screenshot ~* '^https?://' then t.h2_screenshot end,
-    'extra_d_conf', t.extra_d_conf,
     'notes', t.notes,
-    'fase1_daily_respecteert_zone', t.fase1_daily_respecteert_zone,
-    'fase1_spelers_verleden', t.fase1_spelers_verleden,
-    'fase2_daily_respecteert_zone', t.fase2_daily_respecteert_zone,
-    'fase2_structuur', t.fase2_structuur,
-    'fase3_zone_min_2_touches', t.fase3_zone_min_2_touches,
-    'fase3_engulfing_candle', t.fase3_engulfing_candle,
-    'fase3_beide', t.fase3_beide,
-    'fase3_structuur', t.fase3_structuur,
-    'fase4_weekly_bevestigingscandle', t.fase4_weekly_bevestigingscandle,
     'weekly_review_id', t.weekly_review_id,
     'backtest_project_id', t.backtest_project_id,
     'methodology_id', t.methodology_id,
@@ -1533,7 +1462,7 @@ $$;
 
 revoke all on function shared_review_sections(uuid, uuid, text) from public, anon, authenticated;
 
--- get_shared_journal (eindstand 0043: 0042-shape + `and not t.is_open`): het
+-- get_shared_journal (eindstand 0059: 0043-shape minus hide_fase): het
 -- enige leespad voor een anonieme coach. SECURITY DEFINER → de body filtert
 -- strak; missed trades blijven server-side achter (domeinregel), open trades
 -- ook. Geen rij (ongeldig/ingetrokken/verlopen token) → null, geen error.
@@ -1548,7 +1477,6 @@ as $$
     'journal_name', m.naam,
     'display_name', p.display_name,
     'result_unit', p.result_unit,
-    'hide_fase', p.hide_fase,
     'fields', shared_methodology_fields(l.methodology_id, l.user_id),
     'trades', coalesce(
       (
@@ -1575,9 +1503,9 @@ $$;
 revoke execute on function get_shared_journal(text) from public;
 grant execute on function get_shared_journal(text) to anon, authenticated;
 
--- get_shared_review (eindstand 0052: 0048-body + `and not t.is_open` in BEIDE
--- trades-subqueries). Missed trades gaan hier WEL mee — de client toont ze
--- gebadged en houdt ze uit de stats, identiek aan de eigen review-weergave.
+-- get_shared_review (eindstand 0059: 0052-body minus hide_fase). Missed trades
+-- gaan hier WEL mee — de client toont ze gebadged en houdt ze uit de stats,
+-- identiek aan de eigen review-weergave.
 create or replace function get_shared_review(share_token text)
 returns jsonb
 language sql
@@ -1593,7 +1521,6 @@ as $$
           'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
           'display_name', p.display_name,
           'result_unit', p.result_unit,
-          'hide_fase', p.hide_fase,
           'sections', shared_review_sections(r.methodology_id, l.user_id, 'weekly'),
           'review', jsonb_build_object(
             'id', r.id,
@@ -1632,7 +1559,6 @@ as $$
           'journal_name', (select m.naam from methodologies m where m.id = r.methodology_id and m.user_id = l.user_id),
           'display_name', p.display_name,
           'result_unit', p.result_unit,
-          'hide_fase', p.hide_fase,
           'sections', shared_review_sections(r.methodology_id, l.user_id, 'periodic'),
           'review', jsonb_build_object(
             'id', r.id,
@@ -1753,7 +1679,6 @@ alter table daily_journal_entries enable row level security;
 alter table profiles enable row level security;
 alter table custom_options enable row level security;
 alter table methodologies enable row level security;
-alter table methodology_fases enable row level security;
 alter table methodology_fields enable row level security;
 alter table review_sections enable row level security;
 
@@ -1767,11 +1692,12 @@ create policy "profiles_owner_update" on profiles
 -- Column-level UPDATE grant (0044, audit blocker K1): the row policy above
 -- can't limit *which columns* an update touches — with the blanket table grant
 -- a user could PATCH their own role='admin' (→ the admin read-all policies
--- expose every user's data), beta_features or plan. Only the six self-service
--- columns updateProfile() (useAuth.tsx) writes stay writable; updated_at is
--- stamped by trg_profiles_updated_at, which is exempt from column grants.
+-- expose every user's data), beta_features or plan. Only the five self-service
+-- columns updateProfile() (useAuth.tsx) writes stay writable (hide_fase left
+-- the list with its column in 0059); updated_at is stamped by
+-- trg_profiles_updated_at, which is exempt from column grants.
 revoke update on table profiles from authenticated;
-grant update (display_name, hide_fase, timezone, methodology_id, result_unit, onboarded_at)
+grant update (display_name, timezone, methodology_id, result_unit, onboarded_at)
   on table profiles to authenticated;
 -- anon has no profiles policy at all (0 rows) — drop its default grants too
 -- ("anon niets" hygiene, see 0038/0040; the share RPCs are SECURITY DEFINER).
@@ -1786,16 +1712,6 @@ create policy "methodologies_system_select" on methodologies
   for select using (is_system and user_id is null);
 create policy "methodologies_owner_all" on methodologies
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-
-create policy "methodology_fases_select" on methodology_fases
-  for select using (exists (
-    select 1 from methodologies m where m.id = methodology_fases.methodology_id
-      and (m.user_id = auth.uid() or (m.is_system and m.user_id is null))));
-create policy "methodology_fases_write" on methodology_fases
-  for all using (exists (
-    select 1 from methodologies m where m.id = methodology_fases.methodology_id and m.user_id = auth.uid()))
-  with check (exists (
-    select 1 from methodologies m where m.id = methodology_fases.methodology_id and m.user_id = auth.uid()));
 
 create policy "methodology_fields_select" on methodology_fields
   for select using (exists (
@@ -1890,7 +1806,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0057 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0059 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -1950,4 +1866,5 @@ insert into schema_migrations (filename) values
   ('0055_daily_journal.sql'),
   ('0056_configurable_habits.sql'),
   ('0057_registry_fork_track_exit.sql'),
-  ('0058_trade_prices.sql');
+  ('0058_trade_prices.sql'),
+  ('0059_retire_wpm_fase.sql');

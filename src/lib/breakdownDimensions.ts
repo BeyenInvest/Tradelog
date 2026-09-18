@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { MethodologyField, Trade } from "./types";
-import { currenciesOfPair, CCS, DIRECTIONS, FASES, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import { currenciesOfPair, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 import { dynamicMethodologyFields } from "./methodologyFields";
 import { fieldLabel } from "./fieldBlocks";
@@ -15,10 +15,11 @@ export interface DimensionConfig {
   /** Ready-made title for config-driven (custom-field) dimensions, which have no i18n key — the field's own label. See BacktestingAnalysisView. */
   label?: string;
   /**
-   * True for a dimension every journal captures regardless of methodology — date-derived
-   * splits + the universal core fields (pair/currency/direction). A non-Weekly-Phase-Method
-   * journal shows only these fixed dimensions (plus its own custom fields); the rest read
-   * legacy WPM columns that such a journal never fills, so they'd be all-empty (cyclus 4).
+   * True for a dimension every journal captures regardless of methodology — the
+   * date-derived splits + the universal core fields (instrument/direction/sessie).
+   * Since the fase-retirement (0059) every methodology-specific split (fase, cc,
+   * concept, …) is a custom-field dimension (customFieldDimensions), so all the
+   * fixed dimensions here are universal.
    */
   universal?: boolean;
   /** Forex-only dimension (pair/currency split) — shown only for a forex journal (cyclus 7). */
@@ -51,22 +52,18 @@ const boolLabel = (k: string, t: TFunction) => t(k === "Ja" ? "common.yes" : "co
  * place a new dimension needs to be added.
  */
 export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
-  // No "fase" entry — that data lives in the Per Fase overview cards above this section, and a per-fase split of
-  // the fase dimension itself is just a diagonal matrix (every off-diagonal cell is empty by construction).
-  // The kruistabel alone adds FASE_CROSS_DIMENSION (below) on top of this list.
-  { id: "trade_concept", keyFn: (t) => t.trade_concept },
-  { id: "entry", keyFn: (t) => t.entry },
-  // Weekly data ranks above session/candle-close/pair/currency — it's the higher-signal dimension for this methodology.
-  { id: "weekly_criteria", keyFn: (t) => t.weekly_criteria },
-  { id: "weekly_kenmerk", keyFn: (t) => t.weekly_kenmerk },
-  { id: "cc", keyFn: (t) => t.cc, sortOrder: CCS },
-  { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES },
+  // Every methodology-specific split (fase, cc, concept, weekly_*, nieuws, …) is a
+  // custom-field dimension now (customFieldDimensions) — only the universal,
+  // date-derived and forex splits are fixed here (fase-retirement 0059).
+  // Session on the real time axis: the DB derives `sessie` from tijd_open (else
+  // custom.cc on a WPM journal); a trade with neither has sessie=null and drops out.
+  { id: "sessie", keyFn: (t) => t.sessie, sortOrder: SESSIES, universal: true },
   { id: "weekday", keyFn: weekdayKey, sortOrder: WEEKDAYS, universal: true, dateDerived: true, labelFn: weekdayLabel },
   { id: "quarter", keyFn: quarterKey, sortOrder: QUARTERS, universal: true, dateDerived: true },
   // Hour-of-day on the real time axis (Fase S2, 0051) — the trade's own wall-clock
   // open hour, so no tz conversion needed. Trades without tijd_open drop out (null),
   // and the whole card stays hidden until any trade carries a time (rows.length
-  // filter in the view) — which only beta users can enter, so this is data-gated.
+  // filter in the view).
   { id: "uur", keyFn: (t) => (t.tijd_open ? t.tijd_open.slice(0, 2) : null), sortOrder: UREN, universal: true, dateDerived: true, labelFn: (k) => `${k}:00` },
   // Instrument is the universal "what did you trade" (cyclus 7) — on a forex
   // journal instrument mirrors pair on every write path, so a separate "Per Pair"
@@ -74,48 +71,9 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   // (per currency, both legs) is genuinely different and forex-only.
   { id: "instrument", keyFn: (t) => t.instrument ?? t.pair, universal: true },
   { id: "currency", keyFn: (t) => currenciesOfPair(t.pair), forex: true },
-  // Small 2-value dimensions last: they leave a large empty gap if placed mid-grid next to wider tables.
+  // Small 2-value dimension last: it leaves a large empty gap if placed mid-grid next to wider tables.
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
-  { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee"), labelFn: boolLabel },
 ];
-
-/**
- * "Per Fase" as a cross-table axis, for the legacy WPM journal only. Deliberately
- * NOT in BREAKDOWN_DIMENSIONS (see the comment there: the plain fase split lives in
- * the Per Fase overview cards, and fase-within-fase is a diagonal) — but crossed
- * against a *different* dimension (Fase × Sessie, Fase × Setup, …) it's a genuine
- * matrix, so the kruistabel adds this entry on top of the shared list.
- */
-export const FASE_CROSS_DIMENSION: DimensionConfig = {
-  id: "fase",
-  keyFn: (t) => t.fase,
-  sortOrder: FASES,
-};
-
-/**
- * Time-based "Per Sessie" for non-WPM journals (Fase S2, 0051). On such a journal
- * `cc` sits on its hidden default, so the stored `sessie` is only real when the
- * DB derived it from tijd_open — trades without a time must drop out (null)
- * instead of all landing in the default-cc bucket. On the legacy WPM journal the
- * cc-based sessie IS valid for every trade, so there this swap must NOT happen.
- */
-const SESSIE_TIME_DIMENSION: DimensionConfig = {
-  id: "sessie",
-  keyFn: (t) => (t.tijd_open ? t.sessie : null),
-  sortOrder: SESSIES,
-  universal: true,
-};
-
-/**
- * The breakdown-dimension list for the active journal's type: the static list
- * as-is for the legacy WPM journal (cc-based sessie untouched), with the sessie
- * entry swapped for its time-based universal variant on every other journal —
- * same list position, so the view's split/ordering logic is unaffected.
- */
-export function breakdownDimensionsFor(isLegacyMethodology: boolean): DimensionConfig[] {
-  if (isLegacyMethodology) return BREAKDOWN_DIMENSIONS;
-  return BREAKDOWN_DIMENSIONS.map((d) => (d.id === "sessie" ? SESSIE_TIME_DIMENSION : d));
-}
 
 /**
  * Config-driven breakdown dimensions for a methodology's own custom fields
@@ -124,10 +82,9 @@ export function breakdownDimensionsFor(isLegacyMethodology: boolean): DimensionC
  * every fixed dimension uses. Enum + boolean bucket directly; a `number` field is
  * split into quartile ranges derived from the trades passed in (cyclus 7) — so it
  * needs the data, unlike the value-agnostic enum/boolean dims. `text` (too free)
- * and `date` are still skipped. On a legacy (WPM) journal the seeded legacy fields
- * are excluded — those keep their hardcoded columns + the per-fase analysis until
- * cyclus 10; on any other journal the same keys are ordinary user fields (see
- * dynamicMethodologyFields) and do get a breakdown.
+ * and `date` are still skipped. Since the fase-retirement (0059) the former WPM
+ * fields (fase, cc, weekly_*, …) are ordinary custom fields, so they get a
+ * breakdown here like any other (see dynamicMethodologyFields).
  */
 export function customFieldDimensions(fields: MethodologyField[], trades: Trade[] = [], t?: TFunction): DimensionConfig[] {
   const dims: DimensionConfig[] = [];

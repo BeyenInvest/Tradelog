@@ -50,7 +50,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
     async getProfile(userId) {
       const { data, error } = await client
         .from("profiles")
-        .select("beta_features, role, methodology_id, timezone, hide_fase")
+        .select("beta_features, role, methodology_id, timezone")
         .eq("id", userId)
         .maybeSingle();
       if (error || !data) return null;
@@ -58,7 +58,6 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         beta: data.beta_features === true || data.role === "admin",
         methodologyId: data.methodology_id ?? null,
         timezone: data.timezone,
-        hideFase: data.hide_fase === true,
       };
     },
 
@@ -118,21 +117,6 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         .order("created_at", { ascending: true });
       if (error || !data) return [];
       return data.map((p) => ({ id: p.id, naam: p.naam }));
-    },
-
-    async listCustomOptions(field) {
-      const { data: sess } = await client.auth.getSession();
-      const uid = sess.session?.user.id;
-      if (!uid) return [];
-      // Expliciet op user_id filteren — zelfde admin-ziet-alles-les als profiles.
-      const { data, error } = await client
-        .from("custom_options")
-        .select("value")
-        .eq("field", field)
-        .eq("user_id", uid)
-        .order("value", { ascending: true });
-      if (error || !data) return [];
-      return data.map((r) => r.value).filter((v): v is string => typeof v === "string" && v !== "");
     },
 
     async uploadScreenshot(image) {

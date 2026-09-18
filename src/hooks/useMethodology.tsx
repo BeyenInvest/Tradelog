@@ -2,9 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { supabase } from "@/lib/supabase";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
-import { FASES, WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
+import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { instrumentsOfConfig, normalizeInstrument } from "@/lib/instruments";
-import { isLockedLegacyField } from "@/lib/methodologyFields";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 /**
@@ -21,27 +20,8 @@ export interface InlineFieldInput {
 
 export interface MethodologyData {
   methodology: Methodology | null;
-  /** All fields of the active methodology, ordered by sort_order (fase is one of them). */
+  /** All fields of the active methodology, ordered by sort_order (fase, when present, is one of them). */
   fields: MethodologyField[];
-  /**
-   * Ordered fase names for the UI, read from the methodology's `fase` enum field
-   * (since 0023 fase is just a field). Falls back to the fixed FASES constant
-   * while loading or if there is no fase field, so the form/filter never shows an
-   * empty select and Weekly Phase Method users see no change.
-   */
-  faseNames: string[];
-  /**
-   * True when the active methodology still carries the legacy hardcoded Weekly
-   * Phase Method block (the fase <select> + fase-kenmerken + confirms/entry/cc/…,
-   * backed by real trades.* columns). The trade form gates that whole hardcoded
-   * block on this, so an own/empty journal shows only the universal core + its
-   * own custom fields (Scope C, optie A). Signalled by the presence of a `fase`
-   * enum field — the Weekly Phase Method template and its forks have one; an
-   * empty own methodology does not. Stays true while loading so the owner's WPM
-   * fields never flash out on open (an empty journal is forward-looking — public
-   * signup is still off).
-   */
-  isLegacyMethodology: boolean;
   /**
    * True when the active journal trades forex (asset_class 'forex' — the Weekly
    * Phase Method template/forks and the Forex presets). Drives the instrument
@@ -190,23 +170,6 @@ function useMethodologyState(): MethodologyData {
     void refresh();
   }, [refresh]);
 
-  const faseNames = useMemo(() => {
-    const faseField = fields.find((f) => f.field_key === "fase" && f.field_type === "enum");
-    const opts = faseField?.options ?? [];
-    if (opts.length > 0) return opts;
-    // No fase field. Only fall back to the built-in Weekly Phase Method fases while the
-    // methodology is still loading, so the form/filter never flashes an empty
-    // select. Once loaded, an own methodology with no fase field must NOT get
-    // Weekly Phase Method's fases imposed — new users start from an empty journal
-    // (Scope C, cyclus 1b plak 3).
-    return loading ? [...FASES] : [];
-  }, [fields, loading]);
-
-  const isLegacyMethodology = useMemo(
-    () => loading || fields.some((f) => f.field_key === "fase"),
-    [fields, loading]
-  );
-
   // Forex while loading so a forex owner's pair select never flips to a free field on open.
   const isForexJournal = useMemo(
     () => loading || methodology?.asset_class === "forex",
@@ -305,8 +268,9 @@ function useMethodologyState(): MethodologyData {
     [methodology, fields]
   );
 
-  // Shared guard for the inline field mutations: own methodology only, and the
-  // seeded legacy WPM fields stay untouchable (same backstop as useMethodologyEditor).
+  // Shared guard for the inline field mutations: own methodology only (a read-only
+  // system template refuses). Since the fase-retirement (0059) there are no
+  // locked legacy fields — a forked WPM journal's fase is an ordinary own field.
   const requireEditableField = useCallback(
     (id: string): MethodologyField => {
       if (!methodology || methodology.is_system || methodology.user_id == null) {
@@ -314,7 +278,6 @@ function useMethodologyState(): MethodologyData {
       }
       const target = fields.find((f) => f.id === id);
       if (!target) throw new Error("field not found");
-      if (isLockedLegacyField(target, fields)) throw new Error("legacy field is locked");
       return target;
     },
     [methodology, fields]
@@ -406,8 +369,6 @@ function useMethodologyState(): MethodologyData {
   return {
     methodology,
     fields,
-    faseNames,
-    isLegacyMethodology,
     isForexJournal,
     isOwnMethodology,
     trackExit,

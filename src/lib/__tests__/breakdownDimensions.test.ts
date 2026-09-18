@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BREAKDOWN_DIMENSIONS, breakdownDimensionsFor, customFieldDimensions } from "../breakdownDimensions";
+import { BREAKDOWN_DIMENSIONS, customFieldDimensions } from "../breakdownDimensions";
 import { makeTrade } from "../stats/__tests__/fixtures";
 import type { MethodologyField } from "../types";
 
@@ -7,7 +7,6 @@ function field(overrides: Partial<MethodologyField>): MethodologyField {
   return {
     id: overrides.field_key ?? "f",
     methodology_id: "m",
-    fase_id: null,
     field_key: "setup",
     label: "Setup",
     label_key: null,
@@ -39,45 +38,41 @@ describe("uur dimension (0051 — hour of tijd_open)", () => {
   });
 });
 
-describe("breakdownDimensionsFor (0051 — journal-type-aware sessie)", () => {
-  it("keeps the cc-based sessie untouched on the legacy WPM journal", () => {
-    const sessie = breakdownDimensionsFor(true).find((d) => d.id === "sessie")!;
-    // cc-based: every trade has a valid sessie, time or no time.
-    expect(sessie.keyFn(makeTrade({ tijd_open: null, sessie: "New York" }))).toBe("New York");
-    expect(sessie.universal).toBeUndefined();
+describe("sessie dimension (fixed, universal since the fase-retirement 0059)", () => {
+  const sessie = BREAKDOWN_DIMENSIONS.find((d) => d.id === "sessie")!;
+
+  it("reads the DB-derived sessie straight off the trade and drops trades with none", () => {
+    // The DB now derives sessie (from tijd_open, else custom.cc) — the dimension
+    // just reads the stored value; a trade with sessie=null drops out.
+    expect(sessie.keyFn(makeTrade({ sessie: "New York" }))).toBe("New York");
+    expect(sessie.keyFn(makeTrade({ sessie: null }))).toBeNull();
   });
 
-  it("swaps in the time-based sessie for any other journal, in the same list position", () => {
-    const dims = breakdownDimensionsFor(false);
-    expect(dims.map((d) => d.id)).toEqual(BREAKDOWN_DIMENSIONS.map((d) => d.id));
-    const sessie = dims.find((d) => d.id === "sessie")!;
-    // Without tijd_open the stored sessie comes from the hidden cc default → must drop out.
-    expect(sessie.keyFn(makeTrade({ tijd_open: null, sessie: "London" }))).toBeNull();
-    expect(sessie.keyFn(makeTrade({ tijd_open: "22:10:00", sessie: "New York" }))).toBe("New York");
+  it("is a universal dimension shown on every journal", () => {
     expect(sessie.universal).toBe(true);
   });
 });
 
 describe("customFieldDimensions", () => {
-  it("keeps only analysable custom fields, dropping legacy, computed, text, date, and number-without-data", () => {
+  it("keeps only analysable custom fields, dropping computed, text, date, and number-without-data", () => {
+    // Since the fase-retirement (0059) there is no legacy carve-out — former WPM
+    // keys like `fase`/`structuur` are ordinary enum fields that get a breakdown.
     const fields = [
       field({ field_key: "setup", field_type: "enum", options: ["A", "B"] }),
       field({ field_key: "news", field_type: "boolean" }),
-      field({ field_key: "fase", field_type: "enum", options: ["Fase 1"] }), // legacy
-      field({ field_key: "structuur", field_type: "enum", options: ["Inner"] }), // legacy
+      field({ field_key: "fase", field_type: "enum", options: ["Fase 1"] }),
+      field({ field_key: "structuur", field_type: "enum", options: ["Inner"] }),
       field({ field_key: "beide", field_type: "boolean", is_computed: true }), // computed
       field({ field_key: "targets", field_type: "text" }), // not bucketable
       field({ field_key: "leverage", field_type: "number" }), // number, but no trades → no data → dropped
     ];
     const dims = customFieldDimensions(fields);
-    expect(dims.map((d) => d.id)).toEqual(["custom:setup", "custom:news"]);
+    expect(dims.map((d) => d.id)).toEqual(["custom:setup", "custom:news", "custom:fase", "custom:structuur"]);
     expect(dims[0].label).toBe("Setup");
     expect(dims[0].sortOrder).toEqual(["A", "B"]);
   });
 
-  it("keeps user fields with legacy-looking keys on a non-WPM journal (no fase field present)", () => {
-    // Without a seeded `fase` field this is not a legacy journal, so "structuur" /
-    // "engulfing_candle" are ordinary user fields that must get a breakdown.
+  it("keeps user fields with legacy-looking keys (ordinary user fields since 0059)", () => {
     const dims = customFieldDimensions([
       field({ field_key: "structuur", field_type: "enum", options: ["Inner", "Outer"] }),
       field({ field_key: "engulfing_candle", field_type: "boolean" }),

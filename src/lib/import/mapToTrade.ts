@@ -39,12 +39,11 @@ export function deriveOutcome(resultaatPct: number): Outcome {
 /**
  * Builds an insert-ready trade row from a resolved deal. Everything the broker
  * can't tell us is left at the same neutral defaults a hand-entered trade would
- * start from: fase "Fase 1" (DB is not-null; respected by hide_fase), cc "11"
- * (the trade form's own default — session breakdowns for imports can be adjusted
- * later), and every methodology/kenmerk field null. trade_evaluation stays null:
- * an imported trade is always a *taken* trade, never "Missed" — so it can never
- * pollute the missed-trade contract. The original broker symbol is preserved in
- * notes for traceability.
+ * start from: an empty custom bag (methodology fields, incl. the former WPM
+ * fase/cc/… since 0059, stay unset — adjustable later per trade). trade_evaluation
+ * stays null: an imported trade is always a *taken* trade, never "Missed" — so it
+ * can never pollute the missed-trade contract. The original broker symbol is
+ * preserved in notes for traceability.
  *
  * `instrument` is the universal symbol (cyclus 7): for a forex import it mirrors
  * the resolved `pair`; for a non-forex journal it carries the raw broker symbol
@@ -63,7 +62,6 @@ export function dealToImportRow(
   // duration — duur_dagen is a DB-generated column off this pair (audit B4).
   const datumSluiting = deal.closeTime != null && deal.closeTime >= datumOpen ? deal.closeTime : null;
   return {
-    fase: "Fase 1",
     datum_open: datumOpen,
     // The parsers currently truncate broker datetimes to a date (parseDateOnly),
     // so there's no time to carry yet — wiring it through is S2 follow-up work.
@@ -89,29 +87,11 @@ export function dealToImportRow(
     stop_price: null,
     target_price: null,
     exit_price: null,
-    weekly_criteria: null,
-    weekly_kenmerk: null,
-    trade_concept: null,
-    entry: null,
-    cc: "11",
-    nieuws: false,
-    w_confirm: null,
-    d_confirm: null,
-    h4_confirm: null,
     w_screenshot: null,
     d_screenshot: null,
     h4_screenshot: null,
     h2_screenshot: null,
-    extra_d_conf: null,
     notes: `Geïmporteerd (${broker}): ${deal.symbol}`,
-    fase1_daily_respecteert_zone: null,
-    fase1_spelers_verleden: null,
-    fase2_daily_respecteert_zone: null,
-    fase2_structuur: null,
-    fase3_zone_min_2_touches: null,
-    fase3_engulfing_candle: null,
-    fase3_structuur: null,
-    fase4_weekly_bevestigingscandle: null,
     // No methodology/custom fields for imported trades — the DB defaults custom to
     // {} and methodology_id to null; set explicitly here to satisfy TradeInput (Scope C).
     methodology_id: null,

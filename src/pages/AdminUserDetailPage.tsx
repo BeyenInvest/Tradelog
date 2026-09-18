@@ -240,7 +240,6 @@ function AdminUserDetailPageInner() {
               ) : (
                 <BacktestingAnalysisView
                   trades={taken}
-                  hideFaseOverride={profile?.hide_fase}
                   methodologyOverride={methodologyView ?? undefined}
                   showAdherence
                 />
@@ -320,7 +319,6 @@ function AdminUserDetailPageInner() {
         <ReadOnlyProjectModal
           project={selectedProject}
           trades={trades.filter((t) => t.backtest_project_id === selectedProject.id)}
-          hideFaseOverride={profile?.hide_fase}
           methodologyOverride={methodologyView ?? undefined}
           onClose={() => setSelectedProject(null)}
         />

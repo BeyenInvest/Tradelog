@@ -46,7 +46,6 @@ const FIELD_LABELS: Record<string, MessageKey> = {
   target_price: "err.field.target_price",
   pair: "err.field.pair",
   instrument: "err.field.instrument",
-  fase: "err.field.fase",
 };
 
 /** "resultaat_pct: tradeForm.lossMustBeNegative" → "Resultaat % hoort bij een Loss negatief te zijn". */

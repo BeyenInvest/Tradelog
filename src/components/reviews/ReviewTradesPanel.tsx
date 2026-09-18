@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import type { Trade } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
-import { useMethodology } from "@/hooks/useMethodology";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { ReviewTradeGroups, type GroupMode } from "@/components/reviews/ReviewTradeGroups";
 
@@ -28,7 +27,6 @@ interface ReviewTradesPanelProps {
  */
 export function ReviewTradesPanel({ label, taken, missed, extraGroupModes, onAddTrade, initialDate }: ReviewTradesPanelProps) {
   const { t } = useTranslation();
-  const { isLegacyMethodology } = useMethodology();
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -44,7 +42,7 @@ export function ReviewTradesPanel({ label, taken, missed, extraGroupModes, onAdd
             <Plus size={13} /> {t("tradeForm.addTrade")}
           </button>
         </div>
-        <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={extraGroupModes} columnMode={isLegacyMethodology ? "legacy" : "modern"} />
+        <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={extraGroupModes} />
       </div>
 
       {/* Portalled to <body>: TradeForm renders its own <form>, and the review editors mount this

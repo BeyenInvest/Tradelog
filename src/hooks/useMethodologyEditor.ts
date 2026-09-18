@@ -4,7 +4,6 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
-import { isLockedLegacyField } from "@/lib/methodologyFields";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 /** Editable attributes of a custom field, including its conditional visibility (show_when, cyclus 2b). */
@@ -108,15 +107,6 @@ export function useMethodologyEditor() {
     return methodology.id;
   }
 
-  // The seeded legacy WPM fields are backed by real trades.* columns — `fase` even by
-  // a Postgres enum, so editing its options would make every subsequent trade save
-  // fail at the DB. Locked until the cyclus-10 column migration; UI hides the
-  // buttons, this guard is the backstop.
-  function requireEditableField(id: string): void {
-    const f = fields.find((x) => x.id === id);
-    if (f && isLockedLegacyField(f, fields)) throw new Error("legacy field is locked");
-  }
-
   const addField = useCallback(async (input: FieldInput) => {
     const mid = requireOwn();
     const nextSort = (fields.at(-1)?.sort_order ?? 0) + 1;
@@ -130,7 +120,6 @@ export function useMethodologyEditor() {
 
   const updateField = useCallback(async (id: string, patch: Partial<FieldInput>) => {
     const mid = requireOwn();
-    requireEditableField(id);
     const { error: err } = await supabase.from("methodology_fields").update(patch).eq("id", id);
     if (err) throw err;
     await load(mid);
@@ -139,7 +128,6 @@ export function useMethodologyEditor() {
 
   const deleteField = useCallback(async (id: string) => {
     const mid = requireOwn();
-    requireEditableField(id);
     const { error: err } = await supabase.from("methodology_fields").delete().eq("id", id);
     if (err) throw err;
     await load(mid);

@@ -6,7 +6,7 @@ import {
 import type { ExtensionDb, OpenTradeInfo, ProfileInfo, SessionInfo } from "./db";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
-const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
+const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
 
 const OPEN_TRADE: OpenTradeInfo = {
   id: "t-1",
@@ -32,7 +32,6 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     getJournalSchema: vi.fn(async () => null),
     listJournals: vi.fn(async () => []),
     listBacktestProjects: vi.fn(async () => []),
-    listCustomOptions: vi.fn(async () => []),
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     listOpenTrades: vi.fn(async () => [OPEN_TRADE]),
     updateTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1" })),
