@@ -32,6 +32,8 @@ export interface TargetsInfo {
   projects: BacktestProjectInfo[];
   /** profiles.hide_fase — het paneel verbergt dan de fase-select (display-only). */
   hideFase: boolean;
+  /** profiles.timezone (IANA) — het paneel leidt er o.a. de CC-prefill uit af. */
+  timezone: string;
 }
 
 /** Eigen custom_options voor de twee legacy AddableSelect-velden. */

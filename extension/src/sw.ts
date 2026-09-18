@@ -68,6 +68,8 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
         journals,
         projects,
         hideFase: profile?.hideFase === true,
+        // Zelfde fallback als de sessie-trigger in de DB (schema.sql).
+        timezone: profile?.timezone ?? "Europe/Brussels",
       };
     }
     case "custom-options": {
