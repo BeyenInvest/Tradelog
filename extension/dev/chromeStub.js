@@ -18,6 +18,13 @@
         groupLabel: null, sortOrder: 0, showWhenFieldId: null, showWhenValues: null,
       },
       {
+        // Machine-owned in het paneel: niet gerenderd, wél auto in custom.cc
+        // (wpm-startset heeft ditzelfde veld; oefent het syncCc-pad).
+        id: "f-cc", fieldKey: "cc", label: "4H Candle Close", labelKey: null, fieldType: "enum",
+        options: ["03", "07", "11", "15", "19", "23"], required: false, isComputed: false,
+        groupLabel: null, sortOrder: 1, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
         id: "f-structuur", fieldKey: "structuur", label: "Structuur", labelKey: null, fieldType: "enum",
         options: ["Inner", "Outer"], required: false, isComputed: false,
         groupLabel: null, sortOrder: 1, showWhenFieldId: "f-fase", showWhenValues: ["Fase 2", "Fase 3"],
@@ -43,7 +50,7 @@
     "journal-dump": {
       ok: true,
       session: { userId: "u-1", email: "beyenchesney@outlook.com", expiresAt: null },
-      profile: { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false },
+      profile: { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" },
       journal,
     },
     targets: {
@@ -51,7 +58,6 @@
       activeJournalId: "m-1",
       journals: [{ id: "m-1", naam: "Weekly Phase Method", assetClass: "forex" }],
       projects: [{ id: "p-1", naam: "Fase 2 & 3 — 80 dagen" }],
-      hideFase: false,
       timezone: "Europe/Brussels",
     },
     "custom-options": { ok: true, entry: ["Mijn eigen entry"], tradeConcept: ["Eigen concept"] },
