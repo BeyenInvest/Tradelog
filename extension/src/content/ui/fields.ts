@@ -73,11 +73,12 @@ export type LegacyFieldSpec =
   | { key: LegacyTradeColumn; kind: "addable"; options: readonly string[] }
   | { key: LegacyTradeColumn; kind: "boolean" };
 
-/** Het entry-blok: cc, concept, entry (beide addable met custom_options),
- * weekly criteria/kenmerk en nieuws — volgorde = web-form. */
+/** Het entry-blok: concept, entry (beide addable met custom_options), weekly
+ * criteria/kenmerk en nieuws — volgorde = web-form. De CC staat hier bewust
+ * niet meer tussen (owner 18-09, "extra clutter"): het paneel leidt 'm
+ * onzichtbaar af uit de entry-tijd (ccFromTime) en stuurt 'm rechtstreeks mee. */
 export function legacyEntryFields(): LegacyFieldSpec[] {
   return [
-    { key: "cc", kind: "enum", options: CCS },
     { key: "trade_concept", kind: "addable", options: TRADE_CONCEPTS },
     { key: "entry", kind: "addable", options: ENTRIES },
     { key: "weekly_criteria", kind: "enum", options: WEEKLY_CRITERIA },
@@ -137,13 +138,14 @@ export function legacyLabelKey(key: LegacyTradeColumn): MessageKey {
 }
 
 /**
- * De 4H-candle-close (CC) die bij een entry-tijd hoort. De CCS-slots zijn de
- * sluituren van de 4H-candles afgelezen in de profiel-tijdzone (zo gebruikt
- * compute_sessie ze ook, zie schema.sql): een entry om 14:32 valt in de candle
- * die om 15:00 sluit. Een entry exact óp een slot (15:00) hoort bij de candle
- * die dan opent (sluit 19:00); na 23:00 sluit de candle pas de volgende dag om
- * 03:00. De caller geeft de wall-clock-tijd in de profiel-tijdzone mee
- * ("HH:MM", zoals wallClockInTimezone en de manual-time-input die leveren).
+ * De 4H-candle-close (CC) die bij een entry-tijd hoort: de méést recente
+ * 4H-close op of vóór de entry (owner 18-09) — de WPM-workflow is "de candle
+ * sluit, de close bevestigt, je stapt in", dus een entry om 11:00 (of 14:32)
+ * hoort bij CC 11. De CCS-slots zijn de sluituren afgelezen in de
+ * profiel-tijdzone (zo gebruikt compute_sessie ze ook, zie schema.sql); vóór
+ * 03:00 is de recentste close de 23 van de dag ervoor. De caller geeft de
+ * wall-clock-tijd in de profiel-tijdzone mee ("HH:MM", zoals
+ * wallClockInTimezone en de manual-time-input die leveren).
  */
 export function ccFromTime(time: string): CC | null {
   const m = /^(\d{1,2}):(\d{2})/.exec(time.trim());
@@ -152,10 +154,10 @@ export function ccFromTime(time: string): CC | null {
   const minute = Number(m[2]);
   if (hour > 23 || minute > 59) return null;
   const minutes = hour * 60 + minute;
-  for (const cc of CCS) {
-    if (Number(cc) * 60 > minutes) return cc;
+  for (let i = CCS.length - 1; i >= 0; i--) {
+    if (Number(CCS[i]) * 60 <= minutes) return CCS[i];
   }
-  return CCS[0];
+  return CCS[CCS.length - 1];
 }
 
 /**
@@ -185,6 +187,9 @@ export function selectedFase(allFields: JournalField[], values: FormValues): str
  */
 export function legacyFromValues(fase: string, values: FormValues): Record<string, unknown> {
   const allowed = new Set<string>([
+    // De CC is geen zichtbaar veld meer maar reist wél mee: het paneel zet 'm
+    // machinaal in values (ccFromTime uit de entry-tijd).
+    "cc",
     ...legacyEntryFields().map((f) => f.key),
     ...legacyConfirmFields().map((f) => f.key),
     ...legacyKenmerkFields(fase).map((f) => f.key),

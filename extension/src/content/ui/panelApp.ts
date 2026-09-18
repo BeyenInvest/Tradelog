@@ -33,7 +33,7 @@ import {
   selectedFase, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
-import { renderLegacyForm, type LegacyCustomOptions, type LegacyForm } from "./legacyForm";
+import { renderLegacyForm, type LegacyCustomOptions } from "./legacyForm";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
@@ -105,10 +105,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
    * nieuwe outcome-keuze zet de prefill weer aan, tenzij er een eigen waarde
    * staat. */
   let resultTouched = false;
-  /** Idem voor de CC-prefill uit de entry-tijd. */
-  let ccAuto: string | null = null;
-  /** Zodra de user zelf een CC koos (of 'm wiste) blijft de prefill eraf. */
-  let ccTouched = false;
   let riskPct = "";
   let notes = "";
   let manualDate = "";
@@ -124,9 +120,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let loggedScreenshots: Partial<Record<SnapshotSlot, string | null>> | null = null;
 
   let form: DynamicForm | null = null;
-  /** Het legacy-WPM-blok, zolang het gemount is: de CC-prefill zet een waarde in
-   * `values` en laat dit blok zichzelf bijwerken. */
-  let legacyBlock: LegacyForm | null = null;
   let formFieldList: JournalField[] = [];
   /** Eerste-run-hint: pas tonen als de storage-lezing terug is (boot). */
   let showOnboarding = false;
@@ -727,27 +720,23 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   /**
-   * De CC-prefill van het legacy-WPM-blok: de 4H-candle waarin de entry valt,
-   * afgelezen in de profiel-tijdzone. Zelfde hygiëne als het resultaat-voorstel
-   * — een eigen keuze van de user wordt nooit overschreven.
+   * De CC van een legacy-WPM-journal is geen veld meer (owner 18-09: clutter)
+   * maar wordt machinaal afgeleid uit de entry-tijd — de meest recente 4H-close
+   * in de profiel-tijdzone (ccFromTime) — en reist onzichtbaar mee via values →
+   * legacyFromValues. Zonder bruikbare tijd gaat er niets mee en houdt de
+   * server z'n stille default aan.
    */
   function syncCc(): void {
-    if (ccTouched || !journal || !isLegacyJournal(journal.fields)) return;
-    const current = values["cc"];
-    const filled = typeof current === "string" && current !== "";
-    if (filled && current !== ccAuto) return;
+    if (!journal || !isLegacyJournal(journal.fields)) return;
     const time = entryWallClockTime();
     const cc = time ? ccFromTime(time) : null;
-    if (cc == null || cc === current) return;
-    values["cc"] = cc;
-    ccAuto = cc;
-    legacyBlock?.sync();
+    if (cc == null) delete values["cc"];
+    else values["cc"] = cc;
   }
 
   function renderJournalFields(): void {
     clear(journalSec.body);
     form = null;
-    legacyBlock = null;
 
     if (journalNote) {
       const text =
@@ -762,21 +751,19 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // vaste kolommen (fase, entry, confirms, kenmerken), dan de eigen velden.
     const legacy = isLegacyJournal(journal.fields);
     if (legacy) {
-      legacyBlock = renderLegacyForm({
-        allFields: journal.fields,
-        values,
-        hideFase: targets?.hideFase === true,
-        customOptions,
-        onChange: () => {
-          // Een fase-wissel kan een show_when-veld openen of dichtklappen.
-          form?.sync();
-          // Wijkt de CC af van wat wij er zetten, dan koos (of wiste) de user
-          // 'm zelf — vanaf dan blijft de prefill eraf.
-          if (values["cc"] !== ccAuto) ccTouched = true;
-          updatePending();
-        },
-      });
-      journalSec.body.appendChild(legacyBlock.element);
+      journalSec.body.appendChild(
+        renderLegacyForm({
+          allFields: journal.fields,
+          values,
+          hideFase: targets?.hideFase === true,
+          customOptions,
+          onChange: () => {
+            // Een fase-wissel kan een show_when-veld openen of dichtklappen.
+            form?.sync();
+            updatePending();
+          },
+        }).element
+      );
     }
 
     formFieldList = formFields(journal.fields);
@@ -1015,8 +1002,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultPct = "";
     resultAuto = null;
     resultTouched = false;
-    ccAuto = null;
-    ccTouched = false;
     riskPct = "";
     notes = "";
     manualDate = "";
