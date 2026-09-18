@@ -6,6 +6,24 @@ import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
 import { ScreenshotUploadField } from "./ScreenshotUploadField";
+import { CustomFieldGroup, SingleCustomField, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
+import { blockGroupLabel } from "@/lib/fieldBlocks";
+
+// WPM's fixed field order inside Technical analysis (owner 2026-09-18): one "Setup
+// & uitvoering" block, no separate "Markt" heading — Weekly Kenmerk + Nieuws sit
+// right above the "richting mee?"-confirmations. `cc` is left out (it's in Entry).
+const WPM_TECH_ORDER = [
+  "fase",
+  "weekly_criteria",
+  "trade_concept",
+  "entry",
+  "weekly_kenmerk",
+  "nieuws",
+  "w_confirm",
+  "d_confirm",
+  "h4_confirm",
+  "extra_d_conf",
+] as const;
 
 export function TechnicalSection() {
   const { t } = useTranslation();
@@ -25,6 +43,24 @@ export function TechnicalSection() {
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionTechnical")}</h3>
+      {/* Config fields (setup kenmerken) live here with the screenshots (owner
+          2026-09-18). WPM uses a fixed order under one heading (no "Markt" split);
+          other journals fall back to the generic per-group rendering. `cc` is
+          excluded either way — it sits in the Entry grid instead. */}
+      {isWpm ? (
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-muted">{blockGroupLabel(t, "setup")}</p>
+          <div className="grid grid-cols-2 gap-4">
+            {WPM_TECH_ORDER.map((k) => (
+              <SingleCustomField key={k} fieldKey={k} />
+            ))}
+          </div>
+          {/* Any woven config field not in the fixed WPM order (rare user extras). */}
+          <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={[...WPM_TECH_ORDER, "cc"]} />
+        </div>
+      ) : (
+        <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} />
+      )}
       <div className="grid grid-cols-2 gap-4">
         <ScreenshotInput name="w_screenshot" label={isWpm ? t("tradeForm.weeklyScreenshot") : t("tradeForm.screenshot1")} />
         <ScreenshotInput name="d_screenshot" label={isWpm ? t("tradeForm.dailyScreenshot") : t("tradeForm.screenshot2")} />

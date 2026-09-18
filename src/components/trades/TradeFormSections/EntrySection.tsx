@@ -6,6 +6,7 @@ import { EnumSelect } from "@/components/ui/EnumSelect";
 import { useMethodology } from "@/hooks/useMethodology";
 import { InstrumentSelect } from "../InstrumentSelect";
 import { Field } from "./Field";
+import { SingleCustomField } from "./CustomFieldsSection";
 
 interface EntrySectionProps {
   /** Shared with ResultSection: false while the close date still auto-follows the open date. */
@@ -20,7 +21,10 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
     formState: { errors },
   } = useFormContext<TradeFormValues>();
   const { t } = useTranslation();
-  const { isForexJournal, instruments, addInstrument } = useMethodology();
+  const { isForexJournal, instruments, addInstrument, fields } = useMethodology();
+  // A WPM journal (has a `fase` field) shows its 4H Candle Close field in the Entry
+  // grid in place of the open time (owner 2026-09-18); other journals keep tijd_open.
+  const isWpm = fields.some((f) => f.field_key === "fase");
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,13 +47,16 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
             })}
           />
         </Field>
-        {/* Optional real open time (Fase S2, 0051). Un-gated (UX-D): the session/hour
-            breakdowns it feeds are available to everyone, so gating the input that
-            fills them was a dead promise. When filled, the DB derives `sessie` from
-            it (real time axis) and the trade joins the hour/session breakdowns. */}
-        <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>
-          <input type="time" className="input" {...register("tijd_open")} />
-        </Field>
+        {/* WPM: 4H Candle Close in this slot instead of the open time (owner wish).
+            Otherwise the optional real open time (Fase S2, 0051) — feeds the
+            session/hour breakdowns; when filled the DB derives `sessie` from it. */}
+        {isWpm ? (
+          <SingleCustomField fieldKey="cc" />
+        ) : (
+          <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>
+            <input type="time" className="input" {...register("tijd_open")} />
+          </Field>
+        )}
         {/* Instrument: a forex journal picks from the fixed pair enum (and mirrors it
             into `instrument` on submit); any other journal types its own symbol
             (ticker/coin/contract) and pair stays on its hidden default (cyclus 7). */}
