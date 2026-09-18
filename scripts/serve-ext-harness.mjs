@@ -5,8 +5,10 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import process from "node:process";
 
-const root = process.cwd();
-const port = Number(process.env.PORT ?? 8123);
+// Optioneel: root en poort als argumenten, zodat je ook een andere checkout
+// (bv. een tijdelijke worktree) kunt serveren zonder cwd te verhuizen.
+const root = process.argv[2] ?? process.cwd();
+const port = Number(process.env.PORT ?? process.argv[3] ?? 8123);
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
