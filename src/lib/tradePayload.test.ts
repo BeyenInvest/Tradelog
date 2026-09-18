@@ -116,6 +116,59 @@ describe("buildTradePayload — post-hoc (backtest)", () => {
     );
     expect(result).toMatchObject({ ok: false, error: "schema-invalid" });
   });
+
+  it("leidt de sluitdatum af uit de laatste bar (chart-'nu', profiel-tijdzone)", () => {
+    // Entry 15 sep; laatste bar 17 sep 21:30 UTC = 23:30 Brussel → sluit 17 sep.
+    const result = buildTradePayload(
+      baseInput({
+        mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2.5 },
+        closeTimeUtcMs: Date.UTC(2026, 8, 17, 21, 30),
+      })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.datum_sluiting).toBe("2026-09-17");
+  });
+
+  it("een expliciete mode-sluitdatum wint van de bar-tijd", () => {
+    const result = buildTradePayload(
+      baseInput({
+        mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2.5, datumSluiting: "2026-09-16" },
+        closeTimeUtcMs: Date.UTC(2026, 8, 17, 21, 30),
+      })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.datum_sluiting).toBe("2026-09-16");
+  });
+
+  it("laat de sluitdatum leeg als de laatste bar vóór de entry ligt (verkeerde lezing)", () => {
+    const result = buildTradePayload(
+      baseInput({
+        mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2.5 },
+        closeTimeUtcMs: Date.UTC(2026, 8, 10, 12, 0),
+      })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.datum_sluiting).toBeNull();
+  });
+
+  it("zonder bar-tijd blijft de sluitdatum gewoon leeg (geen Date.now-gok)", () => {
+    const result = buildTradePayload(
+      baseInput({ mode: { kind: "post-hoc", outcome: "BE", resultaatPct: 0 } })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.datum_sluiting).toBeNull();
+  });
+
+  it("een live-open log negeert de bar-tijd (sluitdatum hoort bij gesloten)", () => {
+    const result = buildTradePayload(baseInput({ closeTimeUtcMs: Date.UTC(2026, 8, 17, 21, 30) }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.datum_sluiting).toBeNull();
+  });
 });
 
 describe("buildTradePayload — degradatie (nooit stil gokken)", () => {

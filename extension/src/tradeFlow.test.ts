@@ -100,6 +100,18 @@ describe("logTradeFromChart", () => {
     expect(payload.methodology_id).toBe("m-1"); // zelfde gedrag als de web-form
   });
 
+  it("een Win/Loss/BE-log krijgt de sluitdatum van de laatste bar mee (profiel-tz)", async () => {
+    const db = makeDb();
+    await logTradeFromChart(db, req({
+      mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2 },
+      // Twee dagen na de entry-bar, 21:30 UTC = 23:30 Brussel → 17 sep.
+      closeTimeUtcSec: Date.UTC(2026, 8, 17, 21, 30) / 1000,
+    }));
+    const payload = (db.insertTrade as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.is_open).toBe(false);
+    expect(payload.datum_sluiting).toBe("2026-09-17");
+  });
+
   it("weigert zonder sessie / buiten de beta", async () => {
     expect(await logTradeFromChart(makeDb({ getSessionInfo: vi.fn(async () => null) }), req()))
       .toMatchObject({ ok: false, stage: "auth" });

@@ -3,10 +3,13 @@
 // uiteindelijk in de custom-bag belandt. Pure module — form.ts rendert alleen
 // wat hier uitkomt, zodat dezelfde regels als de web-form testbaar blijven.
 //
-// Sinds de fase-retirement (0059) is er geen aparte WPM-spiegel meer: fase, cc,
-// de weekly-velden, de confirms en de fase-kenmerken zijn gewone
+// Sinds de fase-retirement (0059) is er geen aparte WPM-spiegel meer: fase, de
+// weekly-velden, de confirms en de fase-kenmerken zijn gewone
 // methodology_fields-rijen die het paneel via ditzelfde generieke pad rendert en
-// meestuurt (ze landen in trades.custom, net als elk ander custom veld).
+// meestuurt (ze landen in trades.custom, net als elk ander custom veld). `cc` is
+// de enige uitzondering: dat veld toont het paneel niet meer (owner 18-09), maar
+// leidt het onzichtbaar af uit de entry-tijd (ccFromTime) en stuurt het alsnog
+// mee in custom.
 import type { JournalField } from "../../db";
 
 export type FormValues = Record<string, unknown>;
@@ -27,7 +30,9 @@ function showWhenValues(field: JournalField): string[] {
 /**
  * De velden waar het paneel de eigenaar van is: op sortOrder, zonder computed.
  * Alle methodology_fields (incl. fase/cc/… op een WPM-journal) horen hier —
- * zelfde afbakening als dynamicMethodologyFields in de web-app.
+ * zelfde afbakening als dynamicMethodologyFields in de web-app. `cc` zit erbij
+ * (zodat customFromValues 'm meeneemt); het paneel filtert 'm zelf uit de
+ * getoonde rijen, want die waarde is machinaal (owner 18-09).
  */
 export function formFields(allFields: JournalField[]): JournalField[] {
   return allFields
@@ -42,11 +47,13 @@ export function formFields(allFields: JournalField[]): JournalField[] {
 const CC_SLOTS = ["03", "07", "11", "15", "19", "23"] as const;
 
 /**
- * De 4H-candle-close (CC) die bij een entry-tijd hoort. Een entry om 14:32 valt
- * in de candle die om 15:00 sluit. Een entry exact óp een slot (15:00) hoort bij
- * de candle die dan opent (sluit 19:00); na 23:00 sluit de candle pas de
- * volgende dag om 03:00. De caller geeft de wall-clock-tijd in de
- * profiel-tijdzone mee ("HH:MM", zoals wallClockInTimezone en de
+ * De 4H-candle-close (CC) die bij een entry-tijd hoort: de méést recente
+ * 4H-close op of vóór de entry (owner 18-09) — de WPM-workflow is "de candle
+ * sluit, de close bevestigt, je stapt in", dus een entry om 11:00 (of 14:32)
+ * hoort bij CC 11. De slots zijn de sluituren afgelezen in de profiel-tijdzone
+ * (zo gebruikt compute_sessie ze ook, zie schema.sql); vóór 03:00 is de
+ * recentste close de 23 van de dag ervoor. De caller geeft de wall-clock-tijd in
+ * de profiel-tijdzone mee ("HH:MM", zoals wallClockInTimezone en de
  * manual-time-input die leveren).
  */
 export function ccFromTime(time: string): string | null {
@@ -56,10 +63,10 @@ export function ccFromTime(time: string): string | null {
   const minute = Number(m[2]);
   if (hour > 23 || minute > 59) return null;
   const minutes = hour * 60 + minute;
-  for (const cc of CC_SLOTS) {
-    if (Number(cc) * 60 > minutes) return cc;
+  for (let i = CC_SLOTS.length - 1; i >= 0; i--) {
+    if (Number(CC_SLOTS[i]) * 60 <= minutes) return CC_SLOTS[i];
   }
-  return CC_SLOTS[0];
+  return CC_SLOTS[CC_SLOTS.length - 1];
 }
 
 /** show_when: zichtbaar zolang de ouder één van de gevraagde waarden heeft. Een

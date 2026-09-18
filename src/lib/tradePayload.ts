@@ -55,6 +55,13 @@ export interface BuildTradeInput {
    */
   entryTimeUtcMs: number | null;
   manualDateTime?: WallClock | null;
+  /**
+   * Bar-tijd van de láátste bar van de chart in UTC-ms — het "nu" van de chart,
+   * ook in replay correct. Vult bij een post-hoc-log de sluitdatum in (de trade
+   * is dan immers zojuist op de chart afgelopen), tenzij de mode er zelf al één
+   * draagt.
+   */
+  closeTimeUtcMs?: number | null;
   mode: TradeMode;
   direction: Direction | null;
   /** Absolute prijzen uit de chart-adapter; target mag ontbreken (geen TP getekend). */
@@ -160,7 +167,15 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
     values.is_open = false;
     values.outcome = input.mode.outcome;
     values.resultaat_pct = input.mode.resultaatPct;
-    values.datum_sluiting = input.mode.datumSluiting ?? null;
+    // Sluitdatum: expliciet uit de mode, anders de datum van de laatste bar
+    // (chart-"nu", replay-bewust — zelfde regel als closeFlow). Een close vóór
+    // de open kan alleen bij een verkeerde lezing; dan liever leeg dan fout.
+    let datumSluiting = input.mode.datumSluiting ?? null;
+    if (!datumSluiting && input.closeTimeUtcMs != null) {
+      const closeClock = wallClockInTimezone(input.closeTimeUtcMs, input.timezone);
+      if (closeClock && closeClock.date >= wallClock.date) datumSluiting = closeClock.date;
+    }
+    values.datum_sluiting = datumSluiting;
   }
 
   // Zelfde validatie als de web-form (plan §2.4) — vangt o.a. het Loss-met-+%-

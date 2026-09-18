@@ -202,28 +202,29 @@ describe("slotStatus-copy (F4b)", () => {
 });
 
 describe("ccFromTime", () => {
-  it("kiest de close van de 4H-candle waarin de entry valt", () => {
-    expect(ccFromTime("14:32")).toBe("15");
-    expect(ccFromTime("02:59")).toBe("03");
-    expect(ccFromTime("09:00")).toBe("11");
-    expect(ccFromTime("18:01")).toBe("19");
-    expect(ccFromTime("22:15")).toBe("23");
+  it("kiest de meest recente 4H-close op of vóór de entry (WPM: close bevestigt → instappen)", () => {
+    expect(ccFromTime("14:32")).toBe("11");
+    expect(ccFromTime("04:59")).toBe("03");
+    expect(ccFromTime("09:00")).toBe("07");
+    expect(ccFromTime("18:01")).toBe("15");
+    expect(ccFromTime("22:15")).toBe("19");
   });
 
-  it("een entry exact op een slot hoort bij de candle die dan opent", () => {
-    expect(ccFromTime("15:00")).toBe("19");
-    expect(ccFromTime("03:00")).toBe("07");
-    expect(ccFromTime("23:00")).toBe("03"); // sluit pas de volgende dag om 03:00
+  it("een entry exact op een slot hoort bij dié close (owner 18-09: 11:00 → CC 11)", () => {
+    expect(ccFromTime("11:00")).toBe("11");
+    expect(ccFromTime("15:00")).toBe("15");
+    expect(ccFromTime("03:00")).toBe("03");
+    expect(ccFromTime("23:00")).toBe("23");
   });
 
-  it("na 23:00 wikkelt het slot naar 03 (volgende dag)", () => {
-    expect(ccFromTime("23:45")).toBe("03");
-    expect(ccFromTime("00:10")).toBe("03");
+  it("vóór 03:00 is de recentste close de 23 van de dag ervoor", () => {
+    expect(ccFromTime("00:10")).toBe("23");
+    expect(ccFromTime("02:59")).toBe("23");
   });
 
   it("accepteert HH:MM:SS en enkelcijferige uren, weigert rommel", () => {
-    expect(ccFromTime("14:32:07")).toBe("15");
-    expect(ccFromTime("9:05")).toBe("11");
+    expect(ccFromTime("14:32:07")).toBe("11");
+    expect(ccFromTime("9:05")).toBe("07");
     expect(ccFromTime("")).toBeNull();
     expect(ccFromTime("morgenvroeg")).toBeNull();
     expect(ccFromTime("25:00")).toBeNull();

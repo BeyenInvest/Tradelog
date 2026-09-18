@@ -98,10 +98,14 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
   const wanted = SNAPSHOT_SLOTS.filter((s) => slots.includes(s)); // vaste volgorde W→D→4H→2H
   const results: SnapshotCycleResult["slots"] = {};
   const original = await deps.getResolution();
+  // Waar de chart NU op staat — schuift mee met elke switch. Vergelijken tegen
+  // `original` zou fout gaan zodra een eerder slot al gewisseld heeft: een chart
+  // die op 4H start kreeg dan bij het 4H-slot de Daily-capture (W-D-D-bug).
+  let current = original;
 
   for (const slot of wanted) {
     const target = SLOT_RESOLUTIONS[slot];
-    if (original === target) {
+    if (current === target) {
       // Al op dit timeframe — niet onnodig switchen.
       results[slot] = await captureSlot(deps);
       continue;
@@ -111,6 +115,7 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
       results[slot] = { ok: false, error: `kon timeframe ${target} niet zetten` };
       continue;
     }
+    current = target;
     await deps.settle();
     results[slot] = await captureSlot(deps);
     // Eén gebaar-fout betekent: álles gaat falen — stop de cyclus vroeg.

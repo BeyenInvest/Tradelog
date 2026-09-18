@@ -43,6 +43,17 @@ describe("runSnapshotCycle", () => {
     expect(calls).toEqual(["capture:240"]); // geen set, geen herstel nodig
   });
 
+  it("wisselt óók terug naar het start-timeframe als dat zelf een slot is (W-D-D-bug)", async () => {
+    // Chart start op 4H; na de W- en D-captures staat hij op D. Het 4H-slot mag
+    // dan niet "al goed" denken op basis van de start-resolutie — dat leverde
+    // een tweede Daily-screenshot op in het 4H-slot.
+    const { deps, calls } = makeDeps();
+    const result = await runSnapshotCycle(deps, ["w", "d", "h4"]);
+    expect(calls.filter((c) => c.startsWith("capture"))).toEqual(["capture:W", "capture:D", "capture:240"]);
+    expect(result.slots.h4?.ok).toBe(true);
+    expect(result.restored).toBe(true);
+  });
+
   it("stopt vroeg en markeert needs-gesture bij een activeTab-permissiefout (fallback-pad)", async () => {
     const { deps } = makeDeps({
       capture: vi.fn(async () => ({

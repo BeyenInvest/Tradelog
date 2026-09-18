@@ -101,10 +101,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
    * nieuwe outcome-keuze zet de prefill weer aan, tenzij er een eigen waarde
    * staat. */
   let resultTouched = false;
-  /** Idem voor de CC-prefill uit de entry-tijd. */
-  let ccAuto: string | null = null;
-  /** Zodra de user zelf een CC koos (of 'm wiste) blijft de prefill eraf. */
-  let ccTouched = false;
   let riskPct = "";
   let notes = "";
   let manualDate = "";
@@ -727,22 +723,18 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   /**
-   * De CC-prefill: de 4H-candle waarin de entry valt, afgelezen in de
-   * profiel-tijdzone. Zelfde hygiëne als het resultaat-voorstel — een eigen
-   * keuze van de user wordt nooit overschreven. `cc` loopt via de generieke
-   * form, dus die krijgt de verse waarde te zien via form.sync().
+   * De CC is geen zichtbaar veld meer (owner 18-09: clutter) maar wordt
+   * machinaal afgeleid uit de entry-tijd — de meest recente 4H-close in de
+   * profiel-tijdzone (ccFromTime) — en reist onzichtbaar mee via `values`, zodat
+   * customFromValues 'm alsnog in trades.custom zet (fase-retirement-contract).
+   * Zonder bruikbare tijd gaat er niets mee.
    */
   function syncCc(): void {
-    if (ccTouched || !hasCcField()) return;
-    const current = values["cc"];
-    const filled = typeof current === "string" && current !== "";
-    if (filled && current !== ccAuto) return;
+    if (!hasCcField()) return;
     const time = entryWallClockTime();
     const cc = time ? ccFromTime(time) : null;
-    if (cc == null || cc === current) return;
-    values["cc"] = cc;
-    ccAuto = cc;
-    form?.sync();
+    if (cc == null) delete values["cc"];
+    else values["cc"] = cc;
   }
 
   function renderJournalFields(): void {
@@ -759,20 +751,20 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (!journal) return;
 
     // Alle methodology_fields lopen via het generieke pad — sinds de
-    // fase-retirement zijn fase/cc/weekly/confirms/kenmerken gewone velden.
+    // fase-retirement zijn fase/weekly/confirms/kenmerken gewone velden. `cc`
+    // filteren we uit de getóónde rijen (owner 18-09: machinaal berekend), maar
+    // formFieldList houdt 'm wél zodat customFromValues 'm meestuurt.
     formFieldList = formFields(journal.fields);
-    if (formFieldList.length > 0) {
+    const shownFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
-        fields: formFieldList,
+        fields: shownFields,
         values,
         onChange: () => {
           // Een keuze kan een show_when-veld openen of dichtklappen; sync werkt
-          // meteen ook de select-waarden bij (o.a. de CC-prefill).
+          // meteen ook de select-waarden bij.
           form?.sync();
-          // Wijkt de CC af van wat wij er zetten, dan koos (of wiste) de user
-          // 'm zelf — vanaf dan blijft de prefill eraf.
-          if (values["cc"] !== ccAuto) ccTouched = true;
           updatePending();
         },
       });
@@ -848,7 +840,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct };
     }
 
-    const missing = journal ? missingRequired(formFieldList, journal.fields, values) : [];
+    // cc is een onzichtbaar, machinaal veld (owner 18-09): het mag de submit
+    // nooit blokkeren, dus buiten de verplicht-check houden.
+    const checkFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    const missing = journal ? missingRequired(checkFields, journal.fields, values) : [];
     if (missing.length > 0) {
       return {
         ok: false,
@@ -870,6 +865,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         direction,
         prices,
         entryTimeUtcSec,
+        // Chart-"nu" voor de sluitdatum van een Win/Loss/BE-log (replay-bewust).
+        closeTimeUtcSec: chart.lastBar.ok ? chart.lastBar.value.timeSec : null,
         manualDateTime,
         riskPct: risk,
         // Alle methodology-antwoorden (incl. fase/cc/…) gaan via de custom-bag.
@@ -994,8 +991,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultPct = "";
     resultAuto = null;
     resultTouched = false;
-    ccAuto = null;
-    ccTouched = false;
     riskPct = "";
     notes = "";
     manualDate = "";
