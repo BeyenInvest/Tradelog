@@ -22,17 +22,17 @@ describe("applyJournalFilters", () => {
 
   it("combines period and dimension filters with AND semantics", () => {
     const trades = [
-      makeTrade({ id: "match", datum_open: "2026-07-10", fase: "Fase 2", pair: "EURUSD" }),
-      makeTrade({ id: "wrong-fase", datum_open: "2026-07-10", fase: "Fase 1", pair: "EURUSD" }),
-      makeTrade({ id: "wrong-period", datum_open: "2026-08-10", fase: "Fase 2", pair: "EURUSD" }),
+      makeTrade({ id: "match", datum_open: "2026-07-10", pair: "EURUSD", custom: { fase: "Fase 2" } }),
+      makeTrade({ id: "wrong-fase", datum_open: "2026-07-10", pair: "EURUSD", custom: { fase: "Fase 1" } }),
+      makeTrade({ id: "wrong-period", datum_open: "2026-08-10", pair: "EURUSD", custom: { fase: "Fase 2" } }),
     ];
-    const result = applyJournalFilters(trades, { start: "2026-07-01", end: "2026-07-31" }, { fase: "Fase 2", pair: "EURUSD" });
+    const result = applyJournalFilters(trades, { start: "2026-07-01", end: "2026-07-31" }, { pair: "EURUSD", custom: { fase: "Fase 2" } });
     expect(result.map((t) => t.id)).toEqual(["match"]);
   });
 
-  it("nieuws filter distinguishes false from unset (undefined means 'alle')", () => {
-    const trades = [makeTrade({ id: "yes", nieuws: true }), makeTrade({ id: "no", nieuws: false })];
-    expect(applyJournalFilters(trades, null, { nieuws: false }).map((t) => t.id)).toEqual(["no"]);
+  it("nieuws (now a custom field) distinguishes false from unset (undefined means 'alle')", () => {
+    const trades = [makeTrade({ id: "yes", custom: { nieuws: true } }), makeTrade({ id: "no", custom: { nieuws: false } })];
+    expect(applyJournalFilters(trades, null, { custom: { nieuws: false } }).map((t) => t.id)).toEqual(["no"]);
     expect(applyJournalFilters(trades, null, {})).toHaveLength(2);
   });
 

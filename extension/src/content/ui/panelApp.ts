@@ -29,11 +29,9 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, isLegacyJournal, legacyFromValues, missingRequired,
-  selectedFase, type FormValues,
+  ccFromTime, customFromValues, formFields, missingRequired, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
-import { renderLegacyForm, type LegacyCustomOptions } from "./legacyForm";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
@@ -88,8 +86,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let journal: JournalSchema | null = null;
   let journalNote: { kind: "missing" } | { kind: "load-failed"; error: string } | null = null;
   let targets: TargetsInfo | null = null;
-  /** Eigen extra waarden voor entry/trade concept; alleen een legacy journal haalt ze op. */
-  let customOptions: LegacyCustomOptions = { entry: [], tradeConcept: [] };
 
   // ── Keuzes van de user ──────────────────────────────────────────────────
   let selectedPositionId: string | null = null;
@@ -719,15 +715,22 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     paintResultHint();
   }
 
+  /** Het journal draagt een CC-veld (methodology_field met field_key "cc"); dan
+   * geldt de CC-prefill uit de entry-tijd. Sinds de fase-retirement is `cc` een
+   * gewoon custom veld i.p.v. een aparte WPM-kolom. */
+  function hasCcField(): boolean {
+    return journal?.fields.some((f) => f.fieldKey === "cc") === true;
+  }
+
   /**
-   * De CC van een legacy-WPM-journal is geen veld meer (owner 18-09: clutter)
-   * maar wordt machinaal afgeleid uit de entry-tijd — de meest recente 4H-close
-   * in de profiel-tijdzone (ccFromTime) — en reist onzichtbaar mee via values →
-   * legacyFromValues. Zonder bruikbare tijd gaat er niets mee en houdt de
-   * server z'n stille default aan.
+   * De CC is geen zichtbaar veld meer (owner 18-09: clutter) maar wordt
+   * machinaal afgeleid uit de entry-tijd — de meest recente 4H-close in de
+   * profiel-tijdzone (ccFromTime) — en reist onzichtbaar mee via `values`, zodat
+   * customFromValues 'm alsnog in trades.custom zet (fase-retirement-contract).
+   * Zonder bruikbare tijd gaat er niets mee.
    */
   function syncCc(): void {
-    if (!journal || !isLegacyJournal(journal.fields)) return;
+    if (!hasCcField()) return;
     const time = entryWallClockTime();
     const cc = time ? ccFromTime(time) : null;
     if (cc == null) delete values["cc"];
@@ -747,38 +750,26 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     if (!journal) return;
 
-    // Het legacy-WPM-blok staat bovenaan, net als in de web-form: eerst de
-    // vaste kolommen (fase, entry, confirms, kenmerken), dan de eigen velden.
-    const legacy = isLegacyJournal(journal.fields);
-    if (legacy) {
-      journalSec.body.appendChild(
-        renderLegacyForm({
-          allFields: journal.fields,
-          values,
-          hideFase: targets?.hideFase === true,
-          customOptions,
-          onChange: () => {
-            // Een fase-wissel kan een show_when-veld openen of dichtklappen.
-            form?.sync();
-            updatePending();
-          },
-        }).element
-      );
-    }
-
+    // Alle methodology_fields lopen via het generieke pad — sinds de
+    // fase-retirement zijn fase/weekly/confirms/kenmerken gewone velden. `cc`
+    // filteren we uit de getóónde rijen (owner 18-09: machinaal berekend), maar
+    // formFieldList houdt 'm wél zodat customFromValues 'm meestuurt.
     formFieldList = formFields(journal.fields);
-    if (formFieldList.length > 0) {
+    const shownFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
-        fields: formFieldList,
+        fields: shownFields,
         values,
         onChange: () => {
+          // Een keuze kan een show_when-veld openen of dichtklappen; sync werkt
+          // meteen ook de select-waarden bij.
           form?.sync();
           updatePending();
         },
       });
       journalSec.body.appendChild(form.element);
-    } else if (!journalNote && !legacy) {
+    } else if (!journalNote) {
       journalSec.body.appendChild(
         el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
       );
@@ -849,7 +840,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct };
     }
 
-    const missing = journal ? missingRequired(formFieldList, journal.fields, values) : [];
+    // cc is een onzichtbaar, machinaal veld (owner 18-09): het mag de submit
+    // nooit blokkeren, dus buiten de verplicht-check houden.
+    const checkFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    const missing = journal ? missingRequired(checkFields, journal.fields, values) : [];
     if (missing.length > 0) {
       return {
         ok: false,
@@ -861,12 +855,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     const risk = parseNumberInput(riskPct);
     if (riskPct.trim() && risk == null) return { ok: false, message: t("panel.v.riskNaN") };
     if (risk != null && risk <= 0) return { ok: false, message: t("panel.v.riskPositive") };
-
-    // Legacy journal: de getoonde fase scoopt de kenmerken die meegaan. Met
-    // hide_fase toont het paneel geen fase-keuze, dus gaat er ook geen keuze mee
-    // — de server houdt dan z'n stille default aan.
-    const legacy = journal && isLegacyJournal(journal.fields);
-    const shownFase = legacy && journal ? selectedFase(journal.fields, values) : null;
 
     return {
       ok: true,
@@ -881,8 +869,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         closeTimeUtcSec: chart.lastBar.ok ? chart.lastBar.value.timeSec : null,
         manualDateTime,
         riskPct: risk,
-        fase: shownFase && !targets?.hideFase ? shownFase : null,
-        legacy: shownFase ? legacyFromValues(shownFase, values) : null,
+        // Alle methodology-antwoorden (incl. fase/cc/…) gaan via de custom-bag.
         custom: journal ? customFromValues(formFieldList, journal.fields, values) : {},
         notes: notes.trim() ? notes.trim() : null,
         clientUuid,
@@ -1047,17 +1034,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     });
   }
 
-  /** Eén keer per paneel-mount; mislukt de lezing, dan blijven de basisopties over. */
-  async function loadCustomOptions(): Promise<LegacyCustomOptions> {
-    try {
-      const result = await sendToSw({ type: "custom-options" });
-      if (result.ok) return { entry: result.entry, tradeConcept: result.tradeConcept };
-    } catch {
-      /* stil: alleen de gedeelde vaste lijsten */
-    }
-    return { entry: [], tradeConcept: [] };
-  }
-
   async function boot(): Promise<void> {
     // Taal vóór de eerste zin op het scherm; de rest van het paneel leest 'm
     // daarna synchroon via t().
@@ -1082,9 +1058,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         journalNote = { kind: "load-failed", error: dump.error };
       }
       targets = targetsResult.ok ? targetsResult : null;
-      // Alleen een legacy journal heeft de twee addable-velden; op elk ander
-      // journal zou dit een lege query voor niets zijn.
-      customOptions = journal && isLegacyJournal(journal.fields) ? await loadCustomOptions() : { entry: [], tradeConcept: [] };
       showOnboarding = !onboardingDone;
       showView(buildForm);
       await refreshChart();

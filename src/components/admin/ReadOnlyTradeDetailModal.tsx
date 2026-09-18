@@ -12,10 +12,10 @@ import { fieldLabel } from "@/lib/fieldBlocks";
 import type { SharedMethodologyField, Trade } from "@/lib/types";
 
 const SCREENSHOT_FIELDS: { key: keyof Pick<Trade, "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot">; label: string }[] = [
-  { key: "w_screenshot", label: "Weekly" },
-  { key: "d_screenshot", label: "Daily" },
-  { key: "h4_screenshot", label: "H4" },
-  { key: "h2_screenshot", label: "Extra" },
+  { key: "w_screenshot", label: "1" },
+  { key: "d_screenshot", label: "2" },
+  { key: "h4_screenshot", label: "3" },
+  { key: "h2_screenshot", label: "4" },
 ];
 
 function Row({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -31,21 +31,18 @@ function Row({ label, value }: { label: string; value: string | number | null | 
 /**
  * Read-only equivalent of TradeForm — no inputs, no submit, just everything about
  * one trade including screenshots and notes, for the admin debug view and the
- * anonymous share view (Fase M). `hideFase` honours the owner's hide_fase setting
- * on surfaces where the viewer has no useAuth profile of their own (the share view).
- * `fields` (share RPC's methodology_fields slice, 0042) labels the trades.custom
- * values of a config-journal; without it those values stay hidden rather than
- * showing raw field_keys.
+ * anonymous share view (Fase M). `fields` (share RPC's methodology_fields slice,
+ * 0042) labels the trades.custom values of a config-journal — incl. the former WPM
+ * fields (fase/cc/…) since the fase-retirement (0059); without it those values stay
+ * hidden rather than showing raw field_keys.
  */
 export function ReadOnlyTradeDetailModal({
   trade,
   onClose,
-  hideFase = false,
   fields,
 }: {
   trade: Trade;
   onClose: () => void;
-  hideFase?: boolean;
   fields?: SharedMethodologyField[];
 }) {
   const { t, i18n } = useTranslation();
@@ -118,14 +115,10 @@ export function ReadOnlyTradeDetailModal({
             </div>
 
             <div className="mb-4">
-              {!hideFase && <Row label={t("filters.fase")} value={trade.fase} />}
+              {/* Methodology fields (incl. the former WPM fase/cc/concept/… since 0059)
+                  come through customRows now; only the universal core stays hardcoded. */}
               <Row label={t("filters.evaluation")} value={trade.trade_evaluation} />
-              <Row label={t("admin.ccSessie")} value={`${trade.cc} · ${trade.sessie}`} />
-              <Row label={t("tradeForm.tradeConcept")} value={trade.trade_concept} />
-              <Row label={t("tradeForm.entry")} value={trade.entry} />
-              <Row label={t("tradeForm.weeklyCriteria")} value={trade.weekly_criteria} />
-              <Row label={t("tradeForm.weeklyKenmerk")} value={trade.weekly_kenmerk} />
-              <Row label={t("filters.news")} value={trade.nieuws ? t("common.yes") : t("common.no")} />
+              <Row label={t("filters.sessie")} value={trade.sessie} />
               {customRows.map((r) => (
                 <Row key={r.key} label={r.label} value={r.value} />
               ))}

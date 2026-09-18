@@ -106,10 +106,6 @@ function SharedReviewView({ data }: { data: SharedReview }) {
               {t(data.kind === "weekly" ? "reviews.linkedTrades" : "reviews.tradesInPeriod", { count: taken.length + missed.length })}
             </p>
             <ReviewTradeGroups
-              hideFaseOverride={data.hide_fase}
-              // No live methodology on an anonymous page — own-journal reviews carry
-              // a journal_name (modern), the legacy/unscoped WPM journal has null (UX-B).
-              columnMode={data.journal_name != null ? "modern" : "legacy"}
               taken={taken}
               missed={missed}
               extraGroupModes={data.kind === "periodic" ? periodicExtraGroupModes(data.review.period_type) : undefined}

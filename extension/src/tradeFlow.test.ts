@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ExtensionDb, JournalSchema, ProfileInfo, SessionInfo } from "./db";
-import {
-  firstFaseOf, logTradeFromChart, resolveFase, updateLoggedTradeByRef, type LogTradeRequest,
-} from "./tradeFlow";
+import { logTradeFromChart, updateLoggedTradeByRef, type LogTradeRequest } from "./tradeFlow";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
-const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
+const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
 
 const LEGACY_JOURNAL: JournalSchema = {
   id: "m-1",
@@ -40,7 +38,6 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     getJournalSchema: vi.fn(async () => LEGACY_JOURNAL),
     listJournals: vi.fn(async () => []),
     listBacktestProjects: vi.fn(async () => []),
-    listCustomOptions: vi.fn(async () => []),
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     listOpenTrades: vi.fn(async () => []),
     updateTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1" })),
@@ -63,50 +60,28 @@ function req(overrides: Partial<LogTradeRequest> = {}): LogTradeRequest {
   };
 }
 
-describe("firstFaseOf", () => {
-  it("pakt de eerste fase-optie van een legacy journal", () => {
-    expect(firstFaseOf(LEGACY_JOURNAL)).toBe("Fase 2");
-  });
-
-  it("valt terug op de quick-log-default zonder fase-veld", () => {
-    expect(firstFaseOf({ ...LEGACY_JOURNAL, fields: [] })).toBe("Fase 1");
-    expect(firstFaseOf(null)).toBe("Fase 1");
-  });
-});
-
-describe("resolveFase", () => {
-  it("accepteert een gekozen fase alleen als die een journal-optie is", () => {
-    expect(resolveFase(LEGACY_JOURNAL, "Fase 3")).toBe("Fase 3");
-    expect(resolveFase(LEGACY_JOURNAL, "Fase 9")).toBe("Fase 2"); // terug naar de eerste
-    expect(resolveFase(LEGACY_JOURNAL, null)).toBe("Fase 2");
-    expect(resolveFase(null, "Fase 3")).toBe("Fase 1");
-  });
-});
-
-describe("logTradeFromChart — legacy-doorvoer", () => {
-  it("stuurt gekozen fase en legacy-kolommen mee in de insert", async () => {
+describe("logTradeFromChart — methodology-antwoorden via custom", () => {
+  it("stuurt fase/cc/kenmerk mee in de custom-bag (geen aparte kolommen meer)", async () => {
     const insertTrade = vi.fn(async (_payload: Record<string, unknown>) => ({ ok: true as const, tradeId: "t-1", duplicate: false }));
     const db = makeDb({ insertTrade });
     const result = await logTradeFromChart(
       db,
-      req({ fase: "Fase 3", legacy: { cc: "15", entry: "Decel", fase3_engulfing_candle: true } })
+      req({ custom: { fase: "Fase 3", cc: "15", entry: "Decel", fase3_engulfing_candle: true } })
     );
     expect(result.ok).toBe(true);
     const payload = insertTrade.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(payload.fase).toBe("Fase 3");
-    expect(payload.cc).toBe("15");
-    expect(payload.entry).toBe("Decel");
-    expect(payload.fase3_engulfing_candle).toBe(true);
+    // fase/cc/… zijn sinds de fase-retirement gewone custom-velden.
+    expect(payload.fase).toBeUndefined();
+    expect(payload.custom).toEqual({ fase: "Fase 3", cc: "15", entry: "Decel", fase3_engulfing_candle: true });
   });
 });
 
 describe("logTradeFromChart", () => {
-  it("bouwt en insert een live-open trade met journal-fase en import_ref", async () => {
+  it("bouwt en insert een live-open trade met import_ref", async () => {
     const db = makeDb();
     const result = await logTradeFromChart(db, req());
     expect(result).toEqual({ ok: true, tradeId: "t-1", duplicate: false });
     const payload = (db.insertTrade as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
-    expect(payload.fase).toBe("Fase 2"); // uit het journal, niet de blinde default
     expect(payload.import_ref).toBe("tv-ext:c-uuid-1");
     expect(payload.pair).toBe("AUDJPY");
     expect(payload.is_open).toBe(true);
@@ -209,6 +184,5 @@ describe("logTradeFromChart", () => {
     expect(result.ok).toBe(true);
     const payload = (db.insertTrade as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
     expect(payload.instrument).toBe("ES");
-    expect(payload.fase).toBe("Fase 1");
   });
 });

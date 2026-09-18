@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   dynamicMethodologyFields,
   isFieldVisible,
-  isLockedLegacyField,
   missingRequiredCustomFields,
   parseFieldOptions,
   slugifyFieldKey,
@@ -13,7 +12,6 @@ function field(overrides: Partial<MethodologyField>): MethodologyField {
   return {
     id: overrides.field_key ?? "f",
     methodology_id: "m",
-    fase_id: null,
     field_key: "setup",
     label: "Setup",
     label_key: null,
@@ -30,32 +28,21 @@ function field(overrides: Partial<MethodologyField>): MethodologyField {
   };
 }
 
-describe("dynamicMethodologyFields / isLockedLegacyField", () => {
-  it("excludes seeded legacy keys only on a legacy (WPM) journal", () => {
-    const wpm = [
+describe("dynamicMethodologyFields", () => {
+  it("keeps every non-computed field, incl. former WPM keys which are now ordinary user fields", () => {
+    // Since the fase-retirement (0059) there is no legacy carve-out — a `fase` or
+    // `structuur` field is just a config-driven custom field like any other.
+    const fields = [
       field({ field_key: "fase", options: ["Fase 1"] }),
       field({ field_key: "structuur", options: ["Inner"] }),
       field({ field_key: "setup", options: ["A"] }),
     ];
-    expect(dynamicMethodologyFields(wpm).map((f) => f.field_key)).toEqual(["setup"]);
-    expect(isLockedLegacyField(wpm[0], wpm)).toBe(true);
-    expect(isLockedLegacyField(wpm[2], wpm)).toBe(false);
-  });
-
-  it("keeps user fields with legacy-looking keys on a non-WPM journal (no phantom fields)", () => {
-    // A stocks/crypto journal has no `fase` field; "Engulfing candle" / "Structuur"
-    // are then ordinary user fields and must render + get breakdowns.
-    const own = [
-      field({ field_key: "engulfing_candle", field_type: "boolean" }),
-      field({ field_key: "structuur", options: ["Inner", "Outer"] }),
-    ];
-    expect(dynamicMethodologyFields(own).map((f) => f.field_key)).toEqual(["engulfing_candle", "structuur"]);
-    expect(isLockedLegacyField(own[0], own)).toBe(false);
+    expect(dynamicMethodologyFields(fields).map((f) => f.field_key)).toEqual(["fase", "structuur", "setup"]);
   });
 
   it("always excludes computed fields", () => {
-    const fields = [field({ field_key: "beide", is_computed: true })];
-    expect(dynamicMethodologyFields(fields)).toEqual([]);
+    const fields = [field({ field_key: "beide", is_computed: true }), field({ field_key: "setup" })];
+    expect(dynamicMethodologyFields(fields).map((f) => f.field_key)).toEqual(["setup"]);
   });
 });
 
@@ -63,19 +50,20 @@ describe("isFieldVisible", () => {
   const parent = field({ field_key: "setup", options: ["A", "B"] });
   const child = field({ field_key: "detail", show_when_field_id: "setup", show_when_values: ["A"] });
 
-  it("honours show_when against the custom bag, and against fase for the legacy parent", () => {
-    expect(isFieldVisible(child, [parent, child], null, { setup: "A" })).toBe(true);
-    expect(isFieldVisible(child, [parent, child], null, { setup: "B" })).toBe(false);
-    expect(isFieldVisible(child, [parent, child], null, {})).toBe(false);
+  it("honours show_when against the custom bag, incl. a fase parent (now a custom field)", () => {
+    expect(isFieldVisible(child, [parent, child], { setup: "A" })).toBe(true);
+    expect(isFieldVisible(child, [parent, child], { setup: "B" })).toBe(false);
+    expect(isFieldVisible(child, [parent, child], {})).toBe(false);
 
+    // Since the fase-retirement (0059) fase lives in the custom bag like any field.
     const faseParent = field({ field_key: "fase", options: ["Fase 1", "Fase 2"] });
     const faseChild = field({ field_key: "detail", show_when_field_id: "fase", show_when_values: ["Fase 2"] });
-    expect(isFieldVisible(faseChild, [faseParent, faseChild], "Fase 2", {})).toBe(true);
-    expect(isFieldVisible(faseChild, [faseParent, faseChild], "Fase 1", {})).toBe(false);
+    expect(isFieldVisible(faseChild, [faseParent, faseChild], { fase: "Fase 2" })).toBe(true);
+    expect(isFieldVisible(faseChild, [faseParent, faseChild], { fase: "Fase 1" })).toBe(false);
   });
 
   it("shows a field whose condition parent no longer exists", () => {
-    expect(isFieldVisible(child, [child], null, {})).toBe(true);
+    expect(isFieldVisible(child, [child], {})).toBe(true);
   });
 });
 
@@ -85,19 +73,19 @@ describe("missingRequiredCustomFields", () => {
   const confirmed = field({ field_key: "confirmed", field_type: "boolean", required: true });
 
   it("flags visible required fields that are blank ('' / null / NaN), not answered ones (false counts as answered)", () => {
-    expect(missingRequiredCustomFields([setup, note, confirmed], null, {}).map((f) => f.field_key)).toEqual([
+    expect(missingRequiredCustomFields([setup, note, confirmed], {}).map((f) => f.field_key)).toEqual([
       "setup",
       "confirmed",
     ]);
     expect(
-      missingRequiredCustomFields([setup, note, confirmed], null, { setup: "", confirmed: false }).map(
+      missingRequiredCustomFields([setup, note, confirmed], { setup: "", confirmed: false }).map(
         (f) => f.field_key
       )
     ).toEqual(["setup"]);
-    expect(missingRequiredCustomFields([setup, confirmed], null, { setup: "A", confirmed: false })).toEqual([]);
+    expect(missingRequiredCustomFields([setup, confirmed], { setup: "A", confirmed: false })).toEqual([]);
     const rr = field({ field_key: "rr", field_type: "number", required: true });
-    expect(missingRequiredCustomFields([rr], null, { rr: NaN }).map((f) => f.field_key)).toEqual(["rr"]);
-    expect(missingRequiredCustomFields([rr], null, { rr: 0 })).toEqual([]);
+    expect(missingRequiredCustomFields([rr], { rr: NaN }).map((f) => f.field_key)).toEqual(["rr"]);
+    expect(missingRequiredCustomFields([rr], { rr: 0 })).toEqual([]);
   });
 
   it("never requires a field its condition currently hides", () => {
@@ -108,9 +96,9 @@ describe("missingRequiredCustomFields", () => {
       show_when_values: ["A"],
     });
     // setup answered with "B" → detail is hidden → nothing missing.
-    expect(missingRequiredCustomFields([setup, conditional], null, { setup: "B" })).toEqual([]);
+    expect(missingRequiredCustomFields([setup, conditional], { setup: "B" })).toEqual([]);
     // setup answered with "A" → detail is visible and blank → flagged.
-    expect(missingRequiredCustomFields([setup, conditional], null, { setup: "A" }).map((f) => f.field_key)).toEqual([
+    expect(missingRequiredCustomFields([setup, conditional], { setup: "A" }).map((f) => f.field_key)).toEqual([
       "detail",
     ]);
   });

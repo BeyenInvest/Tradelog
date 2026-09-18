@@ -249,15 +249,26 @@
       "targets": { "label": "Targets (R)" },
       "emotion": { "label": "Emotion", "options": ["Calm/disciplined", "FOMO", "Fear", "Greed", "Overconfidence", "Revenge", "Boredom"] },
       "mistake": { "label": "Mistake", "options": ["None", "No stop", "Moved stop", "Oversized", "Chased entry", "Exited too early", "Exited too late", "Off-plan"] },
-      "followed_plan": { "label": "Did I follow my plan?" }
+      "followed_plan": { "label": "Did I follow my plan?" },
+      "fase": { "label": "Phase", "options": ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] },
+      "weekly_criteria": { "label": "Weekly criteria", "options": ["Pattern", "High/Low", "IC", "Region"] },
+      "trade_concept": { "label": "Trade concept", "options": ["Reversal", "Continuation", "Daily retrace", "Pattern in Pattern", "Push IC Push", "Weekly-4H", "Reclaim", "Small daily pattern"] },
+      "entry": { "label": "Entry", "options": ["Decel", "Reversal", "Continuation met ruimte", "Continuation zonder ruimte", "2H Entry", "Reclaim", "100 Fib", "Instant limiet"] },
+      "w_confirm": { "label": "Weekly direction aligned?" },
+      "d_confirm": { "label": "Daily direction aligned?" },
+      "h4_confirm": { "label": "4H direction aligned?" },
+      "extra_d_conf": { "label": "Extra Daily confirmation?" },
+      "weekly_kenmerk": { "label": "Weekly characteristic", "options": ["Trending market", "Corrective market", "Ranging market"] },
+      "cc": { "label": "4H Candle Close (CC)", "options": ["03", "07", "11", "15", "19", "23"] },
+      "nieuws": { "label": "News near trade?" }
     }
   },
   "startsets": {
     "assets": { "forex": "Forex", "futures": "Futures", "stock": "Stocks", "crypto": "Crypto" },
     "styles": { "scalp": "Scalp", "day": "Day trade", "swing": "Swing" },
     "styleHints": { "scalp": "seconds–minutes", "day": "within the day", "swing": "days–weeks" },
-    "strategies": { "ict_smc": "ICT / SMC" },
-    "strategyHints": { "ict_smc": "smart-money concepts" },
+    "strategies": { "ict_smc": "ICT / SMC", "wpm": "Weekly Phase Method" },
+    "strategyHints": { "ict_smc": "smart-money concepts", "wpm": "the 4-phase system" },
     "desc": {
       "forex_scalp": "Fast in-and-out trades; session, news and emotion.",
       "forex_day": "Intraday on 1–60m; setup quality and discipline.",
@@ -345,7 +356,7 @@
       "multiJournals": { "title": "Multiple journals", "body": "Keep separate journals per market or strategy, each with its own fields and numbers. Switch at the top of the sidebar or create a new one." },
       "reviewSections": { "title": "Tailor your review", "body": "Add your own sections to your weekly and periodic review, rename them, or put them in the order that works for you." },
       "advancedAnalysis": { "title": "Advanced analysis", "body": "Turn on exit analysis per journal (MAE/MFE and planned R:R) when you want to zoom in on your execution — off by default to keep things simple." },
-      "display": { "title": "Display", "body": "Show your result in %, R or $, choose a light or dark theme and your language. Not using phases? Hide those fields entirely." },
+      "display": { "title": "Display", "body": "Choose a light or dark theme and the app's language. Your personal preferences live in Settings." },
       "instruments": { "title": "Your own instruments", "body": "Decide which instruments or pairs are available in your journal, so your entry list fits your market." },
       "journal": { "title": "Journal", "body": "Your live trading log. Record every trade with the fields you picked; your stats, charts and calendar build themselves from there." },
       "analyse": { "title": "Analysis", "body": "The Analysis tab next to your Journal: KPIs like result, profit factor and drawdown, plus an equity curve, R-distribution, cross-tables and breakdowns by setup, session or hour." },

@@ -36,7 +36,6 @@ interface TradeFormProps {
 // form opens — a PWA tab can stay open for days (M2), and toISOString() is UTC.
 function emptyDefaults(): TradeFormValues {
   return {
-    fase: "Fase 1",
     datum_open: localTodayIso(),
     tijd_open: null,
     datum_sluiting: null,
@@ -55,29 +54,11 @@ function emptyDefaults(): TradeFormValues {
     stop_price: null,
     target_price: null,
     exit_price: null,
-    weekly_criteria: null,
-    weekly_kenmerk: null,
-    trade_concept: null,
-    entry: null,
-    cc: "11",
-    nieuws: false,
-    w_confirm: null,
-    d_confirm: null,
-    h4_confirm: null,
     w_screenshot: null,
     d_screenshot: null,
     h4_screenshot: null,
     h2_screenshot: null,
-    extra_d_conf: null,
     notes: null,
-    fase1_daily_respecteert_zone: null,
-    fase1_spelers_verleden: null,
-    fase2_daily_respecteert_zone: null,
-    fase2_structuur: null,
-    fase3_zone_min_2_touches: null,
-    fase3_engulfing_candle: null,
-    fase3_structuur: null,
-    fase4_weekly_bevestigingscandle: null,
     custom: {},
     methodology_id: null,
   };
@@ -85,7 +66,6 @@ function emptyDefaults(): TradeFormValues {
 
 function tradeToDefaults(trade: Trade): TradeFormValues {
   return {
-    fase: trade.fase,
     datum_open: trade.datum_open,
     // DB returns "HH:MM:SS"; <input type="time"> wants "HH:MM".
     tijd_open: trade.tijd_open ? trade.tijd_open.slice(0, 5) : null,
@@ -105,29 +85,12 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     stop_price: trade.stop_price,
     target_price: trade.target_price,
     exit_price: trade.exit_price,
-    weekly_criteria: trade.weekly_criteria,
-    weekly_kenmerk: trade.weekly_kenmerk,
-    trade_concept: trade.trade_concept,
-    entry: trade.entry,
-    cc: trade.cc,
-    nieuws: trade.nieuws,
-    w_confirm: trade.w_confirm,
-    d_confirm: trade.d_confirm,
-    h4_confirm: trade.h4_confirm,
     w_screenshot: trade.w_screenshot,
     d_screenshot: trade.d_screenshot,
     h4_screenshot: trade.h4_screenshot,
     h2_screenshot: trade.h2_screenshot,
-    extra_d_conf: trade.extra_d_conf,
     notes: trade.notes,
-    fase1_daily_respecteert_zone: trade.fase1_daily_respecteert_zone,
-    fase1_spelers_verleden: trade.fase1_spelers_verleden,
-    fase2_daily_respecteert_zone: trade.fase2_daily_respecteert_zone,
-    fase2_structuur: trade.fase2_structuur,
-    fase3_zone_min_2_touches: trade.fase3_zone_min_2_touches,
-    fase3_engulfing_candle: trade.fase3_engulfing_candle,
-    fase3_structuur: trade.fase3_structuur,
-    fase4_weekly_bevestigingscandle: trade.fase4_weekly_bevestigingscandle,
+    // Methodology fields (incl. the former WPM fase/cc/…) live in the custom bag since 0059.
     custom: trade.custom ?? {},
     methodology_id: trade.methodology_id,
   };
@@ -207,7 +170,7 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
       blocked = true;
     }
     if (ownJournalTrade) {
-      for (const f of missingRequiredCustomFields(fields, values.fase, values.custom ?? {})) {
+      for (const f of missingRequiredCustomFields(fields, values.custom ?? {})) {
         methods.setError(`custom.${f.field_key}`, { type: "required", message: "tradeForm.required" });
         blocked = true;
       }

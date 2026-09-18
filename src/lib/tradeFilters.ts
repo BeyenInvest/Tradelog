@@ -5,8 +5,6 @@ import type { Pair, Outcome, TradeEvaluation, Sessie, Direction } from "./consta
 export type { DateRange };
 
 export interface JournalFilters {
-  /** A fase name from the user's methodology (Scope C) — free text, not the fixed Fase enum. */
-  fase?: string;
   pair?: Pair;
   /** Free instrument match (cyclus 7) — case-insensitive substring on `instrument ?? pair`, for non-forex journals. */
   instrument?: string;
@@ -14,11 +12,12 @@ export interface JournalFilters {
   outcome?: Outcome;
   tradeEvaluation?: TradeEvaluation;
   sessie?: Sessie;
-  nieuws?: boolean;
   /**
    * Filters on the active journal's own custom fields (Scope C, cyclus E), keyed
    * by field_key. enum → the chosen option string; boolean → true/false. A key is
    * present only while that field is being filtered; matched against trades.custom.
+   * Since the fase-retirement (0059) the former WPM fields (fase, nieuws, …) are
+   * ordinary custom fields and filter through here too.
    */
   custom?: Record<string, string | boolean>;
 }
@@ -40,14 +39,12 @@ function inRange(dateIso: string, range: DateRange | null): boolean {
 export function applyJournalFilters(trades: Trade[], range: DateRange | null, filters: JournalFilters): Trade[] {
   return trades.filter((t) => {
     if (!inRange(t.datum_open, range)) return false;
-    if (filters.fase && t.fase !== filters.fase) return false;
     if (filters.pair && t.pair !== filters.pair) return false;
     if (filters.instrument && !(t.instrument ?? t.pair).toLowerCase().includes(filters.instrument.toLowerCase())) return false;
     if (filters.direction && t.direction !== filters.direction) return false;
     if (filters.outcome && t.outcome !== filters.outcome) return false;
     if (filters.tradeEvaluation && t.trade_evaluation !== filters.tradeEvaluation) return false;
     if (filters.sessie && t.sessie !== filters.sessie) return false;
-    if (filters.nieuws !== undefined && t.nieuws !== filters.nieuws) return false;
     if (filters.custom) {
       for (const [key, want] of Object.entries(filters.custom)) {
         const have = t.custom?.[key];

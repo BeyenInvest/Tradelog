@@ -4,7 +4,7 @@ import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
 
 const USER = { id: "user-1", email: "beyenchesney@outlook.com" };
 const SESSION: SessionInfo = { userId: USER.id, email: USER.email, expiresAt: "2026-09-16T21:00:00.000Z" };
-const BETA_PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
+const BETA_PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
 const JOURNAL: JournalSchema = {
   id: "m-1",
   naam: "WPM",
@@ -40,7 +40,6 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     getJournalSchema: vi.fn(async () => JOURNAL),
     listJournals: vi.fn(async () => []),
     listBacktestProjects: vi.fn(async () => []),
-    listCustomOptions: vi.fn(async () => []),
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
     uploadScreenshot: vi.fn(async () => ({ ok: true as const, path: "u1/x.png" })),
     removeScreenshots: vi.fn(async () => {}),

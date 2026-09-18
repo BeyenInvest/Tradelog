@@ -24,9 +24,9 @@ function labelNode(field: JournalField): HTMLElement {
 }
 
 /**
- * Ja/Nee-toggle op één values-sleutel. Op sleutel en niet op JournalField, zodat
- * de legacy-WPM-rijen (legacyForm.ts) dezelfde knoppen en dezelfde tri-state
- * krijgen als de journal-velden.
+ * Ja/Nee-toggle op één values-sleutel (tri-state: nog een keer op het actieve
+ * antwoord = terug naar onbeantwoord). Op sleutel en niet op JournalField zodat
+ * elke boolean-veldsoort er dezelfde knoppen door krijgt.
  */
 export function booleanControl(fieldKey: string, values: FormValues, changed: () => void): HTMLElement {
   const wrap = el("div", { class: "by-toggle" });
@@ -126,14 +126,21 @@ export function renderDynamicForm(options: {
   const { allFields, fields, values, onChange } = options;
   const element = el("div");
   const rows = new Map<string, HTMLElement>();
+  // De keuzelijsten per sleutel: sync() kan ze uit `values` bijwerken wanneer het
+  // paneel zélf een waarde zet (de CC-prefill uit de entry-tijd) — een re-render
+  // van de rij zou focus en caret kosten. Alleen selects: tekst/nummer-velden
+  // worden nooit programmatisch gevuld en re-setten zou daar de caret verspringen.
+  const selects = new Map<string, HTMLSelectElement>();
 
   for (const group of groupFields(fields)) {
     const groupEl = el("div", { class: "by-group" });
     if (group.label) groupEl.appendChild(el("h4", { class: "by-group-title", text: group.label }));
     for (const field of group.fields) {
+      const ctrl = control(field, values, onChange);
+      if (ctrl instanceof HTMLSelectElement) selects.set(field.fieldKey, ctrl);
       const row = el("div", { class: "by-field", attrs: { "data-field": field.fieldKey } }, [
         labelNode(field),
-        control(field, values, onChange),
+        ctrl,
       ]);
       rows.set(field.fieldKey, row);
       groupEl.appendChild(row);
@@ -145,6 +152,10 @@ export function renderDynamicForm(options: {
     for (const field of fields) {
       const row = rows.get(field.fieldKey);
       if (row) row.hidden = !isVisible(field, allFields, values);
+    }
+    for (const [key, select] of selects) {
+      const value = values[key];
+      select.value = typeof value === "string" ? value : "";
     }
   };
   sync();

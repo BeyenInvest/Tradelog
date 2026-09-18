@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  CCS, DIRECTIONS, OUTCOMES, PAIRS, STRUCTUREN, TRADE_EVALUATIONS, WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
-} from "./constants";
-
-const boolField = z.boolean().nullable().optional().default(null);
+import { DIRECTIONS, OUTCOMES, PAIRS, TRADE_EVALUATIONS } from "./constants";
 
 /** Empty-string inputs must become null, not 0 — z.coerce.number() alone would turn "" into 0. */
 const nullableNumber = z.preprocess(
@@ -28,16 +24,13 @@ const nullableString = z.preprocess((val) => (val === "" || val == null ? null :
 /**
  * Mirrors TradeInput (src/lib/types.ts). Enum fields use z.enum bound to the
  * same constant arrays as the DB schema (rekenregel 7 — strict validation,
- * one list, no free text). Fase-kenmerken are optional, not required — accounts
- * get shared with users who don't use those fields, so answering them is a
- * choice, not a gate on saving the trade.
+ * one list, no free text). Methodology-specific fields (incl. the former Weekly
+ * Phase Method fields: fase, cc, weekly criteria/kenmerk, confirms, …) live in
+ * the per-journal `custom` bag since the fase-retirement (0059), enforced
+ * dynamically via missingRequiredCustomFields, not statically here.
  */
 export const tradeSchema = z
   .object({
-    // Free text (a fase name from the user's methodology, Scope C) rather than a
-    // fixed z.enum — the valid set is now per-user. The <select> in EntrySection,
-    // fed by useMethodology, is still the only way to set it from the UI.
-    fase: z.string().min(1, "tradeForm.required"),
     datum_open: z.string().min(1, "tradeForm.required"),
     // Optional real open time (Fase S2, 0051). An empty <input type="time">
     // submits "" -> null; a filled one submits "HH:MM" (the DB reads that fine,
@@ -76,41 +69,11 @@ export const tradeSchema = z
     stop_price: nullableNumber.optional().default(null),
     target_price: nullableNumber.optional().default(null),
     exit_price: nullableNumber.optional().default(null),
-    weekly_criteria: nullableEnum(WEEKLY_CRITERIA).optional().default(null),
-    weekly_kenmerk: nullableEnum(WEEKLY_KENMERKEN).optional().default(null),
-    // Deliberate exception to "one shared enum, no free text" above (same as `entry` below):
-    // a user can register their own extra values (useCustomOptions, field="trade_concept") on
-    // top of TRADE_CONCEPTS, so this can't be a static z.enum. The <select> in EntrySection.tsx
-    // — TRADE_CONCEPTS + that user's own custom_options rows — is still the only way to set it.
-    trade_concept: nullableString.optional().default(null),
-    // Deliberate exception to "one shared enum, no free text" above: a user can register their own
-    // extra values (useCustomOptions, field="entry") on top of ENTRIES, so this can't be a static
-    // z.enum. The <select> in EntrySection.tsx — ENTRIES + that user's own custom_options rows — is
-    // still the only way to set this from the UI.
-    entry: nullableString.optional().default(null),
-    cc: z.enum(CCS),
-    nieuws: z.boolean().default(false),
-    w_confirm: boolField,
-    d_confirm: boolField,
-    h4_confirm: boolField,
     w_screenshot: z.string().nullable().optional().default(null),
     d_screenshot: z.string().nullable().optional().default(null),
     h4_screenshot: z.string().nullable().optional().default(null),
     h2_screenshot: z.string().nullable().optional().default(null),
-    extra_d_conf: boolField,
     notes: z.string().nullable().optional().default(null),
-
-    fase1_daily_respecteert_zone: boolField,
-    fase1_spelers_verleden: boolField,
-
-    fase2_daily_respecteert_zone: boolField,
-    fase2_structuur: nullableEnum(STRUCTUREN).optional().default(null),
-
-    fase3_zone_min_2_touches: boolField,
-    fase3_engulfing_candle: boolField,
-    fase3_structuur: nullableEnum(STRUCTUREN).optional().default(null),
-
-    fase4_weekly_bevestigingscandle: boolField,
 
     // Scope C, cyclus 3. `custom` is the flexible per-trade bag keyed by
     // MethodologyField.field_key; its shape is per-user so it can't be a fixed

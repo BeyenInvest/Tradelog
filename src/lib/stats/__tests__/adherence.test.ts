@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeConditionGaps, computeEvaluationImpact } from "../adherence";
+import type { Trade } from "../../types";
 import { makeTrade } from "./fixtures";
 
 describe("computeEvaluationImpact", () => {
@@ -77,7 +78,7 @@ describe("computeEvaluationImpact", () => {
 });
 
 describe("computeConditionGaps", () => {
-  const sessieDim = { id: "sessie", keyFn: (t: { sessie: string }) => t.sessie } as const;
+  const sessieDim = { id: "sessie", keyFn: (t: { sessie: string | null }) => t.sessie } as const;
 
   it("measures the avg-R spread between best and worst value, ranked largest first", () => {
     const trades = [
@@ -86,14 +87,15 @@ describe("computeConditionGaps", () => {
       makeTrade({ sessie: "London", outcome: "Win", resultaat_pct: 2 }),
       makeTrade({ sessie: "New York", outcome: "Loss", resultaat_pct: -1 }),
       makeTrade({ sessie: "New York", outcome: "Loss", resultaat_pct: -1 }),
-      // cc: bucket "11" (+2, -1 → +0.5 avg) vs "15" (+2, -1 → +0.5 avg): gap 0 → omitted
+      // cc (now a custom field): bucket "11" (+2, -1 → +0.5 avg) vs "15" (+2, -1 → +0.5 avg): gap 0 → omitted
     ];
-    trades[0].cc = "11";
-    trades[2].cc = "11";
-    trades[1].cc = "15";
-    trades[3].cc = "15";
+    trades[0].custom = { cc: "11" };
+    trades[2].custom = { cc: "11" };
+    trades[1].custom = { cc: "15" };
+    trades[3].custom = { cc: "15" };
 
-    const gaps = computeConditionGaps(trades, [sessieDim, { id: "cc", keyFn: (t) => t.cc }], { minSample: 2 });
+    const ccDim = { id: "cc", keyFn: (t: Trade) => (t.custom.cc as string) ?? null };
+    const gaps = computeConditionGaps(trades, [sessieDim, ccDim], { minSample: 2 });
 
     // The zero-gap cc dimension is omitted — no measurable difference to rank.
     expect(gaps.map((g) => g.dimensionId)).toEqual(["sessie"]);

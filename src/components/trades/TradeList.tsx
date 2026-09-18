@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/Card";
 import { groupTrades, matchesSearch, type GroupBy } from "@/lib/tradeGrouping";
 import { dateLocale, formatResult, groupResultCtx, resultDisplayValue, resultInUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import { useMethodology } from "@/hooks/useMethodology";
 import type { Trade } from "@/lib/types";
 import { TradeListItem } from "./TradeListItem";
 import { TradeListHeader } from "./TradeListHeader";
@@ -40,10 +39,6 @@ export function TradeList({
 }: TradeListProps) {
   const { t, i18n } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
-  const { isLegacyMethodology } = useMethodology();
-  // A modern (own/preset) journal never fills the Weekly Phase Method Concept/Entry
-  // columns — swap them for the universal Richting/R columns so they aren't dead space.
-  const columnMode = isLegacyMethodology ? "legacy" : "modern";
   const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>(fixedGroupBy ?? "week");
   const [sortBy, setSortBy] = useState<"date" | "result">("date");
@@ -201,9 +196,9 @@ export function TradeList({
                 </button>
                 {!isCollapsed && (
                   <div className="px-3 pb-1 pt-2">
-                    <TradeListHeader columnMode={columnMode} />
+                    <TradeListHeader />
                     {rows.map((t) => (
-                      <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} columnMode={columnMode} />
+                      <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
                     ))}
                   </div>
                 )}

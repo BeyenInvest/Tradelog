@@ -3,11 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { RDistributionChart } from "@/components/charts/RDistributionChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
-import { BreakdownGrid } from "@/components/breakdown/BreakdownGrid";
 import { CrossTable, type CrossDim } from "@/components/breakdown/CrossTable";
 import { SectionShell } from "@/components/analyse/SectionShell";
 import { AdherenceSection, type AdherenceDimension } from "@/components/backtesting/AdherenceSection";
@@ -15,13 +13,13 @@ import { ExitAnalysisSection } from "@/components/backtesting/ExitAnalysisSectio
 import { PeriodPicker } from "@/components/trades/PeriodPicker";
 import { FilterPanel } from "@/components/trades/FilterPanel";
 import {
-  computeOverviewKpis, breakdownBy, breakdownByWithFaseSplit, breakdownByFaseKenmerk,
+  computeOverviewKpis, breakdownBy,
   computeDurationByOutcome, groupIntoSeries, takenTrades, closedTrades,
   computeRHistogram, computeRDistribution, computeEvaluationImpact, computeConditionGaps,
 } from "@/lib/stats";
 import { useAnalyseLayout } from "@/hooks/useAnalyseLayout";
-import { breakdownDimensionsFor, customFieldDimensions, FASE_CROSS_DIMENSION, type DimensionConfig } from "@/lib/breakdownDimensions";
-import { FASE_KENMERKEN, FASES, HIDE_FASE_KENMERKEN, OUTCOMES } from "@/lib/constants";
+import { BREAKDOWN_DIMENSIONS, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
+import { OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
@@ -46,15 +44,13 @@ import { useMethodology } from "@/hooks/useMethodology";
 const DEFAULT_OPEN_SECTIONS = ["kpis", "performance"];
 
 export function BacktestingAnalysisView({
-  trades, hideFaseOverride, methodologyOverride, showAdherence = false,
+  trades, methodologyOverride, showAdherence = false,
 }: {
   trades: Trade[];
-  /** Admin read-only view passes the viewed profile's own hide_fase here instead of the viewer's — see AdminUserDetailPage. */
-  hideFaseOverride?: boolean;
   /**
-   * Admin read-only view passes the *viewed* user's journal (fields + is-legacy/
-   * is-forex) here instead of the viewer's own useMethodology() — otherwise the
-   * breakdowns would follow the admin's active journal, not the user's (H2).
+   * Admin read-only view passes the *viewed* user's journal (fields + is-forex)
+   * here instead of the viewer's own useMethodology() — otherwise the breakdowns
+   * would follow the admin's active journal, not the user's (H2).
    */
   methodologyOverride?: MethodologyView;
   /**
@@ -66,18 +62,11 @@ export function BacktestingAnalysisView({
   showAdherence?: boolean;
 }) {
   const { t } = useTranslation();
-  const { hideFase: ownHideFase, profile } = useAuth();
+  const { profile } = useAuth();
   const ownMethodology = useMethodology();
   // Admin read-only view supplies the viewed user's journal; every other call site
   // uses the signed-in user's own active methodology.
-  const { fields, isLegacyMethodology, isForexJournal, trackExit } = methodologyOverride ?? ownMethodology;
-  const hideFase = hideFaseOverride ?? ownHideFase;
-  // A non-Weekly-Phase-Method journal never fills the legacy fase/weekly/cc columns, so its
-  // per-fase cards + fase-kenmerken + WPM-only breakdowns would be all-empty. Gate that whole
-  // block on the active journal actually being the legacy one (cyclus 4); such a journal sees
-  // only the universal KPIs/curve + universal dimensions + its own custom-field breakdowns.
-  const showFase = isLegacyMethodology && !hideFase;
-  const [viewMode, setViewMode] = useState<"totaal" | "per-fase">("totaal");
+  const { fields, isForexJournal, trackExit } = methodologyOverride ?? ownMethodology;
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
 
@@ -100,13 +89,12 @@ export function BacktestingAnalysisView({
   // ratio's en drawdown blijven bewust %-gebaseerd).
   const { unit: resultUnit, saldo } = useResultDisplay();
   const displayTrades = useMemo(() => tradesInResultUnit(scopedTrades, resultUnit, saldo), [scopedTrades, resultUnit, saldo]);
-  const byFase = useMemo(() => breakdownBy(displayTrades, (t) => t.fase, { sortOrder: FASES }), [displayTrades]);
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(displayTrades, 5), [displayTrades]);
 
-  // Journal-type-aware dimension list (0051): identical to the static list for the
-  // legacy WPM journal; other journals get the time-based "Per Sessie" swapped in.
-  const dimensions = breakdownDimensionsFor(isLegacyMethodology);
+  // The fixed dimension list is universal since the fase-retirement (0059) — every
+  // methodology-specific split (fase/cc/weekly/…) is a custom-field dimension below.
+  const dimensions = BREAKDOWN_DIMENSIONS;
   // Per-dimension row-label translator: the breakdown key stays a stable id, the
   // label follows the UI language (weekday abbreviations, Yes/No). Omitted → key shown as-is.
   const labelFnFor = (d: DimensionConfig) =>
@@ -114,36 +102,15 @@ export function BacktestingAnalysisView({
   const dimensionRows = useMemo(
     () => dimensions.map((d) => ({ dim: d, rows: breakdownBy(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayTrades, isLegacyMethodology, t]
+    [displayTrades, t]
   );
-  const dimensionGridRows = useMemo(
-    () =>
-      dimensions.map((d) => ({ dim: d, rows: breakdownByWithFaseSplit(displayTrades, d.keyFn, { sortOrder: d.sortOrder, labelFn: labelFnFor(d) }) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayTrades, isLegacyMethodology, t]
-  );
-  // Fase-kenmerken sits between Weekly Kenmerk and CC — the weekly dimensions read as more important,
-  // the phase-specific setup checklists as the next most important, then the lower-signal dimensions after.
-  // Falls back to splitting after the first dimension if "weekly_kenmerk" is ever renamed/removed, rather
-  // than silently collapsing this whole section to 0 rows (findIndex returning -1 would do that).
-  const weeklyKenmerkIdx = dimensions.findIndex((d) => d.id === "weekly_kenmerk");
-  const kenmerkenSplit = weeklyKenmerkIdx === -1 ? 1 : weeklyKenmerkIdx + 1;
-
-  // The per-fase split is Weekly-Phase-Method-specific; force "totaal" when the fase block is
-  // hidden so a stale toggle state can't leave the breakdowns rendering an empty per-fase grid.
-  const effectiveViewMode = showFase ? viewMode : "totaal";
-  // The first group (setup/weekly) is entirely legacy WPM columns; the second (timing/instrument)
-  // mixes universal dims (weekday/quarter/instrument/direction), forex-only dims (pair/currency,
-  // cyclus 7) and legacy WPM dims (cc/sessie/nieuws). Show each per the active journal's type.
+  // Show a fixed dimension when it's universal, or forex-only on a forex journal.
   const showTimingDim = (dim: { universal?: boolean; forex?: boolean }) =>
-    dim.universal || (dim.forex && isForexJournal) || (!dim.universal && !dim.forex && isLegacyMethodology);
-  // Also skip dimensions with no data at all (rows.length 0) — e.g. "Per Richting"
+    Boolean(dim.universal || (dim.forex && isForexJournal));
+  // Skip dimensions with no data at all (rows.length 0) — e.g. "Per Richting"
   // before any trade carries a direction: an empty card is noise, and it appears by
   // itself as soon as the data exists.
-  const timingDimRows = dimensionRows
-    .slice(kenmerkenSplit)
-    .filter(({ dim, rows }) => showTimingDim(dim) && rows.length > 0);
-  const timingDimGridRows = dimensionGridRows.slice(kenmerkenSplit).filter(({ rows }) => rows.length > 0);
+  const timingDimRows = dimensionRows.filter(({ dim, rows }) => showTimingDim(dim) && rows.length > 0);
 
   // On a forex journal instrument mirrors pair, so the instrument split IS the pair
   // split — title it "Per Pair" there (the term forex traders think in); other
@@ -151,19 +118,8 @@ export function BacktestingAnalysisView({
   const timingDimTitle = (dimId: string) =>
     dimId === "instrument" && isForexJournal ? t("breakdown.pair") : t(`breakdown.${dimId}`);
 
-  const kenmerkRows = useMemo(
-    () =>
-      FASE_KENMERKEN.filter((k) => !k.computed).map((k) => ({
-        config: k,
-        rows: breakdownByFaseKenmerk(displayTrades, k, { minSample: 1 }),
-      })),
-    [displayTrades]
-  );
-
   // Config-driven breakdowns for the active journal's own custom fields (cyclus 4),
-  // read from the trades.custom bag. Empty for a plain Weekly Phase Method journal
-  // (its fields are legacy columns, handled by the per-fase sections above), so this
-  // adds nothing for the owner and everything for a preset/custom journal.
+  // read from the trades.custom bag — incl. the former WPM fields (fase/cc/…) since 0059.
   const customDims = useMemo(() => customFieldDimensions(fields, scopedTrades, t), [fields, scopedTrades, t]);
   const customDimRows = useMemo(
     () =>
@@ -187,8 +143,7 @@ export function BacktestingAnalysisView({
   const adherenceDims = useMemo<AdherenceDimension[]>(
     () =>
       [
-        ...(isLegacyMethodology ? dimensions.slice(0, kenmerkenSplit) : []),
-        ...dimensions.slice(kenmerkenSplit).filter((d) => showTimingDim(d) && !d.dateDerived),
+        ...dimensions.filter((d) => showTimingDim(d) && !d.dateDerived),
         ...customDims,
       ].map((d) => ({
         id: d.id,
@@ -197,24 +152,20 @@ export function BacktestingAnalysisView({
         labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isLegacyMethodology, isForexJournal, customDims, t]
+    [isForexJournal, customDims, t]
   );
 
-  // Kruistabel-dimensies (Fase S2, live voor iedereen — data-gated): exactly the dimensions whose plain
-  // breakdowns render for this journal type — the legacy setup dims (WPM only), the
-  // applicable timing/instrument dims, and the journal's own custom fields. Consumes
-  // the same DimensionConfig list, pre-resolving each title + row-label translator so
-  // CrossTable stays free of dimension/i18n knowledge (unlike adherence, this keeps
-  // the calendar-derived splits — Setup × Uur is a genuine cross-tab). "Per Fase" is
-  // cross-table-only (see FASE_CROSS_DIMENSION) and follows showFase, so a hide_fase
-  // user never sees the fase axis; it sits after the setup dims to keep the
-  // data-aware auto default (Setup × Sessie) unchanged.
+  // Kruistabel-dimensies (Fase S2, live voor iedereen — data-gated): exactly the
+  // dimensions whose plain breakdowns render for this journal — the applicable
+  // timing/instrument dims plus the journal's own custom fields (incl. the former
+  // WPM fase/cc/… since 0059). Consumes the same DimensionConfig list, pre-resolving
+  // each title + row-label translator so CrossTable stays free of dimension/i18n
+  // knowledge (unlike adherence, this keeps the calendar-derived splits — Setup × Uur
+  // is a genuine cross-tab).
   const crossDims = useMemo<CrossDim[]>(
     () =>
       [
-        ...(isLegacyMethodology ? dimensions.slice(0, kenmerkenSplit) : []),
-        ...(showFase ? [FASE_CROSS_DIMENSION] : []),
-        ...dimensions.slice(kenmerkenSplit).filter(showTimingDim),
+        ...dimensions.filter(showTimingDim),
         ...customDims,
       ].map((d) => ({
         id: d.id,
@@ -224,7 +175,7 @@ export function BacktestingAnalysisView({
         labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isLegacyMethodology, showFase, isForexJournal, customDims, t]
+    [isForexJournal, customDims, t]
   );
 
   // Visibility of the two self-hiding sections, computed here so the layout system
@@ -335,47 +286,10 @@ export function BacktestingAnalysisView({
       title: t("analyseLayout.section_performance"),
       visible: true,
       body: (
-        <>
-          {showFase && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {byFase.map((f) => (
-                <Card key={f.key}>
-                  <p className="font-display text-2xl italic text-gold">{f.label}</p>
-                  <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
-                    {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
-                  </p>
-                  <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
-                    {formatAggregate(f.resultaatTotal, resultUnit)}
-                  </p>
-                  <p className="font-body text-xs mt-1 text-muted">
-                    <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
-                    {" · "}
-                    <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
-                  </p>
-                  <p className="font-mono text-[11px] mt-1 text-muted">
-                    <span className="text-win">{f.wins}W</span>
-                    {" / "}
-                    <span className="text-be">{f.be}BE</span>
-                    {" / "}
-                    <span className="text-loss">{f.losses}L</span>
-                  </p>
-                </Card>
-              ))}
-            </div>
-          )}
-          <div className={`grid grid-cols-1 gap-5 ${showFase ? "lg:grid-cols-2" : ""}`}>
-            <Card>
-              <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
-              <EquityCurveChart trades={scopedTrades} />
-            </Card>
-            {showFase && (
-              <Card>
-                <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
-                <FaseBarChart data={byFase} />
-              </Card>
-            )}
-          </div>
-        </>
+        <Card>
+          <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
+          <EquityCurveChart trades={scopedTrades} />
+        </Card>
       ),
     },
     {
@@ -463,70 +377,19 @@ export function BacktestingAnalysisView({
       id: "breakdowns",
       title: t("backtestingAnalysis.breakdownsHeading"),
       visible: true,
-      action: showFase ? (
-        <div className="inline-flex rounded-lg border border-border overflow-hidden">
-          <button
-            onClick={() => setViewMode("totaal")}
-            className={`px-3 py-1.5 text-xs font-body ${viewMode === "totaal" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-          >
-            {t("backtestingAnalysis.total")}
-          </button>
-          <button
-            onClick={() => setViewMode("per-fase")}
-            className={`px-3 py-1.5 text-xs font-body ${viewMode === "per-fase" ? "bg-gold text-on-gold" : "bg-surface-2 text-muted"}`}
-          >
-            {t("backtestingAnalysis.perFase")}
-          </button>
-        </div>
-      ) : undefined,
       body: (
         <>
-          {/* Setup & weekly — entirely legacy WPM columns, so only for the legacy journal. */}
-          {isLegacyMethodology && (
-            <div className="flex flex-col gap-3">
-              <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.setupWeeklyHeading")}</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {effectiveViewMode === "totaal"
-                  ? dimensionRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownTable key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)
-                  : dimensionGridRows.slice(0, kenmerkenSplit).map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={t(`breakdown.${dim.id}`)} rows={rows} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Fase-kenmerken — globale kill-switch (HIDE_FASE_KENMERKEN) verbergt de
-              kenmerk-breakdown voor iedereen, net als de trade-form-vragen. De
-              bredere fase-/setup-breakdowns hierboven blijven (showFase). */}
-          {showFase && !HIDE_FASE_KENMERKEN && (
-            <div className="flex flex-col gap-4">
-              <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.faseKenmerkenHeading")}</h3>
-              {FASES.map((fase) => {
-                const configs = kenmerkRows.filter((k) => k.config.fase === fase);
-                if (configs.length === 0) return null;
-                return (
-                  <div key={fase} className="flex flex-col gap-3">
-                    <h4 className="font-body text-sm text-muted">{fase}</h4>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                      {configs.map(({ config, rows }) => (
-                        <BreakdownTable key={config.field} title={t(`faseKenmerken.${config.field}`)} rows={rows} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           <div className="flex flex-col gap-3">
             <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.timingInstrumentHeading")}</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {effectiveViewMode === "totaal"
-                ? timingDimRows.map(({ dim, rows }) => <BreakdownTable key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)
-                : timingDimGridRows.map(({ dim, rows }) => <BreakdownGrid key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />)}
+              {timingDimRows.map(({ dim, rows }) => (
+                <BreakdownTable key={dim.id} title={timingDimTitle(dim.id)} rows={rows} />
+              ))}
             </div>
           </div>
 
-          {/* Config-driven: the active journal's own custom fields (cyclus 4). Only the
-              "total" split — a per-fase split is inherently Weekly-Phase-Method-specific. */}
+          {/* Config-driven: the active journal's own custom fields (cyclus 4), incl.
+              the former WPM fields (fase/cc/weekly/…) since the fase-retirement (0059). */}
           {customDimRows.length > 0 && (
             <div className="flex flex-col gap-3">
               <h3 className="font-display text-lg italic text-ink">{t("backtestingAnalysis.customBreakdownHeading")}</h3>

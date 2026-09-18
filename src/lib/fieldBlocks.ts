@@ -47,6 +47,17 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   { key: "market_structure", group: "setup", field_type: "enum", hasOptions: true },
   { key: "pd_array", group: "setup", field_type: "enum", hasOptions: true },
   { key: "entry_model", group: "setup", field_type: "enum", hasOptions: true },
+  // — Weekly Phase Method (WPM) — the legacy "4 fasen" methodology, retired as a
+  //   hardcoded special-case (0059) and now an ordinary strategy startset like
+  //   ict_smc. `fase` is just an enum field now; nothing special-cases it.
+  { key: "fase", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "weekly_criteria", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "trade_concept", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "entry", group: "setup", field_type: "enum", hasOptions: true },
+  { key: "w_confirm", group: "setup", field_type: "boolean", hasOptions: false },
+  { key: "d_confirm", group: "setup", field_type: "boolean", hasOptions: false },
+  { key: "h4_confirm", group: "setup", field_type: "boolean", hasOptions: false },
+  { key: "extra_d_conf", group: "setup", field_type: "boolean", hasOptions: false },
   // — Market —
   { key: "session", group: "markt", field_type: "enum", hasOptions: true },
   { key: "htf_bias", group: "markt", field_type: "enum", hasOptions: true },
@@ -65,6 +76,10 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   { key: "leverage", group: "markt", field_type: "number", hasOptions: false },
   { key: "market_regime", group: "markt", field_type: "enum", hasOptions: true },
   { key: "targets", group: "markt", field_type: "text", hasOptions: false },
+  // — Weekly Phase Method market fields (see WPM note above) —
+  { key: "weekly_kenmerk", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "cc", group: "markt", field_type: "enum", hasOptions: true },
+  { key: "nieuws", group: "markt", field_type: "boolean", hasOptions: false },
   // — Mindset & discipline —
   { key: "emotion", group: "mindset", field_type: "enum", hasOptions: true },
   { key: "mistake", group: "mindset", field_type: "enum", hasOptions: true },
@@ -189,6 +204,13 @@ export const STRATEGY_STARTSETS: StrategyStartset[] = [
   {
     key: "ict_smc",
     blockKeys: ["htf_bias", "market_structure", "liquidity_target", "ict_setup", "entry_model", "pd_array", "displacement", "killzone", "timeframe", "emotion", "followed_plan"],
+  },
+  {
+    // Weekly Phase Method — the legacy 4-fasen methodology as a normal startset
+    // (fase-retirement 0059). Matches the seeded WPM template's field set so a new
+    // WPM journal built here == the migrated template.
+    key: "wpm",
+    blockKeys: ["fase", "weekly_criteria", "trade_concept", "entry", "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf", "weekly_kenmerk", "cc", "nieuws"],
   },
 ];
 

@@ -7,7 +7,6 @@ import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { OUTCOMES } from "@/lib/constants";
 import type { Trade } from "@/lib/types";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import { useMethodology } from "@/hooks/useMethodology";
 import { TradeListHeader } from "@/components/trades/TradeListHeader";
 import { TradeListItem } from "@/components/trades/TradeListItem";
 
@@ -34,8 +33,6 @@ function sortDayTrades(trades: Trade[]): Trade[] {
 export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onAddTrade }: DayTradesModalProps) {
   const { t, i18n } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
-  const { isLegacyMethodology } = useMethodology();
-  const columnMode = isLegacyMethodology ? "legacy" : "modern";
   const sorted = sortDayTrades(trades);
   const label = new Date(dateIso + "T00:00:00").toLocaleDateString(dateLocale(i18n.language), {
     weekday: "long",
@@ -103,9 +100,9 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
           ) : (
             <div className="overflow-x-auto mb-4">
               <div className="min-w-[640px]">
-                <TradeListHeader columnMode={columnMode} />
+                <TradeListHeader />
                 {sorted.map((t) => (
-                  <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} columnMode={columnMode} />
+                  <TradeListItem key={t.id} trade={t} onEdit={onEdit} onDelete={onDelete} />
                 ))}
               </div>
             </div>

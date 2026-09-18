@@ -6,7 +6,6 @@ import { ReviewStatsHeader } from "@/components/reviews/ReviewStatsHeader";
 import { ReviewErrorStats } from "@/components/reviews/ReviewErrorStats";
 import { ReviewSectionsDisplay } from "@/components/reviews/ReviewSectionsDisplay";
 import { ReviewTradeGroups } from "@/components/reviews/ReviewTradeGroups";
-import { columnModeForTrades } from "@/components/trades/TradeListHeader";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { useResultUnit } from "@/hooks/useResultUnit";
@@ -61,7 +60,7 @@ export function ReadOnlyWeeklyReviewModal({
 
             <section className="border-t border-border pt-6">
               <p className="font-body text-xs uppercase tracking-wider text-gold mb-4">{t("reviews.linkedTrades", { count: linked.length })}</p>
-              <ReviewTradeGroups taken={taken} missed={missed} columnMode={columnModeForTrades(linked)} />
+              <ReviewTradeGroups taken={taken} missed={missed} />
             </section>
           </div>
         </>

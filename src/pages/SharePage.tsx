@@ -97,7 +97,7 @@ function SharedJournalView({ data }: { data: SharedJournal }) {
           </Card>
         </div>
 
-        <ReadOnlyTradesViewer trades={trades} title={t("journal.trades")} hideFase={data.hide_fase} fields={data.fields} />
+        <ReadOnlyTradesViewer trades={trades} title={t("journal.trades")} fields={data.fields} />
       </SharePageShell>
     </ResultDisplayProvider>
   );

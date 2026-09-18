@@ -159,8 +159,9 @@ function toRow(t: Trade, missed: boolean): ReviewPdfTradeRow {
   return {
     datum: t.datum_open,
     pair: t.instrument ?? t.pair, // instrument (falls back to pair) so non-forex journals read right (cyclus 7)
-    concept: t.trade_concept,
-    entry: t.entry,
+    // Former WPM columns, now read from the custom bag (fase-retirement 0059); null on journals without them.
+    concept: typeof t.custom?.trade_concept === "string" ? t.custom.trade_concept : null,
+    entry: typeof t.custom?.entry === "string" ? t.custom.entry : null,
     outcome: open ? null : t.outcome,
     resultaat: open || t.resultaat_pct == null ? null : round2(t.resultaat_pct),
     evaluation: t.trade_evaluation,

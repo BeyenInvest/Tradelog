@@ -40,23 +40,23 @@ interface QuickLogFormProps {
 export function QuickLogForm({ onSubmit, onClose }: QuickLogFormProps) {
   const { t } = useTranslation();
   const { profile } = useAuth();
-  const { methodology, fields, isForexJournal, faseNames } = useMethodology();
+  const { methodology, fields, isForexJournal } = useMethodology();
   const userId = profile?.id ?? null;
   const methodologyId = methodology?.id ?? null;
 
   // F4 (Q1): quick-log slaat bewust een lege custom-bag op, maar een journal
-  // kan custom velden als VERPLICHT gemarkeerd hebben — benoem die expliciet,
-  // zodat de trader weet dat deze trade nog aanvulling nodig heeft via
-  // bewerken. Bewust een hint, geen blokkade: snelheid is het hele punt van
-  // quick-log. ('fase' is de verborgen legacy-default, geen invoerveld.)
+  // kan custom velden als VERPLICHT gemarkeerd hebben (incl. fase op een WPM-
+  // journal sinds 0059) — benoem die expliciet, zodat de trader weet dat deze
+  // trade nog aanvulling nodig heeft via bewerken. Bewust een hint, geen
+  // blokkade: snelheid is het hele punt van quick-log.
   const requiredCustomLabels = fields
-    .filter((f) => f.required && !f.is_computed && f.field_key !== "fase")
+    .filter((f) => f.required && !f.is_computed)
     .map((f) => fieldLabel(t, f));
 
   const methods = useForm<TradeFormValues>({
     resolver: zodResolver(tradeSchema),
     defaultValues: (() => {
-      const base = quickLogDefaults(faseNames[0] ?? "Fase 1", localTodayIso());
+      const base = quickLogDefaults(localTodayIso());
       const lastRisk = getLastRisk(userId, methodologyId);
       const lastInstrument = getLastInstrument(userId, methodologyId);
       if (lastRisk != null) base.risk_pct = lastRisk;

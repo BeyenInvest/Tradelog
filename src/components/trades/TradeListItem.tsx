@@ -7,8 +7,6 @@ import type { TradeEvaluation } from "@/lib/constants";
 import { hasExplicitRisk, isMissed, isOpen, rMultiple } from "@/lib/stats";
 import { dateLocale, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
 import { OutcomePill } from "@/components/ui/OutcomePill";
-import type { TradeColumnMode } from "./TradeListHeader";
-import { useAuth } from "@/hooks/useAuth";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 const EVAL_BADGES: Partial<Record<TradeEvaluation, { label: string; titleKey: string }>> = {
@@ -22,24 +20,14 @@ interface TradeListItemProps {
   /** Omit both to render read-only (no action column) — used by review trade lists. */
   onEdit?: (trade: Trade) => void;
   onDelete?: (trade: Trade) => void;
-  /** Anonymous share views pass the owner's hide_fase instead of the viewer's (who has no profile) — same pattern as BacktestingAnalysisView. */
-  hideFaseOverride?: boolean;
-  /** Which middle-column pair to render — see TradeColumnMode. Defaults to "legacy" (Concept/Entry). */
-  columnMode?: TradeColumnMode;
 }
 
-export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, columnMode = "legacy" }: TradeListItemProps) {
+export function TradeListItem({ trade, onEdit, onDelete }: TradeListItemProps) {
   const { t, i18n } = useTranslation();
-  const { hideFase: ownHideFase } = useAuth();
-  const hideFase = hideFaseOverride ?? ownHideFase;
   const { unit: resultUnit, saldo } = useResultDisplay();
   const readOnly = !onEdit && !onDelete;
   const missed = isMissed(trade);
   const open = isOpen(trade);
-  const modern = columnMode === "modern";
-  // A modern journal never carries a meaningful fase — hide the column entirely
-  // (not just when the user toggled hideFase), matching TradeListHeader (UX-A).
-  const showFase = !hideFase && !modern;
   const evalBadge = trade.trade_evaluation ? EVAL_BADGES[trade.trade_evaluation] : undefined;
 
   const dateCell = (
@@ -51,7 +39,7 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
   );
   // Last column is wider than the rest so the open-trade actions (pencil + "Sluiten")
   // fit fully to the right of RESULTAAT instead of spilling left over its value.
-  const gridClass = `grid ${showFase ? "grid-cols-[repeat(7,minmax(0,1fr))_1.7fr]" : "grid-cols-[repeat(6,minmax(0,1fr))_1.7fr]"} gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group${
+  const gridClass = `grid grid-cols-[repeat(6,minmax(0,1fr))_1.7fr] gap-3 font-mono text-xs py-2 items-center border-b border-border-soft group${
     onEdit ? " cursor-pointer hover:bg-ink/5 transition-colors" : ""
   }`;
 
@@ -86,11 +74,9 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
     fn(trade);
   };
 
-  // The two middle cells: universal Richting/R for a modern journal, the legacy
-  // WPM Concept/Entry otherwise. R is "—" for a still-running trade (no result).
+  // Universal Richting/R middle cells (the former WPM Concept/Entry columns were
+  // retired with the fase system, 0059). R is "—" for a still-running trade.
   const directionCell = <span className="text-muted font-body truncate">{trade.direction ?? "—"}</span>;
-  const conceptCell = <span className="text-muted font-body truncate">{trade.trade_concept ?? "—"}</span>;
-  const entryCell = <span className="text-muted font-body truncate">{trade.entry ?? "—"}</span>;
   // Fictieve-R-markering (punt B, Fase-I-praktijktest): zonder ingevuld risico is
   // R een aanname (1%-default, R ≡ %) — getoond met "~" en een uitleg-tooltip.
   const rAssumed = !hasExplicitRisk(trade);
@@ -112,13 +98,8 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
       <div className={gridClass} {...rowProps}>
         {dateCell}
         <span className="text-ink">{trade.instrument ?? trade.pair}</span>
-        {showFase && (
-          <span>
-            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
-          </span>
-        )}
-        {modern ? directionCell : conceptCell}
-        {modern ? rCell("—") : entryCell}
+        {directionCell}
+        {rCell("—")}
         <span>
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-xs bg-gold/15 text-gold"
@@ -176,13 +157,8 @@ export function TradeListItem({ trade, onEdit, onDelete, hideFaseOverride, colum
     <div className={gridClass} {...rowProps}>
       {dateCell}
       <span className="text-ink">{trade.instrument ?? trade.pair}</span>
-      {!hideFase && (
-        <span>
-          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border-soft text-muted">{trade.fase}</span>
-        </span>
-      )}
-      {modern ? directionCell : conceptCell}
-      {modern ? rCell(rValue) : entryCell}
+      {directionCell}
+      {rCell(rValue)}
       <span className="flex items-center gap-1.5">
         <OutcomePill outcome={outcome} />
         {evalBadge && (

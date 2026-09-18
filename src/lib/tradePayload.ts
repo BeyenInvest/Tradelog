@@ -33,23 +33,6 @@ export function pruneCustom(raw: Record<string, unknown>): Record<string, string
 // re-export zodat bestaande importeurs (tradeFlow, tests) niets merken.
 export { wallClockInTimezone, type WallClock } from "./wallClock";
 
-/**
- * De legacy-WPM-kolommen die het paneel op een legacy journal als echte velden
- * aanbiedt (spiegel van EntrySection/TechnicalSection/FaseKenmerkenSection).
- * Alleen déze sleutels mogen via `input.legacy` in top-level kolommen landen —
- * al het andere hoort in de custom-bag. `fase` loopt apart (input.fase) en
- * `fase3_beide` is computed en wordt nooit ingestuurd.
- */
-export const LEGACY_TRADE_COLUMNS = [
-  "cc", "trade_concept", "entry", "weekly_criteria", "weekly_kenmerk", "nieuws",
-  "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf",
-  "fase1_daily_respecteert_zone", "fase1_spelers_verleden",
-  "fase2_daily_respecteert_zone", "fase2_structuur",
-  "fase3_zone_min_2_touches", "fase3_engulfing_candle", "fase3_structuur",
-  "fase4_weekly_bevestigingscandle",
-] as const;
-export type LegacyTradeColumn = (typeof LEGACY_TRADE_COLUMNS)[number];
-
 /** Doel van de trade: het live journal óf precies één backtest-project (M2). */
 export type TradeTarget =
   | { type: "live"; methodologyId: string | null }
@@ -66,8 +49,6 @@ export interface BuildTradeInput {
   target: TradeTarget;
   /** profiles.timezone (IANA). */
   timezone: string;
-  /** Eerste fase van het journal of "Fase 1" — zelfde stille default als quick-log (M3). */
-  fase: string;
   /**
    * Bar-tijd van de position-tool in UTC-ms (replay-bewust — NOOIT Date.now(),
    * plan-risico 10). Alternatief: expliciete wall-clock van de user.
@@ -86,14 +67,8 @@ export interface BuildTradeInput {
   /** Absolute prijzen uit de chart-adapter; target mag ontbreken (geen TP getekend). */
   prices: { entry: number; stop: number; target: number | null } | null;
   riskPct: number | null;
-  /** Rauwe antwoorden uit de dynamische form — wordt gepruned. */
+  /** Rauwe antwoorden uit de dynamische form (incl. fase/cc/… op een WPM-journal) — wordt gepruned naar de custom-bag. */
   custom: Record<string, unknown>;
-  /**
-   * Antwoorden op de legacy-WPM-velden van een legacy journal — landen in echte
-   * trades.*-kolommen (whitelist LEGACY_TRADE_COLUMNS), niet in custom. Lege
-   * waarden laten de quickLog-default staan.
-   */
-  legacy?: Partial<Record<LegacyTradeColumn, unknown>>;
   /** Client-uuid voor idempotentie; wordt `import_ref = "tv-ext:<uuid>"` (C6). */
   clientUuid: string;
   notes?: string | null;
@@ -145,7 +120,7 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
   // M5: forex-journal → pair leidend (gespiegeld naar instrument, zoals de
   // web-form op submit doet); geen pair-match = expliciete fout, geen gok.
   // Ander journal → vrij instrument, pair blijft de verborgen baseline-default.
-  const values = quickLogDefaults(input.fase, wallClock.date);
+  const values = quickLogDefaults(wallClock.date);
   if (input.isForexJournal) {
     if (!input.symbol.pair) {
       return { ok: false, error: "symbol-not-in-pairs", detail: input.symbol.instrument };
@@ -162,17 +137,6 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
   values.risk_pct = input.riskPct;
   values.notes = input.notes ?? null;
   values.custom = pruneCustom(input.custom);
-
-  // Legacy-WPM-antwoorden → echte kolommen, strikt via de whitelist. De typen
-  // bewaakt tradeSchema hieronder (cc/weekly_*/structuur zijn enums, confirms
-  // en kenmerken zijn tri-state booleans) — ongeldig = schema-invalid, geen gok.
-  if (input.legacy) {
-    for (const key of LEGACY_TRADE_COLUMNS) {
-      const v = input.legacy[key];
-      if (v === undefined || v === null || v === "") continue;
-      (values as Record<string, unknown>)[key] = v;
-    }
-  }
 
   if (input.prices) {
     const { entry, stop, target } = input.prices;

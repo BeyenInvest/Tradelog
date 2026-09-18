@@ -16,7 +16,6 @@ function baseInput(overrides: Partial<BuildTradeInput> = {}): BuildTradeInput {
     isForexJournal: true,
     target: { type: "live", methodologyId: "m-1" },
     timezone: "Europe/Brussels",
-    fase: "Fase 1",
     entryTimeUtcMs: BAR_UTC_MS,
     mode: { kind: "live-open" },
     direction: "Long",
@@ -81,9 +80,9 @@ describe("buildTradePayload — live-open (M1)", () => {
     expect(p.import_ref).toBe("tv-ext:0f27b0e2-1111-2222-3333-444455556666");
     expect(p.backtest_project_id).toBeNull();
     expect(p.methodology_id).toBe("m-1");
-    // M3: stille legacy-defaults aanwezig (not-null-kolommen).
-    expect(p.fase).toBe("Fase 1");
-    expect(p.cc).toBe("11");
+    // Geen legacy-kolommen meer (fase-retirement 0059): methodologie-antwoorden
+    // leven in de custom-bag; hier leeg meegegeven.
+    expect(p.custom).toEqual({});
   });
 
   it("gebruikt de bar-tijd, nooit 'nu' (replay, risico 10)", () => {
@@ -243,12 +242,12 @@ describe("buildTradePayload — degradatie (nooit stil gokken)", () => {
   });
 });
 
-describe("buildTradePayload — legacy-WPM-kolommen", () => {
-  it("zet legacy-antwoorden in echte kolommen, niet in custom", () => {
+describe("buildTradePayload — methodologie-antwoorden (custom-bag)", () => {
+  it("zet de voormalige WPM-velden in de custom-bag (fase-retirement 0059), niet in kolommen", () => {
     const result = buildTradePayload(
       baseInput({
-        fase: "Fase 2",
-        legacy: {
+        custom: {
+          fase: "Fase 2",
           cc: "15",
           trade_concept: "Reversal",
           entry: "Decel",
@@ -263,41 +262,24 @@ describe("buildTradePayload — legacy-WPM-kolommen", () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.payload.fase).toBe("Fase 2");
-      expect(result.payload.cc).toBe("15");
-      expect(result.payload.trade_concept).toBe("Reversal");
-      expect(result.payload.entry).toBe("Decel");
-      expect(result.payload.weekly_criteria).toBe("Pattern");
-      expect(result.payload.weekly_kenmerk).toBe("Trending market");
-      expect(result.payload.nieuws).toBe(true);
-      expect(result.payload.w_confirm).toBe(true);
-      expect(result.payload.fase2_daily_respecteert_zone).toBe(false);
-      expect(result.payload.fase2_structuur).toBe("Inner");
-      expect(result.payload.custom).toEqual({});
+      expect(result.payload.custom).toEqual({
+        fase: "Fase 2",
+        cc: "15",
+        trade_concept: "Reversal",
+        entry: "Decel",
+        weekly_criteria: "Pattern",
+        weekly_kenmerk: "Trending market",
+        nieuws: true,
+        w_confirm: true,
+        fase2_daily_respecteert_zone: false, // false is een echt antwoord, blijft
+        fase2_structuur: "Inner",
+      });
     }
   });
 
-  it("laat lege legacy-waarden de default en negeert niet-gewhiteliste sleutels", () => {
-    const result = buildTradePayload(
-      baseInput({
-        legacy: {
-          cc: "",
-          entry: null,
-          // @ts-expect-error — bewust: alleen de whitelist mag doorkomen
-          resultaat_pct: 99,
-        },
-      })
-    );
+  it("pruned lege custom-waarden weg vóór ze de bag in gaan", () => {
+    const result = buildTradePayload(baseInput({ custom: { cc: "", entry: null, num: NaN, zone: "Inner" } }));
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.payload.cc).toBe("11"); // quickLog-default blijft staan
-      expect(result.payload.entry).toBeNull();
-      expect(result.payload.resultaat_pct).toBeNull(); // live-open nulregel, niet 99
-    }
-  });
-
-  it("een ongeldige enum-waarde faalt hard op schema-invalid", () => {
-    const result = buildTradePayload(baseInput({ legacy: { cc: "12" } }));
-    expect(result).toMatchObject({ ok: false, error: "schema-invalid" });
+    if (result.ok) expect(result.payload.custom).toEqual({ zone: "Inner" });
   });
 });

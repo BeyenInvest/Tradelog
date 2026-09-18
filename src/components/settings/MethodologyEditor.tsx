@@ -5,7 +5,7 @@ import { ChevronUp, ChevronDown, Lock, Pencil, Trash2, X, Check } from "lucide-r
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
-import { isLockedLegacyField, parseFieldOptions, slugifyFieldKey } from "@/lib/methodologyFields";
+import { parseFieldOptions, slugifyFieldKey } from "@/lib/methodologyFields";
 import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -104,10 +104,9 @@ export function MethodologyEditor() {
                 field={f}
                 allFields={fields}
                 editable={isOwn && !busy}
-                // Seeded WPM fields stay column-backed (`fase` even enum-backed in the
-                // DB — editing its options would break every trade save) → locked
-                // until the cyclus-10 migration. useMethodologyEditor backstops this.
-                locked={isLockedLegacyField(f, fields)}
+                // Since the fase-retirement (0059) no field is column-backed/locked —
+                // every field, WPM's included, is an ordinary editable custom field.
+                locked={false}
                 isFirst={i === 0}
                 isLast={i === fields.length - 1}
                 onMove={(dir) => void run(() => moveField(f.id, dir), "methodology.saveFailed")}
