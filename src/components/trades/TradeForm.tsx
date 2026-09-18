@@ -22,9 +22,7 @@ import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
 import {
   CustomFieldVisibilitySync,
-  CustomFieldGroup,
   CustomFieldsManager,
-  WOVEN_GROUP_KEYS,
 } from "./TradeFormSections/CustomFieldsSection";
 
 interface TradeFormProps {
@@ -251,13 +249,12 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
                 many field groups render below (fase-retirement follow-up 2026-09-18). */}
             <CustomFieldVisibilitySync />
             <EntrySection closeDateTouchedRef={closeDateTouchedRef} />
-            {/* Config fields woven next to Entry, grouped per subheading (Setup/Markt/
-                Mindset) — where the WPM fields (fase/criteria/concept/entry/cc/nieuws)
-                lived before the retirement, instead of one bottom "extra velden" dump. */}
-            <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} />
             <hr className="border-border" />
             <ResultSection allowMissedTrade={allowMissedTrade} closeDateTouchedRef={closeDateTouchedRef} />
             <hr className="border-border" />
+            {/* Technical analysis carries the config fields (setup kenmerken) + the
+                screenshots (owner 2026-09-18). Ungrouped/own fields + field-management
+                stay in the manager below. */}
             <TechnicalSection />
             <CustomFieldsManager />
 

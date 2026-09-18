@@ -75,7 +75,14 @@ export function CustomFieldVisibilitySync() {
  * to, instead of one bottom section. Presentational only — visibility clearing and
  * field management live elsewhere (CustomFieldVisibilitySync / CustomFieldsManager).
  */
-export function CustomFieldGroup({ groupKeys }: { groupKeys: readonly string[] }) {
+export function CustomFieldGroup({
+  groupKeys,
+  excludeKeys,
+}: {
+  groupKeys: readonly string[];
+  /** field_keys to leave out here because they're placed elsewhere (e.g. WPM's `cc` moves into Entry). */
+  excludeKeys?: readonly string[];
+}) {
   const { t } = useTranslation();
   const { fields } = useMethodology();
   const {
@@ -86,7 +93,10 @@ export function CustomFieldGroup({ groupKeys }: { groupKeys: readonly string[] }
   } = useFormContext<TradeFormValues>();
   const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
   const visible = dynamicMethodologyFields(fields).filter(
-    (f) => groupKeys.includes(f.group_key ?? "") && isFieldVisible(f, fields, customVals)
+    (f) =>
+      groupKeys.includes(f.group_key ?? "") &&
+      !excludeKeys?.includes(f.field_key) &&
+      isFieldVisible(f, fields, customVals)
   );
   if (visible.length === 0) return null;
 
@@ -112,6 +122,35 @@ export function CustomFieldGroup({ groupKeys }: { groupKeys: readonly string[] }
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Renders one config field by its field_key (Field + input), if it exists and is
+ * currently visible — for placing a single field inside a native section. A WPM
+ * journal shows its `cc` (4H Candle Close) field in the Entry grid in place of the
+ * open time (owner 2026-09-18). Errors + visibility behave as in CustomFieldGroup.
+ */
+export function SingleCustomField({ fieldKey }: { fieldKey: string }) {
+  const { t } = useTranslation();
+  const { fields } = useMethodology();
+  const {
+    control,
+    register,
+    watch,
+    formState: { errors },
+  } = useFormContext<TradeFormValues>();
+  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const field = dynamicMethodologyFields(fields).find((f) => f.field_key === fieldKey);
+  if (!field || !isFieldVisible(field, fields, customVals)) return null;
+  return (
+    <Field
+      label={fieldLabel(t, field)}
+      required={field.required}
+      error={(errors.custom as Record<string, { message?: string }> | undefined)?.[field.field_key]?.message}
+    >
+      <FieldInput field={field} control={control} register={register} />
+    </Field>
   );
 }
 

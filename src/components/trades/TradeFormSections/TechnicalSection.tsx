@@ -6,6 +6,7 @@ import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
 import { UrlPreviewField } from "./UrlPreviewField";
 import { ScreenshotUploadField } from "./ScreenshotUploadField";
+import { CustomFieldGroup, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
 
 export function TechnicalSection() {
   const { t } = useTranslation();
@@ -25,6 +26,9 @@ export function TechnicalSection() {
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-lg italic text-ink">{t("tradeForm.sectionTechnical")}</h3>
+      {/* Config fields (setup kenmerken) live here with the screenshots (owner
+          2026-09-18). WPM's `cc` is excluded — it sits in the Entry grid instead. */}
+      <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={isWpm ? ["cc"] : undefined} />
       <div className="grid grid-cols-2 gap-4">
         <ScreenshotInput name="w_screenshot" label={isWpm ? t("tradeForm.weeklyScreenshot") : t("tradeForm.screenshot1")} />
         <ScreenshotInput name="d_screenshot" label={isWpm ? t("tradeForm.dailyScreenshot") : t("tradeForm.screenshot2")} />
