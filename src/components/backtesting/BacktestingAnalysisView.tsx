@@ -20,7 +20,7 @@ import {
   computeRHistogram, computeRDistribution, computeEvaluationImpact, computeConditionGaps,
 } from "@/lib/stats";
 import { useAnalyseLayout } from "@/hooks/useAnalyseLayout";
-import { breakdownDimensionsFor, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
+import { breakdownDimensionsFor, customFieldDimensions, FASE_CROSS_DIMENSION, type DimensionConfig } from "@/lib/breakdownDimensions";
 import { FASE_KENMERKEN, FASES, HIDE_FASE_KENMERKEN, OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
@@ -205,11 +205,15 @@ export function BacktestingAnalysisView({
   // applicable timing/instrument dims, and the journal's own custom fields. Consumes
   // the same DimensionConfig list, pre-resolving each title + row-label translator so
   // CrossTable stays free of dimension/i18n knowledge (unlike adherence, this keeps
-  // the calendar-derived splits — Setup × Uur is a genuine cross-tab).
+  // the calendar-derived splits — Setup × Uur is a genuine cross-tab). "Per Fase" is
+  // cross-table-only (see FASE_CROSS_DIMENSION) and follows showFase, so a hide_fase
+  // user never sees the fase axis; it sits after the setup dims to keep the
+  // data-aware auto default (Setup × Sessie) unchanged.
   const crossDims = useMemo<CrossDim[]>(
     () =>
       [
         ...(isLegacyMethodology ? dimensions.slice(0, kenmerkenSplit) : []),
+        ...(showFase ? [FASE_CROSS_DIMENSION] : []),
         ...dimensions.slice(kenmerkenSplit).filter(showTimingDim),
         ...customDims,
       ].map((d) => ({
@@ -220,7 +224,7 @@ export function BacktestingAnalysisView({
         labelFn: d.labelFn ? (k: string) => d.labelFn!(k, t) : undefined,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isLegacyMethodology, isForexJournal, customDims, t]
+    [isLegacyMethodology, showFase, isForexJournal, customDims, t]
   );
 
   // Visibility of the two self-hiding sections, computed here so the layout system

@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { MethodologyField, Trade } from "./types";
-import { currenciesOfPair, CCS, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
+import { currenciesOfPair, CCS, DIRECTIONS, FASES, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
 import { dynamicMethodologyFields } from "./methodologyFields";
 import { fieldLabel } from "./fieldBlocks";
@@ -53,6 +53,7 @@ const boolLabel = (k: string, t: TFunction) => t(k === "Ja" ? "common.yes" : "co
 export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   // No "fase" entry — that data lives in the Per Fase overview cards above this section, and a per-fase split of
   // the fase dimension itself is just a diagonal matrix (every off-diagonal cell is empty by construction).
+  // The kruistabel alone adds FASE_CROSS_DIMENSION (below) on top of this list.
   { id: "trade_concept", keyFn: (t) => t.trade_concept },
   { id: "entry", keyFn: (t) => t.entry },
   // Weekly data ranks above session/candle-close/pair/currency — it's the higher-signal dimension for this methodology.
@@ -77,6 +78,19 @@ export const BREAKDOWN_DIMENSIONS: DimensionConfig[] = [
   { id: "direction", keyFn: (t) => t.direction, sortOrder: DIRECTIONS, universal: true },
   { id: "nieuws", keyFn: (t) => (t.nieuws ? "Ja" : "Nee"), labelFn: boolLabel },
 ];
+
+/**
+ * "Per Fase" as a cross-table axis, for the legacy WPM journal only. Deliberately
+ * NOT in BREAKDOWN_DIMENSIONS (see the comment there: the plain fase split lives in
+ * the Per Fase overview cards, and fase-within-fase is a diagonal) — but crossed
+ * against a *different* dimension (Fase × Sessie, Fase × Setup, …) it's a genuine
+ * matrix, so the kruistabel adds this entry on top of the shared list.
+ */
+export const FASE_CROSS_DIMENSION: DimensionConfig = {
+  id: "fase",
+  keyFn: (t) => t.fase,
+  sortOrder: FASES,
+};
 
 /**
  * Time-based "Per Sessie" for non-WPM journals (Fase S2, 0051). On such a journal

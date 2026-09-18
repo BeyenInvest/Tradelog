@@ -941,6 +941,7 @@
     "targetReached": "Target was beschikbaar (MFE ≥ plan, {{n}} met MFE)"
   },
   "breakdown": {
+    "fase": "Per Fase",
     "trade_concept": "Per Trade Concept",
     "entry": "Per Entry",
     "weekly_criteria": "Per Weekly Criteria",
