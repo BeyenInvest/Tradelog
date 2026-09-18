@@ -1,5 +1,5 @@
-// Het log-paneel zelf (F2d): status → chart lezen → position-tool → doel →
-// modus → dynamische form → "Log trade". Vanilla TS, geen framework.
+// Het log-paneel zelf (F2d): status → chart lezen → position-tool → journal
+// (doel + resultaat) → dynamische form → "Log trade". Vanilla TS, geen framework.
 //
 // Twee regels die de opbouw verklaren:
 //  1. Het paneel REKENT NIETS. Prijzen/R:R komen uit de adapter (F2a) en
@@ -14,8 +14,10 @@
 // (currentView). De ingevulde waarden leven in deze closure, niet in de DOM,
 // dus zo'n hertekening kost geen invoer.
 import type { Direction, Outcome } from "../../../../src/lib/constants";
-import { plannedRR } from "../../../../src/lib/priceMath";
-import type { WallClock } from "../../../../src/lib/tradePayload";
+import { plannedRR, suggestedResultPct } from "../../../../src/lib/priceMath";
+// Bewust uit wallClock.ts en niet uit tradePayload.ts: die laatste sleept
+// validation.ts + zod de content-script-bundel in (~140 KB extra).
+import { wallClockInTimezone, type WallClock } from "../../../../src/lib/wallClock";
 import type { ChartState, PositionState } from "../../adapter/parse";
 import type { JournalField, JournalSchema } from "../../db";
 import { ensureLang, onLangChange, t, type MessageKey } from "../../i18nExt";
@@ -27,11 +29,11 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  customFromValues, formFields, isLegacyJournal, legacyFromValues, missingRequired, selectedFase,
-  type FormValues,
+  ccFromTime, customFromValues, formFields, isLegacyJournal, legacyFromValues, missingRequired,
+  selectedFase, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
-import { renderLegacyForm, type LegacyCustomOptions } from "./legacyForm";
+import { renderLegacyForm, type LegacyCustomOptions, type LegacyForm } from "./legacyForm";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
@@ -42,7 +44,9 @@ import { renderSnapshotsSection } from "./snapshotsSection";
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
 const TARGET_KEY = "beyen-tv-ext:target";
 
-type Mode = "live" | "backtest";
+/** Eén keuze voor "hoe staat deze trade ervoor": lopend, of afgelopen met een
+ * uitkomst. Vervangt de oude modus-toggle + aparte outcome-keuze. */
+type Result = "running" | Outcome;
 type PriceKey = "entry" | "stop" | "target";
 
 export interface PanelApp {
@@ -91,9 +95,20 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let selectedPositionId: string | null = null;
   let overrides: Partial<Record<PriceKey, number | null>> & { direction?: Direction | null } = {};
   let targetKey = storedTarget();
-  let mode: Mode = "live";
-  let outcome: Outcome | null = null;
+  let result: Result | null = defaultResult();
   let resultPct = "";
+  /** Het laatst automatisch ingevulde resultaat%; wat de user zelf typte wijkt
+   * hiervan af en wordt daarom nooit overschreven. */
+  let resultAuto: string | null = null;
+  /** Zodra de user zelf in het veld typte (of het wiste) blijft het voorstel
+   * eraf — anders vult een gewist veld zich meteen weer met het voorstel. Een
+   * nieuwe outcome-keuze zet de prefill weer aan, tenzij er een eigen waarde
+   * staat. */
+  let resultTouched = false;
+  /** Idem voor de CC-prefill uit de entry-tijd. */
+  let ccAuto: string | null = null;
+  /** Zodra de user zelf een CC koos (of 'm wiste) blijft de prefill eraf. */
+  let ccTouched = false;
   let riskPct = "";
   let notes = "";
   let manualDate = "";
@@ -109,6 +124,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let loggedScreenshots: Partial<Record<SnapshotSlot, string | null>> | null = null;
 
   let form: DynamicForm | null = null;
+  /** Het legacy-WPM-blok, zolang het gemount is: de CC-prefill zet een waarde in
+   * `values` en laat dit blok zichzelf bijwerken. */
+  let legacyBlock: LegacyForm | null = null;
   let formFieldList: JournalField[] = [];
   /** Eerste-run-hint: pas tonen als de storage-lezing terug is (boot). */
   let showOnboarding = false;
@@ -184,6 +202,29 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     return !position || position.entryTimeSec == null;
   }
 
+  /**
+   * Wat "Running | Win | Loss | BE" aanstaat zolang de user niets koos. Op het
+   * live journal is lopend de normale gang van zaken; een backtest-project
+   * zonder resultaat is zelden de bedoeling, dus dáár is de keuze bewust leeg
+   * (Running blijft wél kiesbaar, zoals met de oude modus-toggle).
+   */
+  function defaultResult(): Result | null {
+    return targetKey === "live" ? "running" : null;
+  }
+
+  /**
+   * De entry-tijd als wall-clock ("HH:MM") in de profiel-tijdzone: de bar-tijd
+   * van de position-tool, anders wat de user zelf invulde (die input staat al
+   * in diezelfde tijdzone). Basis voor de CC-prefill.
+   */
+  function entryWallClockTime(): string | null {
+    const entryTimeSec = selectedPosition()?.entryTimeSec;
+    if (entryTimeSec != null && targets?.timezone) {
+      return wallClockInTimezone(entryTimeSec * 1000, targets.timezone)?.time ?? null;
+    }
+    return manualTime || null;
+  }
+
   // ── Volledige staten (loading / niet gekoppeld / succes) ────────────────
   /** De weergave die nu op het scherm staat, als functie — een taalwissel roept
    * 'm gewoon opnieuw aan (de ingevulde waarden staan in deze closure). */
@@ -234,7 +275,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const chartSec = sectionEl("panel.sec.chart", refreshBtn);
   const positionSec = sectionEl("panel.sec.position");
   const targetSec = sectionEl("panel.sec.target");
-  const modeSec = sectionEl("panel.sec.mode");
   const journalSec = sectionEl("panel.sec.journal");
   const extraSec = sectionEl("panel.sec.extra");
   const snapshotsSec = renderSnapshotsSection();
@@ -254,7 +294,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // Vaste copy die buiten de render-functies leeft: hier zetten, zodat één
     // buildForm() na een taalwissel het hele paneel klopt.
     paintChrome();
-    for (const sec of [chartSec, positionSec, targetSec, modeSec, journalSec, extraSec]) {
+    for (const sec of [chartSec, positionSec, targetSec, journalSec, extraSec]) {
       sec.title.textContent = t(sec.titleKey);
     }
     refreshBtn.setAttribute("title", t("panel.refreshTitle"));
@@ -280,7 +320,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     body.appendChild(closeSec.element);
     body.appendChild(positionSec.section);
     body.appendChild(targetSec.section);
-    body.appendChild(modeSec.section);
     body.appendChild(journalSec.section);
     body.appendChild(extraSec.section);
     body.appendChild(snapshotsSec.element);
@@ -292,7 +331,6 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     renderChart();
     renderPosition();
     renderTarget();
-    renderMode();
     renderJournalFields();
     renderExtra();
     showError(null);
@@ -562,10 +600,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     on(select, "change", () => {
       targetKey = select.value;
       storeTarget(targetKey);
-      // Een backtest-project zonder resultaat is zelden de bedoeling; de modus
-      // volgt het doel, maar blijft daarna gewoon omschakelbaar.
-      mode = targetKey === "live" ? "live" : "backtest";
-      renderMode();
+      // De resultaat-keuze volgt het nieuwe doel, maar blijft daarna gewoon
+      // omschakelbaar — een lopende backtest-trade mag.
+      result = defaultResult();
+      renderResult();
       updatePending();
     });
     targetSec.body.appendChild(select);
@@ -586,77 +624,130 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         el("p", { class: "by-hint", style: "margin:6px 0 0;", text: t("panel.targetsFailed") })
       );
     }
+
+    targetSec.body.appendChild(resultWrap);
+    renderResult();
   }
 
-  const modeExtra = el("div", { style: "margin-top:10px;" });
+  // Doel en resultaat staan in dezelfde sectie, maar het doel-blok (de select)
+  // blijft staan als alleen de resultaat-keuze wisselt — anders zou de select
+  // z'n focus verliezen bij elke klik op Win/Loss/BE.
+  const resultWrap = el("div", { style: "margin-top:10px;" });
+  /** Het resultaat%-veld en z'n voorstel-hint, zolang die gemount zijn. */
+  let resultInput: HTMLInputElement | null = null;
+  let resultHint: HTMLElement | null = null;
 
-  function renderMode(): void {
-    clear(modeSec.body);
-    clear(modeExtra);
+  /** De hint hoort alleen te staan zolang het veld nog het voorstel toont. */
+  function paintResultHint(): void {
+    if (resultHint) resultHint.hidden = resultAuto == null || resultPct !== resultAuto;
+  }
 
-    const seg = el("div", { class: "by-seg", attrs: { role: "group", "aria-label": t("panel.modeLabel") } });
-    for (const [key, label] of [
-      ["live", t("panel.modeLive")],
-      ["backtest", t("panel.modeBacktest")],
-    ] as const) {
-      const btn = el("button", { class: "by-seg-btn", text: label, attrs: { type: "button" } });
-      btn.classList.toggle("is-active", mode === key);
-      on(btn, "click", () => {
-        mode = key;
-        renderMode();
-        updatePending();
-      });
-      seg.appendChild(btn);
-    }
-    modeSec.body.appendChild(seg);
-    modeSec.body.appendChild(modeExtra);
+  function renderResult(): void {
+    clear(resultWrap);
+    resultInput = null;
+    resultHint = null;
 
-    if (mode === "live") {
-      modeExtra.appendChild(el("p", { class: "by-hint", style: "margin:0;", text: t("panel.modeLiveHint") }));
-      return;
-    }
-
-    const outcomes = el("div", { class: "by-outcomes" });
-    for (const value of ["Win", "Loss", "BE"] as const) {
+    const choices = el("div", {
+      class: "by-outcomes is-quad",
+      attrs: { role: "group", "aria-label": t("panel.resultGroupLabel") },
+    });
+    for (const value of ["running", "Win", "Loss", "BE"] as const) {
       const btn = el("button", {
+        // Win/Loss/BE blijven de rauwe enum-waarde (leenwoorden); alleen
+        // "Running" komt uit de woordenlijst.
         class: "by-oc",
-        text: value,
+        text: value === "running" ? t("panel.resultRunning") : value,
         attrs: { type: "button", "data-outcome": value },
       });
-      btn.classList.toggle("is-active", outcome === value);
+      btn.classList.toggle("is-active", result === value);
       on(btn, "click", () => {
-        outcome = value;
-        renderMode();
+        result = value;
+        // Een nieuwe keuze mag het voorstel weer invullen — maar alleen als er
+        // geen eigen waarde van de user staat.
+        if (resultPct === "" || resultPct === resultAuto) resultTouched = false;
+        renderResult();
+        // updatePending() doet het auto-voorstel en vult het verse veld.
         updatePending();
       });
-      outcomes.appendChild(btn);
+      choices.appendChild(btn);
     }
+    resultWrap.appendChild(choices);
 
-    const resultInput = el("input", {
+    if (result === "running") {
+      resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:8px 0 0;", text: t("panel.runningHint") }));
+      return;
+    }
+    // Nog niets gekozen: geen veld. Wat er dan mist zegt de regel onder de knop.
+    if (!result) return;
+
+    const input = el("input", {
       class: "by-input",
       attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.resultPlaceholder") },
     });
-    resultInput.value = resultPct;
-    on(resultInput, "input", () => {
-      resultPct = resultInput.value;
+    input.value = resultPct;
+    on(input, "input", () => {
+      resultPct = input.value;
+      resultTouched = true;
+      paintResultHint();
       updatePending();
     });
+    resultInput = input;
 
-    modeExtra.appendChild(outcomes);
-    modeExtra.appendChild(
+    const hint = el("p", { class: "by-hint", style: "margin:5px 0 0;", text: t("panel.resultAutoHint") });
+    resultHint = hint;
+    paintResultHint();
+
+    resultWrap.appendChild(
       el("div", { style: "margin-top:8px;" }, [
         el("span", { class: "by-label" }, [
           document.createTextNode(t("panel.resultLabel")),
           el("span", { class: "by-req", text: " *" }),
         ]),
-        resultInput,
+        input,
+        hint,
       ])
     );
+  }
+
+  /**
+   * Het auto-voorstel voor resultaat%: "de trade liep af zoals getekend"
+   * (suggestedResultPct). Het vult alleen een leeg veld of een veld dat nog
+   * exact het vorige voorstel draagt — wat de user zelf typte blijft staan.
+   */
+  function syncResultSuggestion(): void {
+    if (result == null || result === "running" || resultTouched) return;
+    if (resultPct !== "" && resultPct !== resultAuto) return;
+    const suggestion = suggestedResultPct(result, effRR(), parseNumberInput(riskPct));
+    const next = suggestion == null ? "" : String(suggestion);
+    if (next === resultPct) return;
+    resultPct = next;
+    resultAuto = suggestion == null ? null : next;
+    if (resultInput) resultInput.value = resultPct;
+    paintResultHint();
+  }
+
+  /**
+   * De CC-prefill van het legacy-WPM-blok: de 4H-candle waarin de entry valt,
+   * afgelezen in de profiel-tijdzone. Zelfde hygiëne als het resultaat-voorstel
+   * — een eigen keuze van de user wordt nooit overschreven.
+   */
+  function syncCc(): void {
+    if (ccTouched || !journal || !isLegacyJournal(journal.fields)) return;
+    const current = values["cc"];
+    const filled = typeof current === "string" && current !== "";
+    if (filled && current !== ccAuto) return;
+    const time = entryWallClockTime();
+    const cc = time ? ccFromTime(time) : null;
+    if (cc == null || cc === current) return;
+    values["cc"] = cc;
+    ccAuto = cc;
+    legacyBlock?.sync();
   }
 
   function renderJournalFields(): void {
     clear(journalSec.body);
     form = null;
+    legacyBlock = null;
 
     if (journalNote) {
       const text =
@@ -671,19 +762,21 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // vaste kolommen (fase, entry, confirms, kenmerken), dan de eigen velden.
     const legacy = isLegacyJournal(journal.fields);
     if (legacy) {
-      journalSec.body.appendChild(
-        renderLegacyForm({
-          allFields: journal.fields,
-          values,
-          hideFase: targets?.hideFase === true,
-          customOptions,
-          onChange: () => {
-            // Een fase-wissel kan een show_when-veld openen of dichtklappen.
-            form?.sync();
-            updatePending();
-          },
-        }).element
-      );
+      legacyBlock = renderLegacyForm({
+        allFields: journal.fields,
+        values,
+        hideFase: targets?.hideFase === true,
+        customOptions,
+        onChange: () => {
+          // Een fase-wissel kan een show_when-veld openen of dichtklappen.
+          form?.sync();
+          // Wijkt de CC af van wat wij er zetten, dan koos (of wiste) de user
+          // 'm zelf — vanaf dan blijft de prefill eraf.
+          if (values["cc"] !== ccAuto) ccTouched = true;
+          updatePending();
+        },
+      });
+      journalSec.body.appendChild(legacyBlock.element);
     }
 
     formFieldList = formFields(journal.fields);
@@ -759,14 +852,14 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       manualDateTime = { date: manualDate, time: manualTime };
     }
 
+    if (result == null) return { ok: false, message: t("panel.v.pickResult") };
     let tradeMode: LogTradeRequest["mode"] = { kind: "live-open" };
-    if (mode === "backtest") {
-      if (!outcome) return { ok: false, message: t("panel.v.pickOutcome") };
+    if (result !== "running") {
       const pct = parseNumberInput(resultPct);
       if (pct == null) return { ok: false, message: t("panel.v.needResult") };
-      if (outcome === "Loss" && pct > 0) return { ok: false, message: t("panel.v.lossNegative") };
-      if (outcome === "Win" && pct < 0) return { ok: false, message: t("panel.v.winPositive") };
-      tradeMode = { kind: "post-hoc", outcome, resultaatPct: pct };
+      if (result === "Loss" && pct > 0) return { ok: false, message: t("panel.v.lossNegative") };
+      if (result === "Win" && pct < 0) return { ok: false, message: t("panel.v.winPositive") };
+      tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct };
     }
 
     const missing = journal ? missingRequired(formFieldList, journal.fields, values) : [];
@@ -820,6 +913,11 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   }
 
   function updatePending(): void {
+    // Eerst de twee prefills: ze veranderen wat er nog mist. Ze draaien hier en
+    // niet in elke call-site, want dit is precies het moment waarop iets van
+    // invoer (prijs, risico, tijd, keuze) net veranderd is.
+    syncResultSuggestion();
+    syncCc();
     const built = buildRequest();
     pendingLine.textContent = built.ok ? "" : built.message;
     pendingLine.hidden = built.ok;
@@ -913,8 +1011,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     loggedScreenshots = null;
     values = {};
     overrides = {};
-    outcome = null;
+    result = defaultResult();
     resultPct = "";
+    resultAuto = null;
+    resultTouched = false;
+    ccAuto = null;
+    ccTouched = false;
     riskPct = "";
     notes = "";
     manualDate = "";
@@ -922,8 +1024,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // Verse snapshot-staat; wat er nog niet in een trade zit, wordt hier
     // opgeruimd (na een geslaagde log is die lijst al leeg — zie submit()).
     snapshotsSec.reset();
-    // Doel en modus blijven staan: wie vijf backtest-trades logt, wil die keuze
-    // niet vijf keer opnieuw maken.
+    // Het doel blijft staan (wie vijf backtest-trades logt, wil dat niet vijf
+    // keer opnieuw kiezen); de resultaat-keuze valt terug op de default van dát
+    // doel — een tweede trade is zelden dezelfde uitkomst.
   }
 
   // ── Laden ───────────────────────────────────────────────────────────────

@@ -95,8 +95,7 @@ const NL = {
   // Paneel — secties
   "panel.sec.chart": "Chart",
   "panel.sec.position": "Position-tool",
-  "panel.sec.target": "Doel",
-  "panel.sec.mode": "Modus",
+  "panel.sec.target": "Journal",
   "panel.sec.journal": "Journal-velden",
   "panel.sec.extra": "Extra",
 
@@ -126,20 +125,19 @@ const NL = {
   "panel.manualTimeLabel": "Datum en tijd van de entry",
   "panel.manualTimeHint": "De chart geeft hier geen bar-tijd — vul 'm zelf in (in je eigen tijdzone uit Beyen).",
 
-  // Paneel — doel
+  // Paneel — doel + resultaat (één sectie)
   "panel.targetSelectLabel": "Waar komt deze trade terecht",
   "panel.targetLive": "Journal (live)",
   "panel.targetProject": "Backtest: {name}",
   "panel.activeJournal": "Actief journal: {name}",
   "panel.targetsFailed": "Backtest-projecten konden niet geladen worden.",
-
-  // Paneel — modus
-  "panel.modeLabel": "Modus",
-  "panel.modeLive": "Live (open trade)",
-  "panel.modeBacktest": "Backtest (met resultaat)",
-  "panel.modeLiveHint": "De trade komt als lopend in je journal; het resultaat vul je later in Beyen aan.",
+  "panel.resultGroupLabel": "Resultaat van deze trade",
+  "panel.resultRunning": "Running",
+  "panel.runningHint": "De trade komt als lopend in je journal; het resultaat vul je later in Beyen aan.",
   "panel.resultLabel": "Resultaat %",
   "panel.resultPlaceholder": "bv. 1.8 of -0.5",
+  "panel.resultAutoHint":
+    "Voorstel: volle TP/SL op basis van R:R × risico — pas aan als je exit anders was.",
 
   // Paneel — journal-velden
   "panel.noJournalFields": "Dit journal heeft geen eigen velden.",
@@ -182,7 +180,7 @@ const NL = {
   "panel.v.noSymbol": "Zonder symbool kan er niets gelogd worden — ververs de chart.",
   "panel.v.entryStopPair": "Vul entry én stop in — met maar één van de twee valt er geen R te berekenen.",
   "panel.v.needDateTime": "Vul de datum en tijd van de entry in.",
-  "panel.v.pickOutcome": "Kies Win, Loss of BE.",
+  "panel.v.pickResult": "Kies Running, Win, Loss of BE.",
   "panel.v.needResult": "Vul het resultaat in % in.",
   "panel.v.lossNegative": "Een Loss hoort een negatief resultaat te hebben.",
   "panel.v.winPositive": "Een Win hoort een positief resultaat te hebben.",
@@ -380,8 +378,7 @@ const EN: Record<MessageKey, string> = {
   // Panel — sections
   "panel.sec.chart": "Chart",
   "panel.sec.position": "Position tool",
-  "panel.sec.target": "Destination",
-  "panel.sec.mode": "Mode",
+  "panel.sec.target": "Journal",
   "panel.sec.journal": "Journal fields",
   "panel.sec.extra": "Extra",
 
@@ -412,20 +409,19 @@ const EN: Record<MessageKey, string> = {
   "panel.manualTimeHint":
     "The chart gives no bar time here — fill it in yourself (in your own timezone from Beyen).",
 
-  // Panel — destination
+  // Panel — destination + result (one section)
   "panel.targetSelectLabel": "Where this trade lands",
   "panel.targetLive": "Journal (live)",
   "panel.targetProject": "Backtest: {name}",
   "panel.activeJournal": "Active journal: {name}",
   "panel.targetsFailed": "Backtest projects could not be loaded.",
-
-  // Panel — mode
-  "panel.modeLabel": "Mode",
-  "panel.modeLive": "Live (open trade)",
-  "panel.modeBacktest": "Backtest (with result)",
-  "panel.modeLiveHint": "The trade lands in your journal as running; you add the result later in Beyen.",
+  "panel.resultGroupLabel": "Result of this trade",
+  "panel.resultRunning": "Running",
+  "panel.runningHint": "The trade lands in your journal as running; you add the result later in Beyen.",
   "panel.resultLabel": "Result %",
   "panel.resultPlaceholder": "e.g. 1.8 or -0.5",
+  "panel.resultAutoHint":
+    "Suggestion: full TP/SL based on R:R × risk — adjust it if your exit was different.",
 
   // Panel — journal fields
   "panel.noJournalFields": "This journal has no fields of its own.",
@@ -469,7 +465,7 @@ const EN: Record<MessageKey, string> = {
   "panel.v.noSymbol": "Without a symbol there is nothing to log — refresh the chart.",
   "panel.v.entryStopPair": "Fill in both entry and stop — with just one of the two there is no R to compute.",
   "panel.v.needDateTime": "Fill in the date and time of the entry.",
-  "panel.v.pickOutcome": "Pick Win, Loss or BE.",
+  "panel.v.pickResult": "Pick Running, Win, Loss or BE.",
   "panel.v.needResult": "Fill in the result in %.",
   "panel.v.lossNegative": "A Loss should carry a negative result.",
   "panel.v.winPositive": "A Win should carry a positive result.",
