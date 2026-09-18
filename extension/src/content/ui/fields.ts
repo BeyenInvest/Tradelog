@@ -4,7 +4,7 @@
 // wat hier uitkomt, zodat dezelfde regels als de web-form testbaar blijven.
 import {
   CCS, ENTRIES, FASE_KENMERKEN, LEGACY_METHODOLOGY_FIELD_KEYS, TRADE_CONCEPTS,
-  WEEKLY_CRITERIA, WEEKLY_KENMERKEN,
+  WEEKLY_CRITERIA, WEEKLY_KENMERKEN, type CC,
 } from "../../../../src/lib/constants";
 import type { LegacyTradeColumn } from "../../../../src/lib/tradePayload";
 import type { JournalField } from "../../db";
@@ -134,6 +134,28 @@ const LEGACY_LABEL_KEYS: Record<LegacyTradeColumn, MessageKey> = {
 
 export function legacyLabelKey(key: LegacyTradeColumn): MessageKey {
   return LEGACY_LABEL_KEYS[key];
+}
+
+/**
+ * De 4H-candle-close (CC) die bij een entry-tijd hoort. De CCS-slots zijn de
+ * sluituren van de 4H-candles afgelezen in de profiel-tijdzone (zo gebruikt
+ * compute_sessie ze ook, zie schema.sql): een entry om 14:32 valt in de candle
+ * die om 15:00 sluit. Een entry exact óp een slot (15:00) hoort bij de candle
+ * die dan opent (sluit 19:00); na 23:00 sluit de candle pas de volgende dag om
+ * 03:00. De caller geeft de wall-clock-tijd in de profiel-tijdzone mee
+ * ("HH:MM", zoals wallClockInTimezone en de manual-time-input die leveren).
+ */
+export function ccFromTime(time: string): CC | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec(time.trim());
+  if (!m) return null;
+  const hour = Number(m[1]);
+  const minute = Number(m[2]);
+  if (hour > 23 || minute > 59) return null;
+  const minutes = hour * 60 + minute;
+  for (const cc of CCS) {
+    if (Number(cc) * 60 > minutes) return cc;
+  }
+  return CCS[0];
 }
 
 /**

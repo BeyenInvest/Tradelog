@@ -219,8 +219,13 @@
 
 /* ── Outcome-knoppen ─────────────────────────────────────────────────────── */
 .by-outcomes { display: flex; gap: 6px; }
+/* Opt-in voor de vier-knops-rij (Running | Win | Loss | BE): een grid houdt ze
+ * exact even breed, ook al is "Running" het langste woord. Flex blijft de
+ * default, zodat elke andere drie-knops-rij ongemoeid blijft. */
+.by-outcomes.is-quad { display: grid; grid-template-columns: repeat(4, 1fr); }
 .by-oc {
   flex: 1;
+  min-width: 0;
   padding: 7px 4px;
   background: rgb(var(--color-bg));
   border: 1px solid rgb(var(--color-border));
@@ -230,6 +235,13 @@
   cursor: pointer;
 }
 .by-oc:hover { border-color: rgb(var(--color-faint)); color: rgb(var(--color-ink)); }
+/* "Running" is geen uitkomst maar de afwezigheid ervan: neutraal-goud, dezelfde
+ * accentstijl als een actieve toggle — niet groen/rood/oranje. */
+.by-oc[data-outcome="running"].is-active {
+  color: rgb(var(--color-ink));
+  border-color: rgb(var(--color-gold) / 0.6);
+  background: rgb(var(--color-gold) / 0.12);
+}
 .by-oc[data-outcome="Win"].is-active {
   color: rgb(var(--color-win));
   border-color: rgb(var(--color-win) / 0.6);

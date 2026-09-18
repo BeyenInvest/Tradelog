@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   directionFromPrices, pipsBetween, plannedRR, positionPrices, realizedR, resultaatPctFromExit,
-  tickSize, tickSizeFromFormatted,
+  suggestedResultPct, tickSize, tickSizeFromFormatted,
 } from "./priceMath";
 
 describe("tickSize", () => {
@@ -124,5 +124,35 @@ describe("resultaatPctFromExit", () => {
 
   it("degradeert mee met realizedR", () => {
     expect(resultaatPctFromExit("Short", 110.33, 109.83, 111.33, 1)).toBeNull();
+  });
+});
+
+describe("suggestedResultPct", () => {
+  it("Win = volle TP: planned R:R × risk%, afgerond op 2 decimalen", () => {
+    expect(suggestedResultPct("Win", 2, 1)).toBe(2);
+    expect(suggestedResultPct("Win", 2.5, 0.5)).toBe(1.25);
+    expect(suggestedResultPct("Win", 1.333, 1)).toBe(1.33);
+  });
+
+  it("Loss = volle SL: −risk%, ook zonder getekende TP", () => {
+    expect(suggestedResultPct("Loss", 2, 1)).toBe(-1);
+    expect(suggestedResultPct("Loss", null, 0.5)).toBe(-0.5);
+  });
+
+  it("BE = 0, nooit -0, ongeacht R:R of risk", () => {
+    expect(Object.is(suggestedResultPct("BE", null, null), 0)).toBe(true);
+    expect(suggestedResultPct("BE", 3, 2)).toBe(0);
+  });
+
+  it("lege of niet-positieve risk_pct volgt de 1%-default (zoals resultaatPctFromExit)", () => {
+    expect(suggestedResultPct("Win", 2, null)).toBe(2);
+    expect(suggestedResultPct("Win", 2, 0)).toBe(2);
+    expect(suggestedResultPct("Loss", null, null)).toBe(-1);
+  });
+
+  it("Win zonder bruikbare R:R = geen voorstel (veld blijft leeg)", () => {
+    expect(suggestedResultPct("Win", null, 1)).toBeNull();
+    expect(suggestedResultPct("Win", 0, 1)).toBeNull();
+    expect(suggestedResultPct("Win", Number.NaN, 1)).toBeNull();
   });
 });

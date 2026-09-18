@@ -58,9 +58,9 @@ describe("interpolate", () => {
 describe("t", () => {
   it("volgt de gecachete taal", () => {
     expect(getLang()).toBe("nl");
-    expect(t("panel.sec.mode")).toBe("Modus");
+    expect(t("panel.sec.position")).toBe("Position-tool");
     setLang("en");
-    expect(t("panel.sec.mode")).toBe("Mode");
+    expect(t("panel.sec.position")).toBe("Position tool");
   });
 
   it("interpoleert in beide talen", () => {
@@ -72,16 +72,21 @@ describe("t", () => {
   it("houdt de trading-leenwoorden identiek", () => {
     // Zelfde afspraak als het `enums`-namespace van de web-app: Win/Loss/BE,
     // Long/Short en "Log trade" zijn in beide talen hetzelfde woord.
-    for (const key of ["panel.submit", "panel.metric.entry", "panel.metric.stop", "panel.metric.target", "panel.metric.rr"] as const) {
+    // "Running" hoort in hetzelfde rijtje: het is de vierde knop naast
+    // Win/Loss/BE en blijft daarom in beide talen hetzelfde woord.
+    for (const key of [
+      "panel.submit", "panel.metric.entry", "panel.metric.stop", "panel.metric.target",
+      "panel.metric.rr", "panel.resultRunning",
+    ] as const) {
       setLang("nl");
       const nl = t(key);
       setLang("en");
       expect(t(key)).toBe(nl);
     }
     setLang("nl");
-    expect(t("panel.v.pickOutcome")).toContain("Win, Loss");
+    expect(t("panel.v.pickResult")).toContain("Running, Win, Loss");
     setLang("en");
-    expect(t("panel.v.pickOutcome")).toContain("Win, Loss");
+    expect(t("panel.v.pickResult")).toContain("Running, Win, Loss");
   });
 
   it("heeft voor elke sleutel een niet-lege vertaling in beide talen", () => {

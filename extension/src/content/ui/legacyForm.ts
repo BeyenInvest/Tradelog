@@ -29,6 +29,13 @@ export interface LegacyCustomOptions {
 
 export interface LegacyForm {
   element: HTMLElement;
+  /**
+   * De keuzelijsten opnieuw uit `values` zetten (spiegel van DynamicForm.sync).
+   * Nodig omdat het paneel zélf een waarde kan zetten nadat de rijen al staan —
+   * de CC-prefill uit de entry-tijd — en een re-render van het hele blok focus
+   * en caret zou kosten.
+   */
+  sync(): void;
 }
 
 export function renderLegacyForm(options: {
@@ -42,6 +49,11 @@ export function renderLegacyForm(options: {
 }): LegacyForm {
   const { allFields, values, hideFase, customOptions, onChange } = options;
   const element = el("div");
+  /** De keuzelijsten per sleutel, zodat sync() ze kan bijwerken. */
+  const selects = new Map<string, HTMLSelectElement>();
+  /** De kenmerk-rijen worden bij een fase-wissel herbouwd; hun oude selects
+   * horen dan uit de map te verdwijnen (die hangen aan losgeknipte DOM). */
+  let kenmerkKeys: string[] = [];
 
   function optionsFor(spec: LegacyFieldSpec): readonly string[] {
     if (spec.kind === "boolean") return [];
@@ -58,6 +70,7 @@ export function renderLegacyForm(options: {
       spec.kind === "boolean"
         ? booleanControl(key, values, onChange)
         : enumControl(key, optionsFor(spec), values, onChange);
+    if (control instanceof HTMLSelectElement) selects.set(key, control);
     return fieldRow(key, t(legacyLabelKey(key)), control);
   }
 
@@ -103,6 +116,8 @@ export function renderLegacyForm(options: {
 
   function paintKenmerken(): void {
     clear(kenmerkenBody);
+    for (const key of kenmerkKeys) selects.delete(key);
+    kenmerkKeys = [];
     // Globale kill-switch (HIDE_FASE_KENMERKEN) verbergt de kenmerk-vragen voor
     // iedereen, net als de web-form (TechnicalSection) — bovenop de per-user
     // hideFase-toggle. legacyKenmerkFields blijft puur; enkel de render valt weg.
@@ -117,9 +132,18 @@ export function renderLegacyForm(options: {
     // De antwoorden van een andere fase blijven in values staan (legacyFromValues
     // scoopt ze er bij submit uit) — terugwisselen kost je invoer dus niet.
     for (const spec of specs) kenmerkenBody.appendChild(row(spec));
+    kenmerkKeys = specs.map((spec) => spec.key);
   }
   paintKenmerken();
   element.appendChild(kenmerken);
 
-  return { element };
+  return {
+    element,
+    sync() {
+      for (const [key, select] of selects) {
+        const value = values[key];
+        select.value = typeof value === "string" ? value : "";
+      }
+    },
+  };
 }

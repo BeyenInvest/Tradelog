@@ -6,7 +6,7 @@
 // levert entry als prijs (points[0].price) en SL/TP als `stopLevel`/`profitLevel`
 // in TICKS t.o.v. entry; de tick-size komt uit priceFormatter() als
 // `_minMove / _priceScale` (bijv. 1/1000 = 0.001 voor JPY-paren).
-import { DEFAULT_RISK_PCT, type Direction } from "./constants";
+import { DEFAULT_RISK_PCT, type Direction, type Outcome } from "./constants";
 import { round2 } from "./stats/core";
 
 function isFiniteNumber(n: unknown): n is number {
@@ -123,4 +123,24 @@ export function resultaatPctFromExit(
   if (r == null) return null;
   const risk = riskPct != null && riskPct > 0 ? riskPct : DEFAULT_RISK_PCT;
   return round2(r * risk);
+}
+
+/**
+ * Voorstel-resultaat% voor een post-hoc gelogde trade zónder exit-prijs: de
+ * aanname is "de trade liep af zoals getekend" — Win = volle TP (planned R:R ×
+ * risk%), Loss = volle SL (−risk%), BE = 0. Een lege risk_pct volgt dezelfde
+ * DEFAULT_RISK_PCT-conventie als resultaatPctFromExit. Dit is een prefill, geen
+ * waarheid: het paneel houdt het veld bewerkbaar. Null (Win zonder getekende
+ * TP) = geen voorstel, veld blijft leeg.
+ */
+export function suggestedResultPct(
+  outcome: Outcome,
+  plannedRr: number | null,
+  riskPct: number | null
+): number | null {
+  if (outcome === "BE") return 0;
+  const risk = riskPct != null && riskPct > 0 ? riskPct : DEFAULT_RISK_PCT;
+  if (outcome === "Loss") return round2(-risk);
+  if (!isFiniteNumber(plannedRr) || plannedRr <= 0) return null;
+  return round2(plannedRr * risk);
 }

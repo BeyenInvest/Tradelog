@@ -52,6 +52,7 @@
       journals: [{ id: "m-1", naam: "Weekly Phase Method", assetClass: "forex" }],
       projects: [{ id: "p-1", naam: "Fase 2 & 3 — 80 dagen" }],
       hideFase: false,
+      timezone: "Europe/Brussels",
     },
     "custom-options": { ok: true, entry: ["Mijn eigen entry"], tradeConcept: ["Eigen concept"] },
     "chart-state": {
