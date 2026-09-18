@@ -20,7 +20,12 @@ import { PAIRS } from "@/lib/constants";
 import { EntrySection } from "./TradeFormSections/EntrySection";
 import { ResultSection } from "./TradeFormSections/ResultSection";
 import { TechnicalSection } from "./TradeFormSections/TechnicalSection";
-import { CustomFieldsSection } from "./TradeFormSections/CustomFieldsSection";
+import {
+  CustomFieldVisibilitySync,
+  CustomFieldGroup,
+  CustomFieldsManager,
+  WOVEN_GROUP_KEYS,
+} from "./TradeFormSections/CustomFieldsSection";
 
 interface TradeFormProps {
   trade?: Trade;
@@ -242,12 +247,19 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
 
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-8">
+            {/* One owner of the show_when hidden-value clearing, regardless of how
+                many field groups render below (fase-retirement follow-up 2026-09-18). */}
+            <CustomFieldVisibilitySync />
             <EntrySection closeDateTouchedRef={closeDateTouchedRef} />
+            {/* Config fields woven next to Entry, grouped per subheading (Setup/Markt/
+                Mindset) — where the WPM fields (fase/criteria/concept/entry/cc/nieuws)
+                lived before the retirement, instead of one bottom "extra velden" dump. */}
+            <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} />
             <hr className="border-border" />
             <ResultSection allowMissedTrade={allowMissedTrade} closeDateTouchedRef={closeDateTouchedRef} />
             <hr className="border-border" />
             <TechnicalSection />
-            <CustomFieldsSection />
+            <CustomFieldsManager />
 
             {error && <p className="text-sm text-loss">{error}</p>}
 
