@@ -6,7 +6,7 @@
 // levert entry als prijs (points[0].price) en SL/TP als `stopLevel`/`profitLevel`
 // in TICKS t.o.v. entry; de tick-size komt uit priceFormatter() als
 // `_minMove / _priceScale` (bijv. 1/1000 = 0.001 voor JPY-paren).
-import { type Direction } from "./constants";
+import { DEFAULT_RISK_PCT, type Direction } from "./constants";
 import { round2 } from "./stats/core";
 
 function isFiniteNumber(n: unknown): n is number {
@@ -89,4 +89,38 @@ export function plannedRR(entry: number, stop: number, target: number): number |
 export function pipsBetween(a: number, b: number, pipSize: number): number | null {
   if (!isFiniteNumber(a) || !isFiniteNumber(b) || !isFiniteNumber(pipSize) || pipSize <= 0) return null;
   return Math.round((Math.abs(a - b) / pipSize) * 10) / 10;
+}
+
+/**
+ * Gerealiseerde R van een gesloten trade (F5, plan §7.1): (exit − entry) /
+ * (entry − stop). De formule is richting-symmetrisch (bij Short wisselen teller
+ * én noemer van teken), maar de opgegeven richting moet wél bij de SL-kant
+ * passen — een mismatch is dezelfde stille R-corruptor als bij het loggen, dus
+ * null i.p.v. een "gecorrigeerde" gok (zelfde filosofie als directionFromPrices).
+ * Bewust onafgerond: afronden hoort bij het eindresultaat (resultaatPctFromExit),
+ * niet bij de tussenstap.
+ */
+export function realizedR(direction: Direction, entry: number, stop: number, exit: number): number | null {
+  if (!isFiniteNumber(exit) || exit <= 0) return null;
+  if (directionFromPrices(entry, stop) !== direction) return null;
+  return (exit - entry) / (entry - stop);
+}
+
+/**
+ * %-resultaat uit een exit-prijs: realizedR × risk%. Een lege risk_pct volgt de
+ * app-brede conventie "null = de vlakke 1%" (DEFAULT_RISK_PCT, zie riskPct() in
+ * stats/core.ts) — zo blijft R ≡ resultaat_pct voor de 1%-workflow, ook bij het
+ * sluiten vanaf de chart. Afgerond op 2 decimalen zoals de kolom (numeric(7,2)).
+ */
+export function resultaatPctFromExit(
+  direction: Direction,
+  entry: number,
+  stop: number,
+  exit: number,
+  riskPct: number | null
+): number | null {
+  const r = realizedR(direction, entry, stop, exit);
+  if (r == null) return null;
+  const risk = riskPct != null && riskPct > 0 ? riskPct : DEFAULT_RISK_PCT;
+  return round2(r * risk);
 }

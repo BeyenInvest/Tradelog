@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ExtensionDb, JournalSchema, ProfileInfo, SessionInfo } from "./db";
-import { firstFaseOf, logTradeFromChart, resolveFase, type LogTradeRequest } from "./tradeFlow";
+import {
+  firstFaseOf, logTradeFromChart, resolveFase, updateLoggedTradeByRef, type LogTradeRequest,
+} from "./tradeFlow";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
 const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels", hideFase: false };
@@ -40,6 +42,8 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     listBacktestProjects: vi.fn(async () => []),
     listCustomOptions: vi.fn(async () => []),
     insertTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1", duplicate: false })),
+    listOpenTrades: vi.fn(async () => []),
+    updateTrade: vi.fn(async () => ({ ok: true as const, tradeId: "t-1" })),
     ...overrides,
   } as ExtensionDb;
 }
@@ -157,6 +161,32 @@ describe("logTradeFromChart", () => {
     expect(payload.h4_screenshot).toBe("u1/b.png");
     expect(payload.d_screenshot).toBeNull();
     expect(payload.h2_screenshot).toBeNull();
+  });
+
+  it("werkt de laatst gelogde trade bij via z'n import_ref (F5) — zelfde payload, geen insert", async () => {
+    const db = makeDb();
+    const result = await updateLoggedTradeByRef(db, req({ notes: "toch B-setup" }));
+    expect(result).toEqual({ ok: true, tradeId: "t-1", duplicate: false });
+    expect(db.insertTrade).not.toHaveBeenCalled();
+    const [where, patch] = (db.updateTrade as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      { importRef: string }, Record<string, unknown>,
+    ];
+    expect(where).toEqual({ importRef: "tv-ext:c-uuid-1" });
+    expect(patch.notes).toBe("toch B-setup");
+    expect(patch.pair).toBe("AUDJPY");
+  });
+
+  it("bijwerken van een intussen verdwenen trade meldt not-found; build-fouten stoppen vóór de update", async () => {
+    const gone = makeDb({
+      updateTrade: vi.fn(async () => ({ ok: false as const, error: "0 rijen", code: "not-found" as const })),
+    });
+    expect(await updateLoggedTradeByRef(gone, req()))
+      .toMatchObject({ ok: false, stage: "update", error: "not-found" });
+
+    const db = makeDb();
+    expect(await updateLoggedTradeByRef(db, req({ symbolRaw: "  " })))
+      .toMatchObject({ ok: false, stage: "build", error: "symbol-unreadable" });
+    expect(db.updateTrade).not.toHaveBeenCalled();
   });
 
   it("niet-forex journal: vrij instrument, ES1! mag wel", async () => {

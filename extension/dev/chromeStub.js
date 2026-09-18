@@ -68,9 +68,31 @@
             prices: { entry: 110.33, stop: 109.83, target: 111.33, plannedRR: 2 },
           }],
         },
+        lastBar: { ok: true, value: { timeSec: 1789491600, close: 110.92, inReplay: false } },
       },
     },
     "log-trade": { ok: true, tradeId: "t-demo-1", duplicate: false },
+    "update-trade": { ok: true, tradeId: "t-demo-1", duplicate: false },
+    // Twee open trades op AUDJPY: één compleet (exit-prijs-pad) en één zonder
+    // prijzen/richting (dwingt het formulier in handmatig-%-modus).
+    "open-trades": {
+      ok: true,
+      trades: [
+        {
+          id: "t-demo-1", datumOpen: "2026-09-15", tijdOpen: "09:30:00", pair: "AUDJPY",
+          instrument: "AUDJPY", direction: "Long", entryPrice: 110.33, stopPrice: 109.83,
+          targetPrice: 111.33, riskPct: 1, importRef: "tv:demo-1", plannedRR: 2,
+        },
+        {
+          id: "t-demo-2", datumOpen: "2026-09-16", tijdOpen: null, pair: "AUDJPY",
+          instrument: "AUDJPY", direction: null, entryPrice: null, stopPrice: null,
+          targetPrice: null, riskPct: null, importRef: null, plannedRR: null,
+        },
+      ],
+    },
+    "close-trade": {
+      ok: true, tradeId: "t-demo-1", outcome: "Win", resultaatPct: 2, datumSluiting: "2026-09-17",
+    },
     "snapshot-cycle": {
       ok: true,
       restored: true,

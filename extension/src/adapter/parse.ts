@@ -26,12 +26,23 @@ export interface PositionState {
   prices: (PositionPrices & { plannedRR: number | null }) | null;
 }
 
+/** Laatste bar van de hoofdserie (F5/S1): exit-prefill + replay-veilige sluitdatum. */
+export interface LastBarInfo {
+  /** Bar-tijd (start van de bar) in UTC-seconden — in replay de replay-tijd. */
+  timeSec: number;
+  close: number;
+  /** true = TV's replay-modus staat aan (bar-tijd ≠ nu — precies waarom we 'm meenemen). */
+  inReplay: boolean;
+}
+
 export interface ChartState {
   symbol: Reading<string>;
   resolution: Reading<string>;
   tick: Reading<TickInfo>;
   /** Alle position-tools op de chart; het paneel laat kiezen bij >1 (plan-risico 11). */
   positions: Reading<PositionState[]>;
+  /** Laatste bar-close — degradeert los van de rest (het paneel valt dan terug op handmatige exit). */
+  lastBar: Reading<LastBarInfo>;
 }
 
 function rec(v: unknown): Record<string, unknown> | null {
@@ -127,21 +138,31 @@ function parsePositions(raw: Record<string, unknown>, tick: number | null): Read
   return ok(out);
 }
 
+/** tvMain's lastBar: { last: { index, value: [timeSec, o, h, l, c, ...] }, inReplay }. */
+function parseLastBar(raw: Record<string, unknown>): Reading<LastBarInfo> {
+  const lb = unwrapSafe(raw.lastBar);
+  if ("error" in lb) return fail(`lastBar: ${lb.error}`);
+  const outer = rec(lb.value);
+  const bar = rec(outer?.last);
+  const value = bar?.value;
+  if (!Array.isArray(value) || value.length < 5) return fail("lastBar: geen bar-array");
+  const timeSec = num(value[0]);
+  const close = num(value[4]);
+  if (timeSec == null || timeSec <= 0) return fail("lastBar: bar-tijd onbruikbaar");
+  if (close == null || close <= 0) return fail("lastBar: close onbruikbaar");
+  return ok({ timeSec, close, inReplay: outer?.inReplay === true });
+}
+
 /** Onbetrouwbare page-world-payload → typed ChartState met per-veld-degradatie. */
 export function parseChartState(payload: unknown): ChartState {
+  const allFail = (reason: string): ChartState => ({
+    symbol: fail(reason), resolution: fail(reason), tick: fail(reason),
+    positions: fail(reason), lastBar: fail(reason),
+  });
   const raw = rec(payload);
-  if (!raw) {
-    const reason = "geen antwoord uit de page-world";
-    return { symbol: fail(reason), resolution: fail(reason), tick: fail(reason), positions: fail(reason) };
-  }
-  if (raw.bridgeTimeout === true) {
-    const reason = "page-world antwoordde niet (timeout)";
-    return { symbol: fail(reason), resolution: fail(reason), tick: fail(reason), positions: fail(reason) };
-  }
-  if (raw.apiPresent !== true) {
-    const reason = "TradingViewApi niet gevonden — is dit een chart-pagina?";
-    return { symbol: fail(reason), resolution: fail(reason), tick: fail(reason), positions: fail(reason) };
-  }
+  if (!raw) return allFail("geen antwoord uit de page-world");
+  if (raw.bridgeTimeout === true) return allFail("page-world antwoordde niet (timeout)");
+  if (raw.apiPresent !== true) return allFail("TradingViewApi niet gevonden — is dit een chart-pagina?");
 
   const tick = parseTick(raw);
   return {
@@ -149,5 +170,6 @@ export function parseChartState(payload: unknown): ChartState {
     resolution: parseResolution(raw),
     tick,
     positions: parsePositions(raw, tick.ok ? tick.value.size : null),
+    lastBar: parseLastBar(raw),
   };
 }

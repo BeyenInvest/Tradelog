@@ -1,14 +1,15 @@
 // F3a — snapshot-pipeline (plan §2.1/F3a). Cyclus: per gewenst slot de chart
-// naar dat timeframe zetten → captureVisibleTab → croppen op de chart-rect →
-// uploaden naar de bestaande screenshots-bucket ({uid}/{uuid}.png, zelfde
-// contract als src/lib/storage/screenshots.ts) → paden voor de vier vaste
-// trade-kolommen teruggeven. Afsluiten = ALTIJD terug naar het oorspronkelijke
-// timeframe, ook na fouten.
+// naar dat timeframe zetten → beeld maken → uploaden naar de bestaande
+// screenshots-bucket ({uid}/{uuid}.png, zelfde contract als
+// src/lib/storage/screenshots.ts) → paden voor de vier vaste trade-kolommen
+// teruggeven. Afsluiten = ALTIJD terug naar het oorspronkelijke timeframe, ook
+// na fouten.
 //
-// Bekende beperking (S0-bewezen): captureVisibleTab vereist een activeTab-
-// gebaar — host-permission op tradingview.com is níet genoeg. Zonder gebaar
-// geeft Chrome een permissie-fout; die vertalen we naar code "needs-gesture"
-// zodat de UI kan zeggen: "klik één keer op het Beyen-icoon in de werkbalk".
+// Het beeld komt primair uit TV's eigen `takeClientScreenshot()` (chart-only
+// canvas via de page-world — geen permissie-gebaar, geen crop). Alleen de
+// fallback (captureVisibleTab + crop, in sw.ts) kent nog de S0-beperking dat
+// Chrome een activeTab-gebaar eist; dié vertaalt zich naar code
+// "needs-gesture" zodat de UI kan zeggen: "klik één keer op het Beyen-icoon".
 
 export const SNAPSHOT_SLOTS = ["w", "d", "h4", "h2"] as const;
 export type SnapshotSlot = (typeof SNAPSHOT_SLOTS)[number];
@@ -45,45 +46,37 @@ export interface SnapshotCycleResult {
   restored: boolean;
 }
 
+/** Uitkomst van één beeld-poging — de impl (sw.ts) kiest zelf het pad
+ * (page-world-screenshot of captureVisibleTab-fallback) en levert het
+ * chart-beeld al gecropt aan. */
+export type CaptureResult =
+  | { ok: true; image: Blob }
+  | { ok: false; error: string; code?: "needs-gesture" };
+
 /** Afhankelijkheden geïnjecteerd zodat de cyclus-logica puur testbaar is. */
 export interface SnapshotDeps {
   getResolution(): Promise<string | null>;
   setResolution(resolution: string): Promise<boolean>;
-  getChartRect(): Promise<ChartRect | null>;
-  /** Volledige zichtbare tab als PNG-blob (captureVisibleTab + decode). */
-  captureVisible(): Promise<Blob>;
-  crop(full: Blob, rect: ChartRect): Promise<Blob>;
+  /** Chart-beeld als PNG-blob; "needs-gesture" alleen op het fallback-pad. */
+  capture(): Promise<CaptureResult>;
   upload(image: Blob): Promise<{ ok: true; path: string } | { ok: false; error: string }>;
   /** Wachten tot TV het nieuwe timeframe gerenderd heeft. */
   settle(): Promise<void>;
-  /** Optioneel: kleine preview-data-URL van de gecropte snapshot voor de UI.
-   * Mag falen — een preview is nice-to-have, nooit een reden om het slot te
-   * laten mislukken. */
+  /** Optioneel: kleine preview-data-URL van de snapshot voor de UI. Mag falen —
+   * een preview is nice-to-have, nooit een reden om het slot te laten
+   * mislukken. */
   thumbnail?(image: Blob): Promise<string | null>;
 }
 
-function isGestureError(message: string): boolean {
+/** Chrome's permissie-fouten rond captureVisibleTab (fallback-pad, sw.ts). */
+export function isGestureError(message: string): boolean {
   return /activeTab|<all_urls>|permission/i.test(message);
 }
 
 async function captureSlot(deps: SnapshotDeps): Promise<SlotResult> {
-  let full: Blob;
-  try {
-    full = await deps.captureVisible();
-  } catch (e) {
-    const msg = String((e instanceof Error && e.message) || e);
-    return isGestureError(msg)
-      ? { ok: false, error: msg, code: "needs-gesture" }
-      : { ok: false, error: msg };
-  }
-  const rect = await deps.getChartRect();
-  if (!rect) return { ok: false, error: "chart-rect onbepaalbaar" };
-  let image: Blob;
-  try {
-    image = await deps.crop(full, rect);
-  } catch (e) {
-    return { ok: false, error: `crop: ${String((e instanceof Error && e.message) || e)}` };
-  }
+  const captured = await deps.capture();
+  if (!captured.ok) return captured;
+  const image = captured.image;
   if (image.size > SNAPSHOT_MAX_BYTES) {
     return { ok: false, error: `snapshot te groot (${image.size} bytes > 5 MB)` };
   }

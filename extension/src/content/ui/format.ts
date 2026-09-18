@@ -1,6 +1,9 @@
 // Weergave-helpers van het paneel (F2d). Pure functies zonder DOM — het paneel
 // rekent niets uit (dat doet priceMath/tradePayload), het formatteert alleen.
 
+/** Waar elke "open in Beyen"-link heen wijst (log-succes én sluit-succes). */
+export const JOURNAL_URL = "https://www.beyen.app/journal";
+
 /**
  * TradingView-resolutie → hoe een trader het leest: "240" → "4H", "60" → "1H",
  * "15" → "15m", "D"/"W"/"M" blijven zoals ze zijn. Onbekende vormen geven we

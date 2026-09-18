@@ -164,5 +164,51 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
       if (error.code === "23514") return { ok: false, error: error.message, code: "constraint" };
       return { ok: false, error: error.message, code: "other" };
     },
+
+    async listOpenTrades(methodologyId) {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return [];
+      let q = client
+        .from("trades")
+        .select("id, datum_open, tijd_open, pair, instrument, direction, entry_price, stop_price, target_price, risk_pct, import_ref")
+        .eq("user_id", uid) // expliciet — zelfde admin-ziet-alles-les als profiles
+        .eq("is_open", true)
+        .order("datum_open", { ascending: false })
+        .limit(50);
+      if (methodologyId) q = q.eq("methodology_id", methodologyId);
+      const { data, error } = await q;
+      if (error || !data) return [];
+      const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+      return data.map((t) => ({
+        id: t.id as string,
+        datumOpen: t.datum_open as string,
+        tijdOpen: (t.tijd_open as string | null) ?? null,
+        pair: t.pair as string,
+        instrument: (t.instrument as string | null) ?? null,
+        direction: t.direction === "Long" || t.direction === "Short" ? t.direction : null,
+        entryPrice: numOrNull(t.entry_price),
+        stopPrice: numOrNull(t.stop_price),
+        targetPrice: numOrNull(t.target_price),
+        riskPct: numOrNull(t.risk_pct),
+        importRef: (t.import_ref as string | null) ?? null,
+      }));
+    },
+
+    async updateTrade(where, patch) {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return { ok: false, error: "geen sessie", code: "other" };
+      let q = client.from("trades").update(patch).eq("user_id", uid);
+      q = "id" in where ? q.eq("id", where.id) : q.eq("import_ref", where.importRef);
+      const { data, error } = await q.select("id");
+      if (error) {
+        if (error.code === "42703") return { ok: false, error: error.message, code: "missing-column" };
+        if (error.code === "23514") return { ok: false, error: error.message, code: "constraint" };
+        return { ok: false, error: error.message, code: "other" };
+      }
+      if (!data || data.length === 0) return { ok: false, error: "trade niet gevonden", code: "not-found" };
+      return { ok: true, tradeId: (data[0] as { id: string }).id };
+    },
   };
 }

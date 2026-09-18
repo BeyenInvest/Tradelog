@@ -17,6 +17,14 @@ function s0Fixture() {
       value: { type: "price", _priceScale: 1000, _minMove: 1, _minMove2: 10, _fractional: false, _fractionalLength: 3 },
     },
     formattedSample: { ok: true, value: "1.235" },
+    // F5/S1-opname (17-09): getSeries().data().bars().last() — [timeSec, o, h, l, c, volume].
+    lastBar: {
+      ok: true,
+      value: {
+        last: { index: 299, value: [1789678800, 110.997, 110.997, 110.882, 110.904, 1244] },
+        inReplay: false,
+      },
+    },
     shapes: {
       ok: true,
       value: [
@@ -84,6 +92,33 @@ describe("parseChartState — S0-contractfixture", () => {
     expect(state.positions.value[0].stopLevelTicks).toBe(500);
   });
 
+  it("parseert de laatste bar (exit-prefill + replay-vlag, F5)", () => {
+    const state = parseChartState(s0Fixture());
+    expect(state.lastBar).toEqual({ ok: true, value: { timeSec: 1789678800, close: 110.904, inReplay: false } });
+
+    const replay = s0Fixture();
+    (replay.lastBar.value as { inReplay: unknown }).inReplay = true;
+    const replayState = parseChartState(replay);
+    if (!replayState.lastBar.ok) throw new Error("lastBar hoort ok te zijn");
+    expect(replayState.lastBar.value.inReplay).toBe(true);
+  });
+
+  it("degradeert de laatste bar los van de rest (TV-drift → handmatige exit)", () => {
+    const raw = s0Fixture();
+    (raw as Record<string, unknown>).lastBar = { ok: false, error: "getSeries() niet beschikbaar" };
+    const state = parseChartState(raw);
+    expect(state.lastBar.ok).toBe(false);
+    expect(state.symbol.ok).toBe(true); // de rest blijft bruikbaar
+
+    const short = s0Fixture();
+    (short.lastBar.value.last as { value: unknown }).value = [1789678800, 110.997]; // te korte bar-array
+    expect(parseChartState(short).lastBar.ok).toBe(false);
+
+    const zero = s0Fixture();
+    (zero.lastBar.value.last as { value: unknown }).value = [1789678800, 1, 1, 1, 0]; // close ≤ 0
+    expect(parseChartState(zero).lastBar.ok).toBe(false);
+  });
+
   it("short_position spiegelt de prijzen", () => {
     const raw = s0Fixture();
     (raw.shapes.value[1] as { name: string }).name = "short_position";
@@ -99,7 +134,7 @@ describe("parseChartState — S0-contractfixture", () => {
 describe("parseChartState — degradatie over de hele linie", () => {
   it("alles faalt met één duidelijke reden zonder TradingViewApi", () => {
     const state = parseChartState({ apiPresent: false });
-    for (const r of [state.symbol, state.resolution, state.tick, state.positions]) {
+    for (const r of [state.symbol, state.resolution, state.tick, state.positions, state.lastBar]) {
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.reason).toContain("TradingViewApi");
     }

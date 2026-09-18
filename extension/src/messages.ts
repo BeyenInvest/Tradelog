@@ -2,6 +2,7 @@
 // type-map voor de bijbehorende responses; popup.ts krijgt daarmee end-to-end
 // types zonder casts in de call-sites.
 import type { ChartState } from "./adapter/parse";
+import type { CloseTradeRequest, CloseTradeResult, OpenTradesResult } from "./closeFlow";
 import type { BacktestProjectInfo, JournalInfo } from "./db";
 import type { FlowError, JournalDump, LinkOk, StatusInfo } from "./linkFlow";
 import type { LogEntry } from "./storage";
@@ -19,7 +20,10 @@ export type ExtRequest =
   | { type: "log-trade"; request: LogTradeRequest }
   | { type: "custom-options" }
   | { type: "snapshot-cycle"; slots: SnapshotSlot[] }
-  | { type: "delete-screenshots"; paths: string[] };
+  | { type: "delete-screenshots"; paths: string[] }
+  | { type: "open-trades"; symbolRaw: string }
+  | { type: "close-trade"; request: CloseTradeRequest }
+  | { type: "update-trade"; request: LogTradeRequest };
 
 export interface TargetsInfo {
   ok: true;
@@ -49,6 +53,9 @@ export interface ExtResponses {
   "custom-options": CustomOptionsInfo | FlowError;
   "snapshot-cycle": ({ ok: true } & SnapshotCycleResult) | FlowError;
   "delete-screenshots": { ok: true };
+  "open-trades": OpenTradesResult;
+  "close-trade": CloseTradeResult;
+  "update-trade": LogTradeResult;
 }
 
 export function sendToSw<T extends ExtRequest["type"]>(
