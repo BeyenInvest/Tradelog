@@ -18,6 +18,8 @@ export interface LogTradeRequest {
   prices: { entry: number; stop: number; target: number | null } | null;
   /** Bar-tijd uit de position-tool in UTC-SECONDEN (zoals TV ze geeft). */
   entryTimeUtcSec: number | null;
+  /** Bar-tijd van de laatste bar (chart-"nu", replay-bewust) — sluitdatum bij post-hoc. */
+  closeTimeUtcSec?: number | null;
   manualDateTime?: WallClock | null;
   riskPct: number | null;
   custom: Record<string, unknown>;
@@ -86,6 +88,7 @@ async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promi
     timezone: profile.timezone,
     fase: resolveFase(journal, req.fase),
     entryTimeUtcMs: req.entryTimeUtcSec != null ? req.entryTimeUtcSec * 1000 : null,
+    closeTimeUtcMs: req.closeTimeUtcSec != null ? req.closeTimeUtcSec * 1000 : null,
     manualDateTime: req.manualDateTime ?? null,
     mode: req.mode,
     direction: req.direction,

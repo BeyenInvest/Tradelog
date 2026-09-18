@@ -877,6 +877,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         direction,
         prices,
         entryTimeUtcSec,
+        // Chart-"nu" voor de sluitdatum van een Win/Loss/BE-log (replay-bewust).
+        closeTimeUtcSec: chart.lastBar.ok ? chart.lastBar.value.timeSec : null,
         manualDateTime,
         riskPct: risk,
         fase: shownFase && !targets?.hideFase ? shownFase : null,
