@@ -4,6 +4,7 @@ import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
+import { FaseBarChart } from "@/components/charts/FaseBarChart";
 import { RDistributionChart } from "@/components/charts/RDistributionChart";
 import { BreakdownTable } from "@/components/breakdown/BreakdownTable";
 import { CrossTable, type CrossDim } from "@/components/breakdown/CrossTable";
@@ -92,6 +93,29 @@ export function BacktestingAnalysisView({
   const duration = useMemo(() => computeDurationByOutcome(scopedTrades), [scopedTrades]);
   const series = useMemo(() => groupIntoSeries(displayTrades, 5), [displayTrades]);
 
+  // Per-fase kaarten + "Resultaat per Fase"-bar (fase-retirement 0059): fase is nu
+  // een gewoon config-veld, maar de WPM-specifieke fase-weergave blijft een eigen
+  // laag bovenaan wanneer het journal een `fase`-enum-veld draagt. Leest de waarde
+  // uit trades.custom.fase; de volgorde volgt de veld-opties (Fase 1-4). Fase krijgt
+  // daarom hieronder GEEN gewone uitsplitsings-tabel (zou de kaarten dubbelen), maar
+  // blijft wel een kruistabel-as.
+  const faseField = useMemo(() => fields.find((f) => f.field_key === "fase" && f.field_type === "enum"), [fields]);
+  const showFase = Boolean(faseField);
+  const byFase = useMemo(
+    () =>
+      showFase
+        ? breakdownBy(
+            displayTrades,
+            (tr) => {
+              const raw = tr.custom?.fase;
+              return raw == null || raw === "" ? null : String(raw);
+            },
+            { sortOrder: faseField?.options ?? undefined }
+          )
+        : [],
+    [displayTrades, showFase, faseField]
+  );
+
   // The fixed dimension list is universal since the fase-retirement (0059) — every
   // methodology-specific split (fase/cc/weekly/…) is a custom-field dimension below.
   const dimensions = BREAKDOWN_DIMENSIONS;
@@ -128,7 +152,8 @@ export function BacktestingAnalysisView({
         // Skip custom-field dimensions with no data yet (rows.length 0) — same as
         // timingDimRows above. A fresh preset journal defines many fields before any
         // trade fills them, which otherwise rendered a wall of empty "No data." cards.
-        .filter(({ rows }) => rows.length > 0),
+        // Fase is skipped here on a WPM journal — it gets the dedicated cards + bar above.
+        .filter(({ dim, rows }) => rows.length > 0 && !(showFase && dim.id === "custom:fase")),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [displayTrades, customDims, t]
   );
@@ -286,10 +311,47 @@ export function BacktestingAnalysisView({
       title: t("analyseLayout.section_performance"),
       visible: true,
       body: (
-        <Card>
-          <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
-          <EquityCurveChart trades={scopedTrades} />
-        </Card>
+        <div className="flex flex-col gap-5">
+          {showFase && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {byFase.map((f) => (
+                <Card key={f.key}>
+                  <p className="font-display text-2xl italic text-gold">{f.label}</p>
+                  <p className="font-mono text-2xl mt-2 text-ink flex items-center gap-2">
+                    {f.n} <span className="text-xs text-muted font-body">{t("backtestingAnalysis.trades")}</span>
+                  </p>
+                  <p className={`font-mono text-sm mt-1 ${f.resultaatTotal >= 0 ? "text-win" : "text-loss"}`}>
+                    {formatAggregate(f.resultaatTotal, resultUnit)}
+                  </p>
+                  <p className="font-body text-xs mt-1 text-muted">
+                    <span className="text-win">{(f.winRate * 100).toFixed(0)}% win</span>
+                    {" · "}
+                    <span className="text-loss">{(f.lossRate * 100).toFixed(0)}% loss</span>
+                  </p>
+                  <p className="font-mono text-[11px] mt-1 text-muted">
+                    <span className="text-win">{f.wins}W</span>
+                    {" / "}
+                    <span className="text-be">{f.be}BE</span>
+                    {" / "}
+                    <span className="text-loss">{f.losses}L</span>
+                  </p>
+                </Card>
+              ))}
+            </div>
+          )}
+          <div className={`grid grid-cols-1 gap-5 ${showFase ? "lg:grid-cols-2" : ""}`}>
+            <Card>
+              <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.cumulativeResult")}</h3>
+              <EquityCurveChart trades={scopedTrades} />
+            </Card>
+            {showFase && (
+              <Card>
+                <h3 className="font-display text-xl italic mb-4 text-ink">{t("backtestingAnalysis.resultPerFase")}</h3>
+                <FaseBarChart data={byFase} />
+              </Card>
+            )}
+          </div>
+        </div>
       ),
     },
     {

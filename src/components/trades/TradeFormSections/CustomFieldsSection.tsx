@@ -33,17 +33,96 @@ function groupFields(fields: MethodologyField[], t: TFunction): { label: string 
 }
 
 /**
- * Renders the active methodology's custom fields (Scope C, cyclus 3), driven by
- * methodology_fields rather than hardcoded columns. Values read from / write to
- * the flexible trades.custom bag (keyed by field_key). Conditional visibility
- * (show_when) is honoured, and a field hidden by its condition has its stored
- * value cleared so a stale answer is never persisted.
- *
- * Additive & non-intrusive: legacy Weekly Phase Method fields (fase + kenmerken) stay owned by
- * the hardcoded form, so for a user with only the seeded template this section is
- * empty and the form is unchanged.
+ * The block-groups whose fields weave into the Entry area of the trade form (owner
+ * feedback 2026-09-18: config fields belong next to the trade's setup details —
+ * exactly where the WPM fields fase/criteria/concept/entry/cc/nieuws lived before
+ * the fase-retirement — not all in one "extra velden" dump at the bottom). Rendered
+ * right after EntrySection, each group under its own subheading (Setup/Markt/Mindset).
+ * Anything outside these (a user's own inline-added field carries no group_key; any
+ * other group) falls through to CustomFieldsManager at the bottom.
  */
-export function CustomFieldsSection() {
+export const WOVEN_GROUP_KEYS = ["setup", "markt", "mindset"] as const;
+const PLACED_GROUP_KEYS: readonly string[] = WOVEN_GROUP_KEYS;
+
+/**
+ * Clears the stored value of any custom field its show_when condition currently
+ * hides, so a stale answer from a now-hidden field is never saved to trades.custom.
+ * Rendered once (returns null) by TradeForm — keeps a single owner of the side
+ * effect no matter how many CustomFieldGroup blocks the form places.
+ */
+export function CustomFieldVisibilitySync() {
+  const { fields } = useMethodology();
+  const { watch, setValue } = useFormContext<TradeFormValues>();
+  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  useEffect(() => {
+    for (const f of dynamicMethodologyFields(fields)) {
+      const v = customVals[f.field_key];
+      if (!isFieldVisible(f, fields, customVals) && v != null && v !== "") {
+        setValue(`custom.${f.field_key}`, undefined, { shouldDirty: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(customVals)]);
+  return null;
+}
+
+/**
+ * Renders the active methodology's custom fields (Scope C, cyclus 3) whose
+ * group_key is in `groupKeys` — read from / written to the flexible trades.custom
+ * bag (keyed by field_key). Since the fase-retirement (0059) every WPM field
+ * (fase/cc/…) is a plain custom field, so this is how they render. The form places
+ * one block per native section (Entry/Technical) so the fields sit where they used
+ * to, instead of one bottom section. Presentational only — visibility clearing and
+ * field management live elsewhere (CustomFieldVisibilitySync / CustomFieldsManager).
+ */
+export function CustomFieldGroup({ groupKeys }: { groupKeys: readonly string[] }) {
+  const { t } = useTranslation();
+  const { fields } = useMethodology();
+  const {
+    control,
+    register,
+    watch,
+    formState: { errors },
+  } = useFormContext<TradeFormValues>();
+  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const visible = dynamicMethodologyFields(fields).filter(
+    (f) => groupKeys.includes(f.group_key ?? "") && isFieldVisible(f, fields, customVals)
+  );
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {groupFields(visible, t).map((group, gi) => (
+        <div key={group.label ?? `g${gi}`} className="flex flex-col gap-2">
+          {group.label && (
+            <p className="font-mono text-[11px] uppercase tracking-wide text-muted">{group.label}</p>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            {group.fields.map((f) => (
+              <Field
+                key={f.id}
+                label={fieldLabel(t, f)}
+                required={f.required}
+                error={(errors.custom as Record<string, { message?: string }> | undefined)?.[f.field_key]?.message}
+              >
+                <FieldInput field={f} control={control} register={register} />
+              </Field>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Field-management surface (gear: rename/edit/delete + inline add) and the home for
+ * any custom field NOT woven into a native section — a user's own inline-added field
+ * (no group_key) or any group outside setup/markt/mindset. Own-journal only for the
+ * add/edit/delete controls; a read-only or other-journal trade still sees its
+ * ungrouped field values here. Rendered once at the bottom of the form.
+ */
+export function CustomFieldsManager() {
   const { t } = useTranslation();
   const { fields, isOwnMethodology, addField, updateField, deleteField, renameFieldOption, loading } =
     useMethodology();
@@ -58,30 +137,18 @@ export function CustomFieldsSection() {
 
   const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
 
-  // Shared with TradeForm's submit-time required-check and customFieldDimensions,
-  // so what renders, what's enforced and what's analysed can never drift apart.
+  // The gear manages ALL of the journal's own fields (also the ones woven into
+  // Entry/Technical); only the ungrouped ones render their inputs here.
   const dynamicFields = dynamicMethodologyFields(fields);
   const isVisible = (f: MethodologyField) => isFieldVisible(f, fields, customVals);
-
-  // Clear the stored value of any field its condition currently hides, so a stale
-  // answer from a now-hidden field is never saved to trades.custom.
-  useEffect(() => {
-    for (const f of dynamicFields) {
-      const v = customVals[f.field_key];
-      if (!isVisible(f) && v != null && v !== "") {
-        setValue(`custom.${f.field_key}`, undefined, { shouldDirty: true });
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(customVals)]);
+  const ungrouped = dynamicFields.filter((f) => !PLACED_GROUP_KEYS.includes(f.group_key ?? ""));
+  const visibleUngrouped = ungrouped.filter(isVisible);
 
   // Inline field creation (add-while-logging): own journal only — a read-only
-  // template can't take fields. Renders the section even with zero fields so a
-  // blank journal shows in the form itself that fields exist at all.
+  // template can't take fields. Renders even with zero ungrouped fields so a
+  // journal always exposes "manage / add fields" here.
   const canAddInline = isOwnMethodology && !loading;
-
-  const visibleFields = dynamicFields.filter(isVisible);
-  if (visibleFields.length === 0 && !canAddInline) return null;
+  if (visibleUngrouped.length === 0 && !canAddInline) return null;
 
   // Deleting a field must also drop its already-entered form value, or the
   // submit would still persist an answer for a field that no longer exists.
@@ -127,7 +194,7 @@ export function CustomFieldsSection() {
           </button>
         )}
       </div>
-      {visibleFields.length === 0 && (
+      {visibleUngrouped.length === 0 && (
         <p className="font-mono text-xs text-muted">{t("tradeForm.customSectionEmptyHint")}</p>
       )}
       {managing && canAddInline && (
@@ -138,7 +205,7 @@ export function CustomFieldsSection() {
           onRenameOption={handleRenameOption}
         />
       )}
-      {groupFields(visibleFields, t).map((group, gi) => (
+      {groupFields(visibleUngrouped, t).map((group, gi) => (
         <div key={group.label ?? `g${gi}`} className="flex flex-col gap-2">
           {group.label && (
             <p className="font-mono text-[11px] uppercase tracking-wide text-muted">{group.label}</p>
