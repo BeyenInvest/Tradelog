@@ -941,6 +941,7 @@
     "targetReached": "Target was available (MFE ≥ plan, {{n}} with MFE)"
   },
   "breakdown": {
+    "fase": "By Phase",
     "trade_concept": "By Trade Concept",
     "entry": "By Entry",
     "weekly_criteria": "By Weekly Criteria",
