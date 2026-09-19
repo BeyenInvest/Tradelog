@@ -158,10 +158,10 @@ describe("orderedFormFields (WPM-paneelvolgorde)", () => {
     field({ fieldKey: "nieuws", groupLabel: "Markt", sortOrder: 9 }),
   ];
 
-  it("zet kenmerk+nieuws vlak boven de confirms in de vaste WPM-volgorde", () => {
+  it("zet kenmerk onder fase en nieuws vlak boven de confirms (vaste WPM-volgorde)", () => {
     expect(orderedFormFields(wpm()).map((f) => f.fieldKey)).toEqual([
-      "fase", "weekly_criteria", "trade_concept", "entry",
-      "weekly_kenmerk", "nieuws",
+      "fase", "weekly_kenmerk", "weekly_criteria", "trade_concept", "entry",
+      "nieuws",
       "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf",
     ]);
   });
