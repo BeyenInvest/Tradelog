@@ -30,7 +30,6 @@ const USER = { id: "user-1", email: "beyenchesney@outlook.com" };
 function makeDeps(overrides: Partial<ExtensionLinkDeps> = {}): ExtensionLinkDeps {
   return {
     getUserFromJwt: vi.fn(async (jwt: string) => (jwt === "valid-jwt" ? USER : null)),
-    isBetaUser: vi.fn(async () => true),
     generateLinkTokenHash: vi.fn(async () => "hashed-token-123"),
     ...overrides,
   };
@@ -69,16 +68,7 @@ describe("extension-link handler", () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("403 voor een user buiten de beta", async () => {
-    const deps = makeDeps({ isBetaUser: vi.fn(async () => false) });
-    const handler = createHandler(deps);
-    const res = mockRes();
-    await handler(postReq("Bearer valid-jwt"), res);
-    expect(res.statusCode).toBe(403);
-    expect(deps.generateLinkTokenHash).not.toHaveBeenCalled();
-  });
-
-  it("geeft een token_hash aan een beta-user, op basis van de JWT-mail", async () => {
+  it("geeft een token_hash aan elk ingelogd lid, op basis van de JWT-mail", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
     const res = mockRes();
