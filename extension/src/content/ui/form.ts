@@ -24,12 +24,14 @@ function labelNode(field: JournalField): HTMLElement {
 }
 
 /**
- * Ja/Nee-toggle op één values-sleutel (tri-state: nog een keer op het actieve
- * antwoord = terug naar onbeantwoord). Op sleutel en niet op JournalField zodat
- * elke boolean-veldsoort er dezelfde knoppen door krijgt.
+ * Compacte inline Ja/Nee-keuze op één values-sleutel (tri-state: nog een keer op
+ * het actieve antwoord = terug naar onbeantwoord). "Hybride"-ontwerp (owner
+ * 2026-09-19): geen volle-breedte knoppenrij meer maar "Ja · Nee" rechts naast
+ * het label — veel minder ruimte en rust. Op sleutel en niet op JournalField
+ * zodat elke boolean-veldsoort er dezelfde control door krijgt.
  */
 export function booleanControl(fieldKey: string, values: FormValues, changed: () => void): HTMLElement {
-  const wrap = el("div", { class: "by-toggle" });
+  const wrap = el("div", { class: "by-bool" });
   const buttons: HTMLButtonElement[] = [];
   const paint = () => {
     for (const btn of buttons) {
@@ -38,10 +40,12 @@ export function booleanControl(fieldKey: string, values: FormValues, changed: ()
     }
   };
   // De veldlabels zelf komen uit het journal van de user (die kiest z'n eigen
-  // taal daar) — alleen de knoppen zijn van ons.
-  for (const [text, value] of [[t("form.yes"), true], [t("form.no"), false]] as const) {
+  // taal daar) — alleen de keuze-woorden zijn van ons.
+  const optionSpecs = [[t("form.yes"), true], [t("form.no"), false]] as const;
+  optionSpecs.forEach(([text, value], i) => {
+    if (i > 0) wrap.appendChild(el("span", { class: "by-bool-sep", text: "·", attrs: { "aria-hidden": "true" } }));
     const btn = el("button", {
-      class: "by-toggle-btn",
+      class: "by-bool-opt",
       text,
       attrs: { type: "button", "data-value": String(value) },
     });
@@ -53,7 +57,7 @@ export function booleanControl(fieldKey: string, values: FormValues, changed: ()
     });
     buttons.push(btn);
     wrap.appendChild(btn);
-  }
+  });
   paint();
   return wrap;
 }
@@ -102,6 +106,11 @@ function inputControl(field: JournalField, values: FormValues, changed: () => vo
 }
 
 function control(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
+  // CONVENTIE (owner 2026-09-19): élke Ja/Nee-vraag in het paneel — elk
+  // boolean-veld, nu en in de toekomst — krijgt de compacte inline-control
+  // (booleanControl: label links, "Ja · Nee" rechts). Geen volle-breedte
+  // knoppenrij meer voor booleans. Voeg je een nieuw ja/nee-veldtype toe, laat
+  // het hier langs booleanControl lopen zodat de stijl overal gelijk blijft.
   if (field.fieldType === "boolean") return booleanControl(field.fieldKey, values, changed);
   if (field.fieldType === "enum") return enumControl(field.fieldKey, fieldOptions(field), values, changed);
   return inputControl(field, values, changed);
@@ -138,10 +147,13 @@ export function renderDynamicForm(options: {
     for (const field of group.fields) {
       const ctrl = control(field, values, onChange);
       if (ctrl instanceof HTMLSelectElement) selects.set(field.fieldKey, ctrl);
-      const row = el("div", { class: "by-field", attrs: { "data-field": field.fieldKey } }, [
-        labelNode(field),
-        ctrl,
-      ]);
+      // Boolean-velden krijgen de compacte inline-rij (label links, "Ja · Nee"
+      // rechts); enum/tekst/nummer houden het label bovenop de control.
+      const isBool = field.fieldType === "boolean";
+      const row = el("div", {
+        class: isBool ? "by-field by-field--bool" : "by-field",
+        attrs: { "data-field": field.fieldKey },
+      }, [labelNode(field), ctrl]);
       rows.set(field.fieldKey, row);
       groupEl.appendChild(row);
     }
