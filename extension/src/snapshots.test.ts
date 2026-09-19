@@ -18,7 +18,9 @@ function makeDeps(overrides: Partial<SnapshotDeps> = {}) {
       return { ok: true as const, image: new Blob(["png"]) };
     }),
     upload: vi.fn(async () => ({ ok: true as const, path: `u1/${calls.length}.png` })),
-    settle: vi.fn(async () => {}),
+    settle: vi.fn(async (target: string) => {
+      calls.push(`settle:${target}`);
+    }),
     ...overrides,
   };
   return { deps, calls };
@@ -37,10 +39,18 @@ describe("runSnapshotCycle", () => {
     expect(result.slots.h4).toBeUndefined(); // niet gevraagd
   });
 
-  it("slaat het switchen over als de chart al op het slot-timeframe staat", async () => {
+  it("slaat het switchen over als de chart al op het slot-timeframe staat, maar settlet wél", async () => {
     const { deps, calls } = makeDeps();
     await runSnapshotCycle(deps, ["h4"]); // chart staat al op 240
-    expect(calls).toEqual(["capture:240"]); // geen set, geen herstel nodig
+    // Geen set en geen herstel — maar wél settlen: de chart kan nog aan het
+    // laden zijn van een handmatige timeframe-wissel vlak vóór de cyclus.
+    expect(calls).toEqual(["settle:240", "capture:240"]);
+  });
+
+  it("settlet op het doel-timeframe vóór elke capture (ladende chart, F3a-settle-fix)", async () => {
+    const { deps, calls } = makeDeps();
+    await runSnapshotCycle(deps, ["w"]); // chart start op 240
+    expect(calls).toEqual(["set:W", "settle:W", "capture:W", "set:240"]);
   });
 
   it("wisselt óók terug naar het start-timeframe als dat zelf een slot is (W-D-D-bug)", async () => {
