@@ -60,8 +60,9 @@ export interface SnapshotDeps {
   /** Chart-beeld als PNG-blob; "needs-gesture" alleen op het fallback-pad. */
   capture(): Promise<CaptureResult>;
   upload(image: Blob): Promise<{ ok: true; path: string } | { ok: false; error: string }>;
-  /** Wachten tot TV het nieuwe timeframe gerenderd heeft. */
-  settle(): Promise<void>;
+  /** Wachten tot TV het gevraagde timeframe geladen én getekend heeft. Mag
+   * nooit rejecten — de impl (sw.ts → wait-chart-ready) degradeert zelf. */
+  settle(target: string): Promise<void>;
   /** Optioneel: kleine preview-data-URL van de snapshot voor de UI. Mag falen —
    * een preview is nice-to-have, nooit een reden om het slot te laten
    * mislukken. */
@@ -106,7 +107,9 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
   for (const slot of wanted) {
     const target = SLOT_RESOLUTIONS[slot];
     if (current === target) {
-      // Al op dit timeframe — niet onnodig switchen.
+      // Al op dit timeframe — niet onnodig switchen. Wél settlen: de chart kan
+      // nog aan het laden zijn van een handmatige wissel vlak vóór de cyclus.
+      await deps.settle(target);
       results[slot] = await captureSlot(deps);
       continue;
     }
@@ -116,7 +119,7 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
       continue;
     }
     current = target;
-    await deps.settle();
+    await deps.settle(target);
     results[slot] = await captureSlot(deps);
     // Eén gebaar-fout betekent: álles gaat falen — stop de cyclus vroeg.
     const r = results[slot];

@@ -7,6 +7,10 @@ import { isPageResponse, makeRequest, type PageCommand } from "../adapter/protoc
 const PAGE_TIMEOUT_MS = 3000;
 /** Screenshot rendert een canvas van de hele chart — gun 'm meer tijd dan een leesactie. */
 const SCREENSHOT_TIMEOUT_MS = 10_000;
+/** De snapshot-settle pollt page-side tot max READY_TIMEOUT_MS (5 s) + paint-
+ * settle; de bridge-timeout moet daar ruim boven zitten om het antwoord niet
+ * te "verliezen" terwijl het nog onderweg is. */
+const WAIT_READY_TIMEOUT_MS = 6500;
 
 const pending = new Map<string, { resolve: (payload: unknown) => void; timer: number }>();
 
@@ -61,6 +65,10 @@ chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse)
   }
   if (msg?.type === "tv-page-set-resolution" && typeof msg.resolution === "string") {
     askPage({ cmd: "set-resolution", resolution: msg.resolution }).then(sendResponse);
+    return true;
+  }
+  if (msg?.type === "tv-page-wait-ready" && typeof msg.resolution === "string") {
+    askPage({ cmd: "wait-chart-ready", resolution: msg.resolution }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
     return true;
   }
   if (msg?.type === "tv-chart-rect") {

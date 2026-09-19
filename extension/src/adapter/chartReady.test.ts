@@ -1,0 +1,149 @@
+import { describe, expect, it } from "vitest";
+import {
+  BLIND_FALLBACK_MS, READY_TIMEOUT_MS, waitForChartReady, type BarProbe, type ReadyProbe,
+} from "./chartReady";
+
+/** Virtuele klok: sleep() schuift de tijd op zonder echte timers. */
+function clock() {
+  let t = 0;
+  return {
+    now: () => t,
+    sleep: async (ms: number) => {
+      t += ms;
+    },
+  };
+}
+
+/** Probe die per poll-ronde uit scripts leest; het laatste element blijft gelden. */
+function scriptedProbe(script: {
+  resolution?: Array<string | null>;
+  dataReady?: Array<boolean | null>;
+  lastBar?: BarProbe[];
+}): ReadyProbe {
+  let round = -1;
+  const pick = <T>(arr: T[] | undefined, fallback: T): T => {
+    if (!arr || arr.length === 0) return fallback;
+    return arr[Math.min(round, arr.length - 1)];
+  };
+  return {
+    resolution() {
+      round += 1; // resolution wordt als eerste per ronde gelezen → telt de ronde
+      return pick(script.resolution, "D");
+    },
+    dataReady: () => pick(script.dataReady, null),
+    lastBar: () => pick(script.lastBar, { kind: "unreadable" }),
+  };
+}
+
+describe("waitForChartReady", () => {
+  it("is meteen klaar als dataReady=true en er een bar staat (geen wachttijd)", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ dataReady: [true], lastBar: [{ kind: "bar", time: 100 }] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", waitedMs: 0, polls: 1 });
+  });
+
+  it("wacht tot dataReady van false naar true klapt", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ dataReady: [false, false, false, true], lastBar: [{ kind: "bar", time: 100 }] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 4, waitedMs: 450 });
+  });
+
+  it("dataReady=true maar een lege serie is nog niet klaar (mid-switch)", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({
+        dataReady: [true],
+        lastBar: [{ kind: "empty" }, { kind: "empty" }, { kind: "bar", time: 7 }],
+      }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 3 });
+  });
+
+  it("valt zonder dataReady terug op een stabiele laatste bar (twee gelijke polls)", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({
+        lastBar: [
+          { kind: "bar", time: 10 },
+          { kind: "bar", time: 20 }, // nog aan het bijladen
+          { kind: "bar", time: 20 }, // stabiel
+        ],
+      }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "bar-stable", polls: 3, waitedMs: 300 });
+  });
+
+  it("reset de stabiliteitscheck zolang het timeframe nog niet klopt", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({
+        resolution: ["240", "240", "D"],
+        lastBar: [{ kind: "bar", time: 5 }], // zelfde bar-tijd vanaf ronde 1
+      }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    // Rondes 1-2 tellen niet mee (verkeerd timeframe); pas op D begint de
+    // vergelijking, dus stabiel op ronde 4 — niet al op ronde 2.
+    expect(out).toMatchObject({ ready: true, signal: "bar-stable", polls: 4 });
+  });
+
+  it("een expliciete dataReady=false blokkeert de bar-stable-sluiproute", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ dataReady: [false], lastBar: [{ kind: "bar", time: 5 }] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: false, signal: "timeout" });
+    expect(out.waitedMs).toBeGreaterThanOrEqual(READY_TIMEOUT_MS);
+  });
+
+  it("volledig blinde adapter → door na de oude vaste wachttijd (vloer, geen 5s-hang)", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ resolution: [null], dataReady: [null], lastBar: [{ kind: "unreadable" }] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "blind-fallback" });
+    expect(out.waitedMs).toBeGreaterThanOrEqual(BLIND_FALLBACK_MS);
+    expect(out.waitedMs).toBeLessThan(READY_TIMEOUT_MS);
+  });
+
+  it("timeframe dat nooit omschakelt → nette timeout, ready=false", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ resolution: ["240"], dataReady: [true], lastBar: [{ kind: "bar", time: 1 }] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: false, signal: "timeout" });
+    expect(out.waitedMs).toBeGreaterThanOrEqual(READY_TIMEOUT_MS);
+  });
+
+  it("bar zonder bruikbare tijd kan niet stabiliseren maar dataReady wint alsnog", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({
+        dataReady: [null, null, true],
+        lastBar: [{ kind: "bar", time: null }],
+      }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 3 });
+  });
+});

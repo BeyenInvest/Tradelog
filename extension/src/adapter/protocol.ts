@@ -8,6 +8,7 @@ export const ENVELOPE_SOURCE = "beyen-tv-ext";
 export type PageCommand =
   | { cmd: "read-state" }
   | { cmd: "set-resolution"; resolution: string }
+  | { cmd: "wait-chart-ready"; resolution: string }
   | { cmd: "take-screenshot" };
 
 export interface PageRequestEnvelope {
@@ -42,7 +43,9 @@ export function isPageRequest(v: unknown): v is PageRequestEnvelope {
   const c = v.command;
   if (!isRecord(c)) return false;
   if (c.cmd === "read-state") return true;
-  if (c.cmd === "set-resolution") return typeof c.resolution === "string" && c.resolution.length > 0 && c.resolution.length < 16;
+  if (c.cmd === "set-resolution" || c.cmd === "wait-chart-ready") {
+    return typeof c.resolution === "string" && c.resolution.length > 0 && c.resolution.length < 16;
+  }
   if (c.cmd === "take-screenshot") return true;
   return false;
 }

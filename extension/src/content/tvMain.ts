@@ -2,6 +2,7 @@
 // aanraakt. Leest de chart-state (S0-bewezen API-vorm, docs/spike-tv-extensie.md)
 // en zet op verzoek de resolution (snapshot-cyclus, F3a). Schrijft verder NIETS
 // naar TV. Gebundeld als IIFE (content scripts zijn classic scripts, geen ESM).
+import { GRACE_MS, waitForChartReady, type BarProbe, type ReadyProbe } from "../adapter/chartReady";
 import { isPageRequest, makeResponse, type PageCommand } from "../adapter/protocol";
 
 interface SafeResult {
@@ -152,12 +153,81 @@ function setResolution(resolution: string): unknown {
   });
 }
 
+/** Lezers voor de snapshot-settle (chartReady.ts) — zelfde defensieve stijl als
+ * readState: elke TV-drift degradeert naar null/unreadable, nooit een throw. */
+function makeReadyProbe(): ReadyProbe {
+  const w = window as unknown as {
+    TradingViewApi?: {
+      activeChart?: () => {
+        resolution?: () => unknown;
+        dataReady?: (cb?: () => void) => unknown;
+        getSeries?: () => { data?: () => { bars?: () => { last?: () => unknown } } };
+      };
+    };
+  };
+  const chart = () => w.TradingViewApi?.activeChart?.();
+  return {
+    resolution() {
+      try {
+        const r = chart()?.resolution?.();
+        return typeof r === "string" ? r : null;
+      } catch {
+        return null;
+      }
+    },
+    dataReady() {
+      try {
+        const c = chart();
+        if (typeof c?.dataReady !== "function") return null;
+        const v = c.dataReady(() => {});
+        return typeof v === "boolean" ? v : null;
+      } catch {
+        return null;
+      }
+    },
+    lastBar(): BarProbe {
+      try {
+        const bars = chart()?.getSeries?.()?.data?.()?.bars?.();
+        if (!bars || typeof bars.last !== "function") return { kind: "unreadable" };
+        const last = bars.last();
+        if (!last) return { kind: "empty" };
+        const t = Array.isArray(last) ? (last as unknown[])[0] : null;
+        return { kind: "bar", time: typeof t === "number" ? t : null };
+      } catch {
+        return { kind: "unreadable" };
+      }
+    },
+  };
+}
+
+/** Snapshot-settle (F3a-fix): wachten tot de chart het gevraagde timeframe echt
+ * geladen én getekend heeft, i.p.v. de blinde 1,5 s-timer in de SW. Rejects
+ * nooit — bij timeout meldt hij dat en captured de cyclus alsnog. */
+async function waitChartReady(resolution: string): Promise<unknown> {
+  const outcome = await waitForChartReady(makeReadyProbe(), resolution);
+  // Data geladen ≠ frame getekend: twee frames afwachten vóór de capture. De
+  // setTimeout-race voorkomt hangen wanneer rAF niet vuurt (verborgen tab).
+  const frame = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+      setTimeout(resolve, 250);
+    });
+  await frame();
+  await frame();
+  // Alleen als er echt gewacht is nog een korte grace — geeft trage studies
+  // ("… loading") lucht zonder de vlotte slots te vertragen.
+  if (outcome.ready && outcome.polls > 1) await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
+  return { ok: true, ...outcome };
+}
+
 function run(command: PageCommand): unknown | Promise<unknown> {
   switch (command.cmd) {
     case "read-state":
       return readState();
     case "set-resolution":
       return setResolution(command.resolution);
+    case "wait-chart-ready":
+      return waitChartReady(command.resolution);
     case "take-screenshot":
       return takeScreenshot();
   }

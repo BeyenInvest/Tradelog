@@ -156,7 +156,26 @@ async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snaps
     },
     capture,
     upload: (image) => db.uploadScreenshot(image),
-    settle: () => new Promise((resolve) => setTimeout(resolve, 1500)),
+    // Echt wachten tot TV het nieuwe timeframe geladen+getekend heeft (page-
+    // world pollt dataReady/laatste bar, cap 5 s) i.p.v. een blinde timer —
+    // de Daily-capture pakte anders een nog-ladende chart. Degradeert altijd
+    // richting "toch capturen": nooit slechter dan het oude gedrag.
+    async settle(target) {
+      try {
+        const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-wait-ready", resolution: target });
+        const r = typeof res === "object" && res !== null
+          ? (res as { ok?: unknown; ready?: unknown; signal?: unknown; waitedMs?: unknown })
+          : null;
+        if (r?.ok === true && r.ready === true) return;
+        // Timeout of onbruikbaar antwoord: page-side is al ruim gewacht.
+        await appendLog("snapshot-settle-degraded", `signal=${String(r?.signal ?? "geen antwoord")}, waitedMs=${String(r?.waitedMs ?? "?")}`);
+      } catch (e) {
+        // Bericht kwam niet aan (oud content-script na een update?) → de oude
+        // vaste wachttijd als vloer.
+        await appendLog("snapshot-settle-degraded", String((e instanceof Error && e.message) || e));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    },
     thumbnail: thumbnailDataUrl,
   };
 
