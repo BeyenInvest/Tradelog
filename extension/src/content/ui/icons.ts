@@ -34,3 +34,6 @@ export const ICON_LINK = stroke(
   13
 );
 export const ICON_EXTERNAL = stroke('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>', 13);
+export const ICON_ARROW_UP = stroke('<path d="M7 17 17 7"/><path d="M8 7h9v9"/>', 14);
+export const ICON_ARROW_DOWN = stroke('<path d="M7 7 17 17"/><path d="M17 8v9H8"/>', 14);
+export const ICON_CLOCK = stroke('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 12);

@@ -168,28 +168,89 @@
   padding: 3px 8px;
 }
 
-/* ── Meetwaarden met herkomst-badge ──────────────────────────────────────── */
-.by-metric { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
-.by-metric + .by-metric { border-top: 1px dashed rgb(var(--color-border-soft)); }
-.by-metric-label {
-  width: 58px;
-  flex: none;
-  font: 500 11px/1.3 var(--font-body);
+/* ── Position-tool: compacte strip ───────────────────────────────────────── */
+/* Rustig en klein (owner 2026-09-19): richting + R:R + risico op één regel, de
+ * prijzen op één regel eronder, tijd als voetnoot. Geen bron-badges (alles komt
+ * via de TV-tool), geen streepjeslijnen. Waarden zijn knoppen: klik = bewerken
+ * in de gedeelde strook eronder. Een eigen waarde kleurt subtiel goud. */
+
+.by-pos-summary { display: flex; align-items: center; gap: 8px; }
+.by-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: 500 13px/1.2 var(--font-body);
+  color: rgb(var(--color-faint));
+}
+.by-dir-icon { display: inline-flex; }
+.by-dir.is-long { color: rgb(var(--color-win)); }
+.by-dir.is-short { color: rgb(var(--color-loss)); }
+.by-dir.is-editing { text-decoration: underline; text-underline-offset: 3px; }
+
+.by-rr-label { font-size: 11px; color: rgb(var(--color-faint)); }
+.by-rr-value { font: 13px/1 var(--font-mono); color: rgb(var(--color-muted)); }
+
+.by-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgb(var(--color-surface-2));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 999px;
+  cursor: pointer;
+}
+.by-chip-label { font: 500 10px/1 var(--font-body); color: rgb(var(--color-faint)); }
+.by-chip-value { font: 12px/1 var(--font-mono); color: rgb(var(--color-ink)); }
+.by-chip-value.is-default { color: rgb(var(--color-faint)); }
+.by-chip.is-editing { border-color: rgb(var(--color-gold) / 0.6); }
+.by-chip:hover { border-color: rgb(var(--color-faint)); }
+
+.by-prices { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.by-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.by-price-k {
+  font: 500 9px/1 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(var(--color-faint));
+}
+.by-price-v { font: 13px/1.2 var(--font-mono); color: rgb(var(--color-ink)); }
+.by-price:hover .by-price-v { color: rgb(var(--color-gold)); }
+.by-price.is-manual .by-price-v { color: rgb(var(--color-gold)); }
+.by-price.is-editing .by-price-v { text-decoration: underline; text-underline-offset: 3px; }
+.by-price-sep { font-size: 12px; color: rgb(var(--color-border)); }
+
+.by-pos-edit { margin-top: 8px; }
+.by-pos-edit-label {
+  display: block;
+  font: 500 10px/1.3 var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: rgb(var(--color-muted));
+  margin: 0 0 4px;
 }
-.by-metric-value { flex: 1; font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
-.by-src {
-  font: 500 9px/1 var(--font-body);
-  color: rgb(var(--color-muted));
-  border: 1px solid rgb(var(--color-border));
-  border-radius: 999px;
-  padding: 3px 6px;
-  white-space: nowrap;
+
+.by-pos-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  font-size: 10px;
+  color: rgb(var(--color-faint));
 }
-.by-src.is-manual { color: rgb(var(--color-gold)); border-color: rgb(var(--color-gold) / 0.45); }
-.by-metric-edit { padding: 0 0 6px 66px; }
+.by-pos-time-icon { display: inline-flex; }
 
 /* ── Segmented control (modus) ───────────────────────────────────────────── */
 .by-seg {

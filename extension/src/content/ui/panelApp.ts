@@ -35,7 +35,10 @@ import { renderDynamicForm, type DynamicForm } from "./form";
 import {
   formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
-import { ICON_CHECK, ICON_CLOSE, ICON_EXTERNAL, ICON_PENCIL, ICON_REFRESH, markSvg } from "./icons";
+import {
+  ICON_ARROW_DOWN, ICON_ARROW_UP, ICON_CHECK, ICON_CLOCK, ICON_CLOSE, ICON_EXTERNAL,
+  ICON_REFRESH, markSvg,
+} from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
 
@@ -412,142 +415,47 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       updatePending();
     };
 
-    const addMetric = (
-      label: string,
-      read: () => { text: string; cls?: string; src: string; manual: boolean },
-      editor?: (register: (paint: () => void) => void) => HTMLElement
-    ) => {
-      const value = el("span", { class: "by-metric-value" });
-      const src = el("span", { class: "by-src" });
-      const row = el("div", { class: "by-metric" }, [
-        el("span", { class: "by-metric-label", text: label }),
-        value,
-        src,
-      ]);
-      let editWrap: HTMLElement | null = null;
-      if (editor) {
-        editWrap = el("div", { class: "by-metric-edit" });
-        editWrap.hidden = true;
-        editWrap.appendChild(editor((paint) => updaters.push(paint)));
-        const pencil = el("button", {
-          class: "by-icon",
-          unsafeHtml: ICON_PENCIL,
-          attrs: {
-            type: "button",
-            title: t("panel.editTitle", { label }),
-            "aria-label": t("panel.editTitle", { label }),
-          },
-        });
-        on(pencil, "click", () => {
-          const wrap = editWrap;
-          if (!wrap) return;
-          wrap.hidden = !wrap.hidden;
-          if (!wrap.hidden) wrap.querySelector<HTMLElement>("input, button, select")?.focus();
-        });
-        row.appendChild(pencil);
-      }
-      const update = () => {
-        const data = read();
-        value.textContent = data.text;
-        value.className = `by-metric-value${data.cls ? ` ${data.cls}` : ""}`;
-        src.textContent = data.src;
-        src.classList.toggle("is-manual", data.manual);
-      };
-      updaters.push(update);
-      update();
-      positionSec.body.appendChild(row);
-      if (editWrap) positionSec.body.appendChild(editWrap);
+    // Eén gedeelde bewerk-strook onder de regels; klik een waarde om 'm te
+    // openen. De bron-badges ("via TradingView") zijn bewust weg (owner
+    // 2026-09-19): alles komt via de TV-tool, dus dat op élke regel herhalen is
+    // ruis. Een eigen waarde kleurt hooguit subtiel goud (is-manual) — geen
+    // ring of "handmatig"-label.
+    type EditKey = PriceKey | "direction" | "risk";
+    const PRICE_LABEL: Record<PriceKey, MessageKey> = {
+      entry: "panel.metric.entry",
+      stop: "panel.metric.stop",
+      target: "panel.metric.target",
     };
+    let editing: EditKey | null = null;
+    const editArea = el("div", { class: "by-pos-edit" });
+    editArea.hidden = true;
 
-    addMetric(
-      t("panel.metric.direction"),
-      () => {
-        const direction = effDirection();
-        return {
-          // Long/Short blijven de rauwe enum-waarde: trading-leenwoorden die in
-          // beide talen hetzelfde zijn (zoals in de web-app).
-          text: direction ?? "—",
-          cls: direction === "Long" ? "by-win" : direction === "Short" ? "by-loss" : "by-faint",
-          src: overrides.direction ? t("panel.src.manual") : t("panel.src.tv"),
-          manual: !!overrides.direction,
-        };
-      },
-      (register) => {
+    const editLabeled = (label: string, control: HTMLElement): HTMLElement =>
+      el("div", {}, [el("span", { class: "by-pos-edit-label", text: label }), control]);
+
+    function renderEditArea(): void {
+      clear(editArea);
+      editArea.hidden = editing == null;
+      if (editing == null) return;
+
+      if (editing === "direction") {
         const wrap = el("div", { class: "by-toggle" });
-        const buttons: HTMLButtonElement[] = [];
         for (const direction of ["Long", "Short"] as const) {
           const btn = el("button", { class: "by-toggle-btn", text: direction, attrs: { type: "button" } });
+          btn.classList.toggle("is-active", effDirection() === direction);
           on(btn, "click", () => {
             overrides.direction = overrides.direction === direction ? null : direction;
             refreshRows();
+            renderEditArea();
           });
-          buttons.push(btn);
           wrap.appendChild(btn);
         }
-        const paint = () => {
-          for (const btn of buttons) btn.classList.toggle("is-active", btn.textContent === effDirection());
-        };
-        register(paint);
-        paint();
-        return wrap;
+        editArea.appendChild(editLabeled(t("panel.metric.direction"), wrap));
+        wrap.querySelector<HTMLElement>("button")?.focus();
+        return;
       }
-    );
 
-    const priceRow = (label: string, key: PriceKey) =>
-      addMetric(
-        label,
-        () => ({
-          text: formatPrice(effPrice(key)),
-          cls: "by-mono",
-          src: overrides[key] != null ? t("panel.src.manual") : t("panel.src.tv"),
-          manual: overrides[key] != null,
-        }),
-        () => {
-          const input = el("input", {
-            class: "by-input",
-            attrs: {
-              type: "number",
-              step: "any",
-              inputmode: "decimal",
-              placeholder: t("panel.editPlaceholder", { label }),
-            },
-          });
-          const current = overrides[key];
-          if (current != null) input.value = String(current);
-          on(input, "input", () => {
-            overrides[key] = parseNumberInput(input.value);
-            refreshRows();
-          });
-          return input;
-        }
-      );
-
-    priceRow(t("panel.metric.entry"), "entry");
-    priceRow(t("panel.metric.stop"), "stop");
-    priceRow(t("panel.metric.target"), "target");
-
-    addMetric(t("panel.metric.rr"), () => ({
-      text: formatRR(effRR()),
-      cls: "by-mono",
-      src: t("panel.src.computed"),
-      manual: false,
-    }));
-
-    // Risico staat bewust bij R:R (owner 2026-09-19): allebei over risk/reward.
-    // Leeg = de standaard 1% (badge "standaard"); klik het potlood om per trade
-    // een eigen % te zetten. De log gebruikt riskPct; leeg => 1%-default (F5a).
-    addMetric(
-      t("panel.metric.risk"),
-      () => {
-        const set = riskPct.trim() !== "";
-        return {
-          text: `${set ? riskPct.trim() : "1"}%`,
-          cls: "by-mono",
-          src: set ? t("panel.src.manual") : t("panel.src.default"),
-          manual: set,
-        };
-      },
-      () => {
+      if (editing === "risk") {
         const input = el("input", {
           class: "by-input",
           attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
@@ -557,22 +465,124 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
           riskPct = input.value;
           refreshRows();
         });
-        return input;
+        editArea.appendChild(editLabeled(t("panel.metric.risk"), input));
+        input.focus();
+        return;
       }
+
+      const key = editing;
+      const input = el("input", {
+        class: "by-input",
+        attrs: {
+          type: "number",
+          step: "any",
+          inputmode: "decimal",
+          placeholder: t("panel.editPlaceholder", { label: t(PRICE_LABEL[key]) }),
+        },
+      });
+      const current = overrides[key];
+      if (current != null) input.value = String(current);
+      on(input, "input", () => {
+        overrides[key] = parseNumberInput(input.value);
+        refreshRows();
+      });
+      editArea.appendChild(editLabeled(t(PRICE_LABEL[key]), input));
+      input.focus();
+    }
+
+    function toggleEdit(which: EditKey): void {
+      editing = editing === which ? null : which;
+      renderEditArea();
+      for (const update of updaters) update();
+    }
+
+    // ── Samenvatting: richting · R:R · risico ────────────────────────────────
+    const dirIcon = el("span", { class: "by-dir-icon" });
+    const dirText = el("span");
+    const dirBtn = el("button", {
+      class: "by-dir",
+      attrs: { type: "button", title: t("panel.editTitle", { label: t("panel.metric.direction") }) },
+    }, [dirIcon, dirText]);
+    on(dirBtn, "click", () => toggleEdit("direction"));
+
+    const rrValue = el("span", { class: "by-rr-value" });
+
+    const riskValue = el("span", { class: "by-chip-value" });
+    const riskBtn = el("button", {
+      class: "by-chip",
+      attrs: { type: "button", title: t("panel.editTitle", { label: t("panel.metric.risk") }) },
+    }, [el("span", { class: "by-chip-label", text: t("panel.metric.risk") }), riskValue]);
+    on(riskBtn, "click", () => toggleEdit("risk"));
+
+    updaters.push(() => {
+      const direction = effDirection();
+      dirText.textContent = direction ?? "—";
+      // Long/Short blijven de rauwe enum-waarde: trading-leenwoorden die in beide
+      // talen hetzelfde zijn (zoals in de web-app).
+      dirBtn.className =
+        `by-dir${direction === "Long" ? " is-long" : direction === "Short" ? " is-short" : ""}` +
+        `${overrides.direction ? " is-manual" : ""}${editing === "direction" ? " is-editing" : ""}`;
+      dirIcon.innerHTML = direction === "Long" ? ICON_ARROW_UP : direction === "Short" ? ICON_ARROW_DOWN : "";
+      rrValue.textContent = formatRR(effRR());
+      // Leeg risico = de standaard 1% (gedempt getoond); een eigen % kleurt ink.
+      const riskSet = riskPct.trim() !== "";
+      riskValue.textContent = `${riskSet ? riskPct.trim() : "1"}%`;
+      riskValue.classList.toggle("is-default", !riskSet);
+      riskBtn.classList.toggle("is-editing", editing === "risk");
+    });
+
+    positionSec.body.appendChild(
+      el("div", { class: "by-pos-summary" }, [
+        dirBtn,
+        el("span", { class: "by-spacer" }),
+        el("span", { class: "by-rr-label", text: t("panel.metric.rr") }),
+        rrValue,
+        riskBtn,
+      ])
     );
 
+    // ── Prijzen op één regel (E · S · T) ─────────────────────────────────────
+    const pricesRow = el("div", { class: "by-prices" });
+    const priceEls: { key: PriceKey; btn: HTMLElement; value: HTMLElement }[] = [];
+    (["entry", "stop", "target"] as const).forEach((key, i) => {
+      if (i > 0) pricesRow.appendChild(el("span", { class: "by-price-sep", text: "·" }));
+      const value = el("span", { class: "by-price-v" });
+      const btn = el("button", {
+        class: "by-price",
+        attrs: { type: "button", title: t("panel.editTitle", { label: t(PRICE_LABEL[key]) }) },
+        // Beginletter van het (vertaalde) label = E/S/T; in NL én EN gelijk.
+      }, [el("span", { class: "by-price-k", text: t(PRICE_LABEL[key]).charAt(0) }), value]);
+      on(btn, "click", () => toggleEdit(key));
+      pricesRow.appendChild(btn);
+      priceEls.push({ key, btn, value });
+    });
+    updaters.push(() => {
+      for (const { key, btn, value } of priceEls) {
+        value.textContent = formatPrice(effPrice(key));
+        btn.classList.toggle("is-manual", overrides[key] != null);
+        btn.classList.toggle("is-editing", editing === key);
+      }
+    });
+    positionSec.body.appendChild(pricesRow);
+    positionSec.body.appendChild(editArea);
+
+    // ── Tijd als voetnoot ────────────────────────────────────────────────────
     const position = selectedPosition();
     if (position?.entryTimeSec != null) {
-      addMetric(t("panel.metric.time"), () => ({
-        text: formatBarTime(position.entryTimeSec),
-        cls: "by-mono",
-        src: t("panel.src.tv"),
-        manual: false,
-      }));
+      positionSec.body.appendChild(
+        el("div", { class: "by-pos-time" }, [
+          el("span", { class: "by-pos-time-icon", unsafeHtml: ICON_CLOCK }),
+          el("span", { class: "by-mono", text: formatBarTime(position.entryTimeSec) }),
+        ])
+      );
     }
     if (position && !position.prices) {
       positionSec.body.appendChild(readFail(t("panel.noTickPrices")));
     }
+
+    // Alle updaters één keer met de startwaarden laten tekenen.
+    for (const update of updaters) update();
+
     renderManualTime();
   }
 
