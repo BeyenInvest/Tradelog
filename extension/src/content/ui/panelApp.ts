@@ -533,6 +533,34 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       manual: false,
     }));
 
+    // Risico staat bewust bij R:R (owner 2026-09-19): allebei over risk/reward.
+    // Leeg = de standaard 1% (badge "standaard"); klik het potlood om per trade
+    // een eigen % te zetten. De log gebruikt riskPct; leeg => 1%-default (F5a).
+    addMetric(
+      t("panel.metric.risk"),
+      () => {
+        const set = riskPct.trim() !== "";
+        return {
+          text: `${set ? riskPct.trim() : "1"}%`,
+          cls: "by-mono",
+          src: set ? t("panel.src.manual") : t("panel.src.default"),
+          manual: set,
+        };
+      },
+      () => {
+        const input = el("input", {
+          class: "by-input",
+          attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
+        });
+        input.value = riskPct;
+        on(input, "input", () => {
+          riskPct = input.value;
+          refreshRows();
+        });
+        return input;
+      }
+    );
+
     const position = selectedPosition();
     if (position?.entryTimeSec != null) {
       addMetric(t("panel.metric.time"), () => ({
@@ -786,16 +814,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   function renderExtra(): void {
     clear(extraSec.body);
 
-    const risk = el("input", {
-      class: "by-input",
-      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
-    });
-    risk.value = riskPct;
-    on(risk, "input", () => {
-      riskPct = risk.value;
-      updatePending();
-    });
-
+    // Risico staat nu bij R:R in de position-tool (owner 2026-09-19); hier blijft
+    // alleen Notities over — kop-loze sectie.
     const notesInput = el("textarea", {
       class: "by-input",
       attrs: { rows: "3", placeholder: t("panel.notesPlaceholder") },
@@ -805,9 +825,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       notes = notesInput.value;
     });
 
-    extraSec.body.appendChild(el("div", {}, [el("span", { class: "by-label", text: t("panel.riskLabel") }), risk]));
     extraSec.body.appendChild(
-      el("div", { style: "margin-top:8px;" }, [
+      el("div", {}, [
         el("span", { class: "by-label", text: t("panel.notesLabel") }),
         notesInput,
       ])
