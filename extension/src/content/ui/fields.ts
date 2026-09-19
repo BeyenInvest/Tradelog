@@ -10,6 +10,7 @@
 // de enige uitzondering: dat veld toont het paneel niet meer (owner 18-09), maar
 // leidt het onzichtbaar af uit de entry-tijd (ccFromTime) en stuurt het alsnog
 // mee in custom.
+import { WPM_TECH_FIELD_ORDER, hasFaseField } from "../../../../src/lib/wpmLayout";
 import type { JournalField } from "../../db";
 
 export type FormValues = Record<string, unknown>;
@@ -39,6 +40,25 @@ export function formFields(allFields: JournalField[]): JournalField[] {
     .filter((f) => !f.isComputed)
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
+}
+
+/**
+ * De weer te geven volgorde. Op een WPM-journal (heeft een `fase`-veld) spiegelt
+ * het paneel de vaste web-app-volgorde (WPM_TECH_FIELD_ORDER, gedeelde bron):
+ * één doorlopend blok zónder de "Markt"-subkop, met Weekly Kenmerk + Nieuws vlak
+ * boven de "richting mee?"-bevestigingen (owner 2026-09-18/19). De groepslabels
+ * van die vaste velden worden geneutraliseerd zodat groupFields geen kopje meer
+ * tekent; eigen extra velden houden hun volgorde (sortOrder) én hun groep.
+ * Niet-WPM journals blijven ongemoeid op de generieke per-groep-weergave.
+ */
+export function orderedFormFields(fields: JournalField[]): JournalField[] {
+  if (!hasFaseField(fields.map((f) => f.fieldKey))) return fields;
+  const rank = new Map<string, number>(WPM_TECH_FIELD_ORDER.map((k, i) => [k, i]));
+  const at = (f: JournalField) => rank.get(f.fieldKey) ?? Number.MAX_SAFE_INTEGER;
+  return fields
+    .slice()
+    .sort((a, b) => at(a) - at(b)) // stabiel: gelijke rang (de extra's) houdt sortOrder-volgorde
+    .map((f) => (rank.has(f.fieldKey) ? { ...f, groupLabel: null } : f));
 }
 
 /** De 4H-candle-close-slots (sluituren van de 4H-candles in de profiel-tijdzone,

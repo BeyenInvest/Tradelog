@@ -29,7 +29,7 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, missingRequired, type FormValues,
+  ccFromTime, customFromValues, formFields, missingRequired, orderedFormFields, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
 import {
@@ -759,7 +759,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // filteren we uit de getóónde rijen (owner 18-09: machinaal berekend), maar
     // formFieldList houdt 'm wél zodat customFromValues 'm meestuurt.
     formFieldList = formFields(journal.fields);
-    const shownFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    // WPM-journal: zelfde vaste volgorde als de web-app (kenmerk+nieuws boven de
+    // confirms, geen "Markt"-kop); andere journals blijven op sortOrder. `cc`
+    // blijft uit de getoonde rijen (machinaal), maar zit wél in formFieldList.
+    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc"));
     if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
