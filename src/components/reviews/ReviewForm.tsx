@@ -22,6 +22,8 @@ interface ReviewFormProps {
   trades: Trade[];
   onSubmit: (input: WeeklyReviewInput) => Promise<void>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (trade: Trade) => void;
   onClose: () => void;
 }
 
@@ -29,7 +31,7 @@ function defaultWeek() {
   return isoWeekOf(localTodayIso());
 }
 
-export function ReviewForm({ review, sections, trades, onSubmit, onAddTrade, onClose }: ReviewFormProps) {
+export function ReviewForm({ review, sections, trades, onSubmit, onAddTrade, onUpdateTrade, onDeleteTrade, onClose }: ReviewFormProps) {
   const { t } = useTranslation();
   const startWeek = review ? { jaar: review.jaar, week_nummer: review.week_nummer } : defaultWeek();
   const [jaar, setJaar] = useState(startWeek.jaar);
@@ -144,6 +146,8 @@ export function ReviewForm({ review, sections, trades, onSubmit, onAddTrade, onC
         taken={takenPreview}
         missed={missedPreview}
         onAddTrade={onAddTrade}
+        onUpdateTrade={onUpdateTrade}
+        onDeleteTrade={onDeleteTrade}
         initialDate={newTradeDate}
       />
     </ReviewFormModal>

@@ -17,6 +17,9 @@ interface ReviewTradesPanelProps {
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
   /** Pre-fills the new trade's date so it lands inside the reviewed period (this week/month/...). */
   initialDate: string;
+  /** When provided, the trade rows become clickable to edit/delete — the same as the review detail panels. */
+  onUpdateTrade?: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade?: (trade: Trade) => void;
 }
 
 /**
@@ -25,9 +28,10 @@ interface ReviewTradesPanelProps {
  * (missed) trade and add it inline. It opens the same TradeForm the Journal uses —
  * always in the live Journal scope, so "Missed trade" is offered (allowMissedTrade).
  */
-export function ReviewTradesPanel({ label, taken, missed, extraGroupModes, onAddTrade, initialDate }: ReviewTradesPanelProps) {
+export function ReviewTradesPanel({ label, taken, missed, extraGroupModes, onAddTrade, initialDate, onUpdateTrade, onDeleteTrade }: ReviewTradesPanelProps) {
   const { t } = useTranslation();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Trade | null>(null);
 
   return (
     <>
@@ -42,16 +46,35 @@ export function ReviewTradesPanel({ label, taken, missed, extraGroupModes, onAdd
             <Plus size={13} /> {t("tradeForm.addTrade")}
           </button>
         </div>
-        <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={extraGroupModes} />
+        <ReviewTradeGroups
+          taken={taken}
+          missed={missed}
+          extraGroupModes={extraGroupModes}
+          onEditTrade={onUpdateTrade ? setEditing : undefined}
+          onDeleteTrade={onDeleteTrade}
+        />
       </div>
 
       {/* Portalled to <body>: TradeForm renders its own <form>, and the review editors mount this
           panel inside their <form>. Rendering the trade overlay here in-place would nest one form in
           another (invalid HTML — breaks the trade form). The portal lifts it to the top level, the
-          same place every other modal in the app lives. */}
+          same place every other modal in the app lives. TradeForm stops its submit from bubbling,
+          so saving an inline trade never submits/closes the surrounding review editor. */}
       {addOpen &&
         createPortal(
           <TradeForm onSubmit={onAddTrade} onClose={() => setAddOpen(false)} allowMissedTrade initialDate={initialDate} />,
+          document.body
+        )}
+
+      {editing &&
+        onUpdateTrade &&
+        createPortal(
+          <TradeForm
+            trade={editing}
+            onSubmit={(input) => onUpdateTrade(editing.id, input)}
+            onClose={() => setEditing(null)}
+            allowMissedTrade
+          />,
           document.body
         )}
     </>

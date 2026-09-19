@@ -35,12 +35,18 @@ const TABS: { key: ReviewTab; labelKey: string }[] = [
 export default function ReviewsPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<ReviewTab>("week");
-  const { trades, refresh: refreshTrades, createTrade } = useTrades({ type: "live" });
+  const { trades, refresh: refreshTrades, createTrade, updateTrade, deleteTrade } = useTrades({ type: "live" });
 
   // createTrade already refreshes the shared live-trades state, so the open review form's
   // preview (trades-in-period, KPIs, error stats) updates the moment the inline trade is saved.
   async function handleAddTrade(input: TradeSubmitInput) {
     await createTrade(input);
+  }
+
+  // Editing a linked trade in-place from a review detail panel — updateTrade patches
+  // the shared live-trades state, so the review's lists/KPIs update immediately.
+  async function handleUpdateTrade(id: string, input: TradeSubmitInput) {
+    await updateTrade(id, input);
   }
 
   return (
@@ -63,9 +69,21 @@ export default function ReviewsPage() {
       </div>
 
       {tab === "week" ? (
-        <WeeklyReviewsTab trades={trades} refreshTrades={refreshTrades} onAddTrade={handleAddTrade} />
+        <WeeklyReviewsTab
+          trades={trades}
+          refreshTrades={refreshTrades}
+          onAddTrade={handleAddTrade}
+          onUpdateTrade={handleUpdateTrade}
+          onDeleteTrade={deleteTrade}
+        />
       ) : (
-        <PeriodicReviewsTab periodType={tab} trades={trades} onAddTrade={handleAddTrade} />
+        <PeriodicReviewsTab
+          periodType={tab}
+          trades={trades}
+          onAddTrade={handleAddTrade}
+          onUpdateTrade={handleUpdateTrade}
+          onDeleteTrade={deleteTrade}
+        />
       )}
     </>
   );
@@ -75,10 +93,14 @@ function WeeklyReviewsTab({
   trades,
   refreshTrades,
   onAddTrade,
+  onUpdateTrade,
+  onDeleteTrade,
 }: {
   trades: Trade[];
   refreshTrades: () => Promise<void>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (id: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const { confirm, confirmDialog } = useConfirm();
@@ -190,6 +212,22 @@ function WeeklyReviewsTab({
     return count;
   }
 
+  async function handleDeleteTrade(trade: Trade) {
+    const ok = await confirm({
+      title: t("journal.deleteTitle"),
+      message: t("journal.deleteConfirm", { pair: trade.instrument ?? trade.pair, date: trade.datum_open }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await onDeleteTrade(trade.id);
+    } catch (err) {
+      setError(toErrorMessage(err, t("reviews.deleteFailed")));
+    }
+  }
+
   return (
     <>
       {confirmDialog}
@@ -221,6 +259,8 @@ function WeeklyReviewsTab({
               onDelete={() => void handleDelete(selected)}
               onRelink={handleRelink}
               onAddTrade={onAddTrade}
+              onUpdateTrade={onUpdateTrade}
+              onDeleteTrade={(trade) => void handleDeleteTrade(trade)}
             />
           ) : (
             <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>
@@ -235,6 +275,8 @@ function WeeklyReviewsTab({
           trades={trades}
           onSubmit={handleSubmit}
           onAddTrade={onAddTrade}
+          onUpdateTrade={onUpdateTrade}
+          onDeleteTrade={(trade) => void handleDeleteTrade(trade)}
           onClose={() => setFormOpen(false)}
         />
       )}
@@ -251,10 +293,14 @@ function PeriodicReviewsTab({
   periodType,
   trades,
   onAddTrade,
+  onUpdateTrade,
+  onDeleteTrade,
 }: {
   periodType: PeriodType;
   trades: Trade[];
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (id: string) => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
   const { confirm, confirmDialog } = useConfirm();
@@ -324,6 +370,22 @@ function PeriodicReviewsTab({
     }
   }
 
+  async function handleDeleteTrade(trade: Trade) {
+    const ok = await confirm({
+      title: t("journal.deleteTitle"),
+      message: t("journal.deleteConfirm", { pair: trade.instrument ?? trade.pair, date: trade.datum_open }),
+      tone: "danger",
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await onDeleteTrade(trade.id);
+    } catch (err) {
+      setError(toErrorMessage(err, t("reviews.deleteFailed")));
+    }
+  }
+
   async function handleDelete(review: PeriodicReview) {
     const ok = await confirm({
       title: t("common.deleteTitle"),
@@ -376,6 +438,8 @@ function PeriodicReviewsTab({
               onEdit={() => openEdit(selected)}
               onDelete={() => void handleDelete(selected)}
               onAddTrade={onAddTrade}
+              onUpdateTrade={onUpdateTrade}
+              onDeleteTrade={(trade) => void handleDeleteTrade(trade)}
             />
           ) : (
             <div className="col-span-2 flex items-center justify-center text-sm text-muted">{t("reviews.selectOrCreate")}</div>
@@ -391,6 +455,8 @@ function PeriodicReviewsTab({
           trades={trades}
           onSubmit={handleSubmit}
           onAddTrade={onAddTrade}
+          onUpdateTrade={onUpdateTrade}
+          onDeleteTrade={(trade) => void handleDeleteTrade(trade)}
           onClose={() => setFormOpen(false)}
         />
       )}

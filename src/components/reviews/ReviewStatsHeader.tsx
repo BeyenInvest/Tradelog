@@ -56,6 +56,7 @@ export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; mis
             {options.map((o) => (
               <button
                 key={o.key}
+                type="button"
                 onClick={() => setView(o.key)}
                 className={`px-3 py-1.5 text-xs font-body transition-colors ${
                   view === o.key ? "bg-gold text-on-gold" : "bg-surface-2 text-muted hover:text-ink"
