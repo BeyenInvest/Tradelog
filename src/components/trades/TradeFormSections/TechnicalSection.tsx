@@ -8,22 +8,9 @@ import { UrlPreviewField } from "./UrlPreviewField";
 import { ScreenshotUploadField } from "./ScreenshotUploadField";
 import { CustomFieldGroup, SingleCustomField, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
 import { blockGroupLabel } from "@/lib/fieldBlocks";
-
-// WPM's fixed field order inside Technical analysis (owner 2026-09-18): one "Setup
-// & uitvoering" block, no separate "Markt" heading — Weekly Kenmerk + Nieuws sit
-// right above the "richting mee?"-confirmations. `cc` is left out (it's in Entry).
-const WPM_TECH_ORDER = [
-  "fase",
-  "weekly_criteria",
-  "trade_concept",
-  "entry",
-  "weekly_kenmerk",
-  "nieuws",
-  "w_confirm",
-  "d_confirm",
-  "h4_confirm",
-  "extra_d_conf",
-] as const;
+// WPM's vaste veldvolgorde binnen Technical analysis — gedeelde bron met het
+// extensie-paneel (voorkomt drift, zie wpmLayout.ts).
+import { WPM_TECH_FIELD_ORDER } from "@/lib/wpmLayout";
 
 export function TechnicalSection() {
   const { t } = useTranslation();
@@ -51,12 +38,12 @@ export function TechnicalSection() {
         <div className="flex flex-col gap-2">
           <p className="font-mono text-[11px] uppercase tracking-wide text-muted">{blockGroupLabel(t, "setup")}</p>
           <div className="grid grid-cols-2 gap-4">
-            {WPM_TECH_ORDER.map((k) => (
+            {WPM_TECH_FIELD_ORDER.map((k) => (
               <SingleCustomField key={k} fieldKey={k} />
             ))}
           </div>
           {/* Any woven config field not in the fixed WPM order (rare user extras). */}
-          <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={[...WPM_TECH_ORDER, "cc"]} />
+          <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={[...WPM_TECH_FIELD_ORDER, "cc"]} />
         </div>
       ) : (
         <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} />

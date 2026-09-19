@@ -8,6 +8,7 @@ import { humanizeSchemaDetail, logTradeErrorCopy } from "./errors";
 import { slotStatus } from "./snapshotState";
 import {
   ccFromTime, customFromValues, formFields, groupFields, isVisible, missingRequired,
+  orderedFormFields,
 } from "./fields";
 import { formatPrice, formatRR, formatResolution } from "./format";
 
@@ -138,6 +139,55 @@ describe("groupFields", () => {
       field({ fieldKey: "c", groupLabel: null }),
     ]);
     expect(groups.map((g) => [g.label, g.fields.length])).toEqual([["Setup", 2], [null, 1]]);
+  });
+});
+
+describe("orderedFormFields (WPM-paneelvolgorde)", () => {
+  // Een WPM-journal zoals het paneel het binnenkrijgt: fase eerst, kenmerk+nieuws
+  // in een aparte "Markt"-groep ná de confirms — de stand van vóór deze fix.
+  const wpm = () => [
+    field({ fieldKey: "fase", groupLabel: null, sortOrder: 0 }),
+    field({ fieldKey: "weekly_criteria", groupLabel: null, sortOrder: 1 }),
+    field({ fieldKey: "trade_concept", groupLabel: null, sortOrder: 2 }),
+    field({ fieldKey: "entry", groupLabel: null, sortOrder: 3 }),
+    field({ fieldKey: "w_confirm", groupLabel: null, sortOrder: 4 }),
+    field({ fieldKey: "d_confirm", groupLabel: null, sortOrder: 5 }),
+    field({ fieldKey: "h4_confirm", groupLabel: null, sortOrder: 6 }),
+    field({ fieldKey: "extra_d_conf", groupLabel: null, sortOrder: 7 }),
+    field({ fieldKey: "weekly_kenmerk", groupLabel: "Markt", sortOrder: 8 }),
+    field({ fieldKey: "nieuws", groupLabel: "Markt", sortOrder: 9 }),
+  ];
+
+  it("zet kenmerk+nieuws vlak boven de confirms in de vaste WPM-volgorde", () => {
+    expect(orderedFormFields(wpm()).map((f) => f.fieldKey)).toEqual([
+      "fase", "weekly_criteria", "trade_concept", "entry",
+      "weekly_kenmerk", "nieuws",
+      "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf",
+    ]);
+  });
+
+  it("neutraliseert het 'Markt'-kopje zodat er geen aparte groep meer tekent", () => {
+    const groups = groupFields(orderedFormFields(wpm()));
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBeNull();
+  });
+
+  it("laat eigen extra velden achteraan staan (op sortOrder) mét hun groep", () => {
+    const withExtra = [
+      ...wpm(),
+      field({ fieldKey: "setup_kwaliteit", groupLabel: "Eigen velden", sortOrder: 20 }),
+    ];
+    const ordered = orderedFormFields(withExtra);
+    expect(ordered[ordered.length - 1].fieldKey).toBe("setup_kwaliteit");
+    expect(ordered[ordered.length - 1].groupLabel).toBe("Eigen velden");
+  });
+
+  it("laat een niet-WPM journal (geen fase-veld) volledig ongemoeid", () => {
+    const generic = [
+      field({ fieldKey: "session", groupLabel: "Markt", sortOrder: 0 }),
+      field({ fieldKey: "emotion", groupLabel: "Mindset", sortOrder: 1 }),
+    ];
+    expect(orderedFormFields(generic)).toEqual(generic);
   });
 });
 
