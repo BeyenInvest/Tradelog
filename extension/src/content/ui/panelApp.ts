@@ -69,11 +69,15 @@ interface Section {
   titleKey: MessageKey;
 }
 
-function sectionEl(titleKey: MessageKey, extra?: HTMLElement): Section {
+function sectionEl(titleKey: MessageKey, extra?: HTMLElement, headless = false): Section {
   const title = el("h3", { class: "by-sec-title" });
   const head = el("div", { class: "by-sec-head" }, [title, el("span", { class: "by-spacer" }), extra]);
   const body = el("div");
-  return { section: el("section", { class: "by-sec" }, [head, body]), body, title, titleKey };
+  // Kop-loze sectie (owner 2026-09-19: geen "EXTRA"-tussenkop meer): de head
+  // wordt niet aangehangen; `title` blijft een losse node zodat de titel-paint
+  // (die over alle secties loopt) er stil overheen kan.
+  const section = el("section", { class: "by-sec" }, headless ? [body] : [head, body]);
+  return { section, body, title, titleKey };
 }
 
 export function mountPanelApp(host: HTMLElement, options: { onClose: () => void }): PanelApp {
@@ -265,7 +269,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const positionSec = sectionEl("panel.sec.position");
   const targetSec = sectionEl("panel.sec.target");
   const journalSec = sectionEl("panel.sec.journal");
-  const extraSec = sectionEl("panel.sec.extra");
+  const extraSec = sectionEl("panel.sec.extra", undefined, true);
   const snapshotsSec = renderSnapshotsSection();
   const closeSec = renderCloseSection();
 
