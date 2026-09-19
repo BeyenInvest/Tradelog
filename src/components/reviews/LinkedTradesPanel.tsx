@@ -16,10 +16,12 @@ interface LinkedTradesPanelProps {
   trades: Trade[];
   onRelink: (reviewId: string, jaar: number, weekNummer: number) => Promise<number>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (trade: Trade) => void;
 }
 
 /** Trades linked to this review, split into "Trades genomen" and "Missed trades" by trade_evaluation. */
-export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: LinkedTradesPanelProps) {
+export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade, onUpdateTrade, onDeleteTrade }: LinkedTradesPanelProps) {
   const { t } = useTranslation();
   const linked = trades.filter((t) => t.weekly_review_id === review.id);
   const taken = takenTrades(linked);
@@ -28,6 +30,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
   const [lastCount, setLastCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Trade | null>(null);
 
   const weekRange = isoWeekRange(review.jaar, review.week_nummer);
   const today = localTodayIso();
@@ -50,6 +53,15 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
   // appear until it's linked. Relinking this review's ISO week picks it up (it's dated into the week).
   async function handleAddTrade(input: TradeSubmitInput) {
     await onAddTrade(input);
+    await onRelink(review.id, review.jaar, review.week_nummer);
+  }
+
+  // Editing a linked trade can move its date out of this ISO week — the DB
+  // trigger recomputes weekly_review_id on update, but relink here too so a trade
+  // dragged into/out of the week appears/disappears from this list immediately.
+  async function handleEditTrade(input: TradeSubmitInput) {
+    if (!editing) return;
+    await onUpdateTrade(editing.id, input);
     await onRelink(review.id, review.jaar, review.week_nummer);
   }
 
@@ -77,11 +89,17 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade }: Link
       {lastCount != null && !error && <p className="text-[11px] text-muted">{t("reviews.tradesLinked", { count: lastCount })}</p>}
       {error && <p className="text-[11px] text-loss">{error}</p>}
 
-      <ReviewTradeGroups taken={taken} missed={missed} />
+      <ReviewTradeGroups taken={taken} missed={missed} onEditTrade={setEditing} onDeleteTrade={onDeleteTrade} />
 
       {addOpen &&
         createPortal(
           <TradeForm onSubmit={handleAddTrade} onClose={() => setAddOpen(false)} allowMissedTrade initialDate={newTradeDate} />,
+          document.body
+        )}
+
+      {editing &&
+        createPortal(
+          <TradeForm trade={editing} onSubmit={handleEditTrade} onClose={() => setEditing(null)} allowMissedTrade />,
           document.body
         )}
     </div>

@@ -244,7 +244,18 @@ export function TradeForm({ trade, onSubmit, onClose, allowMissedTrade, initialD
         </div>
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-8">
+          <form
+            // This form is portalled into the review editors' own <form> (to avoid
+            // nesting <form> in the DOM). React events still bubble through the
+            // portal along the component tree, so without stopPropagation this
+            // trade's submit would also fire the outer review form's onSubmit —
+            // saving+closing the whole review the moment you save an inline trade.
+            onSubmit={(e) => {
+              e.stopPropagation();
+              void handleSubmit(handleFormSubmit)(e);
+            }}
+            className="flex flex-col gap-8"
+          >
             {/* One owner of the show_when hidden-value clearing, regardless of how
                 many field groups render below (fase-retirement follow-up 2026-09-18). */}
             <CustomFieldVisibilitySync />

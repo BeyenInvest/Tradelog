@@ -26,9 +26,11 @@ interface ReviewDetailProps {
   onDelete: () => void;
   onRelink: (reviewId: string, jaar: number, weekNummer: number) => Promise<number>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (trade: Trade) => void;
 }
 
-export function ReviewDetail({ review, sections, trades, onEdit, onDelete, onRelink, onAddTrade }: ReviewDetailProps) {
+export function ReviewDetail({ review, sections, trades, onEdit, onDelete, onRelink, onAddTrade, onUpdateTrade, onDeleteTrade }: ReviewDetailProps) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
@@ -76,7 +78,7 @@ export function ReviewDetail({ review, sections, trades, onEdit, onDelete, onRel
         </section>
 
         <section className="border-t border-border pt-6">
-          <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} onAddTrade={onAddTrade} />
+          <LinkedTradesPanel review={review} trades={trades} onRelink={onRelink} onAddTrade={onAddTrade} onUpdateTrade={onUpdateTrade} onDeleteTrade={onDeleteTrade} />
         </section>
       </div>
     </Card>

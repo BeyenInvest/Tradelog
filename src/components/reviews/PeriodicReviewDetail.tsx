@@ -30,10 +30,12 @@ interface PeriodicReviewDetailProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (trade: Trade) => void;
 }
 
 /** Trades shown here are matched purely by datum_open falling inside the period's date range — there's no FK, so no relink action is needed (unlike weekly reviews). */
-export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, onDelete, onAddTrade }: PeriodicReviewDetailProps) {
+export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, onDelete, onAddTrade, onUpdateTrade, onDeleteTrade }: PeriodicReviewDetailProps) {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const { unit: resultUnit, saldo } = useResultDisplay();
@@ -46,6 +48,7 @@ export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, 
     [taken, missedClosed, resultUnit, saldo]
   );
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<Trade | null>(null);
 
   // No FK: a trade added inside the period's date range shows up automatically after the refresh.
   const periodeNummerForRange = review.period_type === "year" ? null : review.periode_nummer;
@@ -92,13 +95,30 @@ export function PeriodicReviewDetail({ review, sections, taken, missed, onEdit, 
               <Plus size={13} /> {t("tradeForm.addTrade")}
             </button>
           </div>
-          <ReviewTradeGroups taken={taken} missed={missed} extraGroupModes={periodicExtraGroupModes(review.period_type)} />
+          <ReviewTradeGroups
+            taken={taken}
+            missed={missed}
+            extraGroupModes={periodicExtraGroupModes(review.period_type)}
+            onEditTrade={setEditing}
+            onDeleteTrade={onDeleteTrade}
+          />
         </section>
       </div>
 
       {addOpen &&
         createPortal(
           <TradeForm onSubmit={onAddTrade} onClose={() => setAddOpen(false)} allowMissedTrade initialDate={newTradeDate} />,
+          document.body
+        )}
+
+      {editing &&
+        createPortal(
+          <TradeForm
+            trade={editing}
+            onSubmit={(input) => onUpdateTrade(editing.id, input)}
+            onClose={() => setEditing(null)}
+            allowMissedTrade
+          />,
           document.body
         )}
     </Card>

@@ -24,7 +24,17 @@ function sortDesc(trades: Trade[]): Trade[] {
   return sortChronological(trades).reverse();
 }
 
-function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defaultOpenKey: string | null }) {
+function TradeGroupList({
+  groups,
+  defaultOpenKey,
+  onEditTrade,
+  onDeleteTrade,
+}: {
+  groups: TradeGroup[];
+  defaultOpenKey: string | null;
+  onEditTrade?: (trade: Trade) => void;
+  onDeleteTrade?: (trade: Trade) => void;
+}) {
   const { t } = useTranslation();
   const { unit: resultUnit, saldo } = useResultDisplay();
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -83,7 +93,7 @@ function TradeGroupList({ groups, defaultOpenKey }: { groups: TradeGroup[]; defa
                   <div className="min-w-[640px]">
                     <TradeListHeader />
                     {g.trades.map((t) => (
-                      <TradeListItem key={t.id} trade={t} />
+                      <TradeListItem key={t.id} trade={t} onEdit={onEditTrade} onDelete={onDeleteTrade} />
                     ))}
                   </div>
                 </div>
@@ -100,11 +110,15 @@ function ReviewTradeSection({
   trades,
   emptyLabel,
   groupMode,
+  onEditTrade,
+  onDeleteTrade,
 }: {
   label: string;
   trades: Trade[];
   emptyLabel: string;
   groupMode: GroupMode;
+  onEditTrade?: (trade: Trade) => void;
+  onDeleteTrade?: (trade: Trade) => void;
 }) {
   const groups = useMemo(() => {
     const sorted = sortDesc(trades);
@@ -123,7 +137,7 @@ function ReviewTradeSection({
       {trades.length === 0 ? (
         <p className="text-xs text-muted">{emptyLabel}</p>
       ) : (
-        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} />
+        <TradeGroupList groups={groups} defaultOpenKey={defaultOpenKey} onEditTrade={onEditTrade} onDeleteTrade={onDeleteTrade} />
       )}
     </div>
   );
@@ -141,10 +155,13 @@ interface ReviewTradeGroupsProps {
   missed: Trade[];
   /** Extra grouping modes beyond the default Win/BE/Loss, in display order — e.g. ["week"] for a monthly review, ["month", "quarter"] for a yearly one. Weekly reviews pass none. */
   extraGroupModes?: GroupMode[];
+  /** When provided, trade rows become clickable to edit/delete (review detail panels). Omit for read-only views (share links, PDF, admin, in-form previews). */
+  onEditTrade?: (trade: Trade) => void;
+  onDeleteTrade?: (trade: Trade) => void;
 }
 
-/** Collapsible Win/BE/Loss (or, for periodic reviews, per-week/month/quarter) trade groups for a review — read-only, replaces the old flat TradeRows. */
-export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: ReviewTradeGroupsProps) {
+/** Collapsible Win/BE/Loss (or, for periodic reviews, per-week/month/quarter) trade groups for a review. Read-only by default; the review detail panels pass onEditTrade/onDeleteTrade to make rows editable. */
+export function ReviewTradeGroups({ taken, missed, extraGroupModes = [], onEditTrade, onDeleteTrade }: ReviewTradeGroupsProps) {
   const { t } = useTranslation();
   const modes: GroupMode[] = ["outcome", ...extraGroupModes];
   const [groupMode, setGroupMode] = useState<GroupMode>("outcome");
@@ -168,9 +185,9 @@ export function ReviewTradeGroups({ taken, missed, extraGroupModes = [] }: Revie
         </div>
       )}
 
-      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} />
+      <ReviewTradeSection label={t("reviews.tradesTaken")} trades={taken} emptyLabel={t("reviews.noTakenTrades")} groupMode={groupMode} onEditTrade={onEditTrade} onDeleteTrade={onDeleteTrade} />
       {missed.length > 0 && (
-        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} />
+        <ReviewTradeSection label={t("reviews.missedTradesLabel")} trades={missed} emptyLabel={t("reviews.noMissedTrades")} groupMode={groupMode} onEditTrade={onEditTrade} onDeleteTrade={onDeleteTrade} />
       )}
     </div>
   );

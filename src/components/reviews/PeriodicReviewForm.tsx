@@ -25,6 +25,8 @@ interface PeriodicReviewFormProps {
   trades: Trade[];
   onSubmit: (input: PeriodicReviewInput) => Promise<void>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
+  onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
+  onDeleteTrade: (trade: Trade) => void;
   onClose: () => void;
 }
 
@@ -33,7 +35,7 @@ function defaultPeriodeNummer(periodType: PeriodType, now: Date): number {
   return Math.floor(now.getMonth() / 3) + 1;
 }
 
-export function PeriodicReviewForm({ periodType, review, sections, trades, onSubmit, onAddTrade, onClose }: PeriodicReviewFormProps) {
+export function PeriodicReviewForm({ periodType, review, sections, trades, onSubmit, onAddTrade, onUpdateTrade, onDeleteTrade, onClose }: PeriodicReviewFormProps) {
   const { t, i18n } = useTranslation();
   const now = new Date();
   const monthOptions = Array.from({ length: 12 }, (_, i) => monthName(i, dateLocale(i18n.language)));
@@ -170,6 +172,8 @@ export function PeriodicReviewForm({ periodType, review, sections, trades, onSub
         missed={missedPreview}
         extraGroupModes={periodicExtraGroupModes(periodType)}
         onAddTrade={onAddTrade}
+        onUpdateTrade={onUpdateTrade}
+        onDeleteTrade={onDeleteTrade}
         initialDate={newTradeDate}
       />
     </ReviewFormModal>
