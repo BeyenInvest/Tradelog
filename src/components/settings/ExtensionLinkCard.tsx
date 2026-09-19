@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -21,7 +20,6 @@ import { supabase } from "@/lib/supabase";
  */
 export function ExtensionLinkCard() {
   const { t } = useTranslation();
-  const { betaFeatures } = useAuth();
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +34,6 @@ export function ExtensionLinkCard() {
     },
     [],
   );
-
-  if (!betaFeatures) return null;
 
   async function handleGenerate() {
     setError(null);

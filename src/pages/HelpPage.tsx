@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
-import { useAuth } from "@/hooks/useAuth";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 
 /**
@@ -36,10 +35,9 @@ const CUSTOMIZE: { id: string; icon: LucideIcon }[] = [
 ];
 
 /**
- * TradingView-extensie (F4b). Alleen zichtbaar voor beta-accounts, net als de
- * koppelkaart in Instellingen (ExtensionLinkCard) — uitleg tonen over een kaart
- * die je niet kunt vinden, is erger dan geen uitleg. Un-gaten gebeurt samen met
- * de rest van de extensie.
+ * TradingView-extensie. Zichtbaar voor alle leden, net als de koppelkaart in
+ * Instellingen (ExtensionLinkCard) — samen un-gate uit de beta (owner-besluit
+ * 2026-09-19).
  */
 const EXTENSION: { id: string; icon: LucideIcon }[] = [
   { id: "extension", icon: CandlestickChart },
@@ -57,7 +55,6 @@ const CONCEPTS: { id: string; icon: LucideIcon }[] = [
 
 export default function HelpPage() {
   const { t } = useTranslation();
-  const { betaFeatures } = useAuth();
 
   return (
     <div className="max-w-3xl">
@@ -69,7 +66,7 @@ export default function HelpPage() {
 
       <Section heading={t("help.toolsHeading")} entries={TOOLS} />
       <Section heading={t("help.customizeHeading")} entries={CUSTOMIZE} />
-      {betaFeatures && <Section heading={t("help.extensionHeading")} entries={EXTENSION} />}
+      <Section heading={t("help.extensionHeading")} entries={EXTENSION} />
       <Section heading={t("help.conceptsHeading")} entries={CONCEPTS} />
 
       <Card className="mt-8 flex flex-col gap-2">

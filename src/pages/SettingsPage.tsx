@@ -73,8 +73,8 @@ export default function SettingsPage() {
             description={t("settings.sectionAccountDescription")}
           />
 
-          {/* F1c: koppelt de TradingView-extensie aan dit account. Rendert zichzelf
-              weg buiten de beta-gate. */}
+          {/* F1c: koppelt de TradingView-extensie aan dit account (zichtbaar voor
+              alle leden sinds de extensie un-gate is). */}
           <ExtensionLinkCard />
 
           <SupportSettings />

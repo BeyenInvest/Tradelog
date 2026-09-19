@@ -1,9 +1,9 @@
 // F1a — koppel-endpoint voor de TradingView-extensie (plan-tv-extensie-engines §2.2, variant A).
 //
 // De ingelogde web-app roept dit aan met de eigen Supabase-JWT in de
-// Authorization-header. Het endpoint verifieert die JWT server-side, checkt de
-// beta-gate (beta_features || role='admin') en geeft één kortlevende, eenmalige
-// magiclink token_hash terug. De extensie wisselt die via
+// Authorization-header. Het endpoint verifieert die JWT server-side en geeft één
+// kortlevende, eenmalige magiclink token_hash terug (open voor alle leden sinds de
+// extensie un-gate is, owner-besluit 2026-09-19). De extensie wisselt die via
 // verifyOtp({ token_hash, type: 'magiclink' }) in voor een eigen sessie met een
 // eigen refresh-token-familie (bewezen in de S0-spike, docs/spike-tv-extensie.md).
 //
@@ -31,8 +31,6 @@ interface VercelStyleResponse {
 export interface ExtensionLinkDeps {
   /** Valideert de JWT bij Supabase; null bij ongeldig/verlopen token. */
   getUserFromJwt(jwt: string): Promise<{ id: string; email: string } | null>;
-  /** beta_features || role === 'admin' — zelfde regel als useAuth().betaFeatures. */
-  isBetaUser(userId: string): Promise<boolean>;
   /** admin.generateLink(magiclink) → properties.hashed_token. */
   generateLinkTokenHash(email: string): Promise<string>;
   now?(): number;
@@ -84,11 +82,6 @@ export function createHandler(
       }
       requestLog.set(user.id, [...recent, now()]);
 
-      if (!(await deps.isBetaUser(user.id))) {
-        res.status(403).json({ error: "De TradingView-extensie is nog beta-only" });
-        return;
-      }
-
       const tokenHash = await deps.generateLinkTokenHash(user.email);
       res.status(200).json({ token_hash: tokenHash });
     } catch (err) {
@@ -114,15 +107,6 @@ function buildRealDeps(): ExtensionLinkDeps {
       const { data, error } = await admin.auth.getUser(jwt);
       if (error || !data.user || !data.user.email) return null;
       return { id: data.user.id, email: data.user.email };
-    },
-    async isBetaUser(userId) {
-      const { data, error } = await admin
-        .from("profiles")
-        .select("beta_features, role")
-        .eq("id", userId)
-        .maybeSingle();
-      if (error || !data) return false;
-      return data.beta_features === true || data.role === "admin";
     },
     async generateLinkTokenHash(email) {
       const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
