@@ -272,8 +272,32 @@
 .by-req { color: rgb(var(--color-gold)); }
 
 .by-field.is-missing .by-input,
-.by-field.is-missing .by-select,
-.by-field.is-missing .by-toggle-btn { border-color: rgb(var(--color-loss) / 0.7); }
+.by-field.is-missing .by-select { border-color: rgb(var(--color-loss) / 0.7); }
+
+/* ── Compacte inline Ja/Nee (hybride-ontwerp, owner 2026-09-19) ───────────────
+ * Label links, "Ja · Nee" rechts — geen volle-breedte knoppenrij meer. De oude
+ * .by-toggle(-btn) blijft bestaan voor de Long/Short-richtingstoggle en de
+ * snapshot-slots; alleen de dynamische boolean-velden gebruiken deze variant. */
+.by-field--bool {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.by-field--bool .by-label { margin: 0; }
+.by-bool { display: inline-flex; align-items: center; gap: 9px; flex: none; }
+.by-bool-sep { color: rgb(var(--color-faint)); font-size: 12px; }
+.by-bool-opt {
+  background: transparent;
+  border: 0;
+  padding: 2px 1px;
+  color: rgb(var(--color-faint));
+  font: 500 13px/1.2 var(--font-body);
+  cursor: pointer;
+}
+.by-bool-opt:hover { color: rgb(var(--color-muted)); }
+.by-bool-opt.is-active { color: rgb(var(--color-gold)); }
+.by-field--bool.is-missing .by-bool-opt { color: rgb(var(--color-loss) / 0.85); }
 
 .by-toggle { display: flex; gap: 6px; }
 .by-toggle-btn {

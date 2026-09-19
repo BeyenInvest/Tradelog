@@ -29,7 +29,7 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, missingRequired, type FormValues,
+  ccFromTime, customFromValues, formFields, missingRequired, orderedFormFields, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
 import {
@@ -69,11 +69,15 @@ interface Section {
   titleKey: MessageKey;
 }
 
-function sectionEl(titleKey: MessageKey, extra?: HTMLElement): Section {
+function sectionEl(titleKey: MessageKey, extra?: HTMLElement, headless = false): Section {
   const title = el("h3", { class: "by-sec-title" });
   const head = el("div", { class: "by-sec-head" }, [title, el("span", { class: "by-spacer" }), extra]);
   const body = el("div");
-  return { section: el("section", { class: "by-sec" }, [head, body]), body, title, titleKey };
+  // Kop-loze sectie (owner 2026-09-19: geen "EXTRA"-tussenkop meer): de head
+  // wordt niet aangehangen; `title` blijft een losse node zodat de titel-paint
+  // (die over alle secties loopt) er stil overheen kan.
+  const section = el("section", { class: "by-sec" }, headless ? [body] : [head, body]);
+  return { section, body, title, titleKey };
 }
 
 export function mountPanelApp(host: HTMLElement, options: { onClose: () => void }): PanelApp {
@@ -265,7 +269,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const positionSec = sectionEl("panel.sec.position");
   const targetSec = sectionEl("panel.sec.target");
   const journalSec = sectionEl("panel.sec.journal");
-  const extraSec = sectionEl("panel.sec.extra");
+  const extraSec = sectionEl("panel.sec.extra", undefined, true);
   const snapshotsSec = renderSnapshotsSection();
   const closeSec = renderCloseSection();
 
@@ -529,6 +533,34 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       manual: false,
     }));
 
+    // Risico staat bewust bij R:R (owner 2026-09-19): allebei over risk/reward.
+    // Leeg = de standaard 1% (badge "standaard"); klik het potlood om per trade
+    // een eigen % te zetten. De log gebruikt riskPct; leeg => 1%-default (F5a).
+    addMetric(
+      t("panel.metric.risk"),
+      () => {
+        const set = riskPct.trim() !== "";
+        return {
+          text: `${set ? riskPct.trim() : "1"}%`,
+          cls: "by-mono",
+          src: set ? t("panel.src.manual") : t("panel.src.default"),
+          manual: set,
+        };
+      },
+      () => {
+        const input = el("input", {
+          class: "by-input",
+          attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
+        });
+        input.value = riskPct;
+        on(input, "input", () => {
+          riskPct = input.value;
+          refreshRows();
+        });
+        return input;
+      }
+    );
+
     const position = selectedPosition();
     if (position?.entryTimeSec != null) {
       addMetric(t("panel.metric.time"), () => ({
@@ -755,7 +787,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // filteren we uit de getóónde rijen (owner 18-09: machinaal berekend), maar
     // formFieldList houdt 'm wél zodat customFromValues 'm meestuurt.
     formFieldList = formFields(journal.fields);
-    const shownFields = formFieldList.filter((f) => f.fieldKey !== "cc");
+    // WPM-journal: zelfde vaste volgorde als de web-app (kenmerk+nieuws boven de
+    // confirms, geen "Markt"-kop); andere journals blijven op sortOrder. `cc`
+    // blijft uit de getoonde rijen (machinaal), maar zit wél in formFieldList.
+    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc"));
     if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
@@ -779,16 +814,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   function renderExtra(): void {
     clear(extraSec.body);
 
-    const risk = el("input", {
-      class: "by-input",
-      attrs: { type: "number", step: "any", inputmode: "decimal", placeholder: t("panel.riskPlaceholder") },
-    });
-    risk.value = riskPct;
-    on(risk, "input", () => {
-      riskPct = risk.value;
-      updatePending();
-    });
-
+    // Risico staat nu bij R:R in de position-tool (owner 2026-09-19); hier blijft
+    // alleen Notities over — kop-loze sectie.
     const notesInput = el("textarea", {
       class: "by-input",
       attrs: { rows: "3", placeholder: t("panel.notesPlaceholder") },
@@ -798,9 +825,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       notes = notesInput.value;
     });
 
-    extraSec.body.appendChild(el("div", {}, [el("span", { class: "by-label", text: t("panel.riskLabel") }), risk]));
     extraSec.body.appendChild(
-      el("div", { style: "margin-top:8px;" }, [
+      el("div", {}, [
         el("span", { class: "by-label", text: t("panel.notesLabel") }),
         notesInput,
       ])

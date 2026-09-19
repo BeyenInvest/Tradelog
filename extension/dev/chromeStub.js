@@ -18,26 +18,58 @@
         groupLabel: null, sortOrder: 0, showWhenFieldId: null, showWhenValues: null,
       },
       {
+        id: "f-weekly-criteria", fieldKey: "weekly_criteria", label: "Weekly criteria", labelKey: null, fieldType: "enum",
+        options: ["High/Low", "Break/Retest"], required: false, isComputed: false,
+        groupLabel: null, sortOrder: 1, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-trade-concept", fieldKey: "trade_concept", label: "Trade concept", labelKey: null, fieldType: "enum",
+        options: ["Reversal", "Continuation"], required: false, isComputed: false,
+        groupLabel: null, sortOrder: 2, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-entry", fieldKey: "entry", label: "Entry", labelKey: null, fieldType: "enum",
+        options: ["Reversal", "Break"], required: false, isComputed: false,
+        groupLabel: null, sortOrder: 3, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
         // Machine-owned in het paneel: niet gerenderd, wél auto in custom.cc
         // (wpm-startset heeft ditzelfde veld; oefent het syncCc-pad).
         id: "f-cc", fieldKey: "cc", label: "4H Candle Close", labelKey: null, fieldType: "enum",
         options: ["03", "07", "11", "15", "19", "23"], required: false, isComputed: false,
-        groupLabel: null, sortOrder: 1, showWhenFieldId: null, showWhenValues: null,
+        groupLabel: null, sortOrder: 4, showWhenFieldId: null, showWhenValues: null,
       },
       {
-        id: "f-structuur", fieldKey: "structuur", label: "Structuur", labelKey: null, fieldType: "enum",
-        options: ["Inner", "Outer"], required: false, isComputed: false,
-        groupLabel: null, sortOrder: 1, showWhenFieldId: "f-fase", showWhenValues: ["Fase 2", "Fase 3"],
-      },
-      {
-        id: "f-setup", fieldKey: "setup_kwaliteit", label: "Setup-kwaliteit", labelKey: null, fieldType: "enum",
-        options: ["A+", "A", "B"], required: false, isComputed: false,
-        groupLabel: "Eigen velden", sortOrder: 10, showWhenFieldId: null, showWhenValues: null,
-      },
-      {
-        id: "f-fase2note", fieldKey: "fase2_notitie", label: "Alleen bij Fase 2", labelKey: null, fieldType: "text",
+        id: "f-wconf", fieldKey: "w_confirm", label: "Weekly richting mee?", labelKey: null, fieldType: "boolean",
         options: null, required: false, isComputed: false,
-        groupLabel: "Eigen velden", sortOrder: 11, showWhenFieldId: "f-fase", showWhenValues: ["Fase 2"],
+        groupLabel: null, sortOrder: 5, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-dconf", fieldKey: "d_confirm", label: "Daily richting mee?", labelKey: null, fieldType: "boolean",
+        options: null, required: false, isComputed: false,
+        groupLabel: null, sortOrder: 6, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-h4conf", fieldKey: "h4_confirm", label: "4H richting mee?", labelKey: null, fieldType: "boolean",
+        options: null, required: false, isComputed: false,
+        groupLabel: null, sortOrder: 7, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-extradconf", fieldKey: "extra_d_conf", label: "Extra daily confirmatie?", labelKey: null, fieldType: "boolean",
+        options: null, required: false, isComputed: false,
+        groupLabel: null, sortOrder: 8, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        // Rauwe journal-data: kenmerk + nieuws staan ná de confirms onder een
+        // "Markt"-kop — exact de stand die orderedFormFields op WPM herordent.
+        id: "f-weekly-kenmerk", fieldKey: "weekly_kenmerk", label: "Weekly kenmerk", labelKey: null, fieldType: "enum",
+        options: ["High/Low", "Peak formation"], required: false, isComputed: false,
+        groupLabel: "Markt", sortOrder: 9, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        id: "f-nieuws", fieldKey: "nieuws", label: "Nieuws nabij trade?", labelKey: null, fieldType: "boolean",
+        options: null, required: false, isComputed: false,
+        groupLabel: "Markt", sortOrder: 10, showWhenFieldId: null, showWhenValues: null,
       },
     ],
   };
