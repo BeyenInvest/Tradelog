@@ -77,6 +77,70 @@ function FrameCorner({ variant }: { variant: "tl" | "tr" | "bl" | "br" }) {
   );
 }
 
+/* Section 06 mockup — a TradingView-style short position tool drawn over a mini
+   candle chart. The Beyen panel reads direction/entry/stop/target/R:R straight
+   from the drawn box; the price tags and R:R match the copy. Decorative sample. */
+const POS_CANDLES = [
+  { x: 40, o: 92, c: 106, h: 84, l: 112 },
+  { x: 82, o: 106, c: 100, h: 96, l: 110 },
+  { x: 124, o: 102, c: 118, h: 96, l: 124 },
+  { x: 166, o: 116, c: 132, h: 110, l: 138 },
+  { x: 208, o: 132, c: 126, h: 122, l: 138 },
+  { x: 250, o: 128, c: 150, h: 122, l: 156 },
+  { x: 292, o: 150, c: 170, h: 144, l: 176 },
+  { x: 334, o: 168, c: 190, h: 162, l: 196 },
+  { x: 376, o: 188, c: 212, h: 182, l: 218 },
+  { x: 418, o: 210, c: 232, h: 204, l: 238 },
+];
+
+/* The mini chart the Beyen panel sits on: a short position tool (green profit
+   zone below entry, red risk zone above) over candles that break down into
+   target. The panel below reads its values. */
+function PositionChart() {
+  const ENTRY = 150;
+  const STOP = 120;
+  const TARGET = 240;
+  const X0 = 14;
+  const X1 = 440;
+  return (
+    <svg viewBox="8 76 438 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+      <rect x={X0} y={ENTRY} width={X1 - X0} height={TARGET - ENTRY} fill="var(--win)" opacity="0.1" />
+      <rect x={X0} y={STOP} width={X1 - X0} height={ENTRY - STOP} fill="var(--loss)" opacity="0.1" />
+      {POS_CANDLES.map((k, i) => {
+        const up = k.c < k.o;
+        const top = Math.min(k.o, k.c);
+        const hgt = Math.max(Math.abs(k.o - k.c), 2);
+        const col = up ? "var(--win)" : "var(--loss)";
+        return (
+          <g key={i}>
+            <line x1={k.x} y1={k.h} x2={k.x} y2={k.l} stroke={col} strokeWidth="1.6" />
+            <rect x={k.x - 6} y={top} width="12" height={hgt} fill={col} rx="1" />
+          </g>
+        );
+      })}
+      <line x1={X0} y1={STOP} x2={X1} y2={STOP} stroke="var(--loss)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75" />
+      <line x1={X0} y1={ENTRY} x2={X1} y2={ENTRY} stroke="var(--muted)" strokeWidth="1.5" />
+      <line x1={X0} y1={TARGET} x2={X1} y2={TARGET} stroke="var(--win)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75" />
+      <g>
+        <rect x="20" y="197" width="84" height="24" rx="7" fill="var(--surface)" stroke="var(--gold)" />
+        <text x="31" y="213" fill="var(--gold)" style={{ fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 600 }}>R:R 3.0R</text>
+      </g>
+    </svg>
+  );
+}
+
+/** One read-out row of the Beyen panel: label, value, and an origin badge
+    (where the value came from — the chart, or computed). Mirrors `.by-metric`. */
+function Metric({ label, value, src, tone }: { label: string; value: string; src: string; tone?: "loss" }) {
+  return (
+    <div className="tvext-metric">
+      <span className="tvext-mlabel">{label}</span>
+      <span className={`tvext-mval${tone ? ` ${tone}` : ""}`}>{value}</span>
+      <span className="tvext-src">{src}</span>
+    </div>
+  );
+}
+
 function Kicker({ num, label }: { num: string; label: string }) {
   return (
     <div className="kicker reveal">
@@ -474,11 +538,85 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 06 TRUST — the paper interlude: what Beyen deliberately is not. */}
+        {/* 06 DIFFERENTIATOR — the TradingView extension: log straight from your
+            chart. A Beyen panel sits on your TradingView chart, reads the position
+            tool (direction/entry/stop/target/R:R) and lets you fill your own
+            journal fields in the same panel. Un-gated: live for all members. The
+            panel is a mockup, so it carries the sample-data tag like every other. */}
+        <section className="blk" id="extensie">
+          <div className="wrap">
+            <Kicker num="06" label={t("landing.x.kicker")} />
+            <div className="split rev">
+              <div className="first reveal">
+                {/* The real extension is a floating panel docked on the chart:
+                    a header, the chart read-out, the position-tool metrics with
+                    origin badges ("from TradingView"/"calculated"), your journal
+                    fields, and one primary Log button. This mirrors that panel. */}
+                <div className="tvext">
+                  <div className="tvext-head">
+                    <LogoMark size={17} className="tvext-mark" />
+                    <span className="tvext-title">Beyen</span>
+                    <span className="tvext-spacer" />
+                    <span className="tvext-ic" aria-hidden="true">
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+                    </span>
+                    <span className="tvext-ic" aria-hidden="true">
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </span>
+                  </div>
+                  <div className="tvext-body">
+                    <div className="tvext-sec">
+                      <div className="tvext-sectitle">{t("landing.x.secChart")}</div>
+                      <div className="tvext-chartrow">
+                        <span className="tvext-symbol">EURUSD</span>
+                        <span className="tvext-tf">15m</span>
+                      </div>
+                      <div className="tvext-mini"><PositionChart /></div>
+                    </div>
+                    <div className="tvext-sec">
+                      <div className="tvext-sectitle">{t("landing.x.secPosition")}</div>
+                      <div className="tvext-metrics">
+                        <Metric label={t("landing.x.mDir")} value="Short" src={t("landing.x.srcTv")} tone="loss" />
+                        <Metric label="Entry" value="1.0824" src={t("landing.x.srcTv")} />
+                        <Metric label="Stop" value="1.0841" src={t("landing.x.srcTv")} />
+                        <Metric label="Target" value="1.0773" src={t("landing.x.srcTv")} />
+                        <Metric label="R:R" value="3.0R" src={t("landing.x.srcCalc")} />
+                      </div>
+                    </div>
+                    <div className="tvext-sec">
+                      <div className="tvext-sectitle">{t("landing.x.secJournal")}</div>
+                      <div className="form-mock tvext-fields">
+                        <div className="ff"><div className="ff-label">{t("landing.x.f1Label")}</div><div className="ff-select"><span>{t("landing.x.f1Val")}</span><Chev /></div></div>
+                        <div className="ff"><div className="ff-label">{t("landing.x.f2Label")}</div><div className="ff-select"><span>{t("landing.x.f2Val")}</span><Chev /></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="tvext-foot">
+                    <span className="tvext-log"><Check size={14} /> {t("landing.x.logTrade")}</span>
+                  </div>
+                </div>
+                <div className="tvext-cap">
+                  <span>{t("landing.x.caption")}</span>
+                  <span className="badge">{t("landing.stage.sample")}</span>
+                </div>
+              </div>
+              <div>
+                <h2 className="reveal"><Trans i18nKey="landing.x.h2" components={accent} /></h2>
+                <p className="lead reveal">{t("landing.x.lead")}</p>
+                <ul className="points">
+                  <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.x.b1h")}</h3><p>{t("landing.x.b1b")}</p></div></li>
+                  <li className="reveal"><span className="pt-mark"><Check /></span><div><h3>{t("landing.x.b2h")}</h3><p>{t("landing.x.b2b")}</p></div></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 07 TRUST — the paper interlude: what Beyen deliberately is not. */}
         <section className="blk paper" id="filosofie">
           <LogoMark size={430} className="paper-mark" />
           <div className="wrap">
-            <Kicker num="06" label={t("landing.t.kicker")} />
+            <Kicker num="07" label={t("landing.t.kicker")} />
             <div className="prose">
               <h2 className="reveal"><Trans i18nKey="landing.t.h2" components={accent} /></h2>
               <p className="prose-p reveal">{t("landing.t.p1")}</p>
@@ -500,10 +638,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 07 ACTION — pricing, sober. */}
+        {/* 08 ACTION — pricing, sober. */}
         <section className="blk" id="prijs">
           <div className="wrap">
-            <Kicker num="07" label={t("landing.p.kicker")} />
+            <Kicker num="08" label={t("landing.p.kicker")} />
             <h2 className="reveal"><Trans i18nKey="landing.p.h2" components={accent} /></h2>
             <p className="lead reveal">{t("landing.p.lead")}</p>
             <div className="price-grid">
@@ -549,7 +687,7 @@ export default function LandingPage() {
         {/* FAQ — the questions a sceptical trader is already asking himself. */}
         <section className="blk" id="faq">
           <div className="wrap">
-            <Kicker num="08" label={t("landing.faq.kicker")} />
+            <Kicker num="09" label={t("landing.faq.kicker")} />
             <h2 className="reveal"><Trans i18nKey="landing.faq.h2" components={accent} /></h2>
             {/* Ordered by decision weight: status-quo objection first, import and
                 data ownership next; "does it work on my phone" closes. */}

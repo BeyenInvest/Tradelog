@@ -1409,6 +1409,27 @@
       "b2h": "Strikt gescheiden",
       "b2b": "Een backtest blaast de live win-rate of streaks nooit op. Wat je handelde en wat je testte blijft apart."
     },
+    "x": {
+      "kicker": "TradingView-extensie",
+      "h2": "Log rechtstreeks vanaf je <em>chart</em>.",
+      "lead": "Een Beyen-paneel op je TradingView-chart. Teken je gewone long- of short-position-tool en het paneel leest richting, entry, stop, target en R:R er direct uit. Je eigen journal-velden vul je in datzelfde paneel — de trade landt in je live journal of een backtest-project, zonder over te typen.",
+      "secChart": "Chart",
+      "secPosition": "Position-tool",
+      "secJournal": "Journal-velden",
+      "mDir": "Richting",
+      "srcTv": "via TradingView",
+      "srcCalc": "berekend",
+      "logTrade": "Log trade",
+      "caption": "Het zwevende paneel op je TradingView-chart — leest je position-tool.",
+      "f1Label": "Trigger",
+      "f1Val": "Break & retest",
+      "f2Label": "Mindset",
+      "f2Val": "Kalm",
+      "b1h": "Eén draw, klaar",
+      "b1b": "De position-tool tekenen is genoeg: richting, entry, stop en target komen automatisch mee. Geen cijfers overtypen, geen tab-switchen.",
+      "b2h": "Snapshots erbij",
+      "b2b": "Beyen legt bij het loggen automatisch meerdere timeframes van je chart vast — of plak zelf een TradingView-snapshotlink van precies de timeframe die jij wilt."
+    },
     "t": {
       "kicker": "Wat Beyen niet is",
       "h2": "Bewust <em>geen</em> chart.",
