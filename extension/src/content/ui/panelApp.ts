@@ -269,7 +269,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   on(refreshBtn, "click", () => void refreshChart());
 
   const chartSec = sectionEl("panel.sec.chart", refreshBtn);
-  const positionSec = sectionEl("panel.sec.position");
+  // Bron één keer in de sectiekop (owner 2026-09-20): alle waarden komen via de
+  // TV-tool, dus dat rechtsboven één keer zeggen i.p.v. per regel/blok.
+  const positionSrc = el("span", { class: "by-sec-src" });
+  const positionSec = sectionEl("panel.sec.position", positionSrc);
   const targetSec = sectionEl("panel.sec.target");
   const journalSec = sectionEl("panel.sec.journal");
   const extraSec = sectionEl("panel.sec.extra", undefined, true);
@@ -293,6 +296,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     for (const sec of [chartSec, positionSec, targetSec, journalSec, extraSec]) {
       sec.title.textContent = t(sec.titleKey);
     }
+    positionSrc.textContent = t("panel.src.tv");
     refreshBtn.setAttribute("title", t("panel.refreshTitle"));
     refreshLabel.textContent = t("panel.refresh");
     submitBtn.textContent = t(editingLogged ? "panel.submitUpdate" : "panel.submit");
@@ -541,29 +545,30 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       ])
     );
 
-    // ── Prijzen op één regel (E · S · T) ─────────────────────────────────────
-    const pricesRow = el("div", { class: "by-prices" });
-    const priceEls: { key: PriceKey; btn: HTMLElement; value: HTMLElement }[] = [];
-    (["entry", "stop", "target"] as const).forEach((key, i) => {
-      if (i > 0) pricesRow.appendChild(el("span", { class: "by-price-sep", text: "·" }));
+    // ── Prijzen als blokken (Entry / Stop / Target) ──────────────────────────
+    // Klik een blok = bewerken in de gedeelde strook eronder. Stop trekt subtiel
+    // rood, Target subtiel groen; een eigen waarde wint met een gouden rand +
+    // gouden getal (géén "handmatig"-label — owner 2026-09-20).
+    const pricesGrid = el("div", { class: "by-prices" });
+    const priceEls: { key: PriceKey; box: HTMLElement; value: HTMLElement }[] = [];
+    (["entry", "stop", "target"] as const).forEach((key) => {
       const value = el("span", { class: "by-price-v" });
-      const btn = el("button", {
-        class: "by-price",
+      const box = el("button", {
+        class: `by-price by-price-${key}`,
         attrs: { type: "button", title: t("panel.editTitle", { label: t(PRICE_LABEL[key]) }) },
-        // Beginletter van het (vertaalde) label = E/S/T; in NL én EN gelijk.
-      }, [el("span", { class: "by-price-k", text: t(PRICE_LABEL[key]).charAt(0) }), value]);
-      on(btn, "click", () => toggleEdit(key));
-      pricesRow.appendChild(btn);
-      priceEls.push({ key, btn, value });
+      }, [el("span", { class: "by-price-k", text: t(PRICE_LABEL[key]) }), value]);
+      on(box, "click", () => toggleEdit(key));
+      pricesGrid.appendChild(box);
+      priceEls.push({ key, box, value });
     });
     updaters.push(() => {
-      for (const { key, btn, value } of priceEls) {
+      for (const { key, box, value } of priceEls) {
         value.textContent = formatPrice(effPrice(key));
-        btn.classList.toggle("is-manual", overrides[key] != null);
-        btn.classList.toggle("is-editing", editing === key);
+        box.classList.toggle("is-manual", overrides[key] != null);
+        box.classList.toggle("is-editing", editing === key);
       }
     });
-    positionSec.body.appendChild(pricesRow);
+    positionSec.body.appendChild(pricesGrid);
     positionSec.body.appendChild(editArea);
 
     // ── Tijd als voetnoot ────────────────────────────────────────────────────
