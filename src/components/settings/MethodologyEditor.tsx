@@ -1,25 +1,32 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { ChevronUp, ChevronDown, Lock, Pencil, Trash2, X, Check } from "lucide-react";
+import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
-import { parseFieldOptions, slugifyFieldKey } from "@/lib/methodologyFields";
+import { slugifyFieldKey } from "@/lib/methodologyFields";
 import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
 
 const FIELD_TYPES: MethodologyField["field_type"][] = ["boolean", "enum", "text", "number", "date"];
 
+/** Stable grouping identity — same section iff same group_key (or, for hand-made
+ *  fields without a key, same free-text group_label). Empty = ungrouped. */
+function groupIdentity(f: MethodologyField): string {
+  return f.group_key ?? f.group_label ?? "";
+}
+
 /**
  * Editor for the active methodology's fields (Scope C, cyclus 2). System templates
- * are read-only until the user forks an editable copy. Conditional visibility
- * (show_when) is shown read-only here; editing conditions comes later.
+ * are read-only until the user forks an editable copy. Fields are shown grouped by
+ * section, each choice-list field lists its options as chips, and options are edited
+ * one by one (no comma-string) — see the redesign, 2026-09.
  */
 export function MethodologyEditor() {
   const { t } = useTranslation();
-  const { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField } =
+  const { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, swapFieldOrder } =
     useMethodologyEditor();
   // Collapsed by default, same as the review-sections editor below it — the field
   // list is long and, once set up, rarely retouched.
@@ -55,6 +62,17 @@ export function MethodologyEditor() {
   }
 
   const summary = t("methodology.fieldCount", { count: fields.length });
+
+  // Bucket fields (already in sort_order) by section, first-seen order, ungrouped last.
+  const buckets = new Map<string, MethodologyField[]>();
+  for (const f of fields) {
+    const id = groupIdentity(f);
+    const arr = buckets.get(id);
+    if (arr) arr.push(f);
+    else buckets.set(id, [f]);
+  }
+  const keys = [...buckets.keys()];
+  const orderedKeys = [...keys.filter((k) => k !== ""), ...keys.filter((k) => k === "")];
 
   return (
     <Card>
@@ -96,25 +114,40 @@ export function MethodologyEditor() {
           {actionError && <p className="font-mono text-[11px] mb-3 text-loss">{actionError}</p>}
           {error && !actionError && <p className="font-mono text-[11px] mb-3 text-loss">{error}</p>}
 
-          <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
-            {fields.length === 0 && <p className="font-mono text-xs text-muted py-4">{t("methodology.empty")}</p>}
-            {fields.map((f, i) => (
-              <FieldRow
-                key={f.id}
-                field={f}
-                allFields={fields}
-                editable={isOwn && !busy}
-                // Since the fase-retirement (0059) no field is column-backed/locked —
-                // every field, WPM's included, is an ordinary editable custom field.
-                locked={false}
-                isFirst={i === 0}
-                isLast={i === fields.length - 1}
-                onMove={(dir) => void run(() => moveField(f.id, dir), "methodology.saveFailed")}
-                onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
-                onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
-              />
-            ))}
-          </div>
+          {fields.length === 0 && <p className="font-mono text-xs text-muted py-4">{t("methodology.empty")}</p>}
+
+          {orderedKeys.map((gkey) => {
+            const groupFields = buckets.get(gkey) ?? [];
+            const heading = gkey === "" ? t("methodology.groupOther") : fieldGroupLabel(t, groupFields[0]);
+            return (
+              <div key={gkey || "__ungrouped"} className="mt-4 first:mt-0">
+                <p className="font-mono text-[10px] uppercase tracking-wide text-muted mb-1">{heading}</p>
+                <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+                  {groupFields.map((f, i) => (
+                    <FieldRow
+                      key={f.id}
+                      field={f}
+                      allFields={fields}
+                      editable={isOwn && !busy}
+                      isFirst={i === 0}
+                      isLast={i === groupFields.length - 1}
+                      onMove={(dir) =>
+                        void run(
+                          () => swapFieldOrder(f.id, groupFields[dir === "up" ? i - 1 : i + 1].id),
+                          "methodology.saveFailed"
+                        )
+                      }
+                      onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
+                      onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
+                      onAddOption={(value) =>
+                        run(() => updateField(f.id, { options: [...(f.options ?? []), value] }), "methodology.saveFailed")
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
 
           {isOwn && (
             <AddFieldForm
@@ -144,25 +177,27 @@ function FieldRow({
   field,
   allFields,
   editable,
-  locked,
   isFirst,
   isLast,
   onMove,
   onDelete,
   onSave,
+  onAddOption,
 }: {
   field: MethodologyField;
   allFields: MethodologyField[];
   editable: boolean;
-  locked: boolean;
   isFirst: boolean;
   isLast: boolean;
   onMove: (dir: "up" | "down") => void;
   onDelete: () => void;
   onSave: (patch: Partial<FieldInput>) => Promise<void>;
+  onAddOption: (value: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
+  const [quickAdd, setQuickAdd] = useState(false);
+  const [quickValue, setQuickValue] = useState("");
 
   if (editing) {
     return (
@@ -194,31 +229,83 @@ function FieldRow({
     );
   }
 
+  const isEnum = field.field_type === "enum";
+
+  async function submitQuickAdd() {
+    const v = quickValue.trim();
+    if (!v || (field.options ?? []).includes(v)) {
+      setQuickValue("");
+      setQuickAdd(false);
+      return;
+    }
+    await onAddOption(v);
+    setQuickValue("");
+    setQuickAdd(false);
+  }
+
   return (
-    <div className="flex items-center gap-3 py-2.5">
+    <div className="flex items-start gap-3 py-2.5">
       <div className="min-w-0 flex-1">
         <p className="font-body text-sm text-ink truncate">
           {fieldLabel(t, field)}
           {field.required && <span className="ml-1.5 text-loss">*</span>}
+          <span className="ml-2 font-mono text-[10px] uppercase tracking-wide text-muted">
+            {typeLabel(t, field.field_type)}
+          </span>
           {field.is_computed && (
             <span className="ml-2 font-mono text-[10px] uppercase tracking-wide text-muted">
               {t("methodology.computed")}
             </span>
           )}
         </p>
-        <p className="font-mono text-[11px] mt-0.5 text-muted truncate">
-          {field.field_key} · {typeLabel(t, field.field_type)}
-          {field.field_type === "enum" && field.options?.length ? ` (${field.options.join(", ")})` : ""}
-          {" · "}
-          {t("methodology.condition")}: {conditionSummary(t, field, allFields)}
+
+        {isEnum && (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {(field.options ?? []).map((opt) => (
+              <span
+                key={opt}
+                className="px-2 py-0.5 rounded-full font-mono text-[11px] bg-gold/10 text-ink"
+              >
+                {opt}
+              </span>
+            ))}
+            {editable &&
+              (quickAdd ? (
+                <input
+                  type="text"
+                  autoFocus
+                  value={quickValue}
+                  onChange={(e) => setQuickValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void submitQuickAdd();
+                    } else if (e.key === "Escape") {
+                      setQuickValue("");
+                      setQuickAdd(false);
+                    }
+                  }}
+                  onBlur={() => void submitQuickAdd()}
+                  placeholder={t("methodology.optionPlaceholder")}
+                  className="px-2 py-0.5 rounded-full font-mono text-[11px] bg-surface-2 border border-gold text-ink outline-none w-32"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setQuickAdd(true)}
+                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-mono text-[11px] border border-dashed border-border text-muted hover:border-gold hover:text-ink"
+                >
+                  <Plus size={11} /> {t("methodology.optionShort")}
+                </button>
+              ))}
+          </div>
+        )}
+
+        <p className="font-mono text-[11px] mt-1 text-muted truncate">
+          {field.field_key} · {t("methodology.condition")}: {conditionSummary(t, field, allFields)}
         </p>
       </div>
-      {editable && locked && (
-        <span className="shrink-0 p-1.5 text-muted" title={t("methodology.legacyLocked")} aria-label={t("methodology.legacyLocked")}>
-          <Lock size={14} />
-        </span>
-      )}
-      {editable && !locked && (
+      {editable && (
         <div className="flex items-center gap-0.5 shrink-0 text-muted">
           <IconBtn label={t("methodology.moveUp")} disabled={isFirst} onClick={() => onMove("up")}>
             <ChevronUp size={15} />
@@ -307,6 +394,87 @@ function AddFieldForm({
   );
 }
 
+/** Per-option editor for enum fields — one row per choice (reorder + remove), plus
+ *  an add box where Enter appends. Replaces the old comma-separated text field so a
+ *  single option can be added/removed/reordered and commas in a label are safe. */
+function OptionsEditor({ options, onChange }: { options: string[]; onChange: (next: string[]) => void }) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState("");
+
+  function add() {
+    const v = draft.trim();
+    if (!v || options.includes(v)) {
+      setDraft("");
+      return;
+    }
+    onChange([...options, v]);
+    setDraft("");
+  }
+  function remove(i: number) {
+    onChange(options.filter((_, j) => j !== i));
+  }
+  function move(i: number, dir: "up" | "down") {
+    const j = dir === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= options.length) return;
+    const next = [...options];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="font-mono text-[11px] text-muted">{t("methodology.fieldOptions")}</label>
+      {options.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {options.map((opt, i) => (
+            <div
+              key={`${opt}-${i}`}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-border"
+            >
+              <span className="flex-1 min-w-0 truncate font-body text-sm text-ink">{opt}</span>
+              <div className="flex items-center gap-0.5 shrink-0 text-muted">
+                <IconBtn label={t("methodology.moveUp")} disabled={i === 0} onClick={() => move(i, "up")}>
+                  <ChevronUp size={14} />
+                </IconBtn>
+                <IconBtn label={t("methodology.moveDown")} disabled={i === options.length - 1} onClick={() => move(i, "down")}>
+                  <ChevronDown size={14} />
+                </IconBtn>
+                <IconBtn label={t("methodology.optionRemove")} danger onClick={() => remove(i)}>
+                  <X size={14} />
+                </IconBtn>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2 mt-1">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder={t("methodology.optionPlaceholder")}
+          className="input flex-1"
+        />
+        <button
+          type="button"
+          onClick={add}
+          disabled={!draft.trim()}
+          className="inline-flex items-center gap-1 px-3 py-2 rounded-lg font-body text-sm font-medium border border-gold text-gold disabled:opacity-40"
+        >
+          <Plus size={14} /> {t("methodology.add")}
+        </button>
+      </div>
+      {options.length === 0 && <p className="font-mono text-[10px] text-muted">{t("methodology.optionsEmpty")}</p>}
+    </div>
+  );
+}
+
 /** Shared add/edit form for a field. field_key is derived from the label for new fields, read-only for existing. */
 function FieldForm({
   initial,
@@ -328,7 +496,7 @@ function FieldForm({
   // a real change, so the translation never gets re-frozen by a no-op save.
   const [label, setLabel] = useState(initial ? fieldLabel(t, initial) : "");
   const [fieldType, setFieldType] = useState<MethodologyField["field_type"]>(initial?.field_type ?? "boolean");
-  const [optionsRaw, setOptionsRaw] = useState((initial?.options ?? []).join(", "));
+  const [options, setOptions] = useState<string[]>(initial?.options ?? []);
   const [required, setRequired] = useState(initial?.required ?? false);
   const [group, setGroup] = useState(initial ? fieldGroupLabel(t, initial) ?? "" : "");
   const [showWhenFieldId, setShowWhenFieldId] = useState<string | null>(initial?.show_when_field_id ?? null);
@@ -353,10 +521,7 @@ function FieldForm({
   // instead of letting the DB unique constraint surface a raw error.
   const duplicateKey = isNew && label.trim().length > 0 && allFields.some((f) => f.field_key === slugifyFieldKey(label));
   const canSave =
-    label.trim().length > 0 &&
-    !duplicateKey &&
-    (fieldType !== "enum" || parseFieldOptions(optionsRaw).length > 0) &&
-    conditionValid;
+    label.trim().length > 0 && !duplicateKey && (fieldType !== "enum" || options.length > 0) && conditionValid;
 
   async function submit() {
     if (!canSave) return;
@@ -367,7 +532,7 @@ function FieldForm({
         label: label.trim(),
         label_key: null, // hand-made/edited here — free text is the source; edits keep keys via the FieldRow patch, the DB trigger clears them on a real rename
         field_type: fieldType,
-        options: fieldType === "enum" ? parseFieldOptions(optionsRaw) : null,
+        options: fieldType === "enum" ? options : null,
         required,
         group_label: group.trim() || null,
         group_key: null,
@@ -430,19 +595,7 @@ function FieldForm({
         </div>
       </div>
 
-      {fieldType === "enum" && (
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-[11px] text-muted">{t("methodology.fieldOptions")}</label>
-          <input
-            type="text"
-            value={optionsRaw}
-            onChange={(e) => setOptionsRaw(e.target.value)}
-            placeholder={t("methodology.optionsPlaceholder")}
-            className="input"
-          />
-          <p className="font-mono text-[10px] text-muted">{t("methodology.fieldOptionsHint")}</p>
-        </div>
-      )}
+      {fieldType === "enum" && <OptionsEditor options={options} onChange={setOptions} />}
 
       <div className="flex flex-col gap-1.5 pt-1 border-t border-border-soft">
         <label className="font-mono text-[11px] text-muted">{t("methodology.visibility")}</label>
