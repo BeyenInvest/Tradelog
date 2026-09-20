@@ -134,14 +134,16 @@ export function useMethodologyEditor() {
     void refreshShared();
   }, [fields, load, methodology, isOwn, refreshShared]);
 
-  /** Move a field up/down by swapping sort_order with its neighbour. */
-  const moveField = useCallback(async (id: string, direction: "up" | "down") => {
+  /**
+   * Swap the sort_order of two fields. The grouped editor uses this to reorder a
+   * field within its group (the neighbour is the previous/next field carrying the
+   * same group), so a move never makes a field jump to another section.
+   */
+  const swapFieldOrder = useCallback(async (aId: string, bId: string) => {
     const mid = requireOwn();
-    const idx = fields.findIndex((f) => f.id === id);
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (idx < 0 || swapIdx < 0 || swapIdx >= fields.length) return;
-    const a = fields[idx];
-    const b = fields[swapIdx];
+    const a = fields.find((f) => f.id === aId);
+    const b = fields.find((f) => f.id === bId);
+    if (!a || !b) return;
     const { error: e1 } = await supabase.from("methodology_fields").update({ sort_order: b.sort_order }).eq("id", a.id);
     const { error: e2 } = await supabase.from("methodology_fields").update({ sort_order: a.sort_order }).eq("id", b.id);
     if (e1 || e2) throw (e1 ?? e2);
@@ -149,5 +151,13 @@ export function useMethodologyEditor() {
     void refreshShared();
   }, [fields, load, methodology, isOwn, refreshShared]);
 
-  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, refresh: () => load(methodologyId) };
+  /** Move a field up/down by swapping sort_order with its flat neighbour. */
+  const moveField = useCallback(async (id: string, direction: "up" | "down") => {
+    const idx = fields.findIndex((f) => f.id === id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= fields.length) return;
+    await swapFieldOrder(fields[idx].id, fields[swapIdx].id);
+  }, [fields, swapFieldOrder]);
+
+  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, swapFieldOrder, refresh: () => load(methodologyId) };
 }
