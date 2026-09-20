@@ -1409,6 +1409,27 @@
       "b2h": "Strictly separated",
       "b2b": "A backtest never inflates your live win rate or streaks. What you traded and what you tested stay apart."
     },
+    "x": {
+      "kicker": "TradingView extension",
+      "h2": "Log straight from your <em>chart</em>.",
+      "lead": "A Beyen panel on your TradingView chart. Draw your ordinary long or short position tool and the panel reads direction, entry, stop, target and R:R straight from it. You fill your own journal fields in that same panel — the trade lands in your live journal or a backtest project, no retyping.",
+      "secChart": "Chart",
+      "secPosition": "Position tool",
+      "secJournal": "Journal fields",
+      "mDir": "Direction",
+      "srcTv": "from TradingView",
+      "srcCalc": "calculated",
+      "logTrade": "Log trade",
+      "caption": "The floating panel on your TradingView chart — reads your position tool.",
+      "f1Label": "Trigger",
+      "f1Val": "Break & retest",
+      "f2Label": "Mindset",
+      "f2Val": "Calm",
+      "b1h": "One draw, done",
+      "b1b": "Drawing the position tool is enough: direction, entry, stop and target come along automatically. No retyping numbers, no tab-switching.",
+      "b2h": "Snapshots included",
+      "b2b": "On logging, Beyen captures several timeframes of your chart automatically — or paste a TradingView snapshot link of exactly the timeframe you want."
+    },
     "t": {
       "kicker": "What Beyen is not",
       "h2": "Deliberately <em>no</em> chart.",

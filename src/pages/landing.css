@@ -937,6 +937,177 @@ html:has(.landing-root) {
   font-size: 12px;
 }
 
+/* TradingView-extension panel (section 06): a faithful mock of the real
+   floating in-page panel — a draggable window docked on the chart, with a head,
+   the chart read-out (symbol + timeframe + a mini position tool), the
+   position-tool metrics carrying an origin badge (from TradingView / calculated),
+   the trader's own journal fields, and one gold Log button. Structure mirrors
+   extension/src/content/ui/panel.css (.by-*), rendered in the landing's tokens. */
+.landing-root .tvext {
+  max-width: 360px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 18px 46px -18px rgb(0 0 0 / 0.4), var(--panel-shadow);
+  overflow: hidden;
+}
+.landing-root .tvext-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: linear-gradient(var(--surface-2), var(--surface));
+}
+.landing-root .tvext-mark {
+  color: var(--gold);
+}
+.landing-root .tvext-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink);
+}
+.landing-root .tvext-spacer {
+  flex: 1;
+}
+.landing-root .tvext-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  color: var(--faint);
+}
+.landing-root .tvext-body {
+  padding: 0 12px;
+}
+.landing-root .tvext-sec {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.landing-root .tvext-sec:last-child {
+  border-bottom: 0;
+}
+.landing-root .tvext-sectitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+.landing-root .tvext-chartrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.landing-root .tvext-symbol {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.landing-root .tvext-tf {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.landing-root .tvext-mini {
+  margin-top: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.landing-root .tvext-mini svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.landing-root .tvext-metrics {
+  display: flex;
+  flex-direction: column;
+}
+.landing-root .tvext-metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.landing-root .tvext-metric + .tvext-metric {
+  border-top: 1px dashed var(--hairline);
+}
+.landing-root .tvext-mlabel {
+  width: 62px;
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.landing-root .tvext-mval {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+.landing-root .tvext-mval.loss {
+  color: var(--loss);
+}
+.landing-root .tvext-src {
+  flex: none;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+.landing-root .tvext-fields {
+  gap: 12px 12px;
+}
+.landing-root .tvext-foot {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.landing-root .tvext-log {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.landing-root .tvext-cap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 360px;
+  margin: 12px auto 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.landing-root .tvext-cap .badge {
+  flex: none;
+}
+
 .landing-root .points {
   list-style: none;
   padding: 0;
