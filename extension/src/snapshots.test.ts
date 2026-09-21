@@ -114,6 +114,36 @@ describe("runSnapshotCycle", () => {
     if (capped.slots.d?.ok) expect(capped.slots.d.thumb).toBeUndefined();
   });
 
+  it("wacht niet op uploads: alle captures + het timeframe-herstel gebeuren terwijl uploads nog lopen", async () => {
+    type UploadOutcome = { ok: true; path: string } | { ok: false; error: string };
+    const resolvers: Array<(v: UploadOutcome) => void> = [];
+    const { deps, calls } = makeDeps({
+      upload: vi.fn(() => new Promise<UploadOutcome>((resolve) => { resolvers.push(resolve); })),
+    });
+    const cycle = runSnapshotCycle(deps, ["w", "d"]);
+    // Geen enkele upload is klaar, maar de hele chart-keten is al doorlopen
+    // (beide captures + herstel naar het start-timeframe).
+    await vi.waitFor(() => {
+      expect(calls).toEqual(["set:W", "settle:W", "capture:W", "set:D", "settle:D", "capture:D", "set:240"]);
+    });
+    resolvers.forEach((resolve, i) => resolve({ ok: true, path: `u1/${i}.png` }));
+    const result = await cycle;
+    expect(result.slots.w).toMatchObject({ ok: true, path: "u1/0.png" });
+    expect(result.slots.d).toMatchObject({ ok: true, path: "u1/1.png" });
+    expect(result.restored).toBe(true);
+  });
+
+  it("een gooiende upload-promise faalt alleen dat slot (parallel-pad rejects nooit)", async () => {
+    const { deps } = makeDeps({
+      upload: vi.fn(async () => { throw new Error("netwerk weg"); }),
+    });
+    const result = await runSnapshotCycle(deps, ["w", "d"]);
+    expect(result.slots.w).toMatchObject({ ok: false });
+    if (result.slots.w && !result.slots.w.ok) expect(result.slots.w.error).toContain("netwerk weg");
+    expect(result.slots.d).toMatchObject({ ok: false });
+    expect(result.restored).toBe(true);
+  });
+
   it("geeft upload-fouten per slot door en herstelt daarna alsnog", async () => {
     const { deps, calls } = makeDeps({
       upload: vi.fn(async () => ({ ok: false as const, error: "bucket vol" })),
