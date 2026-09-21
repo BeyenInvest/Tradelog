@@ -17,6 +17,12 @@
 export const READY_POLL_MS = 150;
 export const READY_TIMEOUT_MS = 5000;
 export const BLIND_FALLBACK_MS = 1500; // oude vaste wachttijd, alleen nog als de adapter blind is
+/** dataReady=false mag de bar-stable-route niet eeuwig veto'en: sommige
+ * TV-builds houden 'm false zolang een trage study laadt, terwijl de candles
+ * er allang staan — dan kostte elk slot de volle READY_TIMEOUT_MS. Ná deze
+ * drempel telt een stabiele laatste bar (het pre-fix bewezen leespad) alsnog
+ * als klaar. */
+export const BAR_STABLE_OVERRIDE_MS = 2000;
 /** Korte adem ná ready (alleen als er echt gewacht is) zodat trage studies
  * ("… loading") hun tekst kwijt zijn vóór de capture. */
 export const GRACE_MS = 200;
@@ -50,6 +56,7 @@ export interface WaitReadyOptions {
   timeoutMs?: number;
   pollMs?: number;
   blindMs?: number;
+  barOverrideMs?: number;
   /** Injecteerbaar voor tests (virtuele klok). */
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -63,6 +70,7 @@ export async function waitForChartReady(
   const timeoutMs = opts.timeoutMs ?? READY_TIMEOUT_MS;
   const pollMs = opts.pollMs ?? READY_POLL_MS;
   const blindMs = opts.blindMs ?? BLIND_FALLBACK_MS;
+  const barOverrideMs = opts.barOverrideMs ?? BAR_STABLE_OVERRIDE_MS;
   const now = opts.now ?? (() => Date.now());
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
@@ -83,8 +91,12 @@ export async function waitForChartReady(
       if (dataReady === true && bar.kind !== "empty") {
         return { ready: true, signal: "data-ready", waitedMs: waited, polls };
       }
-      if (dataReady === null && bar.kind === "bar" && bar.time !== null) {
-        if (prevBarTime !== null && bar.time === prevBarTime) {
+      if (bar.kind === "bar" && bar.time !== null) {
+        // dataReady=false = TV zegt zelf "nog niet klaar" — dan pas ná de
+        // override-drempel op de stabiele bar vertrouwen (candles staan er,
+        // alleen een study hangt); zonder dataReady beslist de bar direct.
+        const barMayDecide = dataReady === null || (dataReady === false && waited >= barOverrideMs);
+        if (barMayDecide && prevBarTime !== null && bar.time === prevBarTime) {
           return { ready: true, signal: "bar-stable", waitedMs: waited, polls };
         }
         prevBarTime = bar.time;

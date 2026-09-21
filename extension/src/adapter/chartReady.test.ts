@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  BLIND_FALLBACK_MS, READY_TIMEOUT_MS, waitForChartReady, type BarProbe, type ReadyProbe,
+  BAR_STABLE_OVERRIDE_MS, BLIND_FALLBACK_MS, READY_TIMEOUT_MS, waitForChartReady, type BarProbe, type ReadyProbe,
 } from "./chartReady";
 
 /** Virtuele klok: sleep() schuift de tijd op zonder echte timers. */
@@ -100,13 +100,30 @@ describe("waitForChartReady", () => {
     expect(out).toMatchObject({ ready: true, signal: "bar-stable", polls: 4 });
   });
 
-  it("een expliciete dataReady=false blokkeert de bar-stable-sluiproute", async () => {
+  it("dataReady=false blokkeert bar-stable eerst, maar ná de override-drempel wint de stabiele bar", async () => {
+    // Sommige TV-builds houden dataReady=false zolang een trage study laadt —
+    // vóór de fix kostte dat de volle 5s-timeout per slot terwijl de candles
+    // er allang stonden.
     const c = clock();
     const out = await waitForChartReady(
       scriptedProbe({ dataReady: [false], lastBar: [{ kind: "bar", time: 5 }] }),
       "D",
       { now: c.now, sleep: c.sleep },
     );
+    expect(out).toMatchObject({ ready: true, signal: "bar-stable" });
+    expect(out.waitedMs).toBeGreaterThanOrEqual(BAR_STABLE_OVERRIDE_MS);
+    expect(out.waitedMs).toBeLessThan(READY_TIMEOUT_MS);
+  });
+
+  it("dataReady=false met een nog schuivende bar blijft wachten tot de nette timeout", async () => {
+    const c = clock();
+    let barTime = 0;
+    const probe: ReadyProbe = {
+      resolution: () => "D",
+      dataReady: () => false,
+      lastBar: () => ({ kind: "bar", time: (barTime += 1) }), // elke poll een andere bar → nooit stabiel
+    };
+    const out = await waitForChartReady(probe, "D", { now: c.now, sleep: c.sleep });
     expect(out).toMatchObject({ ready: false, signal: "timeout" });
     expect(out.waitedMs).toBeGreaterThanOrEqual(READY_TIMEOUT_MS);
   });
