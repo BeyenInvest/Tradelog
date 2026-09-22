@@ -2,7 +2,10 @@
 // aanraakt. Leest de chart-state (S0-bewezen API-vorm, docs/spike-tv-extensie.md)
 // en zet op verzoek de resolution (snapshot-cyclus, F3a). Schrijft verder NIETS
 // naar TV. Gebundeld als IIFE (content scripts zijn classic scripts, geen ESM).
-import { GRACE_MS, waitForChartReady, type BarProbe, type ReadyProbe } from "../adapter/chartReady";
+import {
+  GRACE_MS, normalizeResolution, READY_TIMEOUT_MS, waitForChartReady,
+  type BarProbe, type ReadyProbe, type WaitReadyOutcome,
+} from "../adapter/chartReady";
 import { isPageRequest, makeResponse, type PageCommand } from "../adapter/protocol";
 
 interface SafeResult {
@@ -143,11 +146,52 @@ async function takeScreenshot(): Promise<unknown> {
   }
 }
 
+/** Gearmde onDataLoaded-subscription rond één programmatische switch. TV's
+ * `dataReady()` kan vlak na een switch liegen (true op de oude serie) en de
+ * resolution flipt synchroon — het event is het enige signaal dat écht "nieuwe
+ * data staat er" betekent (runtime bewezen, ook bij gecachete switches). Vóór
+ * de set subscriben, dus geen gemist event bij snelle loads. */
+interface DataLoadedSub {
+  subscribe?: (obj: unknown, cb: () => void, once?: boolean) => void;
+  unsubscribe?: (obj: unknown, cb: () => void) => void;
+}
+interface PendingLoad {
+  target: string;
+  fired: boolean;
+  cb: () => void;
+  sub: DataLoadedSub | null;
+}
+let pendingLoad: PendingLoad | null = null;
+
+function armDataLoaded(target: string): void {
+  // Oude, nooit-gevuurde subscription loskoppelen zodat die niet de nieuwe
+  // vlag zet (singleshot ruimt zichzelf alleen op ná vuren).
+  if (pendingLoad && !pendingLoad.fired) {
+    try { pendingLoad.sub?.unsubscribe?.(null, pendingLoad.cb); } catch { /* al weg */ }
+  }
+  const state: PendingLoad = { target, fired: false, cb: () => { state.fired = true; }, sub: null };
+  try {
+    const w = window as unknown as {
+      TradingViewApi?: { activeChart?: () => { onDataLoaded?: () => DataLoadedSub } };
+    };
+    const sub = w.TradingViewApi?.activeChart?.()?.onDataLoaded?.();
+    if (sub && typeof sub.subscribe === "function") {
+      sub.subscribe(null, state.cb, true);
+      state.sub = sub;
+    }
+  } catch { /* geen event beschikbaar → de poll-fallback vangt dit op */ }
+  // Alleen armen als de subscription écht hangt — anders zou het settle-pad 5 s
+  // blind wachten op een event dat nooit komt (TV-drift), terwijl de
+  // waitForChartReady-poll dat geval juist netjes afdekt.
+  pendingLoad = state.sub ? state : null;
+}
+
 function setResolution(resolution: string): unknown {
   const w = window as unknown as { TradingViewApi?: { activeChart?: () => { setResolution?: (r: string) => void } } };
   return safe(() => {
     const c = w.TradingViewApi?.activeChart?.();
     if (!c?.setResolution) throw new Error("setResolution niet beschikbaar");
+    armDataLoaded(resolution);
     c.setResolution(resolution);
     return true;
   });
@@ -191,7 +235,10 @@ function makeReadyProbe(): ReadyProbe {
         if (!bars || typeof bars.last !== "function") return { kind: "unreadable" };
         const last = bars.last();
         if (!last) return { kind: "empty" };
-        const t = Array.isArray(last) ? (last as unknown[])[0] : null;
+        // TV-drift 2026-09: last() geeft { index, value: [timeSec, o, h, l, c, ...] }
+        // i.p.v. de kale array (zelfde shape als parse.ts al afhandelt).
+        const v = Array.isArray(last) ? last : (last as { value?: unknown }).value;
+        const t = Array.isArray(v) ? (v as unknown[])[0] : null;
         return { kind: "bar", time: typeof t === "number" ? t : null };
       } catch {
         return { kind: "unreadable" };
@@ -200,11 +247,30 @@ function makeReadyProbe(): ReadyProbe {
   };
 }
 
-/** Snapshot-settle (F3a-fix): wachten tot de chart het gevraagde timeframe echt
- * geladen én getekend heeft, i.p.v. de blinde 1,5 s-timer in de SW. Rejects
- * nooit — bij timeout meldt hij dat en captured de cyclus alsnog. */
+/** Snapshot-settle: wachten tot de chart het gevraagde timeframe echt geladen
+ * én getekend heeft. Primair = het gearmde onDataLoaded-event van de eigen
+ * setResolution (snel én waarheidsgetrouw); zonder gearmd event (settle zonder
+ * switch, TV-drift) valt hij terug op de poll in chartReady.ts. Rejects nooit —
+ * bij timeout meldt hij dat en captured de cyclus alsnog. */
 async function waitChartReady(resolution: string): Promise<unknown> {
-  const outcome = await waitForChartReady(makeReadyProbe(), resolution);
+  let outcome: WaitReadyOutcome;
+  const pend = pendingLoad;
+  if (pend && normalizeResolution(pend.target) === normalizeResolution(resolution)) {
+    pendingLoad = null; // verbruikt — één settle per gearmde switch
+    const start = Date.now();
+    while (!pend.fired && Date.now() - start < READY_TIMEOUT_MS) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const waitedMs = Date.now() - start;
+    outcome = pend.fired
+      ? { ready: true, signal: "data-loaded", waitedMs, polls: 0 }
+      : { ready: false, signal: "timeout", waitedMs, polls: 0 };
+    if (!pend.fired) {
+      try { pend.sub?.unsubscribe?.(null, pend.cb); } catch { /* al weg */ }
+    }
+  } else {
+    outcome = await waitForChartReady(makeReadyProbe(), resolution);
+  }
   // Data geladen ≠ frame getekend: twee frames afwachten vóór de capture. De
   // setTimeout-race voorkomt hangen wanneer rAF niet vuurt (verborgen tab).
   const frame = () =>
@@ -216,7 +282,9 @@ async function waitChartReady(resolution: string): Promise<unknown> {
   await frame();
   // Alleen als er echt gewacht is nog een korte grace — geeft trage studies
   // ("… loading") lucht zonder de vlotte slots te vertragen.
-  if (outcome.ready && outcome.polls > 1) await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
+  if (outcome.ready && (outcome.polls > 1 || outcome.waitedMs > 0)) {
+    await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
+  }
   return { ok: true, ...outcome };
 }
 
