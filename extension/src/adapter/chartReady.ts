@@ -55,6 +55,10 @@ export interface ReadyProbe {
   /** TV's dataReady(): true/false, of null als de methode ontbreekt/afwijkt. */
   dataReady(): boolean | null;
   lastBar(): BarProbe;
+  /** Is de serie nog aan het laden/narekenen (isLoading/loadingScreen/status —
+   * dekt óók de "No gaps candles loading…"-fase ná het data-event)? true =
+   * zeker bezig, false = zeker klaar, null = onleesbaar (TV-drift). */
+  busy(): boolean | null;
 }
 
 export type ReadySignal = "data-loaded" | "data-ready" | "bar-stable" | "blind-fallback" | "timeout";
@@ -100,8 +104,12 @@ export async function waitForChartReady(
     const res = probe.resolution();
     const dataReady = probe.dataReady();
     const bar = probe.lastBar();
+    // Een serie die zichtbaar nog laadt/narekent (isLoading, loading-screen,
+    // no-gaps-fase) mag nooit "klaar" winnen — alleen een expliciete true
+    // blokkeert, onleesbaar (null) telt niet mee.
+    const busy = probe.busy() === true;
 
-    if (res !== null && normalizeResolution(res) === targetN) {
+    if (!busy && res !== null && normalizeResolution(res) === targetN) {
       // dataReady=true met een lége serie is nog mid-switch — de bar-check mag
       // alleen veto'en als hij ook echt leesbaar is.
       if (dataReady === true && bar.kind !== "empty") {
@@ -120,7 +128,7 @@ export async function waitForChartReady(
         prevBarTime = null;
       }
     } else {
-      // Verkeerd (of onleesbaar) timeframe: eerdere bar-tijd zegt niets meer.
+      // Verkeerd/onleesbaar timeframe of nog bezig: eerdere bar-tijd zegt niets meer.
       prevBarTime = null;
     }
 

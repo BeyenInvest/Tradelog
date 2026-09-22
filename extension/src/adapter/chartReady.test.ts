@@ -20,6 +20,7 @@ function scriptedProbe(script: {
   resolution?: Array<string | null>;
   dataReady?: Array<boolean | null>;
   lastBar?: BarProbe[];
+  busy?: Array<boolean | null>;
 }): ReadyProbe {
   let round = -1;
   const pick = <T>(arr: T[] | undefined, fallback: T): T => {
@@ -33,6 +34,7 @@ function scriptedProbe(script: {
     },
     dataReady: () => pick(script.dataReady, null),
     lastBar: () => pick(script.lastBar, { kind: "unreadable" }),
+    busy: () => pick(script.busy, null),
   };
 }
 
@@ -145,10 +147,35 @@ describe("waitForChartReady", () => {
       resolution: () => "D",
       dataReady: () => false,
       lastBar: () => ({ kind: "bar", time: (barTime += 1) }), // elke poll een andere bar → nooit stabiel
+      busy: () => null,
     };
     const out = await waitForChartReady(probe, "D", { now: c.now, sleep: c.sleep });
     expect(out).toMatchObject({ ready: false, signal: "timeout" });
     expect(out.waitedMs).toBeGreaterThanOrEqual(READY_TIMEOUT_MS);
+  });
+
+  it("een serie die nog bezig is (isLoading/no-gaps-narekening) blokkeert elk klaar-signaal tot hij vrij is", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({
+        dataReady: [true],
+        lastBar: [{ kind: "bar", time: 100 }],
+        busy: [true, true, true, false], // pas ronde 4 klaar met (na)rekenen
+      }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 4 });
+  });
+
+  it("busy=null (drift) verandert niets aan het bestaande gedrag", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ dataReady: [true], lastBar: [{ kind: "bar", time: 100 }], busy: [null] }),
+      "D",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 1 });
   });
 
   it("volledig blinde adapter → door na de oude vaste wachttijd (vloer, geen 5s-hang)", async () => {
