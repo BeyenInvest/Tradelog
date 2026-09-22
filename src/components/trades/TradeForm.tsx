@@ -37,7 +37,9 @@ interface TradeFormProps {
 
 // A function, not a module-level constant: "today" must be evaluated when the
 // form opens — a PWA tab can stay open for days (M2), and toISOString() is UTC.
-function emptyDefaults(): TradeFormValues {
+// Exported so the read-only Settings preview (MethodologyPreview) can seed the same
+// blank form the live "new trade" opens with, guaranteeing a 1:1 layout.
+export function emptyDefaults(): TradeFormValues {
   return {
     datum_open: localTodayIso(),
     tijd_open: null,

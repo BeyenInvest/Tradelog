@@ -143,8 +143,8 @@ describe("groupFields", () => {
 });
 
 describe("orderedFormFields (WPM-paneelvolgorde)", () => {
-  // Een WPM-journal zoals het paneel het binnenkrijgt: fase eerst, kenmerk+nieuws
-  // in een aparte "Markt"-groep ná de confirms — de stand van vóór deze fix.
+  // Een WPM-journal zoals het paneel het binnenkrijgt — op sortOrder, de volgorde
+  // die de gebruiker in Instellingen bepaalt (WYSIWYG sinds 2026-09-22).
   const wpm = () => [
     field({ fieldKey: "fase", groupLabel: null, sortOrder: 0 }),
     field({ fieldKey: "weekly_criteria", groupLabel: null, sortOrder: 1 }),
@@ -158,28 +158,33 @@ describe("orderedFormFields (WPM-paneelvolgorde)", () => {
     field({ fieldKey: "nieuws", groupLabel: "Markt", sortOrder: 9 }),
   ];
 
-  it("zet kenmerk onder fase en nieuws vlak boven de confirms (vaste WPM-volgorde)", () => {
+  it("houdt de eigen journal-volgorde (sortOrder) aan", () => {
     expect(orderedFormFields(wpm()).map((f) => f.fieldKey)).toEqual([
-      "fase", "weekly_kenmerk", "weekly_criteria", "trade_concept", "entry",
-      "nieuws",
+      "fase", "weekly_criteria", "trade_concept", "entry",
       "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf",
+      "weekly_kenmerk", "nieuws",
     ]);
   });
 
-  it("neutraliseert het 'Markt'-kopje zodat er geen aparte groep meer tekent", () => {
+  it("weerspiegelt een herordening: een veld dat vooraan gesleept is, komt vooraan", () => {
+    const reordered = wpm().map((f) => (f.fieldKey === "nieuws" ? { ...f, sortOrder: -1 } : f));
+    expect(orderedFormFields(reordered)[0].fieldKey).toBe("nieuws");
+  });
+
+  it("neutraliseert alle groepslabels zodat er één doorlopend blok tekent", () => {
     const groups = groupFields(orderedFormFields(wpm()));
     expect(groups).toHaveLength(1);
     expect(groups[0].label).toBeNull();
   });
 
-  it("laat eigen extra velden achteraan staan (op sortOrder) mét hun groep", () => {
+  it("zet eigen extra velden op hun sortOrder-plek, in hetzelfde blok (geen eigen kopje)", () => {
     const withExtra = [
       ...wpm(),
       field({ fieldKey: "setup_kwaliteit", groupLabel: "Eigen velden", sortOrder: 20 }),
     ];
     const ordered = orderedFormFields(withExtra);
     expect(ordered[ordered.length - 1].fieldKey).toBe("setup_kwaliteit");
-    expect(ordered[ordered.length - 1].groupLabel).toBe("Eigen velden");
+    expect(ordered[ordered.length - 1].groupLabel).toBeNull();
   });
 
   it("laat een niet-WPM journal (geen fase-veld) volledig ongemoeid", () => {

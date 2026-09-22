@@ -159,5 +159,95 @@ export function useMethodologyEditor() {
     await swapFieldOrder(fields[idx].id, fields[swapIdx].id);
   }, [fields, swapFieldOrder]);
 
-  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, swapFieldOrder, refresh: () => load(methodologyId) };
+  /**
+   * Move a field one step up/down across the WHOLE flat list, ignoring section
+   * boundaries — the fix for "a field is stuck at the bottom of its section". The
+   * moved field adopts the neighbour it swaps with: within a section that group is
+   * identical (no visible change), but at a section edge the field crosses into the
+   * neighbour's section, so pressing "up" repeatedly walks a field through the
+   * sections instead of jamming at the top of its own. Setting group_key/group_label
+   * explicitly to the neighbour's pair keeps the clear-stale-keys trigger happy (it
+   * only nulls group_key when the label changes *without* a new key — see schema.sql).
+   */
+  const moveFieldFlat = useCallback(async (id: string, direction: "up" | "down") => {
+    const mid = requireOwn();
+    const idx = fields.findIndex((f) => f.id === id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= fields.length) return;
+    const moved = fields[idx];
+    const neighbour = fields[swapIdx];
+    const { error: e1 } = await supabase
+      .from("methodology_fields")
+      .update({ sort_order: neighbour.sort_order, group_key: neighbour.group_key, group_label: neighbour.group_label })
+      .eq("id", moved.id);
+    const { error: e2 } = await supabase
+      .from("methodology_fields")
+      .update({ sort_order: moved.sort_order })
+      .eq("id", neighbour.id);
+    if (e1 || e2) throw (e1 ?? e2);
+    await load(mid);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
+
+  /**
+   * Drag-and-drop reorder: drop `draggedId` onto `targetId`, landing it just before
+   * the target in the flat list and adopting the target's section (group_key/
+   * group_label) — so dragging a field into another section's rows re-homes it there,
+   * the same rule the arrows use. Renumbers sort_order to a clean 1..n and only
+   * writes the rows that actually changed. Explicit group_key on the moved row keeps
+   * the clear-stale-keys trigger from nulling it (see schema.sql).
+   */
+  const reorderField = useCallback(async (draggedId: string, targetId: string) => {
+    const mid = requireOwn();
+    if (draggedId === targetId) return;
+    const target = fields.find((f) => f.id === targetId);
+    if (!target) return;
+    const arr = [...fields];
+    const fromIdx = arr.findIndex((f) => f.id === draggedId);
+    if (fromIdx < 0) return;
+    const [moved] = arr.splice(fromIdx, 1);
+    const insertIdx = arr.findIndex((f) => f.id === targetId);
+    arr.splice(insertIdx, 0, moved);
+
+    const updates = arr.flatMap((f, i) => {
+      const newSort = i + 1;
+      const isDragged = f.id === draggedId;
+      const groupChanged =
+        isDragged && (f.group_key !== target.group_key || f.group_label !== target.group_label);
+      if (f.sort_order === newSort && !groupChanged) return [];
+      const patch: Partial<MethodologyField> = { sort_order: newSort };
+      if (isDragged) {
+        patch.group_key = target.group_key;
+        patch.group_label = target.group_label;
+      }
+      return [
+        supabase
+          .from("methodology_fields")
+          .update(patch)
+          .eq("id", f.id)
+          .then(({ error: err }) => {
+            if (err) throw err;
+          }),
+      ];
+    });
+    await Promise.all(updates);
+    await load(mid);
+    void refreshShared();
+  }, [fields, load, methodology, isOwn, refreshShared]);
+
+  /**
+   * Save the 4 per-slot screenshot names (0060). Stored as a jsonb array on the
+   * methodology; an empty string at a position means "use the default label" (the
+   * trade form/preview fall back per slot). Optimistic local update + refreshShared so
+   * the live preview and the real form pick up the new names without a reload.
+   */
+  const setScreenshotLabels = useCallback(async (next: string[]) => {
+    const mid = requireOwn();
+    const { error: err } = await supabase.from("methodologies").update({ screenshot_labels: next }).eq("id", mid);
+    if (err) throw err;
+    setMethodology((m) => (m ? { ...m, screenshot_labels: next } : m));
+    void refreshShared();
+  }, [methodology, isOwn, refreshShared]);
+
+  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, moveFieldFlat, reorderField, swapFieldOrder, setScreenshotLabels, refresh: () => load(methodologyId) };
 }

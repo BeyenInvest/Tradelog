@@ -50,6 +50,13 @@ export interface MethodologyData {
    */
   setTrackExit: (value: boolean) => Promise<void>;
   /**
+   * Per-journal custom names for the 4 screenshot slots (0060), raw from
+   * `methodologies.screenshot_labels` — array index 0..3 = w/d/h4/h2, an empty/missing
+   * entry means "use the default name". null when the journal never set any. The trade
+   * form falls back to the built-in labels per slot.
+   */
+  screenshotLabels: string[] | null;
+  /**
    * The journal's curated instrument universe (cyclus D), read from
    * `instrument_config`. Normalized/sorted. Drives the trade-form instrument select
    * and the Settings instrument editor. Empty for a forex journal (it uses the pair
@@ -373,6 +380,7 @@ function useMethodologyState(): MethodologyData {
     isOwnMethodology,
     trackExit,
     setTrackExit,
+    screenshotLabels: methodology?.screenshot_labels ?? null,
     instruments,
     addInstrument,
     removeInstrument,

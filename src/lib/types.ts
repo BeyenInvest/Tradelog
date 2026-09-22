@@ -363,6 +363,12 @@ export interface Methodology {
    * Default false — the trader activates it per journal in the builder / editor.
    */
   track_exit: boolean;
+  /**
+   * Per-journal names for the 4 screenshot slots (0060): array of 4 strings,
+   * index 0..3 = w/d/h4/h2. null = defaults (Weekly/Daily/4H/Extra, or Screenshot 1-4);
+   * an empty string at a position = default for that slot.
+   */
+  screenshot_labels: string[] | null;
   created_at: string;
   updated_at: string;
 }

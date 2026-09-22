@@ -400,6 +400,10 @@ create table methodologies (
   -- form fields, the exit-analysis view and the SQN KPI. Default off; toggled in the
   -- journal builder / methodology editor. Keeps the default form + KPI row clean.
   track_exit boolean not null default false,
+  -- Per-journal names for the 4 screenshot slots (0060): JSON array of 4 strings,
+  -- index 0..3 = w/d/h4/h2. null = defaults (Weekly/Daily/4H/Extra, or Screenshot 1-4);
+  -- an empty string at a position = default for that slot. Shape is validated in the app.
+  screenshot_labels jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1867,4 +1871,5 @@ insert into schema_migrations (filename) values
   ('0056_configurable_habits.sql'),
   ('0057_registry_fork_track_exit.sql'),
   ('0058_trade_prices.sql'),
-  ('0059_retire_wpm_fase.sql');
+  ('0059_retire_wpm_fase.sql'),
+  ('0060_methodology_screenshot_labels.sql');
