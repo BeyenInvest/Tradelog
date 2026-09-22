@@ -9,9 +9,9 @@ export interface FlowError {
   error: string;
 }
 
-/** Koppelen: token inwisselen en de beta-gate afdwingen. Niet-beta-users worden
- * meteen weer uitgelogd — de extensie houdt dan géén sessie vast. (Client-side
- * weigering, geen harde server-gate — bewuste keuze, plan C3.) */
+/** Koppelen: token inwisselen en het profiel controleren. Sinds de un-gate
+ * (2026-09-19) mag elk ingelogd lid koppelen — geen beta-check meer. Zonder
+ * leesbaar profiel loggen we meteen weer uit, dan houdt de extensie géén sessie vast. */
 export async function linkWithToken(db: ExtensionDb, tokenHash: string): Promise<LinkOk | FlowError> {
   const trimmed = tokenHash.trim();
   if (!trimmed) return { ok: false, error: "Lege koppelcode" };
@@ -23,10 +23,6 @@ export async function linkWithToken(db: ExtensionDb, tokenHash: string): Promise
   if (!profile) {
     await db.signOutLocal();
     return { ok: false, error: "Geen profiel gevonden voor dit account" };
-  }
-  if (!profile.beta) {
-    await db.signOutLocal();
-    return { ok: false, error: "De TradingView-extensie is nog beta-only voor dit account" };
   }
   return { ok: true, email: user.email };
 }

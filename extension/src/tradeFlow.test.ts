@@ -3,7 +3,7 @@ import type { ExtensionDb, JournalSchema, ProfileInfo, SessionInfo } from "./db"
 import { logTradeFromChart, updateLoggedTradeByRef, type LogTradeRequest } from "./tradeFlow";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
-const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
+const PROFILE: ProfileInfo = { methodologyId: "m-1", timezone: "Europe/Brussels" };
 
 const LEGACY_JOURNAL: JournalSchema = {
   id: "m-1",
@@ -112,11 +112,11 @@ describe("logTradeFromChart", () => {
     expect(payload.datum_sluiting).toBe("2026-09-17");
   });
 
-  it("weigert zonder sessie / buiten de beta", async () => {
+  it("weigert zonder sessie / zonder profiel", async () => {
     expect(await logTradeFromChart(makeDb({ getSessionInfo: vi.fn(async () => null) }), req()))
       .toMatchObject({ ok: false, stage: "auth" });
-    expect(await logTradeFromChart(makeDb({ getProfile: vi.fn(async () => ({ ...PROFILE, beta: false })) }), req()))
-      .toMatchObject({ ok: false, stage: "profile", error: "not-beta" });
+    expect(await logTradeFromChart(makeDb({ getProfile: vi.fn(async () => null) }), req()))
+      .toMatchObject({ ok: false, stage: "profile", error: "profile-unreadable" });
   });
 
   it("geeft build-degradaties door zonder insert", async () => {

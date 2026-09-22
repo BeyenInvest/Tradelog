@@ -266,7 +266,6 @@ const NL = {
 
   // Foutcopy van het schrijfpad
   "err.notLinked": "Niet gekoppeld — open de extensie-popup en verbind je Beyen-account.",
-  "err.notBeta": "De TradingView-extensie is nog beta-only voor dit account.",
   "err.profileUnreadable": "Je Beyen-profiel is niet leesbaar — koppel de extensie opnieuw.",
   "err.symbolNotInPairs":
     "{symbol} zit niet in de forex-lijst van dit journal — kies handmatig of log in een ander journal.",
@@ -528,7 +527,6 @@ const EN: Record<MessageKey, string> = {
 
   // Error copy of the write path
   "err.notLinked": "Not connected — open the extension popup and connect your Beyen account.",
-  "err.notBeta": "The TradingView extension is still beta-only for this account.",
   "err.profileUnreadable": "Your Beyen profile can't be read — connect the extension again.",
   "err.symbolNotInPairs":
     "{symbol} is not in this journal's forex list — pick one manually or log into another journal.",

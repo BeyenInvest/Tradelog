@@ -199,7 +199,6 @@ describe("orderedFormFields (WPM-paneelvolgorde)", () => {
 describe("logTradeErrorCopy", () => {
   it("geeft elke bekende faalcode eigen NL-copy", () => {
     expect(logTradeErrorCopy({ ok: false, stage: "auth", error: "not-linked" }).message).toContain("popup");
-    expect(logTradeErrorCopy({ ok: false, stage: "profile", error: "not-beta" }).message).toContain("beta");
     expect(
       logTradeErrorCopy({ ok: false, stage: "build", error: "symbol-not-in-pairs", detail: "XAUUSD" }).message
     ).toContain("XAUUSD");

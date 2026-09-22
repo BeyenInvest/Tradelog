@@ -50,12 +50,11 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
     async getProfile(userId) {
       const { data, error } = await client
         .from("profiles")
-        .select("beta_features, role, methodology_id, timezone")
+        .select("methodology_id, timezone")
         .eq("id", userId)
         .maybeSingle();
       if (error || !data) return null;
       return {
-        beta: data.beta_features === true || data.role === "admin",
         methodologyId: data.methodology_id ?? null,
         timezone: data.timezone,
       };

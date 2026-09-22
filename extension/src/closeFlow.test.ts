@@ -6,7 +6,7 @@ import {
 import type { ExtensionDb, OpenTradeInfo, ProfileInfo, SessionInfo } from "./db";
 
 const SESSION: SessionInfo = { userId: "u1", email: "beyenchesney@outlook.com", expiresAt: null };
-const PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
+const PROFILE: ProfileInfo = { methodologyId: "m-1", timezone: "Europe/Brussels" };
 
 const OPEN_TRADE: OpenTradeInfo = {
   id: "t-1",
@@ -94,11 +94,11 @@ describe("listOpenTradesForSymbol", () => {
     expect(result.trades[0].plannedRR).toBeNull(); // geen prijzen — handmatig sluiten
   });
 
-  it("weigert zonder sessie / buiten de beta / bij onleesbaar symbool", async () => {
+  it("weigert zonder sessie / zonder profiel / bij onleesbaar symbool", async () => {
     expect(await listOpenTradesForSymbol(makeDb({ getSessionInfo: vi.fn(async () => null) }), "OANDA:AUDJPY"))
       .toMatchObject({ ok: false, stage: "auth" });
-    expect(await listOpenTradesForSymbol(makeDb({ getProfile: vi.fn(async () => ({ ...PROFILE, beta: false })) }), "OANDA:AUDJPY"))
-      .toMatchObject({ ok: false, stage: "profile", error: "not-beta" });
+    expect(await listOpenTradesForSymbol(makeDb({ getProfile: vi.fn(async () => null) }), "OANDA:AUDJPY"))
+      .toMatchObject({ ok: false, stage: "profile", error: "profile-unreadable" });
     expect(await listOpenTradesForSymbol(makeDb(), "   "))
       .toMatchObject({ ok: false, stage: "build", error: "symbol-unreadable" });
   });

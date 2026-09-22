@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Beyen voor TradingView (beta)",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Log je TradingView-trades in je Beyen-journal: prijzen uit je position-tool en snapshots per timeframe.",
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "permissions": ["storage", "alarms", "activeTab"],
