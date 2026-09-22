@@ -205,7 +205,11 @@ function makeReadyProbe(): ReadyProbe {
       activeChart?: () => {
         resolution?: () => unknown;
         dataReady?: (cb?: () => void) => unknown;
-        getSeries?: () => { data?: () => { bars?: () => { last?: () => unknown } } };
+        loadingScreenActive?: () => unknown;
+        getSeries?: () => {
+          data?: () => { bars?: () => { last?: () => unknown } };
+          isLoading?: () => unknown;
+        };
       };
     };
   };
@@ -244,6 +248,25 @@ function makeReadyProbe(): ReadyProbe {
         return { kind: "unreadable" };
       }
     },
+    busy() {
+      // isLoading() is (anders dan dataReady) een éérlijk signaal: true vanaf
+      // vlak na de switch tot álles klaar is, inclusief de "No gaps candles
+      // loading…"-narekening die het lege-Daily-beeld veroorzaakte. Het
+      // loading-screen dekt hetzelfde vanaf de chart-kant. Alleen een expliciet
+      // gelezen boolean telt; drift ⇒ null.
+      let known = false;
+      try {
+        const l = chart()?.getSeries?.()?.isLoading?.();
+        if (l === true) return true;
+        if (l === false) known = true;
+      } catch { /* onleesbaar */ }
+      try {
+        const ls = chart()?.loadingScreenActive?.();
+        if (ls === true) return true;
+        if (ls === false) known = true;
+      } catch { /* onleesbaar */ }
+      return known ? false : null;
+    },
   };
 }
 
@@ -257,17 +280,25 @@ async function waitChartReady(resolution: string): Promise<unknown> {
   const pend = pendingLoad;
   if (pend && normalizeResolution(pend.target) === normalizeResolution(resolution)) {
     pendingLoad = null; // verbruikt — één settle per gearmde switch
+    const probe = makeReadyProbe();
     const start = Date.now();
     while (!pend.fired && Date.now() - start < READY_TIMEOUT_MS) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    const waitedMs = Date.now() - start;
-    outcome = pend.fired
-      ? { ready: true, signal: "data-loaded", waitedMs, polls: 0 }
-      : { ready: false, signal: "timeout", waitedMs, polls: 0 };
     if (!pend.fired) {
       try { pend.sub?.unsubscribe?.(null, pend.cb); } catch { /* al weg */ }
     }
+    // Het event zegt "nieuwe data is binnen", maar TV kan daarná nog narekenen
+    // ("No gaps candles loading…" gaf zo alsnog een leeg beeld) — dus óók
+    // wachten tot de serie zelf niet meer bezig is, binnen hetzelfde budget.
+    while (pend.fired && probe.busy() === true && Date.now() - start < READY_TIMEOUT_MS) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const waitedMs = Date.now() - start;
+    const ready = pend.fired && probe.busy() !== true;
+    outcome = ready
+      ? { ready: true, signal: "data-loaded", waitedMs, polls: 0 }
+      : { ready: false, signal: "timeout", waitedMs, polls: 0 };
   } else {
     outcome = await waitForChartReady(makeReadyProbe(), resolution);
   }
