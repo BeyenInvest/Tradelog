@@ -47,6 +47,26 @@ describe("runSnapshotCycle", () => {
     expect(calls).toEqual(["settle:240", "capture:240"]);
   });
 
+  it("vergelijkt timeframes genormaliseerd: TV's '1D' telt als het D-slot (geen spook-switch of spook-herstel)", async () => {
+    let resolution = "1D"; // zoals TV 'm na een switch rapporteert
+    const calls: string[] = [];
+    const deps: SnapshotDeps = {
+      getResolution: vi.fn(async () => resolution),
+      setResolution: vi.fn(async (r: string) => {
+        calls.push(`set:${r}`);
+        resolution = r;
+        return true;
+      }),
+      capture: vi.fn(async () => ({ ok: true as const, image: new Blob(["png"]) })),
+      upload: vi.fn(async () => ({ ok: true as const, path: "u1/x.png" })),
+      settle: vi.fn(async (target: string) => { calls.push(`settle:${target}`); }),
+    };
+    const result = await runSnapshotCycle(deps, ["d"]);
+    expect(calls).toEqual(["settle:D"]); // geen set naar D en geen herstel-set terug
+    expect(result.slots.d?.ok).toBe(true);
+    expect(result.restored).toBe(true);
+  });
+
   it("settlet op het doel-timeframe vóór elke capture (ladende chart, F3a-settle-fix)", async () => {
     const { deps, calls } = makeDeps();
     await runSnapshotCycle(deps, ["w"]); // chart start op 240

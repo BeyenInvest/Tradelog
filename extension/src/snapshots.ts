@@ -12,6 +12,8 @@
 // Chrome een activeTab-gebaar eist; dié vertaalt zich naar code
 // "needs-gesture" zodat de UI kan zeggen: "klik één keer op het Beyen-icoon".
 
+import { normalizeResolution } from "./adapter/chartReady";
+
 export const SNAPSHOT_SLOTS = ["w", "d", "h4", "h2"] as const;
 export type SnapshotSlot = (typeof SNAPSHOT_SLOTS)[number];
 
@@ -105,6 +107,10 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
   // timeframe wisselt. Zelfde beelden, alleen niet meer serieel wachten.
   const pending: Array<{ slot: SnapshotSlot; result: Promise<SlotResult> }> = [];
   const original = await deps.getResolution();
+  // Vergelijken altijd genormaliseerd: TV rapporteert na een switch "1D"/"1W"
+  // waar wij "D"/"W" zetten — raw vergelijken gaf spook-switches (en het
+  // herstel gebruikt bewust de ráuwe original, die TV gewoon accepteert).
+  const same = (a: string | null, b: string) => a !== null && normalizeResolution(a) === normalizeResolution(b);
   // Waar de chart NU op staat — schuift mee met elke switch. Vergelijken tegen
   // `original` zou fout gaan zodra een eerder slot al gewisseld heeft: een chart
   // die op 4H start kreeg dan bij het 4H-slot de Daily-capture (W-D-D-bug).
@@ -114,7 +120,7 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
     const target = SLOT_RESOLUTIONS[slot];
     // Staat de chart al op dit timeframe, dan niet onnodig switchen — maar wél
     // settlen: hij kan nog laden van een handmatige wissel vlak vóór de cyclus.
-    if (current !== target) {
+    if (!same(current, target)) {
       const switched = await deps.setResolution(target);
       if (!switched) {
         results[slot] = { ok: false, error: `kon timeframe ${target} niet zetten` };
@@ -142,7 +148,7 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
   let restored = true;
   if (original) {
     const now = await deps.getResolution();
-    if (now !== original) {
+    if (!same(now, original)) {
       restored = await deps.setResolution(original);
     }
   }

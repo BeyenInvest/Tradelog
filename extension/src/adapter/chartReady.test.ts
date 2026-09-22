@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  BAR_STABLE_OVERRIDE_MS, BLIND_FALLBACK_MS, READY_TIMEOUT_MS, waitForChartReady, type BarProbe, type ReadyProbe,
+  BAR_STABLE_OVERRIDE_MS, BLIND_FALLBACK_MS, normalizeResolution, READY_TIMEOUT_MS, waitForChartReady,
+  type BarProbe, type ReadyProbe,
 } from "./chartReady";
 
 /** Virtuele klok: sleep() schuift de tijd op zonder echte timers. */
@@ -35,7 +36,29 @@ function scriptedProbe(script: {
   };
 }
 
+describe("normalizeResolution", () => {
+  it("maakt TV's post-switch-vormen gelijk aan onze doelen", () => {
+    expect(normalizeResolution("1D")).toBe("D");
+    expect(normalizeResolution("1W")).toBe("W");
+    expect(normalizeResolution("1M")).toBe("M");
+    expect(normalizeResolution("D")).toBe("D");
+    expect(normalizeResolution("240")).toBe("240");
+    expect(normalizeResolution("120")).toBe("120");
+    expect(normalizeResolution("12M")).toBe("12M"); // alleen de kale 1-prefix strippen
+  });
+});
+
 describe("waitForChartReady", () => {
+  it("herkent TV's '1W' als het gevraagde 'W' (geen 5s-timeout op een geladen chart)", async () => {
+    const c = clock();
+    const out = await waitForChartReady(
+      scriptedProbe({ resolution: ["1W"], dataReady: [true], lastBar: [{ kind: "bar", time: 100 }] }),
+      "W",
+      { now: c.now, sleep: c.sleep },
+    );
+    expect(out).toMatchObject({ ready: true, signal: "data-ready", polls: 1 });
+  });
+
   it("is meteen klaar als dataReady=true en er een bar staat (geen wachttijd)", async () => {
     const c = clock();
     const out = await waitForChartReady(

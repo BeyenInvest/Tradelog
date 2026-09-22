@@ -3,6 +3,13 @@
 // timer. De Daily-capture pakte anders een nog-ladende chart zodra de fetch
 // langer duurde dan de oude 1,5 s.
 //
+// Sinds de settle-versnelling (2026-09-22) is dit het FALLBACK-pad: het
+// primaire signaal is TV's `onDataLoaded`-event, page-side gearmd vóór elke
+// setResolution (tvMain.ts). Deze poll dekt de gevallen zonder gearmd event
+// (settle zonder switch, TV-drift). Let op: `dataReady()` blijkt vlak na een
+// programmatische switch te KUNNEN liegen (true terwijl de serie nog de oude
+// bars bevat — runtime bewezen); voor het switch-pad is het event dus leidend.
+//
 // Gelaagd en defensief (zelfde degradatie-filosofie als parse.ts):
 //   1. `resolution() === target` — de switch is echt toegepast;
 //   2. `dataReady()` (charting-library-API, op de website geprobed) — het
@@ -27,6 +34,14 @@ export const BAR_STABLE_OVERRIDE_MS = 2000;
  * ("… loading") hun tekst kwijt zijn vóór de capture. */
 export const GRACE_MS = 200;
 
+/** TV rapporteert een timeframe na een programmatische switch als "1D"/"1W"
+ * waar wij "D"/"W" zetten (runtime bewezen 2026-09-22) — voor élke vergelijking
+ * zijn die gelijk, anders wacht de ready-check zich stuk op een timeframe dat
+ * er allang staat. Numerieke (intraday-)resoluties blijven ongemoeid. */
+export function normalizeResolution(r: string): string {
+  return r.toUpperCase().replace(/^1(?=[DWM]$)/, "");
+}
+
 /** Wat de laatste-bar-probe deze poll zag. */
 export type BarProbe =
   | { kind: "bar"; time: number | null } // er ís een bar; time null = geen bruikbare tijd (dan geen stabiliteitscheck)
@@ -42,7 +57,7 @@ export interface ReadyProbe {
   lastBar(): BarProbe;
 }
 
-export type ReadySignal = "data-ready" | "bar-stable" | "blind-fallback" | "timeout";
+export type ReadySignal = "data-loaded" | "data-ready" | "bar-stable" | "blind-fallback" | "timeout";
 
 export interface WaitReadyOutcome {
   /** false alleen bij timeout — de cyclus captured dan alsnog (gelogd). */
@@ -75,6 +90,7 @@ export async function waitForChartReady(
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
   const start = now();
+  const targetN = normalizeResolution(target);
   let prevBarTime: number | null = null;
   let polls = 0;
 
@@ -85,7 +101,7 @@ export async function waitForChartReady(
     const dataReady = probe.dataReady();
     const bar = probe.lastBar();
 
-    if (res === target) {
+    if (res !== null && normalizeResolution(res) === targetN) {
       // dataReady=true met een lége serie is nog mid-switch — de bar-check mag
       // alleen veto'en als hij ook echt leesbaar is.
       if (dataReady === true && bar.kind !== "empty") {
