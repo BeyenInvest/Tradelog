@@ -44,7 +44,7 @@ describe("tradesToShow", () => {
   });
 
   it("toont niets bij een fout of zonder lezing — de sectie verdwijnt dan", () => {
-    expect(tradesToShow({ ok: false, stage: "profile", error: "not-beta" })).toEqual([]);
+    expect(tradesToShow({ ok: false, stage: "profile", error: "profile-unreadable" })).toEqual([]);
     expect(tradesToShow(null)).toEqual([]);
   });
 });

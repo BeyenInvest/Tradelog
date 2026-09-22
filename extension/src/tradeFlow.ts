@@ -44,7 +44,6 @@ async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promi
 
   const profile = await db.getProfile(session.userId);
   if (!profile) return { ok: false, stage: "profile", error: "profile-unreadable" };
-  if (!profile.beta) return { ok: false, stage: "profile", error: "not-beta" };
 
   // Zoals de web-form: óók een backtest-trade draagt het actieve journal
   // (custom velden per journal gelden in projecten net zo goed); het project

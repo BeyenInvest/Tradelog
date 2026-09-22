@@ -4,7 +4,7 @@ import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
 
 const USER = { id: "user-1", email: "beyenchesney@outlook.com" };
 const SESSION: SessionInfo = { userId: USER.id, email: USER.email, expiresAt: "2026-09-16T21:00:00.000Z" };
-const BETA_PROFILE: ProfileInfo = { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" };
+const PROFILE: ProfileInfo = { methodologyId: "m-1", timezone: "Europe/Brussels" };
 const JOURNAL: JournalSchema = {
   id: "m-1",
   naam: "WPM",
@@ -36,7 +36,7 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
     signOutLocal: vi.fn(async () => {}),
     getSessionInfo: vi.fn(async () => SESSION),
     refreshSession: vi.fn(async () => ({})),
-    getProfile: vi.fn(async () => BETA_PROFILE),
+    getProfile: vi.fn(async () => PROFILE),
     getJournalSchema: vi.fn(async () => JOURNAL),
     listJournals: vi.fn(async () => []),
     listBacktestProjects: vi.fn(async () => []),
@@ -50,7 +50,7 @@ function makeDb(overrides: Partial<ExtensionDb> = {}): ExtensionDb {
 }
 
 describe("linkWithToken", () => {
-  it("koppelt een beta-user", async () => {
+  it("koppelt een gewoon lid (geen beta-gate meer)", async () => {
     const db = makeDb();
     const result = await linkWithToken(db, "valid");
     expect(result).toEqual({ ok: true, email: USER.email });
@@ -76,14 +76,6 @@ describe("linkWithToken", () => {
     const result = await linkWithToken(db, "wrong");
     expect(result).toEqual({ ok: false, error: "Token is invalid or has expired" });
     expect(db.getProfile).not.toHaveBeenCalled();
-  });
-
-  it("logt een niet-beta-user direct weer uit (gate, plan C3)", async () => {
-    const db = makeDb({ getProfile: vi.fn(async () => ({ ...BETA_PROFILE, beta: false })) });
-    const result = await linkWithToken(db, "valid");
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("beta");
-    expect(db.signOutLocal).toHaveBeenCalledOnce();
   });
 
   it("logt uit als het profiel onleesbaar is", async () => {
@@ -120,13 +112,13 @@ describe("fetchJournalDump", () => {
     const result = await fetchJournalDump(makeDb());
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.profile).toEqual(BETA_PROFILE);
+      expect(result.profile).toEqual(PROFILE);
       expect(result.journal).toEqual(JOURNAL);
     }
   });
 
   it("geeft journal null als er nog geen actief journal is", async () => {
-    const db = makeDb({ getProfile: vi.fn(async () => ({ ...BETA_PROFILE, methodologyId: null })) });
+    const db = makeDb({ getProfile: vi.fn(async () => ({ ...PROFILE, methodologyId: null })) });
     const result = await fetchJournalDump(db);
     expect(result.ok).toBe(true);
     if (result.ok) {

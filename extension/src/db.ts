@@ -10,8 +10,6 @@ export interface SessionInfo {
 }
 
 export interface ProfileInfo {
-  /** beta_features || role === 'admin' — zelfde regel als useAuth().betaFeatures. */
-  beta: boolean;
   /** Actief live-journal (profiles.methodology_id); null = nog geen journal. */
   methodologyId: string | null;
   timezone: string;

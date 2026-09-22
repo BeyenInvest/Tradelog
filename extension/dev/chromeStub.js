@@ -82,7 +82,7 @@
     "journal-dump": {
       ok: true,
       session: { userId: "u-1", email: "beyenchesney@outlook.com", expiresAt: null },
-      profile: { beta: true, methodologyId: "m-1", timezone: "Europe/Brussels" },
+      profile: { methodologyId: "m-1", timezone: "Europe/Brussels" },
       journal,
     },
     targets: {

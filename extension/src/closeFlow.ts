@@ -48,13 +48,12 @@ type Gate =
   | { ok: true; session: SessionInfo; profile: ProfileInfo }
   | { ok: false; stage: "auth" | "profile"; error: string };
 
-/** Zelfde poortwachters als logTradeFromChart: sessie + beta-profiel. */
+/** Zelfde poortwachters als logTradeFromChart: sessie + leesbaar profiel. */
 async function gate(db: ExtensionDb): Promise<Gate> {
   const session = await db.getSessionInfo();
   if (!session) return { ok: false, stage: "auth", error: "not-linked" };
   const profile = await db.getProfile(session.userId);
   if (!profile) return { ok: false, stage: "profile", error: "profile-unreadable" };
-  if (!profile.beta) return { ok: false, stage: "profile", error: "not-beta" };
   return { ok: true, session, profile };
 }
 

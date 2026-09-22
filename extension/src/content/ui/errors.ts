@@ -64,15 +64,13 @@ export function humanizeSchemaDetail(detail: string | undefined): string | undef
 
 /**
  * De codes die het log- én het sluitpad delen: dezelfde poortwachters (sessie,
- * beta-profiel), dezelfde symbool-normalisatie, dezelfde DB-weigeringen. null =
+ * profiel), dezelfde symbool-normalisatie, dezelfde DB-weigeringen. null =
  * deze code is van één pad; de aanroeper vertaalt 'm zelf.
  */
 function sharedErrorCopy(error: string, detail: string | undefined): ErrorCopy | null {
   switch (error) {
     case "not-linked":
       return { message: t("err.notLinked") };
-    case "not-beta":
-      return { message: t("err.notBeta") };
     case "profile-unreadable":
       return { message: t("err.profileUnreadable") };
     case "symbol-unreadable":
