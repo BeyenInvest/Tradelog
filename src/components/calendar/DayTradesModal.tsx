@@ -57,7 +57,7 @@ export function DayTradesModal({ dateIso, trades, onClose, onEdit, onDelete, onA
   const netTone = dayStats.net > 0 ? "text-win" : dayStats.net < 0 ? "text-loss" : "text-be";
 
   return (
-    <Modal labelledBy="day-trades-title" maxWidthClass="max-w-2xl" onClose={onClose}>
+    <Modal labelledBy="day-trades-title" maxWidthClass="max-w-3xl" onClose={onClose}>
       {(requestClose) => (
         <>
           <div className="flex items-center justify-between mb-4">

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, Plus } from "lucide-react";
+import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, Plus, GripVertical } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
@@ -9,13 +9,136 @@ import { slugifyFieldKey } from "@/lib/methodologyFields";
 import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { MethodologyPreview } from "./MethodologyPreview";
+
+/** A pickable section in the field editor's group dropdown — the raw stored
+ *  group_key/group_label pair (sent verbatim so the clear-stale-keys trigger never
+ *  fires), with a translated label just for display. */
+interface SectionOption {
+  id: string;
+  group_key: string | null;
+  group_label: string | null;
+  display: string;
+}
+
+/** Distinct sections present across the methodology's fields, in first-seen order.
+ *  Built from raw group_key/group_label so selecting one re-attaches a field to the
+ *  exact same bucket (no translation drift, no orphaned label-only "Setup"). */
+function collectSections(fields: MethodologyField[], t: TFunction): SectionOption[] {
+  const out: SectionOption[] = [];
+  const seen = new Set<string>();
+  for (const f of fields) {
+    if (f.group_key == null && f.group_label == null) continue; // ungrouped
+    const id = f.group_key ?? `label:${f.group_label}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, group_key: f.group_key, group_label: f.group_label, display: fieldGroupLabel(t, f) ?? f.group_label ?? "" });
+  }
+  return out;
+}
 
 const FIELD_TYPES: MethodologyField["field_type"][] = ["boolean", "enum", "text", "number", "date"];
 
-/** Stable grouping identity — same section iff same group_key (or, for hand-made
- *  fields without a key, same free-text group_label). Empty = ungrouped. */
-function groupIdentity(f: MethodologyField): string {
-  return f.group_key ?? f.group_label ?? "";
+/** The config-group keys that render inside the trade form's "Technical analysis"
+ *  section (setup/markt/mindset). Everything else falls to "Extra velden". */
+const WOVEN_KEYS: readonly string[] = ["setup", "markt", "mindset"];
+
+/**
+ * The trade form's built-in (non-config) fields per section — shown greyed in the
+ * editor as read-only context so the field list mirrors the real form top-to-bottom
+ * (owner 2026-09-22). Labels reuse the form's own i18n keys; the set is the common
+ * one (the opt-in MAE/MFE/exit rows are left out to avoid noise).
+ */
+function nativeFields(
+  t: TFunction,
+  isWpm: boolean
+): { entry: string[]; result: string[]; screenshots: string[]; notes: string } {
+  return {
+    entry: [t("tradeForm.datumOpen"), t("tradeForm.pair"), t("tradeForm.direction")],
+    result: [
+      t("tradeForm.tradeStatus"),
+      t("tradeForm.outcome"),
+      t("tradeForm.tradeEvaluation"),
+      t("tradeForm.resultPct"),
+      t("tradeForm.datumSluiting"),
+      t("tradeForm.plannedRisk"),
+      t("tradeForm.durationDerived"),
+    ],
+    // Default screenshot-slot names; the user can override them (0060).
+    screenshots: [
+      t(isWpm ? "tradeForm.weeklyScreenshot" : "tradeForm.screenshot1"),
+      t(isWpm ? "tradeForm.dailyScreenshot" : "tradeForm.screenshot2"),
+      t(isWpm ? "tradeForm.h4Screenshot" : "tradeForm.screenshot3"),
+      t(isWpm ? "tradeForm.h2Screenshot" : "tradeForm.screenshot4"),
+    ],
+    notes: t("tradeForm.notes"),
+  };
+}
+
+/**
+ * Editable per-slot screenshot names (0060). Four inputs; an empty one falls back to
+ * the built-in default (shown as the placeholder). Saves the whole array on blur —
+ * the preview and real form pick the names up via refreshShared.
+ */
+function ScreenshotLabelsEditor({
+  defaults,
+  value,
+  onSave,
+}: {
+  defaults: string[];
+  value: string[] | null;
+  onSave: (next: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [labels, setLabels] = useState<string[]>(() => defaults.map((_, i) => value?.[i] ?? ""));
+
+  const commit = (next: string[]) => {
+    // Trim; if every slot is empty, store [] (all defaults) — keeps the row tidy.
+    const cleaned = next.map((s) => s.trim());
+    onSave(cleaned.some((s) => s.length > 0) ? cleaned : []);
+  };
+
+  return (
+    <div className="mt-3">
+      <p className="font-mono text-[10px] uppercase tracking-wide text-muted mb-1">{t("methodology.screenshotNames")}</p>
+      <div className="flex flex-col gap-2">
+        {defaults.map((def, i) => (
+          <input
+            key={i}
+            type="text"
+            value={labels[i]}
+            placeholder={def}
+            onChange={(e) => setLabels((prev) => prev.map((s, j) => (j === i ? e.target.value : s)))}
+            onBlur={() => commit(labels)}
+            className="input py-1.5 text-sm"
+          />
+        ))}
+      </div>
+      <p className="font-mono text-[10px] mt-1 text-muted">{t("methodology.screenshotNamesHint")}</p>
+    </div>
+  );
+}
+
+/** A built-in trade-form field, greyed and non-interactive — context only. */
+function NativeRow({ label, badge }: { label: string; badge: string }) {
+  return (
+    <div className="flex items-center gap-2 py-2 opacity-55">
+      <span className="min-w-0 flex-1 truncate font-body text-sm text-muted">{label}</span>
+      <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-muted border border-border-soft rounded px-1.5 py-0.5">
+        {badge}
+      </span>
+    </div>
+  );
+}
+
+/** One form section (Entry / Result / Technical / Extra velden) in the editor. */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-6 first:mt-0">
+      <p className="font-display text-base italic text-ink mb-2 pb-1 border-b border-border-soft">{title}</p>
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -26,13 +149,31 @@ function groupIdentity(f: MethodologyField): string {
  */
 export function MethodologyEditor() {
   const { t } = useTranslation();
-  const { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, swapFieldOrder } =
-    useMethodologyEditor();
+  const {
+    methodology,
+    fields,
+    isOwn,
+    loading,
+    error,
+    fork,
+    addField,
+    updateField,
+    deleteField,
+    moveFieldFlat,
+    reorderField,
+    setScreenshotLabels,
+  } = useMethodologyEditor();
   // Collapsed by default, same as the review-sections editor below it — the field
   // list is long and, once set up, rarely retouched.
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Live preview of the trade form, shown under the field list so a user never has
+  // to leave Settings to see how a change lands (owner feedback 2026-09-22).
+  const [showPreview, setShowPreview] = useState(true);
+  // Drag-and-drop: the field currently being dragged (owner 2026-09-22). Dropping it
+  // onto another row re-orders + re-homes it to that row's section.
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   async function run(fn: () => Promise<unknown>, failKey: string) {
     setActionError(null);
@@ -63,19 +204,53 @@ export function MethodologyEditor() {
 
   const summary = t("methodology.fieldCount", { count: fields.length });
 
-  // Bucket fields (already in sort_order) by section, first-seen order, ungrouped last.
-  const buckets = new Map<string, MethodologyField[]>();
-  for (const f of fields) {
-    const id = groupIdentity(f);
-    const arr = buckets.get(id);
-    if (arr) arr.push(f);
-    else buckets.set(id, [f]);
-  }
-  const keys = [...buckets.keys()];
-  const orderedKeys = [...keys.filter((k) => k !== ""), ...keys.filter((k) => k === "")];
+  // Classify config fields into the trade form's sections so the editor mirrors it
+  // top-to-bottom (owner 2026-09-22): `cc` sits in Entry, setup/markt/mindset in
+  // Technical (kept in their group sub-buckets), the rest in "Extra velden". Result
+  // has no config fields — only greyed built-ins.
+  const isWpm = fields.some((f) => f.field_key === "fase");
+  const natives = nativeFields(t, isWpm);
+  const badge = t("methodology.fixedField");
+  const entryConfigs = fields.filter((f) => f.field_key === "cc");
+  const technicalFields = fields.filter((f) => f.field_key !== "cc" && WOVEN_KEYS.includes(f.group_key ?? ""));
+  const extraFields = fields.filter((f) => f.field_key !== "cc" && !WOVEN_KEYS.includes(f.group_key ?? ""));
+
+  // One editable config-field row, wired for arrows AND drag-and-drop. First/last are
+  // against the flat list so a field is never stuck at a section edge.
+  const renderRow = (f: MethodologyField) => {
+    const flatIdx = fields.findIndex((ff) => ff.id === f.id);
+    return (
+      <FieldRow
+        key={f.id}
+        field={f}
+        allFields={fields}
+        editable={isOwn && !busy}
+        isFirst={flatIdx === 0}
+        isLast={flatIdx === fields.length - 1}
+        isDragging={draggingId === f.id}
+        onDragStart={() => setDraggingId(f.id)}
+        onDragEnd={() => setDraggingId(null)}
+        onDropField={() => {
+          const dragged = draggingId;
+          setDraggingId(null);
+          if (dragged && dragged !== f.id) void run(() => reorderField(dragged, f.id), "methodology.saveFailed");
+        }}
+        onMove={(dir) => void run(() => moveFieldFlat(f.id, dir), "methodology.saveFailed")}
+        onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
+        onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
+        onAddOption={(value) =>
+          run(() => updateField(f.id, { options: [...(f.options ?? []), value] }), "methodology.saveFailed")
+        }
+      />
+    );
+  };
 
   return (
-    <Card>
+    // When open, the card breaks out to the right (there's empty space beside the
+    // narrow Settings column) so the live preview can sit next to the editor for
+    // side-by-side comparison — owner 2026-09-22. Capped to the viewport so it never
+    // adds a horizontal scrollbar; below xl it stays narrow and the preview stacks.
+    <Card className={open ? "xl:w-[72rem] xl:max-w-[calc(100vw-19rem)]" : undefined}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -99,13 +274,14 @@ export function MethodologyEditor() {
       </button>
 
       {open && (
-        <div className="mt-4 pt-4 border-t border-border-soft">
+        <div className="mt-4 pt-4 border-t border-border-soft xl:grid xl:grid-cols-[minmax(0,1fr)_34rem] xl:gap-8 xl:items-start">
+          <div className="flex flex-col min-w-0">
           {!isOwn && (
             <button
               type="button"
               onClick={() => void run(fork, "methodology.forkFailed")}
               disabled={busy}
-              className="mb-4 px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
+              className="mb-4 self-start px-4 py-2 rounded-lg font-body text-sm font-medium bg-gold text-on-gold disabled:opacity-40"
             >
               {t("methodology.makeEditable")}
             </button>
@@ -116,46 +292,87 @@ export function MethodologyEditor() {
 
           {fields.length === 0 && <p className="font-mono text-xs text-muted py-4">{t("methodology.empty")}</p>}
 
-          {orderedKeys.map((gkey) => {
-            const groupFields = buckets.get(gkey) ?? [];
-            const heading = gkey === "" ? t("methodology.groupOther") : fieldGroupLabel(t, groupFields[0]);
-            return (
-              <div key={gkey || "__ungrouped"} className="mt-4 first:mt-0">
-                <p className="font-mono text-[10px] uppercase tracking-wide text-muted mb-1">{heading}</p>
-                <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
-                  {groupFields.map((f, i) => (
-                    <FieldRow
-                      key={f.id}
-                      field={f}
-                      allFields={fields}
-                      editable={isOwn && !busy}
-                      isFirst={i === 0}
-                      isLast={i === groupFields.length - 1}
-                      onMove={(dir) =>
-                        void run(
-                          () => swapFieldOrder(f.id, groupFields[dir === "up" ? i - 1 : i + 1].id),
-                          "methodology.saveFailed"
-                        )
-                      }
-                      onDelete={() => void run(() => deleteField(f.id), "methodology.saveFailed")}
-                      onSave={(patch) => run(() => updateField(f.id, patch), "methodology.saveFailed")}
-                      onAddOption={(value) =>
-                        run(() => updateField(f.id, { options: [...(f.options ?? []), value] }), "methodology.saveFailed")
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          {/* Entry — built-ins + WPM's cc (4H candle close) config field. */}
+          <FormSection title={t("tradeForm.sectionEntry")}>
+            <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+              {natives.entry.map((label) => (
+                <NativeRow key={label} label={label} badge={badge} />
+              ))}
+              {entryConfigs.map(renderRow)}
+            </div>
+          </FormSection>
 
-          {isOwn && (
-            <AddFieldForm
-              busy={busy}
-              allFields={fields}
-              onAdd={(input) => run(() => addField(input), "methodology.saveFailed")}
-            />
-          )}
+          {/* Result — all built-in, nothing configurable here. */}
+          <FormSection title={t("tradeForm.sectionResult")}>
+            <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+              {natives.result.map((label) => (
+                <NativeRow key={label} label={label} badge={badge} />
+              ))}
+            </div>
+          </FormSection>
+
+          {/* Technical analysis — your config fields in the journal's own order (flat,
+              matching the form) + the built-in screenshots/notes greyed below. */}
+          <FormSection title={t("tradeForm.sectionTechnical")}>
+            {technicalFields.length > 0 && (
+              <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+                {technicalFields.map(renderRow)}
+              </div>
+            )}
+            {/* Screenshot slots — names are editable per journal (0060). */}
+            {isOwn ? (
+              <ScreenshotLabelsEditor
+                defaults={natives.screenshots}
+                value={methodology.screenshot_labels}
+                onSave={(next) => void run(() => setScreenshotLabels(next), "methodology.saveFailed")}
+              />
+            ) : (
+              <div className="mt-3 flex flex-col divide-y divide-border-soft border-t border-border-soft">
+                {natives.screenshots.map((label) => (
+                  <NativeRow key={label} label={label} badge={badge} />
+                ))}
+              </div>
+            )}
+            {/* Notes stays a fixed built-in field. */}
+            <div className="mt-3 flex flex-col divide-y divide-border-soft border-t border-border-soft">
+              <NativeRow label={natives.notes} badge={badge} />
+            </div>
+          </FormSection>
+
+          {/* Extra velden — ungrouped own fields + the add-field control. */}
+          <FormSection title={t("tradeForm.customSectionHeading")}>
+            {extraFields.length > 0 && (
+              <div className="flex flex-col divide-y divide-border-soft border-t border-border-soft">
+                {extraFields.map(renderRow)}
+              </div>
+            )}
+            {isOwn && (
+              <AddFieldForm
+                busy={busy}
+                allFields={fields}
+                onAdd={(input) => run(() => addField(input), "methodology.saveFailed")}
+              />
+            )}
+          </FormSection>
+          </div>
+
+          {/* Preview: below the editor on narrow screens, a sticky right column on
+              xl+ so it stays in view while scrolling a long field list. */}
+          <div className="mt-6 pt-4 border-t border-border-soft xl:mt-0 xl:pt-0 xl:border-t-0 xl:sticky xl:top-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-wide text-muted">{t("methodology.previewHeading")}</p>
+              <button
+                type="button"
+                onClick={() => setShowPreview((v) => !v)}
+                aria-expanded={showPreview}
+                className="font-mono text-[11px] text-muted hover:text-ink"
+              >
+                {showPreview ? t("methodology.previewHide") : t("methodology.previewShow")}
+              </button>
+            </div>
+            <p className="font-mono text-[11px] mt-1 mb-3 text-muted">{t("methodology.previewHint")}</p>
+            {showPreview && <MethodologyPreview />}
+          </div>
         </div>
       )}
     </Card>
@@ -179,6 +396,10 @@ function FieldRow({
   editable,
   isFirst,
   isLast,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDropField,
   onMove,
   onDelete,
   onSave,
@@ -189,6 +410,10 @@ function FieldRow({
   editable: boolean;
   isFirst: boolean;
   isLast: boolean;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropField: () => void;
   onMove: (dir: "up" | "down") => void;
   onDelete: () => void;
   onSave: (patch: Partial<FieldInput>) => Promise<void>;
@@ -198,6 +423,7 @@ function FieldRow({
   const [editing, setEditing] = useState(false);
   const [quickAdd, setQuickAdd] = useState(false);
   const [quickValue, setQuickValue] = useState("");
+  const [dragOver, setDragOver] = useState(false);
 
   if (editing) {
     return (
@@ -208,18 +434,20 @@ function FieldRow({
         onCancel={() => setEditing(false)}
         onSubmit={async (input) => {
           // field_key is immutable on an existing field (it keys trades.custom) — omit it from the patch.
-          // label/group_label go in only when they actually changed vs what the user
-          // sees: the form edits the *translated* text (0047), and writing it back
-          // unchanged would re-freeze the translation (the DB trigger clears
-          // label_key/group_key on any rewrite of the free text).
+          // The label edits the *translated* text (0047), so only persist it when it
+          // actually changed, or a no-op save would re-freeze the translation (the DB
+          // trigger clears label_key on any rewrite of the free text). The section is
+          // chosen from a dropdown that carries the raw group_key/group_label pair, so
+          // both go in verbatim — the trigger only clears group_key when the label
+          // changes *without* a matching key, which the pair never does.
           const displayLabel = fieldLabel(t, field);
-          const displayGroup = fieldGroupLabel(t, field);
           await onSave({
             ...(input.label !== displayLabel ? { label: input.label } : {}),
             field_type: input.field_type,
             options: input.options,
             required: input.required,
-            ...((input.group_label ?? null) !== displayGroup ? { group_label: input.group_label } : {}),
+            group_key: input.group_key,
+            group_label: input.group_label,
             show_when_field_id: input.show_when_field_id,
             show_when_values: input.show_when_values,
           });
@@ -244,7 +472,41 @@ function FieldRow({
   }
 
   return (
-    <div className="flex items-start gap-3 py-2.5">
+    <div
+      draggable={editable && !quickAdd}
+      onDragStart={editable ? onDragStart : undefined}
+      onDragEnd={editable ? onDragEnd : undefined}
+      onDragOver={
+        editable
+          ? (e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={editable ? () => setDragOver(false) : undefined}
+      onDrop={
+        editable
+          ? (e) => {
+              e.preventDefault();
+              setDragOver(false);
+              onDropField();
+            }
+          : undefined
+      }
+      className={`flex items-start gap-2 py-2.5 ${isDragging ? "opacity-40" : ""} ${
+        dragOver ? "border-t-2 border-gold -mt-px" : ""
+      }`}
+    >
+      {editable && (
+        <span
+          className="mt-0.5 shrink-0 cursor-grab text-muted/50 hover:text-muted"
+          title={t("methodology.dragHint")}
+          aria-hidden
+        >
+          <GripVertical size={14} />
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className="font-body text-sm text-ink truncate">
           {fieldLabel(t, field)}
@@ -498,7 +760,13 @@ function FieldForm({
   const [fieldType, setFieldType] = useState<MethodologyField["field_type"]>(initial?.field_type ?? "boolean");
   const [options, setOptions] = useState<string[]>(initial?.options ?? []);
   const [required, setRequired] = useState(initial?.required ?? false);
-  const [group, setGroup] = useState(initial ? fieldGroupLabel(t, initial) ?? "" : "");
+  // Section is picked from the methodology's existing sections (raw group_key +
+  // group_label, so re-attaching never drifts) — or a brand-new one, or none.
+  const sections = collectSections(allFields, t);
+  const [groupKey, setGroupKey] = useState<string | null>(initial?.group_key ?? null);
+  const [groupLabel, setGroupLabel] = useState<string | null>(initial?.group_label ?? null);
+  const [newSection, setNewSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState("");
   const [showWhenFieldId, setShowWhenFieldId] = useState<string | null>(initial?.show_when_field_id ?? null);
   const [showWhenValues, setShowWhenValues] = useState<string[]>(initial?.show_when_values ?? []);
   const [saving, setSaving] = useState(false);
@@ -521,12 +789,50 @@ function FieldForm({
   // instead of letting the DB unique constraint surface a raw error.
   const duplicateKey = isNew && label.trim().length > 0 && allFields.some((f) => f.field_key === slugifyFieldKey(label));
   const canSave =
-    label.trim().length > 0 && !duplicateKey && (fieldType !== "enum" || options.length > 0) && conditionValid;
+    label.trim().length > 0 &&
+    !duplicateKey &&
+    (fieldType !== "enum" || options.length > 0) &&
+    conditionValid &&
+    (!newSection || newSectionName.trim().length > 0);
+
+  // The section that gets written: a typed new one (label + slugified key), or the
+  // pair currently held in state (an existing section, or null/null for "no section").
+  function resolveGroup(): { group_key: string | null; group_label: string | null } {
+    if (newSection) {
+      const name = newSectionName.trim();
+      return name ? { group_key: slugifyFieldKey(name), group_label: name } : { group_key: null, group_label: null };
+    }
+    return { group_key: groupKey, group_label: groupLabel };
+  }
+
+  // Which <option> is selected right now — "__new__"/"__none__" or a section id.
+  const selectedSectionId = newSection
+    ? "__new__"
+    : groupKey == null && groupLabel == null
+      ? "__none__"
+      : groupKey ?? `label:${groupLabel}`;
+
+  function handleSectionChange(value: string) {
+    if (value === "__new__") {
+      setNewSection(true);
+      return;
+    }
+    setNewSection(false);
+    if (value === "__none__") {
+      setGroupKey(null);
+      setGroupLabel(null);
+      return;
+    }
+    const section = sections.find((s) => s.id === value);
+    setGroupKey(section?.group_key ?? null);
+    setGroupLabel(section?.group_label ?? null);
+  }
 
   async function submit() {
     if (!canSave) return;
     setSaving(true);
     try {
+      const group = resolveGroup();
       await onSubmit({
         field_key: initial?.field_key ?? slugifyFieldKey(label),
         label: label.trim(),
@@ -534,8 +840,8 @@ function FieldForm({
         field_type: fieldType,
         options: fieldType === "enum" ? options : null,
         required,
-        group_label: group.trim() || null,
-        group_key: null,
+        group_label: group.group_label,
+        group_key: group.group_key,
         show_when_field_id: showWhenFieldId,
         show_when_values: showWhenFieldId ? showWhenValues : null,
       });
@@ -581,19 +887,39 @@ function FieldForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className="font-mono text-[11px] text-muted">{t("methodology.group")}</label>
-          <input
-            type="text"
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder={t("methodology.groupPlaceholder")}
-            className="input"
-          />
+          <select
+            value={selectedSectionId}
+            onChange={(e) => handleSectionChange(e.target.value)}
+            className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
+          >
+            <option value="__none__">{t("methodology.groupNone")}</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.display}
+              </option>
+            ))}
+            <option value="__new__">{t("methodology.groupNew")}</option>
+          </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="font-mono text-[11px] text-muted">{t("methodology.required")}</label>
           <BooleanToggle value={required} onChange={setRequired} labels={[t("settings.on"), t("settings.off")]} />
         </div>
       </div>
+
+      {newSection && (
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-[11px] text-muted">{t("methodology.groupNewName")}</label>
+          <input
+            type="text"
+            value={newSectionName}
+            onChange={(e) => setNewSectionName(e.target.value)}
+            placeholder={t("methodology.labelPlaceholder")}
+            className="input"
+            autoFocus
+          />
+        </div>
+      )}
 
       {fieldType === "enum" && <OptionsEditor options={options} onChange={setOptions} />}
 
