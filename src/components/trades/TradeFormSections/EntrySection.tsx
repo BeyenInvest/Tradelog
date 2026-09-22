@@ -22,9 +22,11 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
   } = useFormContext<TradeFormValues>();
   const { t } = useTranslation();
   const { isForexJournal, instruments, addInstrument, fields } = useMethodology();
-  // A WPM journal (has a `fase` field) shows its 4H Candle Close field in the Entry
-  // grid in place of the open time (owner 2026-09-18); other journals keep tijd_open.
-  const isWpm = fields.some((f) => f.field_key === "fase");
+  // A journal with a `cc` (4H Candle Close) field shows it in the Entry grid in place
+  // of the open time (owner 2026-09-18); other journals keep tijd_open. Keyed on `cc`
+  // itself, not on `fase` — the Settings editor places `cc` in Entry whenever it
+  // exists, so a WPM journal whose fase field was removed must not drop it to Technical.
+  const hasCc = fields.some((f) => f.field_key === "cc");
 
   return (
     <div className="flex flex-col gap-4">
@@ -50,7 +52,7 @@ export function EntrySection({ closeDateTouchedRef }: EntrySectionProps) {
         {/* WPM: 4H Candle Close in this slot instead of the open time (owner wish).
             Otherwise the optional real open time (Fase S2, 0051) — feeds the
             session/hour breakdowns; when filled the DB derives `sessie` from it. */}
-        {isWpm ? (
+        {hasCc ? (
           <SingleCustomField fieldKey="cc" />
         ) : (
           <Field label={t("tradeForm.tijdOpen")} error={errors.tijd_open?.message}>

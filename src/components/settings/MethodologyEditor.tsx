@@ -51,10 +51,14 @@ const WOVEN_KEYS: readonly string[] = ["setup", "markt", "mindset"];
  */
 function nativeFields(
   t: TFunction,
-  isWpm: boolean
+  isWpm: boolean,
+  hasCc: boolean
 ): { entry: string[]; result: string[]; screenshots: string[]; notes: string } {
   return {
-    entry: [t("tradeForm.datumOpen"), t("tradeForm.pair"), t("tradeForm.direction")],
+    // The form shows the open time unless a `cc` field takes its slot (EntrySection).
+    entry: hasCc
+      ? [t("tradeForm.datumOpen"), t("tradeForm.pair"), t("tradeForm.direction")]
+      : [t("tradeForm.datumOpen"), t("tradeForm.tijdOpen"), t("tradeForm.pair"), t("tradeForm.direction")],
     result: [
       t("tradeForm.tradeStatus"),
       t("tradeForm.outcome"),
@@ -209,7 +213,7 @@ export function MethodologyEditor() {
   // Technical (kept in their group sub-buckets), the rest in "Extra velden". Result
   // has no config fields — only greyed built-ins.
   const isWpm = fields.some((f) => f.field_key === "fase");
-  const natives = nativeFields(t, isWpm);
+  const natives = nativeFields(t, isWpm, fields.some((f) => f.field_key === "cc"));
   const badge = t("methodology.fixedField");
   const entryConfigs = fields.filter((f) => f.field_key === "cc");
   const technicalFields = fields.filter((f) => f.field_key !== "cc" && WOVEN_KEYS.includes(f.group_key ?? ""));

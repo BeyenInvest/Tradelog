@@ -58,7 +58,7 @@ export function TechnicalSection() {
           </div>
         </div>
       ) : (
-        <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} />
+        <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={["cc"]} />
       )}
       <div className="grid grid-cols-2 gap-4">
         <ScreenshotInput name="w_screenshot" label={slotLabel(0)} />
