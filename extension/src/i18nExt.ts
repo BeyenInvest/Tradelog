@@ -126,6 +126,8 @@ const NL = {
   "panel.noTickPrices": "Prijzen niet berekenbaar (tick-size onbekend) — vul entry en stop handmatig in.",
   "panel.manualTimeLabel": "Datum en tijd van de entry",
   "panel.manualTimeHint": "De chart geeft hier geen bar-tijd — vul 'm zelf in (in je eigen tijdzone uit Beyen).",
+  "panel.timeFromToolHint":
+    "Uit je position-tool (start van die candle) — pas aan als je entry ergens anders lag.",
 
   // Paneel — doel + resultaat (één sectie)
   "panel.targetSelectLabel": "Waar komt deze trade terecht",
@@ -140,6 +142,8 @@ const NL = {
   "panel.resultPlaceholder": "bv. 1.8 of -0.5",
   "panel.resultAutoHint":
     "Voorstel: volle TP/SL op basis van R:R × risico — pas aan als je exit anders was.",
+  "panel.closeDateLabel": "Sluitdatum",
+  "panel.closeDateHint": "Uit de rechterrand van je position-tool — pas aan als de trade ergens anders stopte.",
 
   // Paneel — journal-velden
   "panel.noJournalFields": "Dit journal heeft geen eigen velden.",
@@ -386,6 +390,8 @@ const EN: Record<MessageKey, string> = {
   "panel.manualTimeLabel": "Date and time of the entry",
   "panel.manualTimeHint":
     "The chart gives no bar time here — fill it in yourself (in your own timezone from Beyen).",
+  "panel.timeFromToolHint":
+    "From your position tool (the start of that candle) — adjust it if your entry was elsewhere.",
 
   // Panel — destination + result (one section)
   "panel.targetSelectLabel": "Where this trade lands",
@@ -400,6 +406,8 @@ const EN: Record<MessageKey, string> = {
   "panel.resultPlaceholder": "e.g. 1.8 or -0.5",
   "panel.resultAutoHint":
     "Suggestion: full TP/SL based on R:R × risk — adjust it if your exit was different.",
+  "panel.closeDateLabel": "Close date",
+  "panel.closeDateHint": "From the right edge of your position tool — adjust it if the trade ended elsewhere.",
 
   // Panel — journal fields
   "panel.noJournalFields": "This journal has no fields of its own.",

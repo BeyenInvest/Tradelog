@@ -69,9 +69,19 @@ describe("parseChartState — S0-contractfixture", () => {
     expect(pos.direction).toBe("Long");
     expect(pos.entry).toBe(110.33);
     expect(pos.entryTimeSec).toBe(1789448400);
+    expect(pos.endTimeSec).toBe(1789621200); // punt 2 = rechterrand van de box
     expect(pos.prices?.stop).toBeCloseTo(109.83, 10);
     expect(pos.prices?.target).toBeCloseTo(111.33, 10);
     expect(pos.prices?.plannedRR).toBe(2);
+  });
+
+  it("negeert een eindpunt dat niet ná de entry ligt (ingeklapte/omgekeerde box)", () => {
+    const raw = s0Fixture();
+    const shape = (raw.shapes as { value: Array<Record<string, unknown>> }).value[1];
+    (shape.points as { value: Array<{ price: number; time: number }> }).value[1].time = 1789448400;
+    const state = parseChartState(raw);
+    if (!state.positions.ok) throw new Error("positions hoort ok te zijn");
+    expect(state.positions.value[0].endTimeSec).toBeNull();
   });
 
   it("valt terug op decimalen tellen als de formatter-props wegvallen (TV-drift)", () => {

@@ -10,6 +10,7 @@ const JOURNAL: JournalSchema = {
   naam: "WPM",
   assetClass: "forex",
   trackExit: false,
+  screenshotLabels: null,
   fields: [
     {
       id: "f-entry-type",

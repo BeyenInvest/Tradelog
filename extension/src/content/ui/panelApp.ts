@@ -33,10 +33,10 @@ import {
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
 import {
-  formatBarTime, formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
+  formatPrice, formatResolution, formatRR, JOURNAL_URL, newClientUuid, parseNumberInput,
 } from "./format";
 import {
-  ICON_ARROW_DOWN, ICON_ARROW_UP, ICON_CHECK, ICON_CLOCK, ICON_CLOSE, ICON_EXTERNAL,
+  ICON_ARROW_DOWN, ICON_ARROW_UP, ICON_CHECK, ICON_CLOSE, ICON_EXTERNAL,
   ICON_REFRESH, markSvg,
 } from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
@@ -112,6 +112,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let notes = "";
   let manualDate = "";
   let manualTime = "";
+  /** true zodra de user de entry-datum/tijd zelf aanraakte — de tool-prefill
+   * blijft er dan af (zelfde touched-contract als resultTouched). */
+  let timeTouched = false;
+  /** Sluitdatum bij Win/Loss/BE; een eigen waarde wint van de tool-prefill. */
+  let closeDate = "";
+  let closeDateTouched = false;
   let values: FormValues = {};
   /** Eén keer per formulier-sessie; blijft gelijk bij een retry (idempotentie). */
   let clientUuid = newClientUuid();
@@ -208,15 +214,33 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     return targetKey === "live" ? "running" : null;
   }
 
+  /** Tool-afgeleide entry-wallclock (profiel-tijdzone), of null zonder bar-tijd.
+   * ⚠️ De bar-tijd is de bar-STÁRT van de bar waar de tool op staat — wie op
+   * candle-close handelt bedoelt vaak een candle later; daarom staat deze
+   * prefill zichtbaar en aanpasbaar in het paneel (issue Mathias 2026-09-23). */
+  function entryPrefill(): WallClock | null {
+    const entryTimeSec = selectedPosition()?.entryTimeSec;
+    if (entryTimeSec == null || !targets?.timezone) return null;
+    return wallClockInTimezone(entryTimeSec * 1000, targets.timezone);
+  }
+
+  /** Sluitdatum-prefill: de rechterrand van de position-box (waar de trade
+   * "stopt"), anders de laatste bar (chart-"nu" — alleen in replay betrouwbaar). */
+  function closeDatePrefill(): string | null {
+    const sec = selectedPosition()?.endTimeSec ?? (chart?.lastBar.ok ? chart.lastBar.value.timeSec : null);
+    if (sec == null || !targets?.timezone) return null;
+    return wallClockInTimezone(sec * 1000, targets.timezone)?.date ?? null;
+  }
+
   /**
-   * De entry-tijd als wall-clock ("HH:MM") in de profiel-tijdzone: de bar-tijd
-   * van de position-tool, anders wat de user zelf invulde (die input staat al
-   * in diezelfde tijdzone). Basis voor de CC-prefill.
+   * De entry-tijd als wall-clock ("HH:MM") in de profiel-tijdzone: wat de user
+   * zelf invulde/aanpaste wint, anders de bar-tijd van de position-tool. Basis
+   * voor de CC-prefill.
    */
   function entryWallClockTime(): string | null {
-    const entryTimeSec = selectedPosition()?.entryTimeSec;
-    if (entryTimeSec != null && targets?.timezone) {
-      return wallClockInTimezone(entryTimeSec * 1000, targets.timezone)?.time ?? null;
+    if (!timeTouched) {
+      const prefill = entryPrefill();
+      if (prefill) return prefill.time;
     }
     return manualTime || null;
   }
@@ -571,16 +595,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     positionSec.body.appendChild(pricesGrid);
     positionSec.body.appendChild(editArea);
 
-    // ── Tijd als voetnoot ────────────────────────────────────────────────────
     const position = selectedPosition();
-    if (position?.entryTimeSec != null) {
-      positionSec.body.appendChild(
-        el("div", { class: "by-pos-time" }, [
-          el("span", { class: "by-pos-time-icon", unsafeHtml: ICON_CLOCK }),
-          el("span", { class: "by-mono", text: formatBarTime(position.entryTimeSec) }),
-        ])
-      );
-    }
     if (position && !position.prices) {
       positionSec.body.appendChild(readFail(t("panel.noTickPrices")));
     }
@@ -591,17 +606,39 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     renderManualTime();
   }
 
+  /**
+   * Entry-datum/tijd: ALTIJD zichtbaar en aanpasbaar (issue Mathias 2026-09-23
+   * — de bar-tijd van de tool is de bar-start, en wie op candle-close handelt
+   * bedoelt een candle later; dat mag niet onzichtbaar fout de DB in). Met een
+   * tool-tijd staan de velden voorgevuld; zonder zijn ze verplicht.
+   */
   function renderManualTime(): void {
-    if (!needsManualTime()) return;
+    const required = needsManualTime();
+    const prefill = timeTouched || required ? null : entryPrefill();
+
     const dateInput = el("input", { class: "by-input", attrs: { type: "date" } });
-    dateInput.value = manualDate;
+    dateInput.value = prefill ? prefill.date : manualDate;
+    const timeInput = el("input", { class: "by-input", attrs: { type: "time" } });
+    timeInput.value = prefill ? prefill.time : manualTime;
+
+    /** Eerste aanraking: de prefill vastklikken, zodat het níét bewerkte veld
+     * z'n waarde houdt terwijl het andere wordt aangepast. */
+    function touch(): void {
+      if (timeTouched) return;
+      const p = entryPrefill();
+      if (p) {
+        manualDate = manualDate || p.date;
+        manualTime = manualTime || p.time;
+      }
+      timeTouched = true;
+    }
     on(dateInput, "input", () => {
+      touch();
       manualDate = dateInput.value;
       updatePending();
     });
-    const timeInput = el("input", { class: "by-input", attrs: { type: "time" } });
-    timeInput.value = manualTime;
     on(timeInput, "input", () => {
+      touch();
       manualTime = timeInput.value;
       updatePending();
     });
@@ -610,10 +647,14 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       el("div", { style: "margin-top:10px;" }, [
         el("span", { class: "by-label" }, [
           document.createTextNode(t("panel.manualTimeLabel")),
-          el("span", { class: "by-req", text: " *" }),
+          required ? el("span", { class: "by-req", text: " *" }) : null,
         ]),
         el("div", { class: "by-row" }, [dateInput, timeInput]),
-        el("p", { class: "by-hint", style: "margin:5px 0 0;", text: t("panel.manualTimeHint") }),
+        el("p", {
+          class: "by-hint",
+          style: "margin:5px 0 0;",
+          text: required ? t("panel.manualTimeHint") : t("panel.timeFromToolHint"),
+        }),
       ])
     );
   }
@@ -743,6 +784,24 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         hint,
       ])
     );
+
+    // Sluitdatum: zichtbaar en aanpasbaar (issue Mathias 2026-09-23 — de
+    // laatste zichtbare bar is buiten replay niet waar de trade stopt; de
+    // rechterrand van de position-box wél). Prefill = closeDatePrefill().
+    const closeInput = el("input", { class: "by-input", attrs: { type: "date" } });
+    closeInput.value = closeDateTouched ? closeDate : closeDatePrefill() ?? "";
+    on(closeInput, "input", () => {
+      closeDate = closeInput.value;
+      closeDateTouched = true;
+      updatePending();
+    });
+    resultWrap.appendChild(
+      el("div", { style: "margin-top:8px;" }, [
+        el("span", { class: "by-label", text: t("panel.closeDateLabel") }),
+        closeInput,
+        el("p", { class: "by-hint", style: "margin:5px 0 0;", text: t("panel.closeDateHint") }),
+      ])
+    );
   }
 
   /**
@@ -864,9 +923,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if ((entry == null) !== (stop == null)) return { ok: false, message: t("panel.v.entryStopPair") };
     const prices = entry != null && stop != null ? { entry, stop, target } : null;
 
-    const entryTimeUtcSec = position?.entryTimeSec ?? null;
+    // Aangepaste datum/tijd wint van de tool (timeTouched); zonder beide gaat
+    // de exacte bar-tijd mee zoals altijd.
+    let entryTimeUtcSec: number | null = null;
     let manualDateTime: WallClock | null = null;
-    if (entryTimeUtcSec == null) {
+    if (!timeTouched && position?.entryTimeSec != null) {
+      entryTimeUtcSec = position.entryTimeSec;
+    } else {
       if (!manualDate || !manualTime) return { ok: false, message: t("panel.v.needDateTime") };
       manualDateTime = { date: manualDate, time: manualTime };
     }
@@ -878,7 +941,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       if (pct == null) return { ok: false, message: t("panel.v.needResult") };
       if (result === "Loss" && pct > 0) return { ok: false, message: t("panel.v.lossNegative") };
       if (result === "Win" && pct < 0) return { ok: false, message: t("panel.v.winPositive") };
-      tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct };
+      // Sluitdatum expliciet mee: wat de user aanpaste, anders de box-rand.
+      // Leeg/null → tradePayload valt terug op de laatste bar (closeTimeUtcSec).
+      const datumSluiting = closeDateTouched && closeDate ? closeDate : closeDatePrefill();
+      tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct, datumSluiting };
     }
 
     // cc is een onzichtbaar, machinaal veld (owner 18-09): het mag de submit
@@ -1036,6 +1102,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     notes = "";
     manualDate = "";
     manualTime = "";
+    timeTouched = false;
+    closeDate = "";
+    closeDateTouched = false;
     // Verse snapshot-staat; wat er nog niet in een trade zit, wordt hier
     // opgeruimd (na een geslaagde log is die lijst al leeg — zie submit()).
     snapshotsSec.reset();
@@ -1098,6 +1167,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         journal = null;
         journalNote = { kind: "load-failed", error: dump.error };
       }
+      // Slot-namen van het journal (0060) — dezelfde namen als de web-form.
+      snapshotsSec.setSlotLabels(journal?.screenshotLabels ?? null);
       targets = targetsResult.ok ? targetsResult : null;
       showOnboarding = !onboardingDone;
       showView(buildForm);

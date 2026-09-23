@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Eye } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { ImagePreviewModal } from "@/components/trades/TradeFormSections/UrlPreviewField";
+import { ImagePreviewModal } from "@/components/trades/TradeFormSections/ImagePreviewModal";
 import { OutcomePill } from "@/components/ui/OutcomePill";
 import { dateLocale, formatResult, resultDisplayValue } from "@/lib/format";
 import { hasExplicitRisk, rMultiple } from "@/lib/stats";

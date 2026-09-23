@@ -4,8 +4,7 @@ import type { TradeFormValues } from "@/lib/validation";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
-import { UrlPreviewField } from "./UrlPreviewField";
-import { ScreenshotUploadField } from "./ScreenshotUploadField";
+import { ScreenshotField } from "./ScreenshotField";
 import { CustomFieldGroup, SingleCustomField, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
 import { blockGroupLabel } from "@/lib/fieldBlocks";
 import { dynamicMethodologyFields } from "@/lib/methodologyFields";
@@ -16,9 +15,10 @@ export function TechnicalSection() {
   const { betaFeatures } = useAuth();
   const { fields, screenshotLabels } = useMethodology();
 
-  // Beta users get paste/upload straight into the private screenshots bucket
-  // (Fase K); everyone else keeps the plain URL field until public launch.
-  const ScreenshotInput = betaFeatures ? ScreenshotUploadField : UrlPreviewField;
+  // One field for everyone: display (URL or extension-uploaded bucket path) is
+  // universal, only NEW web uploads (paste/drag/browse) stay behind the beta
+  // gate (fixplan blok H).
+  const allowUpload = betaFeatures;
 
   // The four screenshot slots are universal columns, but a WPM journal (has a
   // `fase` field, same signal as the fase-analysis) keeps its Weekly/Daily/4H/Extra
@@ -61,10 +61,10 @@ export function TechnicalSection() {
         <CustomFieldGroup groupKeys={WOVEN_GROUP_KEYS} excludeKeys={["cc"]} />
       )}
       <div className="grid grid-cols-2 gap-4">
-        <ScreenshotInput name="w_screenshot" label={slotLabel(0)} />
-        <ScreenshotInput name="d_screenshot" label={slotLabel(1)} />
-        <ScreenshotInput name="h4_screenshot" label={slotLabel(2)} />
-        <ScreenshotInput name="h2_screenshot" label={slotLabel(3)} />
+        <ScreenshotField name="w_screenshot" label={slotLabel(0)} allowUpload={allowUpload} />
+        <ScreenshotField name="d_screenshot" label={slotLabel(1)} allowUpload={allowUpload} />
+        <ScreenshotField name="h4_screenshot" label={slotLabel(2)} allowUpload={allowUpload} />
+        <ScreenshotField name="h2_screenshot" label={slotLabel(3)} allowUpload={allowUpload} />
       </div>
       <Field label={t("tradeForm.notes")}>
         <textarea rows={3} className="input" {...register("notes")} />

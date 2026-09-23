@@ -31,6 +31,17 @@ export const SLOT_LABELS: Record<SnapshotSlot, string> = {
   h2: "Extra (2H)",
 };
 
+/** Slot → index in methodologies.screenshot_labels — zelfde volgorde als de
+ * web-form (TechnicalSection: w/d/h4/h2 = slot 0..3). */
+const SLOT_LABEL_INDEX: Record<SnapshotSlot, number> = { w: 0, d: 1, h4: 2, h2: 3 };
+
+/** De naam van een slot zoals de user 'm kent: de eigen journal-naam (0060)
+ * als die gezet is — exact wat de web-form toont — anders de timeframe-default.
+ * Het capture-timeframe zelf verandert nooit mee: slot w blijft W schieten. */
+export function slotLabel(slot: SnapshotSlot, custom: string[] | null | undefined): string {
+  return custom?.[SLOT_LABEL_INDEX[slot]]?.trim() || SLOT_LABELS[slot];
+}
+
 /** Default: de drie vaste tijdframes aan, het extra slot uit (plan C4). */
 export const DEFAULT_ENABLED: Record<SnapshotSlot, boolean> = { w: true, d: true, h4: true, h2: false };
 

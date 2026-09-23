@@ -16,7 +16,7 @@ import { clear, el, on } from "./dom";
 import { ICON_LINK, ICON_REFRESH } from "./icons";
 import {
   applyCycle, autoSlots, initialState, linkValue, needsGesture, parseEnabled, pathOf,
-  screenshotsForRequest, serializeEnabled, slotStatus, SLOT_LABELS, thumbOf, uploadedPaths,
+  screenshotsForRequest, serializeEnabled, slotLabel, slotStatus, thumbOf, uploadedPaths,
   type SnapshotState,
 } from "./snapshotState";
 
@@ -25,6 +25,8 @@ const ENABLED_KEY = "beyen-tv-ext:snapshot-slots";
 
 export interface SnapshotsSection {
   element: HTMLElement;
+  /** Eigen slot-namen van het journal (0060) — de web-form-namen; null = defaults. */
+  setSlotLabels(labels: string[] | null): void;
   /** Paden/links per slot voor `LogTradeRequest.screenshots`. */
   screenshots(): Record<SnapshotSlot, string | null>;
   /** Na een geslaagde log: de paden zitten nu in een trade — vergeten, niet wissen. */
@@ -69,6 +71,8 @@ export function renderSnapshotsSection(): SnapshotsSection {
   let state: SnapshotState = initialState(readEnabled());
   let busy = false;
   let restored = true;
+  /** Journal-eigen slot-namen (0060); komen ná de boot binnen via setSlotLabels. */
+  let customLabels: string[] | null = null;
   /** Eigen copy bewaren we als sleutel (die hertaalt bij een taalwissel), een
    * reden uit de service worker als rauwe tekst. */
   let cycleError: { key: "panel.reload.retry" } | { raw: string } | null = null;
@@ -149,7 +153,6 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
     const toggle = el("button", {
       class: "by-toggle-btn by-snap-toggle",
-      text: SLOT_LABELS[slot],
       attrs: { type: "button", "aria-pressed": "false" },
     });
     on(toggle, "click", () => setEnabled(slot, !state[slot].enabled));
@@ -196,11 +199,14 @@ export function renderSnapshotsSection(): SnapshotsSection {
         const current = state[slot];
         const hasLink = linkValue(current) !== null;
 
+        // Naam in de paint, niet één keer bij de bouw: de journal-eigen naam
+        // (0060) komt pas ná de boot binnen via setSlotLabels.
+        toggle.textContent = slotLabel(slot, customLabels);
         linkInput.setAttribute("placeholder", t("snap.linkPlaceholder"));
         linkBtn.setAttribute("title", t("snap.linkTitle"));
-        linkBtn.setAttribute("aria-label", t("snap.linkAria", { slot: SLOT_LABELS[slot] }));
+        linkBtn.setAttribute("aria-label", t("snap.linkAria", { slot: slotLabel(slot, customLabels) }));
         retryBtn.setAttribute("title", t("snap.retryTitle"));
-        retryBtn.setAttribute("aria-label", t("snap.retryAria", { slot: SLOT_LABELS[slot] }));
+        retryBtn.setAttribute("aria-label", t("snap.retryAria", { slot: slotLabel(slot, customLabels) }));
 
         toggle.classList.toggle("is-active", current.enabled);
         toggle.setAttribute("aria-pressed", String(current.enabled));
@@ -293,6 +299,10 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
   return {
     element,
+    setSlotLabels(labels) {
+      customLabels = labels;
+      paint();
+    },
     screenshots: () => screenshotsForRequest(state),
     consume: fresh,
     reset() {
