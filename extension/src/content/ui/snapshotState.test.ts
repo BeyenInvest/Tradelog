@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { SnapshotCycleResult } from "../../snapshots";
 import {
   applyCycle, autoSlots, DEFAULT_ENABLED, initialState, isExternalLink, needsGesture, parseEnabled,
-  pathTail, screenshotsForRequest, serializeEnabled, slotStatus, thumbOf, uploadedPaths,
+  pathTail, screenshotsForRequest, serializeEnabled, slotLabel, slotStatus, thumbOf, uploadedPaths,
   type SnapshotState,
 } from "./snapshotState";
 
@@ -14,6 +14,23 @@ function withSlot(state: SnapshotState, slot: "w" | "d" | "h4" | "h2", patch: Pa
   next[slot] = { ...state[slot], ...patch };
   return next;
 }
+
+describe("slotLabel", () => {
+  it("gebruikt de journal-eigen naam (0060) in web-volgorde w/d/h4/h2", () => {
+    const labels = ["Screenshot Weekly", "Screenshot Daily", "Screenshot 4H", "Screenshot LTF"];
+    expect(slotLabel("w", labels)).toBe("Screenshot Weekly");
+    expect(slotLabel("d", labels)).toBe("Screenshot Daily");
+    expect(slotLabel("h4", labels)).toBe("Screenshot 4H");
+    expect(slotLabel("h2", labels)).toBe("Screenshot LTF");
+  });
+
+  it("valt per slot terug op de timeframe-default bij leeg/ontbrekend/null", () => {
+    expect(slotLabel("w", null)).toBe("Weekly (W)");
+    expect(slotLabel("d", undefined)).toBe("Daily (D)");
+    expect(slotLabel("h4", ["", "  ", ""])).toBe("4H");
+    expect(slotLabel("h2", ["Alleen weekly"])).toBe("Extra (2H)");
+  });
+});
 
 describe("initialState / autoSlots", () => {
   it("start met W/D/4H aan en het extra slot uit", () => {

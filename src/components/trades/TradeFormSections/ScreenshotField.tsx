@@ -12,14 +12,21 @@ import {
   SCREENSHOT_MIME_TYPES,
 } from "@/lib/storage/screenshots";
 import { Field } from "./Field";
-import { ImagePreviewModal, type ScreenshotFieldName } from "./UrlPreviewField";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 
-interface ScreenshotUploadFieldProps {
+export type ScreenshotFieldName = "w_screenshot" | "d_screenshot" | "h4_screenshot" | "h2_screenshot";
+
+interface ScreenshotFieldProps {
   name: ScreenshotFieldName;
   label: string;
+  /** Beta gate (fixplan blok H) on CREATING uploads only — paste/drag/browse into
+   * the private bucket. Display is deliberately ungated: the TradingView extension
+   * is open to every member and writes bucket paths into these same columns, so
+   * every account must be able to view (and remove) an uploaded screenshot. */
+  allowUpload: boolean;
 }
 
-/** Resolve a stored screenshot value (URL or bucket path) to a displayable URL, re-resolving when the value changes. */
+/** Resolve a stored screenshot value (external URL or bucket path) to a displayable URL, re-resolving when the value changes. */
 function useResolvedScreenshot(value: string): { url: string | null; loading: boolean } {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,13 +53,14 @@ function useResolvedScreenshot(value: string): { url: string | null; loading: bo
 }
 
 /**
- * Beta variant of UrlPreviewField (Fase K): paste (Ctrl+V), drag-drop or browse
- * a chart screenshot straight into the trade form. Uploads to the private
- * `screenshots` bucket and stores the returned path in the same *_screenshot
- * column; a pasted image URL keeps working too (stored verbatim). Gated on
- * useAuth().betaFeatures at the call site (TechnicalSection).
+ * The one screenshot slot for the trade form (Fase K + TV-extensie). A stored
+ * value is EITHER an external URL (shown in a text input, previewed via the eye)
+ * OR a private-bucket path (shown as an "uploaded image" pill with a thumbnail —
+ * the raw path is never surfaced, it isn't a URL). With `allowUpload` the empty
+ * input also accepts paste (Ctrl+V), drag-drop and browse, uploading straight
+ * into the bucket and storing the returned path in the same *_screenshot column.
  */
-export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProps) {
+export function ScreenshotField({ name, label, allowUpload }: ScreenshotFieldProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -128,13 +136,14 @@ export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProp
     setError(null);
   }
 
-  // One compact row, like the original URL field: the input IS the paste target
-  // (paste fires reliably on an editable input) and also accepts drag-drop; a
-  // small browse button folds in file upload; the eye enlarges. An uploaded
-  // image shows a tiny-thumbnail pill in place of the input (its raw storage
-  // path is never surfaced).
+  // One compact row: the input IS the paste target (paste fires reliably on an
+  // editable input) and also accepts drag-drop when uploads are allowed; a small
+  // browse button folds in file upload; the eye enlarges. An uploaded image shows
+  // a tiny-thumbnail pill in place of the input. The URL-only variant keeps its
+  // original "(url)" label hint so non-beta users see the form exactly as before.
+  const showUrlHint = !allowUpload && !isUpload;
   return (
-    <Field label={label}>
+    <Field label={showUrlHint ? `${label}${t("tradeForm.urlLabelSuffix")}` : label}>
       <div className="flex gap-2">
         {isUpload ? (
           <div className="input flex items-center gap-2 min-w-0">
@@ -147,7 +156,7 @@ export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProp
             )}
             <span className="truncate text-muted">{t("tradeForm.screenshotUploaded")}</span>
           </div>
-        ) : (
+        ) : allowUpload ? (
           <input
             type="text"
             className="input"
@@ -157,9 +166,11 @@ export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProp
             onDragOver={(e) => e.preventDefault()}
             {...register(name)}
           />
+        ) : (
+          <input type="text" className="input" {...register(name)} />
         )}
 
-        {!hasValue && (
+        {allowUpload && !hasValue && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -180,7 +191,7 @@ export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProp
           <Eye size={15} />
         </button>
 
-        {hasValue && (
+        {(isUpload || (allowUpload && hasValue)) && (
           <button
             type="button"
             onClick={remove}
@@ -192,16 +203,18 @@ export function ScreenshotUploadField({ name, label }: ScreenshotUploadFieldProp
         )}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        className="hidden"
-        onChange={(e) => {
-          void handleFile(e.target.files?.[0]);
-          e.target.value = ""; // allow re-picking the same file after a remove
-        }}
-      />
+      {allowUpload && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={(e) => {
+            void handleFile(e.target.files?.[0]);
+            e.target.value = ""; // allow re-picking the same file after a remove
+          }}
+        />
+      )}
 
       {error && <p className="mt-1 text-xs text-loss">{error}</p>}
       {enlarged && resolvedUrl && <ImagePreviewModal src={resolvedUrl} label={label} onClose={() => setEnlarged(false)} />}

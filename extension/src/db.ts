@@ -37,6 +37,9 @@ export interface JournalSchema {
   naam: string;
   assetClass: string | null;
   trackExit: boolean;
+  /** Eigen slot-namen (methodologies.screenshot_labels, 0060): index 0..3 =
+   * w/d/h4/h2; leeg/ontbrekend = de standaard timeframe-naam van dat slot. */
+  screenshotLabels: string[] | null;
   fields: JournalField[];
 }
 

@@ -20,6 +20,9 @@ export interface PositionState {
   entry: number;
   /** Bar-tijd van het entry-punt in UTC-seconden (replay-bewust). */
   entryTimeSec: number | null;
+  /** Bar-tijd van de rechterrand van de tool (punt 2) — waar de trade "stopt".
+   * Alleen gezet als hij ná de entry ligt; basis voor de sluitdatum-prefill. */
+  endTimeSec: number | null;
   stopLevelTicks: number;
   profitLevelTicks: number;
   /** Alleen gezet als de tick-size bekend is. */
@@ -107,6 +110,11 @@ function parseOnePosition(entry: Record<string, unknown>, tick: number | null): 
   const entryPrice = num(p0?.price);
   if (entryPrice == null) return null;
   const entryTimeSec = num(p0?.time);
+  // Punt 2 = de rechterrand van de position-box. De sluitdatum hoort dáár
+  // vandaan te komen, niet van de laatste zichtbare bar van de chart (die staat
+  // buiten replay willekeurig ver voorbij het einde van de trade).
+  const rawEnd = num(rec(points.value[1])?.time);
+  const endTimeSec = rawEnd != null && (entryTimeSec == null || rawEnd > entryTimeSec) ? rawEnd : null;
 
   const props = unwrapSafe(entry.properties);
   if ("error" in props) return null;
@@ -121,7 +129,7 @@ function parseOnePosition(entry: Record<string, unknown>, tick: number | null): 
     if (abs) prices = { ...abs, plannedRR: plannedRR(abs.entry, abs.stop, abs.target) };
   }
 
-  return { id, direction, entry: entryPrice, entryTimeSec, stopLevelTicks, profitLevelTicks, prices };
+  return { id, direction, entry: entryPrice, entryTimeSec, endTimeSec, stopLevelTicks, profitLevelTicks, prices };
 }
 
 function parsePositions(raw: Record<string, unknown>, tick: number | null): Reading<PositionState[]> {
