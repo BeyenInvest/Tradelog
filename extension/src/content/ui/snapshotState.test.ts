@@ -30,6 +30,17 @@ describe("slotLabel", () => {
     expect(slotLabel("h4", ["", "  ", ""])).toBe("4H");
     expect(slotLabel("h2", ["Alleen weekly"])).toBe("Extra (2H)");
   });
+
+  it("zonder eigen naam volgt de default de journal-TF (0061); een eigen naam wint altijd", () => {
+    // Slot h2 op 15m zonder naam → "15m" i.p.v. het oude "Extra (2H)".
+    expect(slotLabel("h2", null, ["", "", "", "15"])).toBe("15m");
+    expect(slotLabel("w", null, ["60", "", "", ""])).toBe("1H");
+    // Slot op de default-TF (of expliciet de default gekozen) → oude naam.
+    expect(slotLabel("d", null, ["", "", "", "15"])).toBe("Daily (D)");
+    expect(slotLabel("w", null, ["W", "", "", ""])).toBe("Weekly (W)");
+    // Eigen naam (0060) wint van de TF-naam.
+    expect(slotLabel("h2", ["", "", "", "After"], ["", "", "", "15"])).toBe("After");
+  });
 });
 
 describe("initialState / autoSlots", () => {

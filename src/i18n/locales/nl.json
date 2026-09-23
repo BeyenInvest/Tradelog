@@ -1176,8 +1176,10 @@
     "previewHide": "Voorbeeld verbergen",
     "fixedField": "vast",
     "dragHint": "Sleep om te herordenen",
-    "screenshotNames": "Screenshot-namen",
-    "screenshotNamesHint": "Leeg = de standaardnaam voor dat slot.",
+    "screenshotNames": "Screenshot-slots",
+    "screenshotNamesHint": "Timeframe = wat de TradingView-extensie voor dat slot schiet; naam leeg = de standaardnaam. Twee slots met dezelfde timeframe mag (bv. before/after).",
+    "slotTimeframe": "Timeframe",
+    "slotTfDefault": "Standaard ({{tf}})",
     "fieldCount_one": "{{count}} veld",
     "fieldCount_other": "{{count}} velden"
   },

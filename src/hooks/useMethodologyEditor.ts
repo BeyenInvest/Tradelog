@@ -249,5 +249,19 @@ export function useMethodologyEditor() {
     void refreshShared();
   }, [methodology, isOwn, refreshShared]);
 
-  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, moveFieldFlat, reorderField, swapFieldOrder, setScreenshotLabels, refresh: () => load(methodologyId) };
+  /**
+   * Save the 4 per-slot snapshot timeframes for the TV extension (0061). Same
+   * contract as the labels: jsonb array, an empty string at a position means
+   * "the default TF for that slot" (W/D/240/120). The extension reads them via
+   * its journal-schema fetch; the trade form only derives default labels.
+   */
+  const setScreenshotTimeframes = useCallback(async (next: string[]) => {
+    const mid = requireOwn();
+    const { error: err } = await supabase.from("methodologies").update({ screenshot_timeframes: next }).eq("id", mid);
+    if (err) throw err;
+    setMethodology((m) => (m ? { ...m, screenshot_timeframes: next } : m));
+    void refreshShared();
+  }, [methodology, isOwn, refreshShared]);
+
+  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, moveFieldFlat, reorderField, swapFieldOrder, setScreenshotLabels, setScreenshotTimeframes, refresh: () => load(methodologyId) };
 }

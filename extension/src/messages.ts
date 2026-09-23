@@ -18,7 +18,14 @@ export type ExtRequest =
   | { type: "chart-state" }
   | { type: "targets" }
   | { type: "log-trade"; request: LogTradeRequest }
-  | { type: "snapshot-cycle"; slots: SnapshotSlot[] }
+  | {
+      type: "snapshot-cycle";
+      slots: SnapshotSlot[];
+      /** Journal-eigen TF per slot (screenshot_timeframes, 0061); weggelaten =
+       * de vaste W/D/4H/2H-defaults. De SW valideert elke waarde tegen de
+       * gedeelde whitelist (trust boundary) vóór hij naar TV gaat. */
+      resolutions?: Record<SnapshotSlot, string>;
+    }
   | { type: "delete-screenshots"; paths: string[] }
   | { type: "open-trades"; symbolRaw: string }
   | { type: "close-trade"; request: CloseTradeRequest }

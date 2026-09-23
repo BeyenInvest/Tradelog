@@ -12,18 +12,28 @@
 // Chrome een activeTab-gebaar eist; dié vertaalt zich naar code
 // "needs-gesture" zodat de UI kan zeggen: "klik één keer op het Beyen-icoon".
 
+import { DEFAULT_SLOT_TIMEFRAMES, resolveSlotTimeframes } from "../../src/lib/screenshotSlots";
 import { normalizeResolution } from "./adapter/chartReady";
 
 export const SNAPSHOT_SLOTS = ["w", "d", "h4", "h2"] as const;
 export type SnapshotSlot = (typeof SNAPSHOT_SLOTS)[number];
 
-/** Vaste W/D/4H/2H-slots (plan C4) → TV-resolutions. */
+/** Standaard-TF per slot (het oude vaste W/D/4H/2H, plan C4) → TV-resolutions.
+ * Sinds 0061 zijn dit de fallbacks — het journal kan per slot een eigen TF
+ * dragen (screenshot_timeframes), die de cyclus via `resolutions` meekrijgt. */
 export const SLOT_RESOLUTIONS: Record<SnapshotSlot, string> = {
-  w: "W",
-  d: "D",
-  h4: "240",
-  h2: "120",
+  w: DEFAULT_SLOT_TIMEFRAMES[0],
+  d: DEFAULT_SLOT_TIMEFRAMES[1],
+  h4: DEFAULT_SLOT_TIMEFRAMES[2],
+  h2: DEFAULT_SLOT_TIMEFRAMES[3],
 };
+
+/** `screenshot_timeframes` (rauw, index 0..3) → effectieve TF per slot, met de
+ * gedeelde whitelist-validatie per positie (ongeldig/leeg = slot-default). */
+export function slotResolutions(customTimeframes: readonly unknown[] | null | undefined): Record<SnapshotSlot, string> {
+  const effective = resolveSlotTimeframes(customTimeframes);
+  return { w: effective[0], d: effective[1], h4: effective[2], h2: effective[3] };
+}
 
 export const SNAPSHOT_MAX_BYTES = 5 * 1024 * 1024; // bucket-limiet 0039
 
@@ -99,8 +109,15 @@ async function uploadSlot(deps: SnapshotDeps, image: Blob): Promise<SlotResult> 
   }
 }
 
-export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]): Promise<SnapshotCycleResult> {
-  const wanted = SNAPSHOT_SLOTS.filter((s) => slots.includes(s)); // vaste volgorde W→D→4H→2H
+export async function runSnapshotCycle(
+  deps: SnapshotDeps,
+  slots: SnapshotSlot[],
+  /** Journal-eigen TF per slot (0061); weggelaten = de vaste defaults. Twee
+   * slots mogen dezelfde TF dragen (Before/After) — elk slot blijft een eigen
+   * capture+upload, alleen de overbodige switch wordt overgeslagen. */
+  resolutions: Record<SnapshotSlot, string> = SLOT_RESOLUTIONS,
+): Promise<SnapshotCycleResult> {
+  const wanted = SNAPSHOT_SLOTS.filter((s) => slots.includes(s)); // vaste slot-volgorde (= formulier-volgorde)
   const results: SnapshotCycleResult["slots"] = {};
   // Uploads lopen buiten de kritieke keten (zie onder): capture per slot, maar
   // de upload+preview draait door terwijl de chart al naar het volgende
@@ -117,7 +134,7 @@ export async function runSnapshotCycle(deps: SnapshotDeps, slots: SnapshotSlot[]
   let current = original;
 
   for (const slot of wanted) {
-    const target = SLOT_RESOLUTIONS[slot];
+    const target = resolutions[slot];
     // Staat de chart al op dit timeframe, dan niet onnodig switchen — maar wél
     // settlen: hij kan nog laden van een handmatige wissel vlak vóór de cyclus.
     if (!same(current, target)) {

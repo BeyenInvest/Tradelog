@@ -11,7 +11,7 @@
 // weer weg. Geplakte links raken we nooit aan — die zijn niet van ons.
 import { onLangChange, t } from "../../i18nExt";
 import { sendToSw } from "../../messages";
-import { SNAPSHOT_SLOTS, type SnapshotSlot } from "../../snapshots";
+import { SNAPSHOT_SLOTS, slotResolutions, type SnapshotSlot } from "../../snapshots";
 import { clear, el, on } from "./dom";
 import { ICON_LINK, ICON_REFRESH } from "./icons";
 import {
@@ -25,8 +25,9 @@ const ENABLED_KEY = "beyen-tv-ext:snapshot-slots";
 
 export interface SnapshotsSection {
   element: HTMLElement;
-  /** Eigen slot-namen van het journal (0060) — de web-form-namen; null = defaults. */
-  setSlotLabels(labels: string[] | null): void;
+  /** Slot-config van het journal: eigen namen (0060) + eigen TF's (0061);
+   * null = de defaults (Weekly/Daily/4H/Extra resp. W/D/240/120). */
+  setSlotConfig(labels: string[] | null, timeframes: string[] | null): void;
   /** Paden/links per slot voor `LogTradeRequest.screenshots`. */
   screenshots(): Record<SnapshotSlot, string | null>;
   /** Na een geslaagde log: de paden zitten nu in een trade — vergeten, niet wissen. */
@@ -71,8 +72,10 @@ export function renderSnapshotsSection(): SnapshotsSection {
   let state: SnapshotState = initialState(readEnabled());
   let busy = false;
   let restored = true;
-  /** Journal-eigen slot-namen (0060); komen ná de boot binnen via setSlotLabels. */
+  /** Journal-eigen slot-namen (0060) + slot-TF's (0061); komen ná de boot
+   * binnen via setSlotConfig. */
   let customLabels: string[] | null = null;
+  let customTimeframes: string[] | null = null;
   /** Eigen copy bewaren we als sleutel (die hertaalt bij een taalwissel), een
    * reden uit de service worker als rauwe tekst. */
   let cycleError: { key: "panel.reload.retry" } | { raw: string } | null = null;
@@ -130,7 +133,8 @@ export function renderSnapshotsSection(): SnapshotsSection {
     cycleError = null;
     paint();
     try {
-      const result = await sendToSw({ type: "snapshot-cycle", slots });
+      // De journal-TF's reizen mee (0061); de SW valideert ze tegen de whitelist.
+      const result = await sendToSw({ type: "snapshot-cycle", slots, resolutions: slotResolutions(customTimeframes) });
       if (result.ok) {
         const applied = applyCycle(state, slots, result);
         state = applied.state;
@@ -199,14 +203,15 @@ export function renderSnapshotsSection(): SnapshotsSection {
         const current = state[slot];
         const hasLink = linkValue(current) !== null;
 
-        // Naam in de paint, niet één keer bij de bouw: de journal-eigen naam
-        // (0060) komt pas ná de boot binnen via setSlotLabels.
-        toggle.textContent = slotLabel(slot, customLabels);
+        // Naam in de paint, niet één keer bij de bouw: de journal-eigen config
+        // (0060/0061) komt pas ná de boot binnen via setSlotConfig.
+        const name = slotLabel(slot, customLabels, customTimeframes);
+        toggle.textContent = name;
         linkInput.setAttribute("placeholder", t("snap.linkPlaceholder"));
         linkBtn.setAttribute("title", t("snap.linkTitle"));
-        linkBtn.setAttribute("aria-label", t("snap.linkAria", { slot: slotLabel(slot, customLabels) }));
+        linkBtn.setAttribute("aria-label", t("snap.linkAria", { slot: name }));
         retryBtn.setAttribute("title", t("snap.retryTitle"));
-        retryBtn.setAttribute("aria-label", t("snap.retryAria", { slot: slotLabel(slot, customLabels) }));
+        retryBtn.setAttribute("aria-label", t("snap.retryAria", { slot: name }));
 
         toggle.classList.toggle("is-active", current.enabled);
         toggle.setAttribute("aria-pressed", String(current.enabled));
@@ -299,8 +304,9 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
   return {
     element,
-    setSlotLabels(labels) {
+    setSlotConfig(labels, timeframes) {
       customLabels = labels;
+      customTimeframes = timeframes;
       paint();
     },
     screenshots: () => screenshotsForRequest(state),

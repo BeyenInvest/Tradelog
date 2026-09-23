@@ -40,6 +40,10 @@ export interface JournalSchema {
   /** Eigen slot-namen (methodologies.screenshot_labels, 0060): index 0..3 =
    * w/d/h4/h2; leeg/ontbrekend = de standaard timeframe-naam van dat slot. */
   screenshotLabels: string[] | null;
+  /** Eigen slot-TF's (methodologies.screenshot_timeframes, 0061): index 0..3 =
+   * w/d/h4/h2, TV-resolutions; leeg/ontbrekend/ongeldig = de standaard-TF van
+   * dat slot (W/D/240/120). Validatie tegen de whitelist zit in de SW. */
+  screenshotTimeframes: string[] | null;
   fields: JournalField[];
 }
 

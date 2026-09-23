@@ -369,6 +369,13 @@ export interface Methodology {
    * an empty string at a position = default for that slot.
    */
   screenshot_labels: string[] | null;
+  /**
+   * Per-journal TV-timeframes for those same 4 slots (0061): array of 4
+   * TV-resolution strings ("W","D","240","15",...), index 0..3 = w/d/h4/h2.
+   * null = defaults (W/D/240/120); an empty string at a position = default for
+   * that slot. Values validated against the whitelist in screenshotSlots.ts.
+   */
+  screenshot_timeframes: string[] | null;
   created_at: string;
   updated_at: string;
 }

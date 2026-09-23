@@ -9,6 +9,7 @@
 //     geplakte links — die zijn van TradingView, niet van ons.
 //  3. Een retry vervangt altijd het oude pad: het oude gaat weg (stale), het
 //     nieuwe resultaat komt ervoor in de plaats, ook als de retry faalde.
+import { customTimeframeLabel } from "../../../../src/lib/screenshotSlots";
 import { t } from "../../i18nExt";
 import { SNAPSHOT_SLOTS, type SlotResult, type SnapshotCycleResult, type SnapshotSlot } from "../../snapshots";
 
@@ -36,10 +37,16 @@ export const SLOT_LABELS: Record<SnapshotSlot, string> = {
 const SLOT_LABEL_INDEX: Record<SnapshotSlot, number> = { w: 0, d: 1, h4: 2, h2: 3 };
 
 /** De naam van een slot zoals de user 'm kent: de eigen journal-naam (0060)
- * als die gezet is — exact wat de web-form toont — anders de timeframe-default.
- * Het capture-timeframe zelf verandert nooit mee: slot w blijft W schieten. */
-export function slotLabel(slot: SnapshotSlot, custom: string[] | null | undefined): string {
-  return custom?.[SLOT_LABEL_INDEX[slot]]?.trim() || SLOT_LABELS[slot];
+ * als die gezet is — exact wat de web-form toont — anders volgt de default de
+ * gekozen TF (0061): een slot met een eigen timeframe heet "15m", alleen een
+ * onaangeraakt slot valt terug op het oude "Weekly (W)"-erfgoed. */
+export function slotLabel(
+  slot: SnapshotSlot,
+  custom: string[] | null | undefined,
+  customTimeframes?: string[] | null,
+): string {
+  const i = SLOT_LABEL_INDEX[slot];
+  return custom?.[i]?.trim() || customTimeframeLabel(customTimeframes, i) || SLOT_LABELS[slot];
 }
 
 /** Default: de drie vaste tijdframes aan, het extra slot uit (plan C4). */
