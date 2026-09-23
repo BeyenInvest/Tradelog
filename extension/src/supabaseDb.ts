@@ -63,7 +63,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
     async getJournalSchema(methodologyId) {
       const { data: journal, error: journalErr } = await client
         .from("methodologies")
-        .select("id, naam, asset_class, track_exit, screenshot_labels")
+        .select("id, naam, asset_class, track_exit, screenshot_labels, screenshot_timeframes")
         .eq("id", methodologyId)
         .maybeSingle();
       if (journalErr || !journal) return null;
@@ -97,6 +97,9 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         trackExit: journal.track_exit === true,
         screenshotLabels: Array.isArray(journal.screenshot_labels)
           ? journal.screenshot_labels.map((v: unknown) => (typeof v === "string" ? v : ""))
+          : null,
+        screenshotTimeframes: Array.isArray(journal.screenshot_timeframes)
+          ? journal.screenshot_timeframes.map((v: unknown) => (typeof v === "string" ? v : ""))
           : null,
         fields: mapped,
       };

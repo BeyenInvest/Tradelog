@@ -11,6 +11,7 @@ const LEGACY_JOURNAL: JournalSchema = {
   assetClass: "forex",
   trackExit: false,
   screenshotLabels: null,
+  screenshotTimeframes: null,
   fields: [
     {
       id: "f-fase",

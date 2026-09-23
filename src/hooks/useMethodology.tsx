@@ -57,6 +57,14 @@ export interface MethodologyData {
    */
   screenshotLabels: string[] | null;
   /**
+   * Per-journal TV-timeframes for the 4 snapshot slots (0061), raw from
+   * `methodologies.screenshot_timeframes` — array index 0..3 = w/d/h4/h2, an
+   * empty/missing entry means "the default TF" (W/D/240/120). null when never
+   * set. The trade form uses it only for the default slot label; capturing is
+   * the extension's job.
+   */
+  screenshotTimeframes: string[] | null;
+  /**
    * The journal's curated instrument universe (cyclus D), read from
    * `instrument_config`. Normalized/sorted. Drives the trade-form instrument select
    * and the Settings instrument editor. Empty for a forex journal (it uses the pair
@@ -381,6 +389,7 @@ function useMethodologyState(): MethodologyData {
     trackExit,
     setTrackExit,
     screenshotLabels: methodology?.screenshot_labels ?? null,
+    screenshotTimeframes: methodology?.screenshot_timeframes ?? null,
     instruments,
     addInstrument,
     removeInstrument,

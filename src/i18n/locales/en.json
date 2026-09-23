@@ -1176,8 +1176,10 @@
     "previewHide": "Hide preview",
     "fixedField": "fixed",
     "dragHint": "Drag to reorder",
-    "screenshotNames": "Screenshot names",
-    "screenshotNamesHint": "Empty = the default name for that slot.",
+    "screenshotNames": "Screenshot slots",
+    "screenshotNamesHint": "Timeframe = what the TradingView extension captures for that slot; empty name = the default. Two slots may share a timeframe (e.g. before/after).",
+    "slotTimeframe": "Timeframe",
+    "slotTfDefault": "Default ({{tf}})",
     "fieldCount_one": "{{count}} field",
     "fieldCount_other": "{{count}} fields"
   },

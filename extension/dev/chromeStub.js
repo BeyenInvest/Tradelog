@@ -11,6 +11,10 @@
     naam: "Weekly Phase Method",
     assetClass: "forex",
     trackExit: false,
+    screenshotLabels: null,
+    // 0061: het Extra-slot op 15m — het paneel moet dat slot dan "15m" noemen
+    // en de resolution "15" in de snapshot-cycle-request meesturen.
+    screenshotTimeframes: ["", "", "", "15"],
     fields: [
       {
         id: "f-fase", fieldKey: "fase", label: "Fase", labelKey: null, fieldType: "enum",

@@ -6,6 +6,9 @@ import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
 import { slugifyFieldKey } from "@/lib/methodologyFields";
+import {
+  customTimeframeLabel, DEFAULT_SLOT_TIMEFRAMES, isSnapshotTimeframe, SNAPSHOT_TIMEFRAMES, timeframeLabel,
+} from "@/lib/screenshotSlots";
 import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
 import type { MethodologyField } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -80,26 +83,42 @@ function nativeFields(
 }
 
 /**
- * Editable per-slot screenshot names (0060). Four inputs; an empty one falls back to
- * the built-in default (shown as the placeholder). Saves the whole array on blur —
- * the preview and real form pick the names up via refreshShared.
+ * Editable per-slot screenshot config: the TV timeframe the extension captures
+ * (0061) + the slot name (0060). Names save on blur, timeframes immediately on
+ * change; an empty entry means "the default" for that slot. Two slots may share
+ * a timeframe on purpose (before/after workflows) — no dedupe. When a slot has
+ * a custom TF but no custom name, the TF name becomes the default label (shown
+ * as the placeholder), matching the trade form and the extension panel.
  */
-function ScreenshotLabelsEditor({
+function ScreenshotSlotsEditor({
   defaults,
-  value,
-  onSave,
+  labels,
+  timeframes,
+  onSaveLabels,
+  onSaveTimeframes,
 }: {
   defaults: string[];
-  value: string[] | null;
-  onSave: (next: string[]) => void;
+  labels: string[] | null;
+  timeframes: string[] | null;
+  onSaveLabels: (next: string[]) => void;
+  onSaveTimeframes: (next: string[]) => void;
 }) {
   const { t } = useTranslation();
-  const [labels, setLabels] = useState<string[]>(() => defaults.map((_, i) => value?.[i] ?? ""));
+  const [names, setNames] = useState<string[]>(() => defaults.map((_, i) => labels?.[i] ?? ""));
+  const [tfs, setTfs] = useState<string[]>(() =>
+    defaults.map((_, i) => {
+      const v = timeframes?.[i];
+      return typeof v === "string" && isSnapshotTimeframe(v) ? v : "";
+    })
+  );
 
-  const commit = (next: string[]) => {
-    // Trim; if every slot is empty, store [] (all defaults) — keeps the row tidy.
+  // Trim; if every slot is empty, store [] (all defaults) — keeps the row tidy.
+  const commitNames = (next: string[]) => {
     const cleaned = next.map((s) => s.trim());
-    onSave(cleaned.some((s) => s.length > 0) ? cleaned : []);
+    onSaveLabels(cleaned.some((s) => s.length > 0) ? cleaned : []);
+  };
+  const commitTfs = (next: string[]) => {
+    onSaveTimeframes(next.some((s) => s.length > 0) ? next : []);
   };
 
   return (
@@ -107,15 +126,31 @@ function ScreenshotLabelsEditor({
       <p className="font-mono text-[10px] uppercase tracking-wide text-muted mb-1">{t("methodology.screenshotNames")}</p>
       <div className="flex flex-col gap-2">
         {defaults.map((def, i) => (
-          <input
-            key={i}
-            type="text"
-            value={labels[i]}
-            placeholder={def}
-            onChange={(e) => setLabels((prev) => prev.map((s, j) => (j === i ? e.target.value : s)))}
-            onBlur={() => commit(labels)}
-            className="input py-1.5 text-sm"
-          />
+          <div key={i} className="flex gap-2">
+            <select
+              value={tfs[i]}
+              onChange={(e) => {
+                const next = tfs.map((s, j) => (j === i ? e.target.value : s));
+                setTfs(next);
+                commitTfs(next);
+              }}
+              aria-label={t("methodology.slotTimeframe")}
+              className="w-36 shrink-0 rounded-lg px-2 py-1.5 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
+            >
+              <option value="">{t("methodology.slotTfDefault", { tf: timeframeLabel(DEFAULT_SLOT_TIMEFRAMES[i]) })}</option>
+              {SNAPSHOT_TIMEFRAMES.map((tf) => (
+                <option key={tf} value={tf}>{timeframeLabel(tf)}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={names[i]}
+              placeholder={customTimeframeLabel(tfs, i) ?? def}
+              onChange={(e) => setNames((prev) => prev.map((s, j) => (j === i ? e.target.value : s)))}
+              onBlur={() => commitNames(names)}
+              className="input min-w-0 flex-1 py-1.5 text-sm"
+            />
+          </div>
         ))}
       </div>
       <p className="font-mono text-[10px] mt-1 text-muted">{t("methodology.screenshotNamesHint")}</p>
@@ -166,6 +201,7 @@ export function MethodologyEditor() {
     moveFieldFlat,
     reorderField,
     setScreenshotLabels,
+    setScreenshotTimeframes,
   } = useMethodologyEditor();
   // Collapsed by default, same as the review-sections editor below it — the field
   // list is long and, once set up, rarely retouched.
@@ -323,12 +359,14 @@ export function MethodologyEditor() {
                 {technicalFields.map(renderRow)}
               </div>
             )}
-            {/* Screenshot slots — names are editable per journal (0060). */}
+            {/* Screenshot slots — timeframe (0061) + name (0060) editable per journal. */}
             {isOwn ? (
-              <ScreenshotLabelsEditor
+              <ScreenshotSlotsEditor
                 defaults={natives.screenshots}
-                value={methodology.screenshot_labels}
-                onSave={(next) => void run(() => setScreenshotLabels(next), "methodology.saveFailed")}
+                labels={methodology.screenshot_labels}
+                timeframes={methodology.screenshot_timeframes}
+                onSaveLabels={(next) => void run(() => setScreenshotLabels(next), "methodology.saveFailed")}
+                onSaveTimeframes={(next) => void run(() => setScreenshotTimeframes(next), "methodology.saveFailed")}
               />
             ) : (
               <div className="mt-3 flex flex-col divide-y divide-border-soft border-t border-border-soft">

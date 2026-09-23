@@ -404,6 +404,11 @@ create table methodologies (
   -- index 0..3 = w/d/h4/h2. null = defaults (Weekly/Daily/4H/Extra, or Screenshot 1-4);
   -- an empty string at a position = default for that slot. Shape is validated in the app.
   screenshot_labels jsonb,
+  -- Per-journal TV-timeframes for those same 4 slots (0061): JSON array of 4
+  -- TV-resolution strings ("W","D","240","15",...), index 0..3 = w/d/h4/h2.
+  -- null = defaults (W/D/240/120); an empty string at a position = default for
+  -- that slot. Values validated against the app-layer whitelist (screenshotSlots.ts).
+  screenshot_timeframes jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1025,10 +1030,10 @@ begin
     raise exception 'not authenticated';
   end if;
 
-  -- track_exit reist mee de fork in (0057) — 0048 hercreëerde deze insert
-  -- zonder de 0050-kolom, waardoor een fork de opt-in stil verloor.
-  insert into methodologies (user_id, naam, is_system, asset_class, instrument_config, track_exit)
-  select auth.uid(), naam, false, asset_class, instrument_config, track_exit
+  -- track_exit reist mee sinds 0057; screenshot_labels (0060) + screenshot_
+  -- timeframes (0061) sinds 0061 — een fork verloor de slot-config anders stil.
+  insert into methodologies (user_id, naam, is_system, asset_class, instrument_config, track_exit, screenshot_labels, screenshot_timeframes)
+  select auth.uid(), naam, false, asset_class, instrument_config, track_exit, screenshot_labels, screenshot_timeframes
   from methodologies where id = source_id
   returning id into new_id;
 
@@ -1872,4 +1877,5 @@ insert into schema_migrations (filename) values
   ('0057_registry_fork_track_exit.sql'),
   ('0058_trade_prices.sql'),
   ('0059_retire_wpm_fase.sql'),
-  ('0060_methodology_screenshot_labels.sql');
+  ('0060_methodology_screenshot_labels.sql'),
+  ('0061_methodology_screenshot_timeframes.sql');

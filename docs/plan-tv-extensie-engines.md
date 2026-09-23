@@ -139,7 +139,9 @@ Per blok geldt "klaar = gemerged op main + docs/CLAUDE.md bijgewerkt + afgevinkt
 
 ---
 
-## 6. Bouwlog (bijgewerkt 2026-09-19 — **F1–F4b + legacy-velden live; F5 in aanbouw na owner-go**)
+## 6. Bouwlog (bijgewerkt 2026-09-23 — **F1–F5 + un-gate + v0.2.8 live; snapshot-TF's (§8) in aanbouw**)
+
+**2026-09-23 avond — configureerbare snapshot-timeframes (§8, branch `tv-ext-snapshot-timeframes`, migratie 0061, v0.2.9):** de vier slots schieten niet langer hardcoded W/D/4H/2H maar de per-journal gekozen TF's. Gebouwd volgens het §8-ontwerp: (1) **migratie 0061** — `methodologies.screenshot_timeframes` (jsonb, 0060-conventies) + fork-fix (`fork_methodology` kopieerde `screenshot_labels` niet mee; nu reizen labels én timeframes mee de fork in), schema.sql bijgewerkt. (2) **Gedeelde catalogus** `src/lib/screenshotSlots.ts` (13 TV-standaard-resolutions 1m→M, `timeframeLabel`, `resolveSlotTimeframes`, `customTimeframeLabel`) — web via `@/lib`, extensie relatief. (3) **Engine**: `runSnapshotCycle(deps, slots, resolutions)` met de slot-defaults als fallback; het paneel stuurt `resolutions` mee in het `snapshot-cycle`-bericht (journal-select leest `screenshot_timeframes` mee, zelfde route als de slot-namen); de SW valideert élke waarde tegen de whitelist (`sanitizeResolutions` — onvertrouwd content-script-bericht, ongeldig = stil de default). Dubbele TF's toegestaan (before/after-workflow): één switch, wél twee onafhankelijke captures/uploads. (4) **Default-naam volgt de TF**: slot met custom TF zonder custom naam heet "15m" i.p.v. "Weekly (W)" — in `slotLabel` (paneel) én `TechnicalSection` (web-form + preview). (5) **Web-Settings**: `ScreenshotSlotsEditor` (voorheen labels-editor) met per slot [TF-select | naam-input], nieuwe hook-mutatie `setScreenshotTimeframes`, copy NL/EN. Manifest → 0.2.9. **668 tests groen** (nieuw: catalogus-unit-tests, cyclus met vrije TF's, duplicate-TF-gedrag, slotResolutions-validatie, TF-volgende slotnamen); lint + build + build:ext schoon. Harnas-run bewijst: h2-slot op 15m heet "15m" in het paneel en de cycle-request draagt `resolutions: {w:"W", d:"D", h4:"240", h2:"15"}`; web-editor visueel geverifieerd op de dev-server. ⚠️ Owner: 0061 draaien op prod vóór de merge/deploy; daarna v0.2.9-zip naar de Store.
 
 **2026-09-19 — snapshot-settle-fix na owner-test (branch `tv-ext-snapshot-settle`):** owner zag bij de Daily-snapshot een half-geladen chart ("No gaps candles (6) loading…" nog in beeld) — een ánder probleem dan de W-D-D-bug van 18-09. Root cause: `settle` in de SW was een blinde `setTimeout(1500)`; duurde de Daily-datafetch langer, dan vuurde `takeClientScreenshot` mid-load. Fix: nieuw page-commando `wait-chart-ready` (protocol → bridge `tv-page-wait-ready`, eigen 6,5s-timeout → tvMain) dat pollt (150 ms, cap 5 s) op een echte ready-conditie — gelaagd defensief in `adapter/chartReady.ts`: (1) `resolution()` = target, (2) TV's `dataReady()` als die bestaat, (3) anders een stabiele laatste bar over twee polls (S1-bewezen leespad), (4) alles onleesbaar → door na 1,5 s (oud gedrag als vloer). Na ready: 2× rAF (met setTimeout-race tegen hangen) + 200 ms grace alleen als er echt gewacht is. `SnapshotDeps.settle(target)` draait nu vóór élke capture, óók als de chart al op het slot-timeframe staat (dicht het gat "capture direct na handmatige wissel"). Timeout ⇒ tóch capturen + `snapshot-settle-degraded`-logregel — nooit slechter dan vroeger; sweet spot: klaar = meteen door, dus vlotte slots zijn nu júist sneller dan de oude vaste 1,5 s. 645 tests groen op main-basis (9 nieuwe voor de wait-loop + settle-volgorde-regressietests; los van de open panel-branches).
 
@@ -211,6 +213,46 @@ Nieuwe sectie "Open trades op dit symbool" (alleen zichtbaar als er ≥1 open tr
 | F5b | paneel-sectie + sluit-formulier + copy | Opus | 1 dag |
 
 **Open owner-beslissingen vóór de bouw:** (1) go voor F5 überhaupt (na beta-feedback); (2) MAE/MFE in het sluit-formulier of weglaten (het is een beta-laag); (3) de kenmerken/CC-vraag van 17-09 (zie bouwlog) — als die velden sneuvelen, wordt het sluit-formulier nóg kleiner.
+
+---
+
+## 8. Configureerbare snapshot-timeframes per journal (owner-go 2026-09-23 → migratie 0061, ext v0.2.9)
+
+**Waarom:** de vier snapshot-slots staan hardcoded op W/D/4H/2H (`SLOT_RESOLUTIONS`, `extension/src/snapshots.ts`) — WPM-erfgoed. Het journal is er voor álle strategieën: een scalper wil 15m/5m/1m. Zelfde beweging als de slot-namen (0060): per journal instelbaar, kolommen op `trades` veranderen niet.
+
+### 8.1 Datamodel (migratie 0061)
+
+- `methodologies.screenshot_timeframes jsonb`, nullable, géén default — exact de 0060-conventies: array van 4 strings, index 0..3 = slot w/d/h4/h2; waarde = TV-resolution-string (`"W"`, `"D"`, `"240"`, `"15"`, …); **lege string op een positie = de standaard-TF van dat slot** (W/D/240/120). null = alles standaard. Geen backfill, geen CHECK (vorm-validatie in de app-laag, een later vijfde slot vraagt geen migratie).
+- **Bijvangst-fix:** `fork_methodology` kopieert `screenshot_labels` (0060) níet mee — zelfde stille-verlies-klasse als de 0048/track_exit-les. 0061 hercreëert de functie met `screenshot_labels` én `screenshot_timeframes` in de kopie.
+
+### 8.2 TF-catalogus (welke opties bieden we aan)
+
+Eén gedeelde bron van waarheid in `src/lib/screenshotSlots.ts` (web importeert via `@/lib`, de extensie relatief — zelfde route als `adapter/parse.ts` → `priceMath`): **1m, 3m, 5m, 15m, 30m, 45m, 1H, 2H, 3H, 4H, D, W, M** — opgeslagen als TV-resolutions (`"1"…"45"`, `"60"/"120"/"180"/"240"`, `"D"/"W"/"M"`). Dat is TV's standaardset die op elk abonnement bestaat; seconden-, range- en custom-intervals bewust niet (plan-gated bij TV, en de settle-checks zijn er niet op bewezen). De catalogus is tegelijk de **whitelist op de trust boundary**: de SW valideert elke aangeleverde resolution ertegen (content-script-bericht = onvertrouwd; ongeldig → stil terug naar de slot-default, nooit een vrije string naar `setResolution`). Kiest een user tóch een TF die zijn TV-abonnement niet aankan, dan vangt het bestaande per-slot-foutpad dat af ("kon timeframe X niet zetten").
+
+### 8.3 Twee slots met dezelfde TF: toegestaan, bewust
+
+- **Use case is echt:** "Before/After" — twee slots op 4H, één geschoten bij entry, één bij de close (slots worden op verschillende momenten hergeschoten; de close-flow hergebruikt de slots). Blokkeren zou die workflow onmogelijk maken.
+- **Gedrag in één cyclus:** elk slot blijft onafhankelijk — eigen capture, eigen upload (uuid-pad, los deletable). Twee gelijke TF's direct na elkaar leveren twee (vrijwel) identieke beelden; de switch wordt al overgeslagen (`same(current, target)`-check) en de settle is dan vrijwel gratis, dus het kost nauwelijks tijd. Geen capture-dedupe: gedeelde paden zouden de wees-opruiming (delete per slot) breken.
+- **UI:** geen blokkade, geen warning-drama; de hint onder de editor benoemt het gewoon.
+
+### 8.4 Volgorde & engine-wijzigingen
+
+- **Cyclus-volgorde blijft slot-volgorde** (0..3 = formulier-volgorde van boven naar beneden), niet TF-gesorteerd — voorspelbaar en WYSIWYG, zoals de veld-volgorde.
+- `runSnapshotCycle(deps, slots, resolutions?)`: target per slot = aangeleverde resolution ?? `SLOT_RESOLUTIONS[slot]`. Settle (`wait-chart-ready`) en herstel (rauwe original terugzetten) werken al met vrije strings — ongewijzigd. `normalizeResolution` dekt intraday-nummers al.
+- Bericht `snapshot-cycle` krijgt `resolutions?: Record<SnapshotSlot, string>`; het paneel bouwt 'm uit het journal-schema (zelfde route als de slot-namen van v0.2.8: `supabaseDb` leest `screenshot_timeframes` mee in het journal-select → `JournalSchema.screenshotTimeframes` → panelApp → snapshot-sectie).
+- **Default-slotnaam volgt de TF:** staat er een custom TF maar geen custom naam, dan toont het slot de TF-naam ("15m") i.p.v. het oude "Weekly (W)" — in de extensie (`slotLabel`) én in de web-form (`TechnicalSection`, de preview volgt vanzelf via de gedeelde context).
+
+### 8.5 Web-Settings (MethodologyEditor)
+
+`ScreenshotLabelsEditor` wordt de slot-editor: per slot één rij **[TF-select | naam-input]**. Select-waarde leeg = "standaard (W)" per slot; opslaan per array, `[]`/null = alles standaard (zelfde commit-patroon als de namen). Nieuwe hook-mutatie `setScreenshotTimeframes` naast `setScreenshotLabels`.
+
+### 8.6 Blokken
+
+| Blok | Inhoud | Engine |
+|---|---|---|
+| T1 | migratie 0061 + schema.sql + gedeelde catalogus `screenshotSlots.ts` + engine (`runSnapshotCycle`-resolutions, SW-validatie, dataketen ext) — unit-getest | Fable |
+| T2 | web-Settings TF-kiezer + default-label-volgt-TF (form + ext-paneel) + copy NL/EN | Fable (kleine UI, geen aparte Opus-sessie waard) |
+| T3 | versie 0.2.9, zip, CLAUDE.md-nazorg | Fable |
 
 ---
 

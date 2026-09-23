@@ -8,12 +8,13 @@ import { ScreenshotField } from "./ScreenshotField";
 import { CustomFieldGroup, SingleCustomField, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
 import { blockGroupLabel } from "@/lib/fieldBlocks";
 import { dynamicMethodologyFields } from "@/lib/methodologyFields";
+import { customTimeframeLabel } from "@/lib/screenshotSlots";
 
 export function TechnicalSection() {
   const { t } = useTranslation();
   const { register } = useFormContext<TradeFormValues>();
   const { betaFeatures } = useAuth();
-  const { fields, screenshotLabels } = useMethodology();
+  const { fields, screenshotLabels, screenshotTimeframes } = useMethodology();
 
   // One field for everyone: display (URL or extension-uploaded bucket path) is
   // universal, only NEW web uploads (paste/drag/browse) stay behind the beta
@@ -35,11 +36,14 @@ export function TechnicalSection() {
   );
 
   // Per-slot screenshot names: the journal's own label (0060) if set, else the
-  // built-in default (WPM timeframe names, or neutral Screenshot 1-4).
+  // slot's custom timeframe name (0061 — a slot the extension shoots on 15m
+  // shouldn't be called "Weekly"), else the built-in default (WPM timeframe
+  // names, or neutral Screenshot 1-4).
   const defaultScreenshotLabels = isWpm
     ? [t("tradeForm.weeklyScreenshot"), t("tradeForm.dailyScreenshot"), t("tradeForm.h4Screenshot"), t("tradeForm.h2Screenshot")]
     : [t("tradeForm.screenshot1"), t("tradeForm.screenshot2"), t("tradeForm.screenshot3"), t("tradeForm.screenshot4")];
-  const slotLabel = (i: number) => screenshotLabels?.[i]?.trim() || defaultScreenshotLabels[i];
+  const slotLabel = (i: number) =>
+    screenshotLabels?.[i]?.trim() || customTimeframeLabel(screenshotTimeframes, i) || defaultScreenshotLabels[i];
 
   return (
     <div className="flex flex-col gap-4">

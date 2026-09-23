@@ -5,8 +5,9 @@ import { parseChartState } from "./adapter/parse";
 import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
 import { fetchJournalDump, getStatus, linkWithToken } from "./linkFlow";
+import { isSnapshotTimeframe } from "../../src/lib/screenshotSlots";
 import {
-  cropToRect, isGestureError, runSnapshotCycle, thumbnailDataUrl,
+  cropToRect, isGestureError, runSnapshotCycle, SLOT_RESOLUTIONS, SNAPSHOT_SLOTS, thumbnailDataUrl,
   type CaptureResult, type ChartRect, type SnapshotDeps, type SnapshotSlot,
 } from "./snapshots";
 import { appendLog, readLog } from "./storage";
@@ -77,7 +78,7 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
       return result;
     }
     case "snapshot-cycle":
-      return snapshotCycle(req.slots);
+      return snapshotCycle(req.slots, req.resolutions);
     case "delete-screenshots":
       await db.removeScreenshots(req.paths.filter((p) => typeof p === "string" && p.length < 200));
       return { ok: true };
@@ -105,10 +106,25 @@ async function findChartTab(): Promise<chrome.tabs.Tab | undefined> {
   return candidates.find(isChartTab);
 }
 
-/** F3a: de W/D/4H/2H-cyclus met echte Chrome/TV/Supabase-deps rond de pure
- * runSnapshotCycle. Fouten per slot; het oorspronkelijke timeframe wordt
- * altijd hersteld (garantie uit runSnapshotCycle zelf). */
-async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snapshot-cycle"]> {
+/** Trust boundary rond de door het paneel aangeleverde slot-TF's (0061): het
+ * content-script-bericht is onvertrouwd, dus alleen whitelist-waarden komen
+ * door — al het andere valt stil terug op de default van dat slot. Er gaat
+ * nooit een vrije string naar TV's setResolution. */
+function sanitizeResolutions(raw: Record<SnapshotSlot, string> | undefined): Record<SnapshotSlot, string> {
+  const out = { ...SLOT_RESOLUTIONS };
+  if (typeof raw !== "object" || raw === null) return out;
+  for (const slot of SNAPSHOT_SLOTS) {
+    const v = raw[slot];
+    if (isSnapshotTimeframe(v)) out[slot] = v;
+  }
+  return out;
+}
+
+/** F3a: de snapshot-cyclus (slot-TF's uit het journal, 0061; default W/D/4H/2H)
+ * met echte Chrome/TV/Supabase-deps rond de pure runSnapshotCycle. Fouten per
+ * slot; het oorspronkelijke timeframe wordt altijd hersteld (garantie uit
+ * runSnapshotCycle zelf). */
+async function snapshotCycle(slots: SnapshotSlot[], resolutions?: Record<SnapshotSlot, string>): Promise<ExtResponses["snapshot-cycle"]> {
   const tab = await findChartTab();
   if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
   const tabId = tab.id;
@@ -180,7 +196,7 @@ async function snapshotCycle(slots: SnapshotSlot[]): Promise<ExtResponses["snaps
   };
 
   try {
-    const result = await runSnapshotCycle(deps, slots);
+    const result = await runSnapshotCycle(deps, slots, sanitizeResolutions(resolutions));
     const failed = Object.entries(result.slots).filter(([, r]) => r && !r.ok);
     if (failed.length > 0) await appendLog("snapshot-degraded", failed.map(([s, r]) => `${s}: ${r && !r.ok ? r.error : ""}`).join(" | "));
     return { ok: true, ...result };

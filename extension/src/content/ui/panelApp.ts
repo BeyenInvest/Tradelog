@@ -1167,8 +1167,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         journal = null;
         journalNote = { kind: "load-failed", error: dump.error };
       }
-      // Slot-namen van het journal (0060) — dezelfde namen als de web-form.
-      snapshotsSec.setSlotLabels(journal?.screenshotLabels ?? null);
+      // Slot-namen (0060) + slot-TF's (0061) van het journal — dezelfde
+      // namen/timeframes als de web-form en de web-Settings.
+      snapshotsSec.setSlotConfig(journal?.screenshotLabels ?? null, journal?.screenshotTimeframes ?? null);
       targets = targetsResult.ok ? targetsResult : null;
       showOnboarding = !onboardingDone;
       showView(buildForm);
