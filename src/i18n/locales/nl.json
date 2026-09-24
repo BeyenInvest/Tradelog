@@ -370,9 +370,9 @@
       "evaluation": { "title": "Uitvoering vs uitkomst", "body": "De trade-evaluatie (goede trade, emotionele fout, technische fout) meet hóe je handelde; de uitkomst (winst, verlies, break-even) meet het geld. Een winstgevende trade kan alsnog een slechte trade zijn." },
       "missed": { "title": "Gemiste trades", "body": "Een setup die je zag maar niet nam, hypothetisch gelogd. Telt nooit mee in je echte statistieken — puur om te zien welke kansen je laat liggen." },
       "settings": { "title": "Instellingen", "body": "Je naam en tijdzone, licht of donker thema, taal, je data exporteren naar CSV, en je account verwijderen." },
-      "extension": { "title": "Loggen vanaf je chart", "body": "Een Chrome-extensie die een Beyen-paneel op je TradingView-chart zet. Teken je gewone long- of short-position-tool en het paneel leest richting, entry, stop, target en R:R er rechtstreeks uit; je journal-velden vul je in hetzelfde paneel in. De trade landt in je live journal (als lopende trade) of in een backtestproject. De extensie is beta: ze verandert nog en is voorlopig alleen voor beta-accounts." },
+      "extension": { "title": "Loggen vanaf je chart", "body": "Een Chrome-extensie die een Beyen-paneel op je TradingView-chart zet. Teken je gewone long- of short-position-tool en het paneel leest richting, entry, stop, target en R:R er rechtstreeks uit; je journal-velden vul je in hetzelfde paneel in. De trade landt in je live journal (als lopende trade) of in een backtestproject. De extensie is beta: ze verandert nog." },
       "extensionLink": { "title": "De extensie koppelen", "body": "Installeer de extensie, ga naar Instellingen → “Verbind TradingView-extensie” en genereer een koppelcode. Plak die code in de extensie-popup bij “Verbind”. De code werkt één keer en vervalt snel; daarna heeft de extensie haar eigen sessie met exact jouw rechten. Loskoppelen doe je in de popup met “Koppel los”." },
-      "extensionSnapshots": { "title": "Snapshots per timeframe", "body": "Het paneel kan per slot (W, D, 4H en een extra) een beeld van je chart maken en aan de trade hangen — of je plakt zelf een TradingView-snapshotlink. Chrome vereist hiervoor eerst één klik op het Beyen-icoon in je werkbalk, per tab; het paneel zegt het als die klik nog ontbreekt. Je eigen timeframe wordt na de ronde teruggezet." }
+      "extensionSnapshots": { "title": "Snapshots per timeframe", "body": "Het paneel kan per slot een beeld van je chart maken en aan de trade hangen — of je plakt zelf een TradingView-snapshotlink. Standaard schieten de vier slots W, D, 4H en 2H, maar per journal kies je zelf de timeframes én de slotnamen: Instellingen → Journal & velden → open de veld-editor → Screenshot-slots. Twee slots met dezelfde timeframe mag (bv. before/after: één schieten bij entry, één bij het sluiten). Je eigen timeframe wordt na de ronde teruggezet." }
     }
   },
   "import": {
@@ -1112,6 +1112,7 @@
     "extensionLinkCopied": "Gekopieerd",
     "extensionLinkCopyFailed": "Kopiëren lukte niet — selecteer de code en kopieer hem handmatig.",
     "extensionLinkHint": "Deze code werkt één keer en vervalt snel. Plak hem meteen in het \"Verbind\"-veld van de extensie-popup.",
+    "extensionLinkSlots": "Welke timeframes de snapshots schieten (en hoe de vier slots heten) stel je per journal in: Journal & velden → open de veld-editor → Screenshot-slots.",
     "extensionLinkErrorBeta": "De TradingView-extensie is voorlopig alleen voor beta-accounts.",
     "extensionLinkErrorRate": "Te veel verzoeken — probeer het zo weer.",
     "extensionLinkErrorGeneric": "Koppelcode genereren mislukt. Probeer het later opnieuw."
