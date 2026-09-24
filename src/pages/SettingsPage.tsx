@@ -9,7 +9,6 @@ import { ReviewSectionsEditor } from "@/components/settings/ReviewSectionsEditor
 import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { JournalOverview } from "@/components/settings/JournalOverview";
-import { AdvancedAnalysisSettings } from "@/components/settings/AdvancedAnalysisSettings";
 import { ExtensionLinkCard } from "@/components/settings/ExtensionLinkCard";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { RESULT_UNITS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
@@ -63,7 +62,6 @@ export default function SettingsPage() {
           <NewJournalCard defaultOpen={openPresets} />
           <MethodologyEditor />
           <ReviewSectionsEditor />
-          <AdvancedAnalysisSettings />
           <JournalInstruments />
         </section>
 
