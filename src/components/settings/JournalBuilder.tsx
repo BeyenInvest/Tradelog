@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronDown, ChevronUp, LayoutTemplate, LineChart, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, LayoutTemplate, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import {
   ASSET_ORDER, STYLE_ORDER, STARTSETS, STRATEGY_ORDER,
   blocksInGroup, blockGroupLabel, blockLabel, blockToFieldInput,
@@ -41,7 +40,6 @@ export function JournalBuilder({
   const [fields, setFields] = useState<FieldInput[]>([]);
   const [name, setName] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [trackExit, setTrackExit] = useState(false);
 
   const addedKeys = useMemo(() => new Set(fields.map((f) => f.field_key)), [fields]);
 
@@ -133,7 +131,7 @@ export function JournalBuilder({
         fields,
         assetClass: asset,
         instrumentConfig: asset ? assetInstrumentConfig(asset) : null,
-        trackExit,
+        trackExit: false,
         reuseActiveIfEmpty,
       });
       onDone?.(id);
@@ -276,20 +274,6 @@ export function JournalBuilder({
             ) : (
               <CustomFieldAdd existingKeys={addedKeys} onAdd={addCustomField} onClose={() => setShowAdvanced(false)} />
             )}
-          </section>
-
-          {/* ---- optional module: advanced analysis (0050) ---- */}
-          <section className="border-t border-border-soft pt-5">
-            <div className="flex items-start justify-between gap-4 rounded-xl border border-gold/25 bg-gold/[0.06] p-4">
-              <div className="flex items-start gap-3 min-w-0">
-                <LineChart size={18} className="mt-0.5 shrink-0 text-gold" />
-                <div className="min-w-0">
-                  <p className="font-body text-sm text-ink">{t("builder.advancedAnalysis")}</p>
-                  <p className="font-mono text-xs mt-1 text-muted">{t("builder.advancedAnalysisHint")}</p>
-                </div>
-              </div>
-              <BooleanToggle value={trackExit} onChange={setTrackExit} labels={[t("settings.on"), t("settings.off")]} />
-            </div>
           </section>
 
           {/* ---- commit ---- */}
