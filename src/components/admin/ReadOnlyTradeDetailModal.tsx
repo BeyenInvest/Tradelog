@@ -9,7 +9,8 @@ import { hasExplicitRisk, rMultiple } from "@/lib/stats";
 import { resolveScreenshotUrl } from "@/lib/storage/screenshots";
 import { screenshotSlotLabel } from "@/lib/screenshotSlots";
 import { useResultUnit } from "@/hooks/useResultUnit";
-import { fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
+import { blockGroupLabel, fieldGroupLabel, fieldLabel } from "@/lib/fieldBlocks";
+import { WOVEN_GROUP_KEYS } from "@/components/trades/TradeFormSections/CustomFieldsSection";
 import type { ReadOnlyJournalMeta, SharedMethodologyField, Trade } from "@/lib/types";
 
 const SCREENSHOT_KEYS = ["w_screenshot", "d_screenshot", "h4_screenshot", "h2_screenshot"] as const;
@@ -90,18 +91,35 @@ export function ReadOnlyTradeDetailModal({
       else value = String(raw);
       // field_key is the unique key (labels are free owner text and may repeat).
       // fieldLabel: catalogue-backed labels follow the VIEWER's language (0047).
-      return { key: f.field_key, label: fieldLabel(t, f), group: fieldGroupLabel(t, f), value };
+      return { key: f.field_key, label: fieldLabel(t, f), group: fieldGroupLabel(t, f), groupKey: f.group_key, value };
     });
 
-  // Full view: bucket the journal fields under their form group (Setup/Markt/…),
-  // in first-appearance order so it reads like the owner's own form.
-  const groupedRows: { group: string; rows: typeof customRows }[] = [];
-  for (const r of customRows) {
-    const group = r.group ?? t("tradeForm.customSectionHeading");
-    const bucket = groupedRows.find((g) => g.group === group);
-    if (bucket) bucket.rows.push(r);
-    else groupedRows.push({ group, rows: [r] });
-  }
+  // Full view: place the journal fields exactly where the owner's own form puts
+  // them. `cc` sits in the Entry grid (EntrySection); the woven Setup/Markt/Mindset
+  // fields follow in Technical — for WPM as ONE flat "Setup" block in the journal's
+  // own order (TechnicalSection), otherwise per group subheading (CustomFieldGroup);
+  // everything else lands under "Extra velden" (CustomFieldsManager).
+  const wovenKeys: readonly string[] = WOVEN_GROUP_KEYS;
+  const ccRow = customRows.find((r) => r.key === "cc");
+  const isWoven = (r: (typeof customRows)[number]) => wovenKeys.includes(r.groupKey ?? "") && r.key !== "cc";
+  const bucket = (rows: typeof customRows, labelOf: (r: (typeof customRows)[number]) => string) => {
+    const out: { group: string; rows: typeof customRows }[] = [];
+    for (const r of rows) {
+      const group = labelOf(r);
+      const last = out.at(-1);
+      if (last && last.group === group) last.rows.push(r);
+      else out.push({ group, rows: [r] });
+    }
+    return out;
+  };
+  const woven = customRows.filter(isWoven);
+  const groupedRows = [
+    ...bucket(woven, (r) => (journal?.isWpm ? blockGroupLabel(t, "setup") : (r.group ?? blockGroupLabel(t, "setup")))),
+    ...bucket(
+      customRows.filter((r) => r.key !== "cc" && !isWoven(r)),
+      (r) => r.group ?? t("tradeForm.customSectionHeading")
+    ),
+  ];
 
   const hasPrices = [trade.entry_price, trade.stop_price, trade.target_price, trade.exit_price].some((p) => p !== null);
 
@@ -155,6 +173,7 @@ export function ReadOnlyTradeDetailModal({
                   label={t("tradeForm.datumOpen")}
                   value={fmtDate(trade.datum_open) + (trade.tijd_open ? ` ${trade.tijd_open.slice(0, 5)}` : "")}
                 />
+                {ccRow && <Row label={ccRow.label} value={ccRow.value} />}
                 <Row label={t("tradeForm.instrument")} value={trade.instrument ?? trade.pair} />
                 <Row label={t("tradeForm.direction")} value={trade.direction ? t(`enums.direction.${trade.direction}`, trade.direction) : null} />
                 <Row label={t("filters.sessie")} value={trade.sessie} />
