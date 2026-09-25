@@ -86,6 +86,12 @@ try {
 
   console.log(`Running ${file} …`);
   await client.query("begin");
+  // C7 (deep review blok C): een migratie mag prod nooit bevriezen. Wie een
+  // lock niet binnen 5 s krijgt faalt en rolt terug (dan opnieuw proberen op
+  // een rustig moment); geen enkel statement mag langer dan 5 min draaien.
+  // `set local` = geldt alleen binnen deze transactie.
+  await client.query("set local lock_timeout = '5s'");
+  await client.query("set local statement_timeout = '5min'");
   await client.query(sql);
   // Zelfde transactie: de registratie hoort bij de run zelf. Savepoint: bestaat
   // de registry óók na deze run nog niet (een oude migratie draaien vóór 0057),

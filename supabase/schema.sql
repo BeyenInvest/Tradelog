@@ -2,8 +2,9 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0061 (gesynct in fixplan
--- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots).
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0062 (gesynct in fixplan
+-- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
+-- 0062 = DB-hardening, deep review blok C).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -83,8 +84,8 @@ create table backtest_projects (
 create table weekly_reviews (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  -- Which journal this review belongs to (per-journal isolation, cyclus 3b). Nullable
-  -- + on delete set null, mirroring trades.methodology_id. The FK constraint is
+  -- Which journal this review belongs to (per-journal isolation, cyclus 3b). Nullable;
+  -- on delete NO ACTION since 0062, mirroring trades.methodology_id. The FK constraint is
   -- added AFTER the methodologies block below (fresh-bootstrap order, fixplan C1/W1)
   -- — an inline REFERENCES here would fail: methodologies doesn't exist yet.
   methodology_id uuid,
@@ -147,32 +148,8 @@ create unique index periodic_reviews_year_unique
   on periodic_reviews(user_id, methodology_id, jaar)
   where period_type = 'year' and methodology_id is not null;
 
--- ---------- TRADE CONTRACTS (owner-only pre-trade commitment, 0053) ----------
--- A short contract the trader signs BEFORE a trade (keystone-check, fase,
--- instrument, risk, news window, signature), later closed with the outcome in R
--- + whether the process was respected — or logged as a deliberately missed
--- setup. Owner-only in the UI (betaFeatures gate), but per-user + per-journal in
--- the DB just like the review tables. No money/P&L is ever stored (outcome is an
--- R-multiple only). No updated_at: signed once, closed once.
-create table trade_contracts (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  -- FK added after the methodologies block (see weekly_reviews).
-  methodology_id uuid,
-  created_at timestamptz not null default now(),
-  signed_at timestamptz,
-  instrument text,
-  fase text,
-  entry_type text,
-  risk_pct numeric,
-  signature text,
-  status text not null default 'open' check (status in ('open', 'closed', 'missed')),
-  outcome_r numeric,
-  proces_goed boolean,
-  note text
-);
-create index idx_trade_contracts_user on trade_contracts(user_id);
-create index idx_trade_contracts_methodology on trade_contracts(methodology_id);
+-- (trade_contracts — het owner-only pre-trade-contract uit 0053 — is gedropt
+-- in 0062; de feature verdween al op 2026-09-15 uit de app.)
 
 -- ---------- HABITS (0054 + 0056 — performance-laag naast het journal) ----------
 -- Life-level, deliberately GLOBAL per user (no methodology_id): habits and the
@@ -209,7 +186,7 @@ create table habit_days (
   created_at timestamptz not null default now(),
   unique (user_id, day)
 );
-create index idx_habit_days_user_day on habit_days(user_id, day);
+-- (idx_habit_days_user_day was redundant t.o.v. de unique (user_id, day) — weg in 0062.)
 
 -- ---------- DAILY JOURNAL / DAGBOEK (0055) ----------
 -- A short free-text note per calendar day, next to the Habits tracker. Global
@@ -222,11 +199,10 @@ create table daily_journal_entries (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- List/browse ("my entries, newest day first") leest deze unique achterstevoren;
+-- de aparte desc-index was redundant en is weg in 0062.
 create unique index daily_journal_entries_user_date_unique
   on daily_journal_entries(user_id, entry_date);
--- List/browse is always "my entries, newest day first".
-create index idx_daily_journal_entries_user_date
-  on daily_journal_entries(user_id, entry_date desc);
 
 -- ---------- TRADES ----------
 create table trades (
@@ -244,6 +220,9 @@ create table trades (
   -- the trade then sits out the time-based session/hour breakdowns.
   tijd_open time,
   datum_sluiting date,
+  -- 0062 (C3): een sluitdatum vóór de opening is per definitie invoerfout —
+  -- duur_dagen zou negatief worden en de chronologie-sorteringen liegen.
+  constraint trades_dates_chk check (datum_sluiting is null or datum_sluiting >= datum_open),
   duur_dagen integer generated always as (datum_sluiting - datum_open) stored,
 
   pair pair_enum not null,
@@ -414,6 +393,15 @@ create table methodologies (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Kolom-comments zoals de migraties (0050/0060/0061) ze op prod zetten — hier
+-- herhaald zodat een verse install pg_dump-identiek blijft (0062/C6-sync).
+comment on column methodologies.track_exit is
+  'Opt-in for the advanced-analysis layer (Fase G-rest): planned R:R + MAE/MFE fields, the exit-analysis view and the SQN KPI. Default off; toggled per journal in the builder / methodology editor.';
+comment on column methodologies.screenshot_labels is
+  'Per-journal namen voor de 4 screenshot-slots: JSON-array van 4 strings, index 0..3 = w/d/h4/h2. null = standaardnamen; lege string per positie = standaard voor dat slot.';
+comment on column methodologies.screenshot_timeframes is
+  'Per-journal TV-timeframes voor de 4 snapshot-slots van de extensie: JSON-array van 4 TV-resolution-strings ("W","D","240","15",...), index 0..3 = w/d/h4/h2. null = standaard (W/D/240/120); lege string per positie = standaard voor dat slot.';
 
 -- (methodology_fases — the transitional per-methodology fase list from 0020 —
 -- and methodology_fields.fase_id were dropped in 0059: fase is just a field.)
@@ -696,7 +684,12 @@ where group_key is null
 
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
-alter table trades add column methodology_id uuid references methodologies(id) on delete set null;
+-- on delete NO ACTION (0062): de client verwijdert alleen lege journals; dit is
+-- de DB-backstop tegen raced/PostgREST-deletes die trades stil zouden loskoppelen.
+-- Bewust géén RESTRICT: delete_own_account() cascadeert vanuit auth.users naar
+-- trades én methodologies in ongedefinieerde volgorde — NO ACTION checkt pas
+-- aan het einde van het statement en laat die cascade wél door.
+alter table trades add column methodology_id uuid references methodologies(id) on delete no action;
 alter table trades add column custom jsonb not null default '{}'::jsonb; -- flexible per-trade custom-field bag (was `kenmerken`, renamed in 0022)
 -- No column default: new users are provisioned an own empty journal by
 -- handle_new_user() (see 0025), not silently handed the Weekly Phase Method template.
@@ -705,23 +698,22 @@ alter table profiles add column methodology_id uuid references methodologies(id)
 -- Deferred FK constraints for the tables created BEFORE the methodologies block
 -- (fresh-bootstrap order, fixplan C1/W1): their methodology_id columns are plain
 -- uuid in the CREATE TABLE and get their FK here. Constraint names match what
--- prod got from 0030/0053's inline REFERENCES (default naming), so prod and a
--- fresh install stay pg_dump-identical.
+-- prod got from 0030's inline REFERENCES (default naming), so prod and a
+-- fresh install stay pg_dump-identical. on delete NO ACTION since 0062 (zie
+-- trades.methodology_id hierboven).
 alter table weekly_reviews add constraint weekly_reviews_methodology_id_fkey
-  foreign key (methodology_id) references methodologies(id) on delete set null;
+  foreign key (methodology_id) references methodologies(id) on delete no action;
 alter table periodic_reviews add constraint periodic_reviews_methodology_id_fkey
-  foreign key (methodology_id) references methodologies(id) on delete set null;
+  foreign key (methodology_id) references methodologies(id) on delete no action;
 alter table prop_accounts add constraint prop_accounts_methodology_id_fkey
-  foreign key (methodology_id) references methodologies(id) on delete set null;
-alter table trade_contracts add constraint trade_contracts_methodology_id_fkey
-  foreign key (methodology_id) references methodologies(id) on delete set null;
+  foreign key (methodology_id) references methodologies(id) on delete no action;
 
--- Journal ownership (0044, audit blocker N1): trades.methodology_id has a plain
--- FK, so nothing else stops a write from pointing a trade at a *system template*
--- or another user's journal (the client can do exactly that when its profile
--- fetch fails and the WPM-template fallback kicks in). Any non-null value must
--- be one of the trade owner's own (non-system) methodologies. Invoker rights:
--- the methodologies RLS lets a user see their own rows, which is all this needs.
+-- Journal ownership (0044, audit blocker N1; verbreed in 0062/C5): de FK's op
+-- methodology_id/backtest_project_id/weekly_review_id checken alleen dat de rij
+-- bestaat, niet van wíé hij is — een write kon een trade aan een *system
+-- template* of andermans journal/project/review hangen. Elke non-null koppeling
+-- moet van de trade-eigenaar zelf zijn. Invoker rights: de eigen RLS-policies
+-- laten precies de eigen rijen zien, en dat is wat de exists-checks nodig hebben.
 create or replace function enforce_trades_journal_ownership() returns trigger
 language plpgsql
 set search_path = public
@@ -736,22 +728,38 @@ begin
     raise exception 'trades.methodology_id must reference one of the trade owner''s own journals (not a system template)'
       using errcode = 'check_violation';
   end if;
+  if new.backtest_project_id is not null and not exists (
+    select 1 from backtest_projects p
+    where p.id = new.backtest_project_id
+      and p.user_id = new.user_id
+  ) then
+    raise exception 'trades.backtest_project_id must reference one of the trade owner''s own projects'
+      using errcode = 'check_violation';
+  end if;
+  if new.weekly_review_id is not null and not exists (
+    select 1 from weekly_reviews w
+    where w.id = new.weekly_review_id
+      and w.user_id = new.user_id
+  ) then
+    raise exception 'trades.weekly_review_id must reference one of the trade owner''s own weekly reviews'
+      using errcode = 'check_violation';
+  end if;
   return new;
 end;
 $$;
 
 create trigger trg_trades_journal_ownership
-  before insert or update of methodology_id, user_id on trades
+  before insert or update of methodology_id, backtest_project_id, weekly_review_id, user_id on trades
   for each row execute function enforce_trades_journal_ownership();
 
 -- ---------- INDEXES ----------
 create index idx_trades_user on trades(user_id);
-create index idx_trades_datum_open on trades(datum_open);
 create index idx_trades_methodology on trades(methodology_id);
 -- Hoofdleespad (0052): elke journal-gescopeerde fetch filtert op
 -- (user_id, methodology_id) en sorteert/vergelijkt op datum_open.
+-- (idx_trades_datum_open, idx_trades_pair en idx_trades_fase — door geen
+-- serverpad gebruikt — zijn weg in 0062.)
 create index idx_trades_user_methodology_datum on trades(user_id, methodology_id, datum_open);
-create index idx_trades_pair on trades(pair);
 create index idx_trades_weekly_review on trades(weekly_review_id);
 create index idx_trades_backtest_project on trades(backtest_project_id);
 create unique index trades_user_import_ref_unique on trades(user_id, import_ref) where import_ref is not null;
@@ -1683,7 +1691,6 @@ alter table prop_accounts enable row level security;
 alter table payouts enable row level security;
 alter table backtest_projects enable row level security;
 alter table periodic_reviews enable row level security;
-alter table trade_contracts enable row level security;
 alter table habits enable row level security;
 alter table habit_days enable row level security;
 alter table daily_journal_entries enable row level security;
@@ -1761,8 +1768,6 @@ create policy "weekly_reviews_owner_all" on weekly_reviews
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "periodic_reviews_owner_all" on periodic_reviews
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "trade_contracts_owner_all" on trade_contracts
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "habits_owner_all" on habits
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "habit_days_owner_all" on habit_days
@@ -1791,8 +1796,6 @@ create policy "trades_admin_select" on trades
 create policy "weekly_reviews_admin_select" on weekly_reviews
   for select to authenticated using (is_admin());
 create policy "periodic_reviews_admin_select" on periodic_reviews
-  for select to authenticated using (is_admin());
-create policy "trade_contracts_admin_select" on trade_contracts
   for select to authenticated using (is_admin());
 create policy "habits_admin_select" on habits
   for select to authenticated using (is_admin());
@@ -1880,4 +1883,5 @@ insert into schema_migrations (filename) values
   ('0058_trade_prices.sql'),
   ('0059_retire_wpm_fase.sql'),
   ('0060_methodology_screenshot_labels.sql'),
-  ('0061_methodology_screenshot_timeframes.sql');
+  ('0061_methodology_screenshot_timeframes.sql'),
+  ('0062_db_hardening.sql');
