@@ -31,7 +31,7 @@ function ser(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
   if (t === "number" || t === "boolean") return value;
   if (depth >= 4) return "[depth]";
   if (t === "object") {
-    const obj = value as object;
+    const obj = value;
     if (seen.has(obj)) return "[cycle]";
     seen.add(obj);
     if (Array.isArray(obj)) return obj.slice(0, 30).map((v) => ser(v, depth + 1, seen));
@@ -338,7 +338,7 @@ window.addEventListener("message", (ev: MessageEvent) => {
   if (!isPageRequest(data)) return;
   // take-screenshot is async — via Promise.resolve loopt sync en async door
   // hetzelfde antwoordpad (de bridge heeft toch een eigen timeout).
-  Promise.resolve()
+  void Promise.resolve()
     .then(() => run(data.command))
     .catch((e: unknown) => ({ fatal: String((e instanceof Error && e.message) || e) }))
     .then((payload) => window.postMessage(makeResponse(data.id, payload), location.origin));

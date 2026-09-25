@@ -50,7 +50,7 @@ export default function LotSizeCalculatorPage() {
       currentPrice: needsCurrentPrice ? Number(currentPrice) : undefined,
       quoteToAccountRate: needsCrossRate ? Number(quoteToAccountRate) : undefined,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [allFilled, accountCurrency, accountBalance, riskPercent, stopLossPips, pair, currentPrice, quoteToAccountRate, needsCrossRate, needsCurrentPrice]);
 
   function errorFor(field: string): string | undefined {

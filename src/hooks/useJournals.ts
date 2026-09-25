@@ -173,7 +173,7 @@ export function useJournals() {
           .eq("id", userId)
           .maybeSingle();
         if (profErr) throw profErr;
-        if ((prof as { methodology_id: string | null } | null)?.methodology_id === id) {
+        if ((prof)?.methodology_id === id) {
           throw new Error("cannot delete the active journal");
         }
       }

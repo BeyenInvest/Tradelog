@@ -64,7 +64,7 @@ function ProjectDashboardPageInner() {
     setError(null);
     try {
       await deleteProject(project!.id);
-      navigate("/backtesting");
+      void navigate("/backtesting");
     } catch (err) {
       setError(toErrorMessage(err, t("backtesting.deleteFailed")));
     }

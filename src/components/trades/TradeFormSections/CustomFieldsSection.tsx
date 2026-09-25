@@ -53,7 +53,7 @@ const PLACED_GROUP_KEYS: readonly string[] = WOVEN_GROUP_KEYS;
 export function CustomFieldVisibilitySync() {
   const { fields } = useMethodology();
   const { watch, setValue } = useFormContext<TradeFormValues>();
-  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const customVals = (watch("custom") ?? {});
   useEffect(() => {
     for (const f of dynamicMethodologyFields(fields)) {
       const v = customVals[f.field_key];
@@ -91,7 +91,7 @@ export function CustomFieldGroup({
     watch,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
-  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const customVals = (watch("custom") ?? {});
   const visible = dynamicMethodologyFields(fields).filter(
     (f) =>
       groupKeys.includes(f.group_key ?? "") &&
@@ -140,7 +140,7 @@ export function SingleCustomField({ fieldKey }: { fieldKey: string }) {
     watch,
     formState: { errors },
   } = useFormContext<TradeFormValues>();
-  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const customVals = (watch("custom") ?? {});
   const field = dynamicMethodologyFields(fields).find((f) => f.field_key === fieldKey);
   if (!field || !isFieldVisible(field, fields, customVals)) return null;
   return (
@@ -174,7 +174,7 @@ export function CustomFieldsManager() {
     formState: { errors },
   } = useFormContext<TradeFormValues>();
 
-  const customVals = (watch("custom") ?? {}) as Record<string, unknown>;
+  const customVals = (watch("custom") ?? {});
 
   // The gear manages ALL of the journal's own fields (also the ones woven into
   // Entry/Technical); only the ungrouped ones render their inputs here.

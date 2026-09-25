@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    void supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
       if (data.session) await loadProfile(data.session.user.id);
       else setProfile(null);
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => listener.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   async function retryProfile() {

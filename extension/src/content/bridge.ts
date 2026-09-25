@@ -60,15 +60,15 @@ function measureChartRect(): { x: number; y: number; w: number; h: number; dpr: 
 
 chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse) => {
   if (msg?.type === "tv-page-read") {
-    askPage({ cmd: "read-state" }).then(sendResponse);
+    void askPage({ cmd: "read-state" }).then(sendResponse);
     return true;
   }
   if (msg?.type === "tv-page-set-resolution" && typeof msg.resolution === "string") {
-    askPage({ cmd: "set-resolution", resolution: msg.resolution }).then(sendResponse);
+    void askPage({ cmd: "set-resolution", resolution: msg.resolution }).then(sendResponse);
     return true;
   }
   if (msg?.type === "tv-page-wait-ready" && typeof msg.resolution === "string") {
-    askPage({ cmd: "wait-chart-ready", resolution: msg.resolution }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
+    void askPage({ cmd: "wait-chart-ready", resolution: msg.resolution }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
     return true;
   }
   if (msg?.type === "tv-chart-rect") {
@@ -76,7 +76,7 @@ chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse)
     return false;
   }
   if (msg?.type === "tv-page-screenshot") {
-    askPage({ cmd: "take-screenshot" }, SCREENSHOT_TIMEOUT_MS).then(sendResponse);
+    void askPage({ cmd: "take-screenshot" }, SCREENSHOT_TIMEOUT_MS).then(sendResponse);
     return true;
   }
   return false;

@@ -19,7 +19,7 @@ const ALIASES: Record<string, Pair> = {
 export function normalizeSymbol(raw: string): Pair | null {
   if (!raw) return null;
   // Keep only letters/digits, uppercase — drops ".", "/", "-", "_", spaces.
-  let s = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const s = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
   if (PAIR_SET.has(s)) return s as Pair;
   if (s in ALIASES) return ALIASES[s];

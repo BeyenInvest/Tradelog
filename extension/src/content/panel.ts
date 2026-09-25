@@ -176,7 +176,7 @@ function mount(): void {
   // binnen het paneel.
   for (const type of ["keydown", "keyup", "keypress"] as const) {
     host.addEventListener(type, (event) => {
-      if (type === "keydown" && (event as KeyboardEvent).key === "Escape" && app) close();
+      if (type === "keydown" && (event).key === "Escape" && app) close();
       event.stopPropagation();
     });
   }
