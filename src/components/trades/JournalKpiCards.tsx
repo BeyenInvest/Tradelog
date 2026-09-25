@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatProfitFactor, formatResult, pctToAmount, resultDisplayValue } from "@/lib/format";
-import type { OverviewKpis } from "@/lib/stats";
+import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
+import { computeMaxDrawdown, type ClosedTrade, type OverviewKpis } from "@/lib/stats";
 import type { ResultUnit } from "@/lib/constants";
 
 /**
@@ -53,13 +54,25 @@ export function AvgRStatCard({ kpis }: { kpis: OverviewKpis }) {
   );
 }
 
-export function MaxDrawdownStatCard({ kpis }: { kpis: OverviewKpis }) {
+/**
+ * H1 (deep review): de kaart rekent zijn drawdown over dezelfde unit-
+ * geconverteerde lijst als de marker in EquityCurveChart — in R-/geld-modus
+ * spraken KPI (altijd %) en marker elkaar anders tegen (R-drawdown ligt bij
+ * variabel risico op een ándere plek dan %-drawdown). Kost geen extra wiring:
+ * de callers hebben de trade-lijst al in handen.
+ */
+export function MaxDrawdownStatCard({ trades, unit, saldo = null }: { trades: ClosedTrade[]; unit: ResultUnit; saldo?: number | null }) {
   const { t } = useTranslation();
+  const depth = useMemo(
+    () => computeMaxDrawdown(tradesInResultUnit(trades, unit, saldo)).maxDrawdownPct,
+    [trades, unit, saldo]
+  );
   return (
     <StatCard
       label={t("journal.statMaxDrawdown")}
-      value={`${kpis.maxDrawdownPct > 0 ? "-" : ""}${kpis.maxDrawdownPct}%`}
-      tone={kpis.maxDrawdownPct > 0 ? "down" : "neutral"}
+      // Zelfde format als het marker-label in de chart (negatief getoond).
+      value={formatAggregate(depth > 0 ? -depth : 0, unit, { decimals: unit === "currency" ? 0 : 1 })}
+      tone={depth > 0 ? "down" : "neutral"}
     />
   );
 }

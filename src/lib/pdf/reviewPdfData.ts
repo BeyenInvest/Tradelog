@@ -293,11 +293,18 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
   const takenClosed = tradesInResultUnit(closedTrades(input.taken), resultUnit, input.saldo);
   const takenOpen = input.taken.filter(isOpen);
   const missed = tradesInResultUnit(input.missed, resultUnit, input.saldo);
-  const kpis = computeOverviewKpis(takenClosed);
+  // ⚠️ H3 (deep review): takenClosed is hierboven al naar de weergave-eenheid
+  // geconverteerd, terwijl computeOverviewKpis de %-conventie aanneemt. Alleen
+  // de eenheid-agnostische tellingen en de bewust-geconverteerde som zijn hier
+  // dus betekenisvol; velden als avgR/totalR/maxDrawdownPct zouden in R-/geld-
+  // modus stil onzin zijn. Daarom worden uitsluitend de veilige velden
+  // gedestructureerd — wie later méér uit de kpis nodig heeft, rekent dat op de
+  // ruwe %-lijst uit (recept: JournalKpiCards/EquityCurveChart).
+  const { totalTrades, totalResultaat, wins, be, losses } = computeOverviewKpis(takenClosed);
   // Gem. resultaat/trade deelt door álle genomen trades (een BE-trade is een echte
   // genomen trade met 0% en hoort in de noemer) — zo spreken de "trades"-kaart en
   // het gemiddelde elkaar niet tegen. Spiegelt ReviewStatsHeader op het scherm.
-  const avgRR = kpis.totalTrades > 0 ? round2(kpis.totalResultaat / kpis.totalTrades) : 0;
+  const avgRR = totalTrades > 0 ? round2(totalResultaat / totalTrades) : 0;
 
   const heading =
     input.kind === "weekly"
@@ -323,12 +330,12 @@ export function buildReviewPdfData(t: TFunction, input: ReviewPdfInput, now: Dat
     traderName: input.traderName?.trim() || null,
     generatedOn: formatDate(now),
     kpis: {
-      trades: kpis.totalTrades,
-      resultaat: kpis.totalResultaat,
+      trades: totalTrades,
+      resultaat: totalResultaat,
       avgRR,
-      wins: kpis.wins,
-      be: kpis.be,
-      losses: kpis.losses,
+      wins,
+      be,
+      losses,
     },
     unit: resultUnit,
     equity: equityCurve(takenClosed),

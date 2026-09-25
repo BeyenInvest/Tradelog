@@ -655,10 +655,10 @@
     "missedHypothetical": "Missed trade (hypothetical)",
     "weekColHeader": "wk",
     "weekNum": "w{{n}}",
-    "weekTotal": "Week total",
+    "weekTotal": "Week total — counts only this month's days; the week number is the true ISO week",
     "dayNet": "Net",
     "dayTrades": "Trades",
-    "dayWinRate": "Win rate"
+    "dayWinRate": "Win rate (excl. BE)"
   },
   "tradeBadge": {
     "missedTitle": "Hypothetical — this trade wasn't taken",

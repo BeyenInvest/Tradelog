@@ -105,6 +105,16 @@ describe("computeRHistogram", () => {
   it("returns [] for an empty list", () => {
     expect(computeRHistogram([])).toEqual([]);
   });
+
+  it("bint op de rauwe R-ratio — geen dubbele afronding op een bin-grens (H3)", () => {
+    // Raw ratio 0.495: via het ge-round2'de rMultiple werd dat eerst 0.50 en
+    // daarna (half-away) de +1R-bin; de rauwe ratio hoort in de 0R-bin.
+    const bins = computeRHistogram([makeTrade({ resultaat_pct: 0.495, risk_pct: 1 })]);
+    expect(bins.map((b) => b.key)).toEqual(["0R"]);
+    // De echte grens blijft werken: exact 0.5 rondt half-away naar +1R.
+    const edge = computeRHistogram([makeTrade({ resultaat_pct: 0.5, risk_pct: 1 })]);
+    expect(edge.map((b) => b.key)).toEqual(["+1R"]);
+  });
 });
 
 describe("computeCrossTable", () => {

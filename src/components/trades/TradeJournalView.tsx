@@ -338,7 +338,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
             <ResultStatCard kpis={kpis} unit={resultUnit} saldo={saldo} />
             <ProfitFactorStatCard kpis={kpis} />
             <AvgRStatCard kpis={kpis} />
-            <MaxDrawdownStatCard kpis={kpis} />
+            <MaxDrawdownStatCard trades={windowedTrades} unit={resultUnit} saldo={saldo} />
             <Card className="flex items-center gap-3">
               <Flame size={16} className="text-loss" />
               <div className="min-w-0">
