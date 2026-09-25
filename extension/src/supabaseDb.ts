@@ -106,9 +106,13 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
     },
 
     async listJournals() {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return [];
       const { data, error } = await client
         .from("methodologies")
         .select("id, naam, asset_class")
+        .eq("user_id", uid) // expliciet — zelfde admin-ziet-alles-les als profiles (D6)
         .eq("is_system", false)
         .order("created_at", { ascending: true });
       if (error || !data) return [];
@@ -116,9 +120,13 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
     },
 
     async listBacktestProjects() {
+      const { data: sess } = await client.auth.getSession();
+      const uid = sess.session?.user.id;
+      if (!uid) return [];
       const { data, error } = await client
         .from("backtest_projects")
         .select("id, naam")
+        .eq("user_id", uid) // expliciet — zelfde admin-ziet-alles-les als profiles (D6)
         .order("created_at", { ascending: true });
       if (error || !data) return [];
       return data.map((p) => ({ id: p.id, naam: p.naam }));
