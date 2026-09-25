@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  customTimeframeLabel, DEFAULT_SLOT_TIMEFRAMES, isSnapshotTimeframe, resolveSlotTimeframes,
+  customTimeframeLabel, DEFAULT_SLOT_TIMEFRAMES, isSnapshotTimeframe, resolveSlotTimeframes, screenshotSlotLabel,
   SLOT_COUNT, SNAPSHOT_TIMEFRAMES, timeframeLabel,
 } from "./screenshotSlots";
 
@@ -46,5 +46,13 @@ describe("screenshotSlots", () => {
     expect(customTimeframeLabel(["W", "", "", ""], 0)).toBeNull(); // expliciet de default gekozen
     expect(customTimeframeLabel(null, 2)).toBeNull();
     expect(customTimeframeLabel(["", "", "", "5"], 3)).toBe("5m");
+  });
+
+  it("slot-naam: eigen naam > afwijkende TF > vaste default", () => {
+    const defs = ["Weekly", "Daily", "4H", "Extra"];
+    expect(screenshotSlotLabel(null, null, defs, 0)).toBe("Weekly");
+    expect(screenshotSlotLabel(["", " ", null as unknown as string, "Mijn 15m"], null, defs, 3)).toBe("Mijn 15m");
+    expect(screenshotSlotLabel(["  "], ["15"], defs, 0)).toBe("15m");
+    expect(screenshotSlotLabel(["Top-down"], ["15"], defs, 0)).toBe("Top-down");
   });
 });

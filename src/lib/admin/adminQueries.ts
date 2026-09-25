@@ -3,7 +3,7 @@ import { fetchAllPages } from "@/lib/fetchAll";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import type {
   BacktestProject, DailyJournalEntry, Habit, HabitDay, Methodology, MethodologyField, MethodologyView,
-  PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview,
+  PeriodicReview, Payout, Profile, PropAccount, ReadOnlyJournalMeta, Trade, WeeklyReview,
 } from "@/lib/types";
 
 /**
@@ -78,6 +78,39 @@ export async function getMethodologyViewForUser(methodologyId: string | null): P
     isForexJournal: methodology?.asset_class === "forex",
     trackExit: methodology?.track_exit === true,
   };
+}
+
+/**
+ * Per-journal display meta for the admin trade detail, keyed by methodology id —
+ * one entry for every journal the viewed user's trades were logged in (incl.
+ * backtest projects, which can sit under another journal than the active one).
+ * A trade with methodology_id null reads as the WPM template, like
+ * getMethodologyViewForUser. Needs the same is_admin() carve-out (0046).
+ */
+export async function getJournalMetaForTrades(trades: Trade[]): Promise<Map<string, ReadOnlyJournalMeta>> {
+  const ids = [...new Set(trades.map((t) => t.methodology_id ?? WPM_TEMPLATE_METHODOLOGY_ID))];
+  const out = new Map<string, ReadOnlyJournalMeta>();
+  if (ids.length === 0) return out;
+
+  const [m, fl] = await Promise.all([
+    supabase.from("methodologies").select("id, screenshot_labels, screenshot_timeframes").in("id", ids),
+    supabase.from("methodology_fields").select("*").in("methodology_id", ids).order("sort_order"),
+  ]);
+  if (m.error) throw m.error;
+  if (fl.error) throw fl.error;
+
+  const fields = (fl.data as MethodologyField[] | null) ?? [];
+  type Row = Pick<Methodology, "id" | "screenshot_labels" | "screenshot_timeframes">;
+  for (const row of (m.data as Row[] | null) ?? []) {
+    const own = fields.filter((f) => f.methodology_id === row.id);
+    out.set(row.id, {
+      fields: own,
+      screenshotLabels: row.screenshot_labels,
+      screenshotTimeframes: row.screenshot_timeframes,
+      isWpm: own.some((f) => f.field_key === "fase"),
+    });
+  }
+  return out;
 }
 
 export async function getTradesForUser(userId: string): Promise<Trade[]> {
