@@ -8,7 +8,7 @@ import { ScreenshotField } from "./ScreenshotField";
 import { CustomFieldGroup, SingleCustomField, WOVEN_GROUP_KEYS } from "./CustomFieldsSection";
 import { blockGroupLabel } from "@/lib/fieldBlocks";
 import { dynamicMethodologyFields } from "@/lib/methodologyFields";
-import { customTimeframeLabel } from "@/lib/screenshotSlots";
+import { screenshotSlotLabel } from "@/lib/screenshotSlots";
 
 export function TechnicalSection() {
   const { t } = useTranslation();
@@ -42,8 +42,7 @@ export function TechnicalSection() {
   const defaultScreenshotLabels = isWpm
     ? [t("tradeForm.weeklyScreenshot"), t("tradeForm.dailyScreenshot"), t("tradeForm.h4Screenshot"), t("tradeForm.h2Screenshot")]
     : [t("tradeForm.screenshot1"), t("tradeForm.screenshot2"), t("tradeForm.screenshot3"), t("tradeForm.screenshot4")];
-  const slotLabel = (i: number) =>
-    screenshotLabels?.[i]?.trim() || customTimeframeLabel(screenshotTimeframes, i) || defaultScreenshotLabels[i];
+  const slotLabel = (i: number) => screenshotSlotLabel(screenshotLabels, screenshotTimeframes, defaultScreenshotLabels, i);
 
   return (
     <div className="flex flex-col gap-4">

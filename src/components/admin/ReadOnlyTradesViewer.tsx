@@ -10,7 +10,7 @@ import { takenTrades, closedTrades, missedTrades as filterMissedTrades } from "@
 import { groupTrades } from "@/lib/tradeGrouping";
 import { dateLocale, formatResult, groupResultCtx, resultDisplayValue } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import type { SharedMethodologyField, Trade } from "@/lib/types";
+import type { ReadOnlyJournalMeta, SharedMethodologyField, Trade } from "@/lib/types";
 
 /**
  * Calendar/list toggle + day and trade drill-down modals, shared by the live-journal
@@ -22,6 +22,7 @@ export function ReadOnlyTradesViewer({
   title,
   fields,
   allowSessions = false,
+  journalOf,
 }: {
   trades: Trade[];
   title?: string;
@@ -29,6 +30,8 @@ export function ReadOnlyTradesViewer({
   fields?: SharedMethodologyField[];
   /** Backtest context only: offer the "Per sessie" grouping (trades bucketed by the day they were logged), mirroring the members' backtest journal. */
   allowSessions?: boolean;
+  /** Admin only: the journal a trade was logged in — switches the detail modal to the full view (every field, like the owner's own form). */
+  journalOf?: (trade: Trade) => ReadOnlyJournalMeta | undefined;
 }) {
   const { t, i18n } = useTranslation();
   const { unit, saldo } = useResultDisplay();
@@ -134,7 +137,12 @@ export function ReadOnlyTradesViewer({
       )}
 
       {selectedTrade && (
-        <ReadOnlyTradeDetailModal trade={selectedTrade} fields={fields} onClose={() => setSelectedTrade(null)} />
+        <ReadOnlyTradeDetailModal
+          trade={selectedTrade}
+          fields={fields}
+          journal={journalOf?.(selectedTrade)}
+          onClose={() => setSelectedTrade(null)}
+        />
       )}
     </>
   );

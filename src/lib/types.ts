@@ -455,6 +455,19 @@ export interface ShareLink {
  * (0042) so the shared trade-detail modal can label trades.custom values.
  * Deliberately without required/show_when — the share view never renders a form.
  */
+/**
+ * What the read-only trade detail needs from the journal a trade was logged in:
+ * its field definitions (labels for trades.custom) + the per-journal screenshot
+ * slot names/timeframes (0060/0061). The admin view resolves this per trade.
+ */
+export interface ReadOnlyJournalMeta {
+  fields: SharedMethodologyField[];
+  screenshotLabels: string[] | null;
+  screenshotTimeframes: string[] | null;
+  /** WPM journal (has a `fase` field) — picks the Weekly/Daily/4H/Extra default slot names. */
+  isWpm: boolean;
+}
+
 export interface SharedMethodologyField {
   field_key: string;
   label: string;

@@ -4,14 +4,16 @@ import { X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ReadOnlyTradesViewer } from "@/components/admin/ReadOnlyTradesViewer";
 import { BacktestingAnalysisView } from "@/components/backtesting/BacktestingAnalysisView";
-import type { BacktestProject, MethodologyView, Trade } from "@/lib/types";
+import type { BacktestProject, MethodologyView, ReadOnlyJournalMeta, Trade } from "@/lib/types";
 
 /** Read-only equivalent of ProjectDashboardPage — Journal/Analyse tabs over a project's trades, for the admin debug view. */
 export function ReadOnlyProjectModal({
-  project, trades, methodologyOverride, onClose,
+  project, trades, methodologyOverride, journalOf, onClose,
 }: {
   project: BacktestProject;
   trades: Trade[];
+  /** Per-trade journal meta for the full trade detail (see ReadOnlyTradesViewer). */
+  journalOf?: (trade: Trade) => ReadOnlyJournalMeta | undefined;
   /** The viewed user's journal view, so breakdowns follow their methodology, not the admin's (H2). */
   methodologyOverride?: MethodologyView;
   onClose: () => void;
@@ -51,7 +53,7 @@ export function ReadOnlyProjectModal({
           </div>
 
           {tab === "journal" ? (
-            <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} allowSessions />
+            <ReadOnlyTradesViewer trades={trades} title={t("journal.tradesCount", { count: trades.length })} allowSessions journalOf={journalOf} />
           ) : (
             <BacktestingAnalysisView trades={trades} methodologyOverride={methodologyOverride} />
           )}

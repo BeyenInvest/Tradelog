@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
@@ -18,15 +18,16 @@ import { PeriodicReviewList } from "@/components/reviews/PeriodicReviewList";
 import {
   getProfileById, getTradesForUser, getWeeklyReviewsForUser, getPeriodicReviewsForUser,
   getBacktestProjectsForUser, getPropAccountsForUser, getMethodologyViewForUser,
-  getHabitsForUser, getDailyJournalForUser,
+  getHabitsForUser, getDailyJournalForUser, getJournalMetaForTrades,
 } from "@/lib/admin/adminQueries";
+import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { takenTrades, closedTrades, round2 } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
 import { ResultDisplayProvider, useResultDisplay } from "@/hooks/useResultDisplay";
 import type { PeriodType } from "@/lib/constants";
 import { rangeOfPeriod } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
-import type { BacktestProject, DailyJournalEntry, Habit, HabitDay, MethodologyView, PeriodicReview, Payout, Profile, PropAccount, Trade, WeeklyReview } from "@/lib/types";
+import type { BacktestProject, DailyJournalEntry, Habit, HabitDay, MethodologyView, PeriodicReview, Payout, Profile, PropAccount, ReadOnlyJournalMeta, Trade, WeeklyReview } from "@/lib/types";
 
 type MainTab = "journal" | "backtesting" | "reviews" | "accounts" | "habits" | "daily";
 type ReviewTab = "week" | PeriodType;
@@ -69,6 +70,7 @@ function AdminUserDetailPageInner() {
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [methodologyView, setMethodologyView] = useState<MethodologyView | null>(null);
+  const [journalMeta, setJournalMeta] = useState<Map<string, ReadOnlyJournalMeta>>(new Map());
   const [trades, setTrades] = useState<Trade[]>([]);
   const [weeklyReviews, setWeeklyReviews] = useState<WeeklyReview[]>([]);
   const [periodicReviews, setPeriodicReviews] = useState<PeriodicReview[]>([]);
@@ -117,8 +119,16 @@ function AdminUserDetailPageInner() {
         setDailyEntries(dj);
         // The Analyse breakdowns are journal-type-specific: load the viewed user's
         // active-journal view so they don't follow the admin's own journal (H2).
-        const mv = await getMethodologyViewForUser(p?.methodology_id ?? null);
-        if (!cancelled) setMethodologyView(mv);
+        // Plus per-journal field labels + screenshot names for the full trade
+        // detail — per trade, since backtest projects can sit under other journals.
+        const [mv, jm] = await Promise.all([
+          getMethodologyViewForUser(p?.methodology_id ?? null),
+          getJournalMetaForTrades(t),
+        ]);
+        if (!cancelled) {
+          setMethodologyView(mv);
+          setJournalMeta(jm);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(toErrorMessage(err, t("admin.loadUserDataFailed")));
@@ -144,6 +154,10 @@ function AdminUserDetailPageInner() {
     [trades, profile]
   );
   const taken = useMemo(() => takenTrades(liveTrades), [liveTrades]);
+  const journalOf = useCallback(
+    (tr: Trade) => journalMeta.get(tr.methodology_id ?? WPM_TEMPLATE_METHODOLOGY_ID),
+    [journalMeta]
+  );
 
   const tradesByWeeklyReview = useMemo(() => {
     const m = new Map<string, Trade[]>();
@@ -236,7 +250,7 @@ function AdminUserDetailPageInner() {
               </div>
 
               {journalTab === "journal" ? (
-                <ReadOnlyTradesViewer trades={liveTrades} title={t("admin.journalTradesTitle")} />
+                <ReadOnlyTradesViewer trades={liveTrades} title={t("admin.journalTradesTitle")} journalOf={journalOf} />
               ) : (
                 <BacktestingAnalysisView
                   trades={taken}
@@ -320,6 +334,7 @@ function AdminUserDetailPageInner() {
           project={selectedProject}
           trades={trades.filter((t) => t.backtest_project_id === selectedProject.id)}
           methodologyOverride={methodologyView ?? undefined}
+          journalOf={journalOf}
           onClose={() => setSelectedProject(null)}
         />
       )}

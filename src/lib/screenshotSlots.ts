@@ -60,3 +60,17 @@ export function customTimeframeLabel(custom: readonly unknown[] | null | undefin
   const effective = resolveSlotTimeframes(custom)[slotIndex];
   return effective === DEFAULT_SLOT_TIMEFRAMES[slotIndex] ? null : timeframeLabel(effective);
 }
+
+/**
+ * De getoonde naam van een slot: de eigen journal-naam (0060) als die gezet is,
+ * anders de naam van een afwijkende TF (0061), anders de meegegeven vaste default
+ * (vertaald door de caller — dit bestand blijft i18n-vrij voor de extensie).
+ */
+export function screenshotSlotLabel(
+  labels: readonly (string | null | undefined)[] | null | undefined,
+  timeframes: readonly unknown[] | null | undefined,
+  defaults: readonly string[],
+  slotIndex: number
+): string {
+  return labels?.[slotIndex]?.trim() || customTimeframeLabel(timeframes, slotIndex) || defaults[slotIndex];
+}
