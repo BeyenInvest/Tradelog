@@ -41,6 +41,7 @@ import {
 } from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
+import { chartStateStale } from "./staleness";
 
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
 const TARGET_KEY = "beyen-tv-ext:target";
@@ -395,6 +396,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     if (!chart.positions.ok) {
       positionSec.body.appendChild(readFail(chart.positions.reason));
       return;
+    }
+
+    // D4 — dropped-shape-telemetrie: een position-tool die er wél staat maar
+    // onleesbaar was mag niet stil verdwijnen (dat oogt als "tool vergeten").
+    if (chart.dropped.length > 0) {
+      positionSec.body.appendChild(note(t("panel.droppedShapes", { count: chart.dropped.length }), "is-warn"));
     }
 
     const list = positions();
@@ -1016,6 +1023,29 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     showError(null);
     submitBtn.disabled = true;
     submitBtn.textContent = t(editingLogged ? "panel.submitUpdateBusy" : "panel.submitBusy");
+
+    // D1 — staleness-guard: het paneel kan minutenlang openstaan terwijl de
+    // user van symbool wisselde of de tool versleepte. Vlak vóór het loggen de
+    // chart nog één keer vers lezen; bij een verschil NIET loggen maar de
+    // nieuwe staat tonen met één waarschuwingsregel. Een mislukte verse lezing
+    // blokkeert niet (degradatie-filosofie: nooit slechter dan het oude gedrag).
+    try {
+      const freshRead = await sendToSw({ type: "chart-state" });
+      if (freshRead.ok && chartStateStale(chart, freshRead.state, selectedPosition()?.id ?? null)) {
+        chart = freshRead.state;
+        chartError = null;
+        renderChart();
+        renderPosition();
+        updatePending();
+        syncCloseSection();
+        showError({ message: t("panel.staleWarning") });
+        submitBtn.disabled = false;
+        submitBtn.textContent = t(editingLogged ? "panel.submitUpdate" : "panel.submit");
+        return;
+      }
+    } catch {
+      /* verse lezing kwam niet aan — doorgaan op de getoonde staat */
+    }
     // Bij een bewerking gaat exact dezelfde payload mee, mét de screenshots van
     // de log erin — anders zou de update die kolommen leegschrijven.
     const request: LogTradeRequest = editingLogged

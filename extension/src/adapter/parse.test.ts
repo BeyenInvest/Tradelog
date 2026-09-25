@@ -84,10 +84,29 @@ describe("parseChartState — S0-contractfixture", () => {
     expect(state.positions.value[0].endTimeSec).toBeNull();
   });
 
-  it("valt terug op decimalen tellen als de formatter-props wegvallen (TV-drift)", () => {
+  it("valt terug op symbolExt.minmov/pricescale als de formatter-props wegvallen (D5)", () => {
     const raw = s0Fixture();
     raw.formatter = { ok: false, value: undefined } as never;
+    (raw.symbolExt.value as Record<string, unknown>).minmov = 1;
+    (raw.symbolExt.value as Record<string, unknown>).pricescale = 1000;
     const state = parseChartState(raw);
+    expect(state.tick).toEqual({ ok: true, value: { size: 0.001, source: "symbol-ext" } });
+  });
+
+  it("symbolExt-bron overleeft ook fractie-ticks waar de sample-teller op faalt (D5)", () => {
+    const raw = s0Fixture();
+    raw.formatter = { ok: false, value: undefined } as never;
+    raw.formattedSample = { ok: true, value: "110'16" }; // fractie-notatie
+    (raw.symbolExt.value as Record<string, unknown>).minmov = 1;
+    (raw.symbolExt.value as Record<string, unknown>).pricescale = 4;
+    const state = parseChartState(raw);
+    expect(state.tick).toEqual({ ok: true, value: { size: 0.25, source: "symbol-ext" } });
+  });
+
+  it("valt terug op decimalen tellen als formatter-props én symbolExt wegvallen (TV-drift)", () => {
+    const raw = s0Fixture();
+    raw.formatter = { ok: false, value: undefined } as never;
+    const state = parseChartState(raw); // fixture-symbolExt draagt geen minmov/pricescale
     expect(state.tick).toEqual({ ok: true, value: { size: 0.001, source: "formatted-sample" } });
   });
 
@@ -156,11 +175,29 @@ describe("parseChartState — degradatie over de hele linie", () => {
     expect(parseChartState("garbage").symbol.ok).toBe(false);
   });
 
-  it("kapotte shape-entries worden overgeslagen, niet half geparseerd", () => {
+  it("kapotte shape-entries worden overgeslagen én gemeld als dropped (D4)", () => {
     const raw = s0Fixture();
     (raw.shapes.value[1] as Record<string, unknown>).properties = { ok: true, value: { stopLevel: "vijfhonderd" } };
     const state = parseChartState(raw);
     if (!state.positions.ok) throw new Error("positions hoort ok te zijn");
     expect(state.positions.value).toHaveLength(0);
+    expect(state.dropped).toEqual([{ id: "WJJ3zr", reason: "stopLevel/profitLevel onleesbaar" }]);
+  });
+
+  it("shapeError uit de page-world (getShapeById faalde) wordt dropped met die reden (D4)", () => {
+    const raw = s0Fixture();
+    const shape = raw.shapes.value[1] as Record<string, unknown>;
+    delete shape.points;
+    delete shape.properties;
+    shape.shapeError = "getShapeById faalde";
+    const state = parseChartState(raw);
+    if (!state.positions.ok) throw new Error("positions hoort ok te zijn");
+    expect(state.positions.value).toHaveLength(0);
+    expect(state.dropped).toEqual([{ id: "WJJ3zr", reason: "getShapeById faalde" }]);
+  });
+
+  it("niet-position-shapes tellen nooit als dropped; een gave chart heeft dropped=[]", () => {
+    const state = parseChartState(s0Fixture()); // horizontal_ray in de fixture = ruis
+    expect(state.dropped).toEqual([]);
   });
 });

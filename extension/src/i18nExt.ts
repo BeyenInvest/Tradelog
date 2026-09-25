@@ -110,6 +110,10 @@ const NL = {
   "panel.positionPick": "{count} position-tools op deze chart — kies er één.",
   "panel.positionSelectLabel": "Kies de position-tool",
   "panel.positionOption": "{direction} · entry {price}",
+  "panel.droppedShapes":
+    "{count} position-tool(s) op de chart onleesbaar — herteken de tool of ververs; details in het diagnose-log.",
+  "panel.staleWarning":
+    "De chart is intussen veranderd — er is níét gelogd. Controleer de verse gegevens hieronder en klik opnieuw.",
   "panel.metric.direction": "Richting",
   "panel.metric.entry": "Entry",
   "panel.metric.stop": "Stop",
@@ -373,6 +377,10 @@ const EN: Record<MessageKey, string> = {
   "panel.positionPick": "{count} position tools on this chart — pick one.",
   "panel.positionSelectLabel": "Pick the position tool",
   "panel.positionOption": "{direction} · entry {price}",
+  "panel.droppedShapes":
+    "{count} position tool(s) on the chart could not be read — redraw the tool or refresh; details in the diagnostic log.",
+  "panel.staleWarning":
+    "The chart changed in the meantime — nothing was logged. Check the fresh values below and click again.",
   "panel.metric.direction": "Direction",
   "panel.metric.entry": "Entry",
   "panel.metric.stop": "Stop",

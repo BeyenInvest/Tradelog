@@ -39,7 +39,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   })();
 });
 
-async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]> {
+async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Promise<ExtResponses[ExtRequest["type"]]> {
   switch (req.type) {
     case "status":
       return getStatus(db);
@@ -57,7 +57,7 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
     case "diag-log":
       return { entries: await readLog() };
     case "chart-state":
-      return readChartState();
+      return readChartState(sender);
     case "targets": {
       const session = await db.getSessionInfo();
       if (!session) return { ok: false, error: "Niet gekoppeld" };
@@ -78,7 +78,7 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
       return result;
     }
     case "snapshot-cycle":
-      return snapshotCycle(req.slots, req.resolutions);
+      return snapshotCycle(req.slots, req.resolutions, sender);
     case "delete-screenshots":
       await db.removeScreenshots(req.paths.filter((p) => typeof p === "string" && p.length < 200));
       return { ok: true };
@@ -97,13 +97,23 @@ async function handle(req: ExtRequest): Promise<ExtResponses[ExtRequest["type"]]
   }
 }
 
+function isChartTab(t: chrome.tabs.Tab | undefined): t is chrome.tabs.Tab {
+  return !!t?.id && !!t.url && /^https:\/\/([^/]+\.)?tradingview\.com\/chart\//.test(t.url); // geen lookalike-suffixdomeinen
+}
+
 async function findChartTab(): Promise<chrome.tabs.Tab | undefined> {
-  const isChartTab = (t: chrome.tabs.Tab | undefined) =>
-    !!t?.id && !!t.url && /^https:\/\/([^/]+\.)?tradingview\.com\/chart\//.test(t.url); // geen lookalike-suffixdomeinen
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (isChartTab(active)) return active;
   const candidates = await chrome.tabs.query({ url: "https://*.tradingview.com/chart/*" });
   return candidates.find(isChartTab);
+}
+
+/** D3: het paneel leeft ín de chart-tab, dus die tab is per definitie de juiste
+ * — sender.tab wint. findChartTab (raad-de-tab) blijft alleen als fallback voor
+ * de popup, die geen tab-context heeft. */
+async function resolveChartTab(sender: chrome.runtime.MessageSender): Promise<chrome.tabs.Tab | undefined> {
+  if (isChartTab(sender.tab)) return sender.tab;
+  return findChartTab();
 }
 
 /** Trust boundary rond de door het paneel aangeleverde slot-TF's (0061): het
@@ -124,8 +134,12 @@ function sanitizeResolutions(raw: Record<SnapshotSlot, string> | undefined): Rec
  * met echte Chrome/TV/Supabase-deps rond de pure runSnapshotCycle. Fouten per
  * slot; het oorspronkelijke timeframe wordt altijd hersteld (garantie uit
  * runSnapshotCycle zelf). */
-async function snapshotCycle(slots: SnapshotSlot[], resolutions?: Record<SnapshotSlot, string>): Promise<ExtResponses["snapshot-cycle"]> {
-  const tab = await findChartTab();
+async function snapshotCycle(
+  slots: SnapshotSlot[],
+  resolutions: Record<SnapshotSlot, string> | undefined,
+  sender: chrome.runtime.MessageSender
+): Promise<ExtResponses["snapshot-cycle"]> {
+  const tab = await resolveChartTab(sender);
   if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
   const tabId = tab.id;
   const windowId = tab.windowId;
@@ -146,6 +160,14 @@ async function snapshotCycle(slots: SnapshotSlot[], resolutions?: Record<Snapsho
       await appendLog("snapshot-page-shot-degraded", String((e instanceof Error && e.message) || e));
     }
     try {
+      // D2: captureVisibleTab pakt wat er in het venster ZICHTBAAR is — dat is
+      // alleen onze chart als de chart-tab nog echt de actieve tab is. De user
+      // kan tijdens de cyclus van tab gewisseld zijn; dan afbreken, nooit een
+      // andere tab fotograferen (Store-claim "no other tab is ever captured").
+      const [active] = await chrome.tabs.query({ active: true, windowId });
+      if (active?.id !== tabId) {
+        return { ok: false, error: "chart-tab is niet meer de actieve tab — capture afgebroken" };
+      }
       const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
       const full = await (await fetch(dataUrl)).blob();
       const rect: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-chart-rect" });
@@ -210,8 +232,8 @@ async function snapshotCycle(slots: SnapshotSlot[], resolutions?: Record<Snapsho
 /** Vraag de bridge op een open TV-chart-tab om de chart-state en parseer die
  * over de vertrouwensgrens heen (F2a). Actieve tab eerst, anders de eerste
  * TV-chart-tab; leesfouten gaan het diagnose-log in (telemetrie-haak F4a). */
-async function readChartState(): Promise<ExtResponses["chart-state"]> {
-  const tab = await findChartTab();
+async function readChartState(sender: chrome.runtime.MessageSender): Promise<ExtResponses["chart-state"]> {
+  const tab = await resolveChartTab(sender);
   if (!tab?.id) return { ok: false, error: "Geen open TradingView-chart-tab gevonden" };
   try {
     const payload: unknown = await chrome.tabs.sendMessage(tab.id, { type: "tv-page-read" });
@@ -220,6 +242,10 @@ async function readChartState(): Promise<ExtResponses["chart-state"]> {
       .filter((r) => !r.ok)
       .map((r) => (r.ok ? "" : r.reason));
     if (failures.length > 0) await appendLog("chart-read-degraded", failures.join(" | "));
+    // D4: onleesbare position-tools zichtbaar maken vóór gebruikersklachten.
+    if (state.dropped.length > 0) {
+      await appendLog("chart-shapes-dropped", state.dropped.map((d) => `${d.id}: ${d.reason}`).join(" | "));
+    }
     return { ok: true, state };
   } catch (e) {
     const detail = String((e instanceof Error && e.message) || e);
@@ -228,8 +254,8 @@ async function readChartState(): Promise<ExtResponses["chart-state"]> {
   }
 }
 
-chrome.runtime.onMessage.addListener((msg: ExtRequest, _sender, sendResponse) => {
-  handle(msg)
+chrome.runtime.onMessage.addListener((msg: ExtRequest, sender, sendResponse) => {
+  handle(msg, sender)
     .then(sendResponse)
     .catch((err: unknown) => {
       const detail = err instanceof Error ? err.message : String(err);
