@@ -21,8 +21,10 @@ interface ReviewSectionsDisplayProps {
  */
 export function ReviewSectionsDisplay({ kind, sections, source }: ReviewSectionsDisplayProps) {
   const { t } = useTranslation();
+  // Each section is its own tinted panel (ReviewContentBlocks); a small gap lets
+  // the surfaces, not borders, separate them.
   return (
-    <>
+    <div className="flex flex-col gap-3">
       {sections.map((section) => {
         const label = reviewSectionLabel(t, section);
         if (section.inputType === "list") {
@@ -42,6 +44,6 @@ export function ReviewSectionsDisplay({ kind, sections, source }: ReviewSections
             return <ContentBlock key={section.key} label={label}>{body}</ContentBlock>;
         }
       })}
-    </>
+    </div>
   );
 }
