@@ -83,7 +83,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const [shareOpen, setShareOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
-  const [showMissed, setShowMissed] = useState(false);
+  // Missed trades visible by default (owner 2026-09-25) — a freshly logged missed
+  // trade must show up in the list/calendar. Display only: KPIs, charts and the
+  // calendar's day sums keep reading realTrades (missed excluded) either way.
+  const [showMissed, setShowMissed] = useState(true);
   const [deletingTrade, setDeletingTrade] = useState<Trade | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [period, setPeriod] = useState<DateRange | null>(null);

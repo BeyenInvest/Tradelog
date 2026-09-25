@@ -82,13 +82,16 @@ export function ReviewStatsHeader({ taken, missed }: { taken: ClosedTrade[]; mis
 
       {rows.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-border bg-surface-2 p-4 flex flex-col items-center">
-            <p className="font-body text-xs uppercase tracking-wider text-muted self-start mb-2">{t("journal.winRate")}</p>
-            <WinRatePieChart wins={kpis.wins} be={kpis.be} losses={kpis.losses} size={148} />
-            <div className="flex gap-4 mt-3 font-mono text-xs">
-              <span className="text-win">{kpis.wins}W</span>
-              <span className="text-be">{kpis.be}BE</span>
-              <span className="text-loss">{kpis.losses}L</span>
+          <div className="rounded-xl border border-border bg-surface-2 p-4 flex flex-col">
+            <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">{t("journal.winRate")}</p>
+            {/* Pie + legend centred both ways in the card, whatever height the equity card next to it gives the row. */}
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <WinRatePieChart wins={kpis.wins} be={kpis.be} losses={kpis.losses} size={148} />
+              <div className="flex justify-center gap-4 mt-3 font-mono text-xs">
+                <span className="text-win">{kpis.wins}W</span>
+                <span className="text-be">{kpis.be}BE</span>
+                <span className="text-loss">{kpis.losses}L</span>
+              </div>
             </div>
           </div>
           <div className="rounded-xl border border-border bg-surface-2 p-4 lg:col-span-2">

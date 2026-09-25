@@ -34,14 +34,27 @@ export function warmUpReviewPdf(): Promise<void> {
   return warmUp;
 }
 
-function fileNameFor(heading: string): string {
-  const slug = heading
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-  return `beyen-review-${slug || "export"}.pdf`;
+/**
+ * Download name = "<trader name> - <review title>.pdf" (owner 2026-09-25), so a
+ * saved/forwarded review is recognisable at a glance. An untitled review falls
+ * back to its period heading (W38 · 2026), a trader without a display name to
+ * the title alone. Only characters no OS accepts in a file name are stripped —
+ * spaces and accents stay readable.
+ */
+export function reviewPdfFileName(data: Pick<ReviewPdfData, "traderName" | "subtitle" | "heading">): string {
+  const clean = (s: string | null | undefined) =>
+    (s ?? "")
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/[. ]+$/, ""); // Windows rejects a trailing dot/space
+  // The period heading reads "W39 · 2026" in the PDF itself; as a file name that
+  // becomes "Week 39 2026" (no middle dot, no cryptic W).
+  const period = clean(data.heading.replace(/^W(\d+)\b/, "Week $1").replace(/\s*·\s*/g, " "));
+  const title = clean(data.subtitle) || period;
+  const name = [clean(data.traderName), title].filter(Boolean).join(" - ");
+  return `${name || "Beyen review"}.pdf`;
 }
 
 /**
@@ -62,7 +75,7 @@ export async function generateReviewPdf(data: ReviewPdfData): Promise<void> {
   try {
     const a = document.createElement("a");
     a.href = url;
-    a.download = fileNameFor(data.heading);
+    a.download = reviewPdfFileName(data);
     document.body.appendChild(a);
     a.click();
     a.remove();

@@ -2,24 +2,36 @@ import type { ReactNode } from "react";
 import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-/** A factual/analytical note — plain body copy under a small gold caps label. */
+/**
+ * Every review section is the same quiet "page" (owner 2026-09-25: the mix of
+ * tinted/bordered/quoted cards was "veel tralala", the plain version a "muur aan
+ * tekst"): one softly tinted panel per section, set apart by surface rather than
+ * borders, headed by Beyen's gold caps label, body copy capped at a book-like
+ * line length. Only the takeaway gets a warmer (gold) tint — the one thing to
+ * carry into next week.
+ */
+const PANEL = "flex flex-col gap-2 rounded-xl px-6 py-5";
+// Half-strength tint reads right on the white light-mode card; on the dark card
+// that is ~invisible, so dark mode takes the full surface-2 (= the chart cards).
+const TINT = "bg-surface-2/50 dark:bg-surface-2";
+// Beyen's own label voice (same as RESULTAAT / WIN RATE in the stats block above),
+// one step firmer than the 11px/90% original so it stands out on the tinted panel.
+const HEADING = "font-body text-xs font-medium uppercase tracking-[0.14em] text-gold";
+const BODY = "font-body text-[15px] leading-[1.75] text-ink/90 whitespace-pre-wrap max-w-[68ch]";
+
+/** One review section — serif heading + body on a softly tinted panel. */
 export function ContentBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold/90">{label}</p>
-      <p className="font-body text-[15px] leading-[1.7] text-ink/90 whitespace-pre-wrap">{children}</p>
+    <div className={`${PANEL} ${TINT}`}>
+      <h4 className={HEADING}>{label}</h4>
+      <p className={BODY}>{children}</p>
     </div>
   );
 }
 
-/** A personal/reflective note (the weekly review's Owner/Trader voices) — body copy on a quietly tinted card, set apart from the factual blocks by its surface rather than a different typeface. */
+/** A personal/reflective note (the weekly review's mentaal voice) — same plain block as the rest; no separate card any more. */
 export function VoiceBlock({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-lg p-4 bg-surface-2/50 border border-border-soft">
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold/90">{label}</p>
-      <p className="font-body text-[15px] leading-[1.7] text-ink/90 whitespace-pre-wrap">{children}</p>
-    </div>
-  );
+  return <ContentBlock label={label}>{children}</ContentBlock>;
 }
 
 function parseActie(a: string): { label: string; status: "ok" | "niet-ok" | null; value: string | null } {
@@ -35,8 +47,8 @@ function parseActie(a: string): { label: string; status: "ok" | "niet-ok" | null
 export function ActiesList({ label, items }: { label: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2.5">
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold/90">{label}</p>
+    <div className={`${PANEL} ${TINT}`}>
+      <h4 className={HEADING}>{label}</h4>
       <div className="flex flex-col gap-1.5">
         {items.map((a, i) => {
           const { label: itemLabel, status, value } = parseActie(a);
@@ -55,24 +67,18 @@ export function ActiesList({ label, items }: { label: string; items: string[] })
   );
 }
 
-/** The hero pull-quote for a review's takeaway/conclusie — body copy on a gold-tinted card with a decorative quote mark. */
+/** The review's takeaway/conclusie — the one section with an accent: the same panel, warmed with a gold tint. */
 export function TakeawayQuote({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="relative rounded-xl p-5 pl-7 bg-gradient-to-br from-gold/[0.08] via-transparent to-transparent border border-gold/20 overflow-hidden">
-      <span className="absolute left-2 top-0 font-display text-6xl leading-none text-gold/20 select-none">&ldquo;</span>
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold/90 mb-2">{label}</p>
-      <p className="font-body text-[15px] leading-[1.7] text-ink whitespace-pre-wrap">{children}</p>
+    <div className={`${PANEL} bg-gold/[0.08] dark:bg-gold/[0.12]`}>
+      <h4 className={HEADING}>{label}</h4>
+      <p className={`${BODY} text-ink`}>{children}</p>
     </div>
   );
 }
 
-/** The review's final word — given real visual weight (bordered card, clear label, ink-toned text) since it's the closing conclusion, not an afterthought. */
+/** The review's final word — same plain block as the rest. */
 export function OverallCommentBlock({ children, label }: { children: ReactNode; label?: string }) {
   const { t } = useTranslation();
-  return (
-    <div className="rounded-xl p-5 border border-gold/25 bg-gold/[0.04]">
-      <p className="font-body text-[11px] uppercase tracking-[0.14em] text-gold/90 mb-2">{label ?? t("reviewContent.overallComment")}</p>
-      <p className="font-body text-[15px] leading-[1.7] text-ink whitespace-pre-wrap">{children}</p>
-    </div>
-  );
+  return <ContentBlock label={label ?? t("reviewContent.overallComment")}>{children}</ContentBlock>;
 }
