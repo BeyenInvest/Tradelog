@@ -1029,22 +1029,27 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // chart nog één keer vers lezen; bij een verschil NIET loggen maar de
     // nieuwe staat tonen met één waarschuwingsregel. Een mislukte verse lezing
     // blokkeert niet (degradatie-filosofie: nooit slechter dan het oude gedrag).
-    try {
-      const freshRead = await sendToSw({ type: "chart-state" });
-      if (freshRead.ok && chartStateStale(chart, freshRead.state, selectedPosition()?.id ?? null)) {
-        chart = freshRead.state;
-        chartError = null;
-        renderChart();
-        renderPosition();
-        updatePending();
-        syncCloseSection();
-        showError({ message: t("panel.staleWarning") });
-        submitBtn.disabled = false;
-        submitBtn.textContent = t(editingLogged ? "panel.submitUpdate" : "panel.submit");
-        return;
+    // NIET bij "Nog aanpassen" (editingLogged): een bewerking hoort bij de
+    // chart-momentopname van de log zelf — de guard zou daar juist de vérse
+    // staat klaarzetten en een tweede klik met het verkeerde symbool wegschrijven.
+    if (!editingLogged) {
+      try {
+        const freshRead = await sendToSw({ type: "chart-state" });
+        if (freshRead.ok && chartStateStale(chart, freshRead.state, selectedPosition()?.id ?? null)) {
+          chart = freshRead.state;
+          chartError = null;
+          renderChart();
+          renderPosition();
+          updatePending();
+          syncCloseSection();
+          showError({ message: t("panel.staleWarning") });
+          submitBtn.disabled = false;
+          submitBtn.textContent = t("panel.submit");
+          return;
+        }
+      } catch {
+        /* verse lezing kwam niet aan — doorgaan op de getoonde staat */
       }
-    } catch {
-      /* verse lezing kwam niet aan — doorgaan op de getoonde staat */
     }
     // Bij een bewerking gaat exact dezelfde payload mee, mét de screenshots van
     // de log erin — anders zou de update die kolommen leegschrijven.
