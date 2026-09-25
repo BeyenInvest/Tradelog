@@ -370,9 +370,9 @@
       "evaluation": { "title": "Execution vs outcome", "body": "The trade evaluation (good trade, emotional error, technical error) measures how you traded; the outcome (win, loss, break-even) measures the money. A profitable trade can still be a bad trade." },
       "missed": { "title": "Missed trades", "body": "A setup you saw but didn't take, logged hypothetically. It never counts toward your real stats — purely to see the opportunities you leave on the table." },
       "settings": { "title": "Settings", "body": "Your name and timezone, light or dark theme, language, exporting your data to CSV, and deleting your account." },
-      "extension": { "title": "Logging from your chart", "body": "A Chrome extension that puts a Beyen panel on your TradingView chart. Draw your usual long or short position tool and the panel reads direction, entry, stop, target and R:R straight from it; you fill in your journal fields in the same panel. The trade lands in your live journal (as a running trade) or in a backtest project. The extension is in beta: it still changes, and it is beta-accounts only for now." },
+      "extension": { "title": "Logging from your chart", "body": "A Chrome extension that puts a Beyen panel on your TradingView chart. Draw your usual long or short position tool and the panel reads direction, entry, stop, target and R:R straight from it; you fill in your journal fields in the same panel. The trade lands in your live journal (as a running trade) or in a backtest project. The extension is in beta: it still changes." },
       "extensionLink": { "title": "Connecting the extension", "body": "Install the extension, go to Settings → “Connect TradingView extension” and generate a link code. Paste that code into the extension popup under “Connect”. The code works once and expires quickly; after that the extension has its own session with exactly your permissions. You disconnect from the popup with “Disconnect”." },
-      "extensionSnapshots": { "title": "Snapshots per timeframe", "body": "The panel can capture your chart per slot (W, D, 4H and an extra one) and attach it to the trade — or you paste a TradingView snapshot link yourself. Chrome first requires one click on the Beyen icon in your toolbar, per tab; the panel says so when that click is still missing. Your own timeframe is restored after the round." }
+      "extensionSnapshots": { "title": "Snapshots per timeframe", "body": "The panel can capture your chart per slot and attach it to the trade — or you paste a TradingView snapshot link yourself. By default the four slots shoot W, D, 4H and 2H, but per journal you pick the timeframes and the slot names yourself: Settings → Journal & fields → open the field editor → Screenshot slots. Two slots may share a timeframe (e.g. before/after: capture one at entry, one when closing). Your own timeframe is restored after the round." }
     }
   },
   "import": {
@@ -1112,6 +1112,7 @@
     "extensionLinkCopied": "Copied",
     "extensionLinkCopyFailed": "Copying failed — select the code and copy it manually.",
     "extensionLinkHint": "This code works once and expires quickly. Paste it straight into the \"Connect\" field in the extension popup.",
+    "extensionLinkSlots": "Which timeframes the snapshots capture (and what the four slots are called) is set per journal: Journal & fields → open the field editor → Screenshot slots.",
     "extensionLinkErrorBeta": "The TradingView extension is beta-accounts only for now.",
     "extensionLinkErrorRate": "Too many requests — try again in a moment.",
     "extensionLinkErrorGeneric": "Could not generate a link code. Please try again later."

@@ -139,6 +139,10 @@ export function ExtensionLinkCard() {
 
       {error && <p className="font-mono text-[11px] mt-3 text-loss">{error}</p>}
 
+      {/* Vindbaarheids-hint (0061): de slot-TF's/-namen wonen in de veld-editor,
+          niet hier — zelfs de owner zocht ze eerst op deze kaart. */}
+      <p className="font-mono text-[11px] mt-3 text-muted">{t("settings.extensionLinkSlots")}</p>
+
       <Link to="/help" className="block w-fit mt-3 text-xs text-gold underline-offset-2 hover:underline">
         {t("common.readGuide")} →
       </Link>
