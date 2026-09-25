@@ -47,7 +47,7 @@ export function useReviewSectionsEditor() {
         .select("id")
         .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
         .maybeSingle();
-      mid = (sys as { id: string } | null)?.id ?? null;
+      mid = (sys)?.id ?? null;
     }
     if (requestId !== requestIdRef.current) return;
     if (!mid) {

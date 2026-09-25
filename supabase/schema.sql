@@ -2,11 +2,13 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0059 (gesynct in fixplan
--- blok C, 2026-09-09; 0059 = WPM-sanering, 2026-09-18). ⚠️ CONVENTIE (hard
--- sinds het fixplan): elke migratie die
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0061 (gesynct in fixplan
+-- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots).
+-- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
--- commit bij. Migratienummers nooit hergebruiken. (Historische voetnoot: 0020
+-- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
+-- (scripts/check-migrations.mjs). Migratienummers nooit hergebruiken.
+-- (Historische voetnoot: 0020
 -- bestaat dubbel — twee bestanden, beide gedraaid; 0034 bestaat niet.)
 -- =========================================================
 create extension if not exists pgcrypto;

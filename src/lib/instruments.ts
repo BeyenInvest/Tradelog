@@ -36,7 +36,7 @@ export function instrumentsOfConfig(config: Record<string, unknown> | null | und
     list.length > 0
       ? list
       : config.tick_values && typeof config.tick_values === "object"
-        ? Object.keys(config.tick_values as Record<string, unknown>)
+        ? Object.keys(config.tick_values)
         : [];
   const seen = new Set<string>();
   const out: string[] = [];

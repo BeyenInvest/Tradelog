@@ -150,7 +150,7 @@ function useMethodologyState(): MethodologyData {
         .select("id")
         .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
         .maybeSingle();
-      id = (sys as { id: string } | null)?.id ?? null;
+      id = (sys)?.id ?? null;
     }
     if (requestId !== requestIdRef.current) return; // superseded by a newer refresh
 

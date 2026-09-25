@@ -152,7 +152,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
 
     async insertTrade(payload) {
       const { data, error } = await client.from("trades").insert(payload).select("id").single();
-      if (!error) return { ok: true, tradeId: (data as { id: string }).id, duplicate: false };
+      if (!error) return { ok: true, tradeId: (data).id, duplicate: false };
       // 23505 = unique violation op trades_user_import_ref_unique → deze trade
       // is al gelogd (retry na netwerkfout) — dat is succes, geen fout (plan C6).
       if (error.code === "23505") return { ok: true, tradeId: null, duplicate: true };
@@ -205,7 +205,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         return { ok: false, error: error.message, code: "other" };
       }
       if (!data || data.length === 0) return { ok: false, error: "trade niet gevonden", code: "not-found" };
-      return { ok: true, tradeId: (data[0] as { id: string }).id };
+      return { ok: true, tradeId: (data[0]).id };
     },
   };
 }

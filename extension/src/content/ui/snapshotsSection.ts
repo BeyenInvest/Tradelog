@@ -187,7 +187,7 @@ export function renderSnapshotsSection(): SnapshotsSection {
 
     // Preview van de laatste geslaagde capture (F3b-spec); puur decoratief,
     // het pad in de statusregel blijft de bron van waarheid.
-    const thumbImg = el("img", { class: "by-snap-thumb", attrs: { alt: "" } }) as HTMLImageElement;
+    const thumbImg = el("img", { class: "by-snap-thumb", attrs: { alt: "" } });
     thumbImg.hidden = true;
 
     const rowEl = el("div", { class: "by-snap", attrs: { "data-slot": slot } }, [

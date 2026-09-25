@@ -58,7 +58,7 @@ export function useMethodologyEditor() {
         .select("id")
         .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
         .maybeSingle();
-      mid = (sys as { id: string } | null)?.id ?? null;
+      mid = (sys)?.id ?? null;
     }
     if (requestId !== requestIdRef.current) return; // superseded by a newer load
     if (!mid) {

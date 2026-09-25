@@ -22,6 +22,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # G2: migratienummer-uniciteit + schema.sql-eindstand ("t/m NNNN") — de
+      # goedkoopste wachter op de migratie-conventies, zonder DB.
+      - run: npm run check:migrations
       - run: npm run test
       # Geen VITE_*-secrets nodig: de build leest env alleen in als inline
       # strings; de app zelf draait hier niet.

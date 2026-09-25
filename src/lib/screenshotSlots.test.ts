@@ -51,7 +51,7 @@ describe("screenshotSlots", () => {
   it("slot-naam: eigen naam > afwijkende TF > vaste default", () => {
     const defs = ["Weekly", "Daily", "4H", "Extra"];
     expect(screenshotSlotLabel(null, null, defs, 0)).toBe("Weekly");
-    expect(screenshotSlotLabel(["", " ", null as unknown as string, "Mijn 15m"], null, defs, 3)).toBe("Mijn 15m");
+    expect(screenshotSlotLabel(["", " ", null, "Mijn 15m"], null, defs, 3)).toBe("Mijn 15m");
     expect(screenshotSlotLabel(["  "], ["15"], defs, 0)).toBe("15m");
     expect(screenshotSlotLabel(["Top-down"], ["15"], defs, 0)).toBe("Top-down");
   });

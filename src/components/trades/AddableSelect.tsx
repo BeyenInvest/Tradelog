@@ -157,7 +157,7 @@ export function AddableSelect({ baseOptions, customOptions, value, onChange, onA
       className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
     >
       <option value="">{t("common.selectPlaceholder")}</option>
-      {showsCurrent && <option value={value as string}>{value}</option>}
+      {showsCurrent && <option value={value}>{value}</option>}
       {baseOptions.map((opt) => (
         <option key={opt} value={opt}>
           {opt}

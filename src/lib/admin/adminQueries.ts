@@ -60,7 +60,7 @@ export async function getMethodologyViewForUser(methodologyId: string | null): P
       .select("id")
       .eq("id", WPM_TEMPLATE_METHODOLOGY_ID)
       .maybeSingle();
-    id = (sys as { id: string } | null)?.id ?? null;
+    id = (sys)?.id ?? null;
   }
   if (!id) return { fields: [], isForexJournal: false, trackExit: false };
 

@@ -71,7 +71,7 @@ describe("logTradeFromChart — methodology-antwoorden via custom", () => {
       req({ custom: { fase: "Fase 3", cc: "15", entry: "Decel", fase3_engulfing_candle: true } })
     );
     expect(result.ok).toBe(true);
-    const payload = insertTrade.mock.calls[0]?.[0] as Record<string, unknown>;
+    const payload = insertTrade.mock.calls[0]?.[0];
     // fase/cc/… zijn sinds de fase-retirement gewone custom-velden.
     expect(payload.fase).toBeUndefined();
     expect(payload.custom).toEqual({ fase: "Fase 3", cc: "15", entry: "Decel", fase3_engulfing_candle: true });

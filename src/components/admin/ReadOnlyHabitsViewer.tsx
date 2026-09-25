@@ -276,7 +276,7 @@ export function ReadOnlyHabitsViewer({ habits, days }: { habits: Habit[]; days: 
 
   const daysByDate = useMemo<DaysByDate>(() => {
     const m = new Map<string, HabitValues>();
-    for (const d of days) m.set(d.day, (d.values ?? {}) as HabitValues);
+    for (const d of days) m.set(d.day, (d.values ?? {}));
     return m;
   }, [days]);
 

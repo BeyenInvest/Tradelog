@@ -88,7 +88,7 @@ export function useModalGuard<T extends HTMLElement = HTMLDivElement>(isDirty: b
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // When the discard prompt opens, pull focus into it so a keyboard user lands on (and can reach)

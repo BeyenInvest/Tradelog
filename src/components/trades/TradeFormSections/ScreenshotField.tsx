@@ -39,7 +39,7 @@ function useResolvedScreenshot(value: string): { url: string | null; loading: bo
     }
     let cancelled = false;
     setLoading(true);
-    resolveScreenshotUrl(value).then((resolved) => {
+    void resolveScreenshotUrl(value).then((resolved) => {
       if (cancelled) return;
       setUrl(resolved);
       setLoading(false);

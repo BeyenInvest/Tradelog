@@ -233,7 +233,7 @@ export function JournalSwitcher({ compact = false }: { compact?: boolean }) {
               setOpen(false);
               // Route state makes Settings auto-open + scroll to the preset
               // picker, so "new journal" is one click, not a hunt through Settings.
-              navigate("/settings", { state: { openPresets: true } });
+              void navigate("/settings", { state: { openPresets: true } });
             }}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-surface-2"
           >

@@ -15,7 +15,7 @@ import en from "@/i18n/locales/en.json";
  */
 
 type Locale = typeof nl;
-const LOCALES: Record<string, Locale> = { nl, en: en as unknown as Locale };
+const LOCALES: Record<string, Locale> = { nl, en: en };
 
 /** Minimal t-stub over the real locale JSON — returns defaultValue on a missing key, like i18next. */
 function tFor(lang: string): TFunction {

@@ -63,7 +63,7 @@ export function useHabits() {
       setError(toErrorMessage(habitsRes.error ?? daysRes.error));
     } else {
       setHabits((habitsRes.data ?? []) as Habit[]);
-      setDays((daysRes.data ?? []) as HabitDay[]);
+      setDays((daysRes.data ?? []));
     }
     setLoading(false);
   }, [userId]);
@@ -84,7 +84,7 @@ export function useHabits() {
   /** day (yyyy-mm-dd) → its values bag. */
   const daysByDate = useMemo(() => {
     const map = new Map<string, HabitValues>();
-    for (const d of days) map.set(d.day, (d.values ?? {}) as HabitValues);
+    for (const d of days) map.set(d.day, (d.values ?? {}));
     return map;
   }, [days]);
 
