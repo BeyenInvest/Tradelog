@@ -72,7 +72,7 @@ function SharedJournalView({ data }: { data: SharedJournal }) {
           <ResultStatCard kpis={kpis} unit={unit} />
           <ProfitFactorStatCard kpis={kpis} />
           <AvgRStatCard kpis={kpis} />
-          <MaxDrawdownStatCard kpis={kpis} />
+          <MaxDrawdownStatCard trades={trades} unit={unit} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
