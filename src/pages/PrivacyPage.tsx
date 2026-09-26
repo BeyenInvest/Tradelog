@@ -5,7 +5,8 @@ import { LogoLockup } from "@/components/ui/Logo";
  * Privacybeleid — volledig uitgeschreven op basis van wat de app feitelijk doet
  * (niet door een jurist nagekeken). Bevestigde/afgeleide feiten: Chesney Beyen als
  * natuurlijke persoon in België; alle hosting in een EU-regio; geen tracking-/analytics-
- * cookies; verwerkers = Supabase (DB/auth/opslag), Vercel (hosting), Cloudflare
+ * cookies (Plausible = cookieloze, geaggregeerde bezoekersstatistiek, EU-gehost —
+ * launchplan L6, 2026-09-26); verwerkers = Supabase (DB/auth/opslag), Vercel (hosting), Cloudflare
  * (Turnstile-CAPTCHA bij registratie) en Sentry (foutmonitoring, alleen actief met
  * VITE_SENTRY_DSN, enkel fouten, sendDefaultPii:false — geen IP/cookies). Account
  * verwijderen kan self-service in Instellingen (DeleteAccountModal + useAuth.
@@ -20,7 +21,7 @@ import { LogoLockup } from "@/components/ui/Logo";
  * juridische review, en moet live staan vóór de eerste externe installatie uit de
  * Web Store — de Store-listing verwijst naar deze pagina als privacy-policy-URL.
  */
-const LAST_UPDATED = "17 september 2026";
+const LAST_UPDATED = "26 september 2026";
 const PROVIDER_NAME = "Chesney Beyen";
 const CONTACT_EMAIL = "info@beyen.app";
 
@@ -71,6 +72,11 @@ export default function PrivacyPage() {
                 enkel wanneer foutmonitoring aanstaat — technische foutrapporten zonder je IP-adres of persoonlijke
                 identificatie (zie punt 5).
               </li>
+              <li>
+                <span className="text-ink">Bezoekersstatistiek:</span> geanonimiseerde, geaggregeerde gegevens over
+                het gebruik van de website (bezochte pagina's, verwijzende website, land, apparaattype) en of er een
+                account werd aangemaakt — zonder cookies en zonder dat je als persoon herkenbaar bent (zie punt 4 en 5).
+              </li>
             </ul>
           </section>
 
@@ -84,7 +90,8 @@ export default function PrivacyPage() {
               <li>
                 <span className="text-ink">Gerechtvaardigd belang</span> (art. 6.1.f AVG): misbruik van het
                 registratieformulier tegengaan via een CAPTCHA, en de stabiliteit en veiligheid van de dienst bewaken
-                via foutmonitoring.
+                via foutmonitoring, en via geanonimiseerde bezoekersstatistiek begrijpen hoe de website gebruikt wordt
+                en welke kanalen bezoekers opleveren.
               </li>
             </ul>
             <p className="mt-1">
@@ -95,7 +102,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-ink font-medium mb-1">4. Cookies en lokale opslag</h2>
             <p>
-              We gebruiken geen tracking- of analytics-cookies. Om je ingelogd te houden bewaart de app een
+              We gebruiken geen tracking- of analytics-cookies. Voor bezoekersstatistiek gebruiken we Plausible
+              Analytics, dat zonder cookies werkt en geen persoonsgegevens of IP-adressen bewaart. Om je ingelogd te houden bewaart de app een
               technisch noodzakelijke sessie van Supabase Authenticatie in je browser, en je taalvoorkeur lokaal. Bij
               het registreren laadt een CAPTCHA (Cloudflare Turnstile) om geautomatiseerd misbruik te weren.
             </p>
@@ -108,6 +116,10 @@ export default function PrivacyPage() {
               <li><span className="text-ink">Supabase</span> — database, authenticatie en opslag (EU-regio).</li>
               <li><span className="text-ink">Vercel</span> — hosting en levering van de webapplicatie.</li>
               <li><span className="text-ink">Cloudflare</span> — Turnstile-CAPTCHA bij registratie.</li>
+              <li>
+                <span className="text-ink">Plausible Analytics</span> — cookieloze, geaggregeerde bezoekersstatistiek
+                (EU-bedrijf, gegevens gehost in de EU).
+              </li>
               <li>
                 <span className="text-ink">Sentry</span> — foutmonitoring, uitsluitend wanneer geactiveerd; enkel
                 technische foutgegevens, zonder IP-adres of andere directe persoonsgegevens.
