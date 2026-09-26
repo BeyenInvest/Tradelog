@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LogoLockup } from "@/components/ui/Logo";
 import { CaptchaWidget } from "@/components/ui/CaptchaWidget";
 import { toErrorMessage } from "@/lib/errorMessage";
+import { trackEvent } from "@/lib/analytics";
 import { signupSchema, type SignupFormValues } from "@/lib/validation";
 
 export default function SignupPage() {
@@ -27,6 +28,7 @@ export default function SignupPage() {
     setError(null);
     try {
       const { needsEmailConfirmation } = await signUp(values.email, values.password, values.displayName, captchaToken);
+      trackEvent("Signup");
       if (needsEmailConfirmation) {
         setCheckEmail(true);
       }

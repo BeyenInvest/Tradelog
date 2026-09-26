@@ -5,8 +5,10 @@
 //
 // Schrijft een timestamped custom-format dump (pg_dump -Fc) van de schema's
 // `public` (alle app-data) en `auth` (de accounts) naar backups/, en ruimt
-// dumps ouder dan de laatste 14 op. Voor een dagelijkse run: Windows Task
-// Scheduler → "node --env-file=.env.local scripts/backup-db.mjs" in deze map.
+// dumps ouder dan de laatste 14 op. De dumps landen in `backups/` onder de
+// huidige werkmap — draai het dus vanuit een map BUITEN de repo (de dumps
+// bevatten auth-password-hashes). Owner-setup sinds 2026-09-25: Task Scheduler
+// "Beyen backup" (dagelijks 21:00) → C:\Users\Beyen\BeyenBackups\run-backup.cmd.
 //
 // Vereist:
 //   - SUPABASE_DB_URL in .env.local (zelfde als de migratie-runner).
@@ -15,12 +17,19 @@
 //     of `winget install PostgreSQL.PostgreSQL.17` (bevat pg_dump + pg_restore).
 //
 // Restore-oefening (fixplan B3, tegen een WEGWERP-project — nooit prod):
-//   1. Maak een gratis Supabase-project, run supabase/schema.sql via de SQL Editor.
-//   2. pg_restore --dbname="<wegwerp-DB-URL>" --data-only --disable-triggers \
-//        --schema=public --no-owner backups/<file>.dump
-//      (auth.users eerst als je FK's naar auth wilt: --schema=auth --table=users)
-//   3. Zet de app-env op het wegwerp-project en verifieer dat de app start en
-//      trades/journals toont. Dát is het bewijs dat de backup werkt.
+// Op 2026-09-25 geslaagd (rij-aantallen identiek aan prod) met dit recept:
+//   1. Gratis Supabase-project; `psql "<wegwerp-URL>" -v ON_ERROR_STOP=1 -f supabase/schema.sql`.
+//   2. pg_restore --dbname="<wegwerp-URL>" --data-only --no-owner \
+//        --schema=auth --table=users backups/<file>.dump
+//   3. pg_restore --data-only --no-owner --schema=public -f data.sql backups/<file>.dump
+//      en data.sql in ÉÉN psql-transactie laden, voorafgegaan door:
+//        begin; set local session_replication_role = replica;
+//        -- truncate alle public-tabellen (cascade): schema.sql seedt zelf rijen
+//        -- (templates, schema_migrations) die anders botsen
+//      … data.sql … commit;
+//      NB: --disable-triggers en PGOPTIONS werken NIET via de Supabase-pooler
+//      (postgres is geen superuser) — vandaar de replica-rol in de sessie.
+//   4. Vergelijk count(*) van auth.users/profiles/methodologies/trades met prod.
 //
 // NB: dit is het vangnet zolang het project op de free tier zit; het advies in
 // het fixplan blijft Supabase Pro (7 dagen automatische backups) zodra er één
