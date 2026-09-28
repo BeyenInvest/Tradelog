@@ -155,38 +155,74 @@ export default function LandingPage() {
   const { t } = useTranslation();
 
   // Scroll-reveal: fade sections up as they enter view, with a small per-sibling
-  // stagger. Hero elements animate immediately via CSS. Falls back to showing
-  // everything if reduced-motion is set or IntersectionObserver is unavailable.
+  // stagger. Hero elements animate immediately via CSS.
+  //
+  // Fail-open: `.reveal` is visible by default; only JS hides an element (the
+  // `rv-wait` class), and only when it starts beyond the pre-trigger zone. So
+  // without JS, with reduced motion, without IntersectionObserver, after an
+  // anchor jump / scroll restore, or when printing, nothing stays invisible.
+  // (Was: every `.reveal` opacity:0 until the observer fired — it only fires on
+  // a painted frame, so fast jumps, screenshot tools and throttled tabs showed
+  // whole blank screens.)
   useEffect(() => {
-    const items = Array.from(
-      document.querySelectorAll<HTMLElement>(".landing-root .reveal:not(.hero .reveal)"),
-    );
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !("IntersectionObserver" in window)) {
-      items.forEach((el) => el.classList.add("in"));
-      return;
-    }
+    if (reduce || !("IntersectionObserver" in window)) return;
+
+    // Pre-trigger one full viewport below the fold so normal scrolling never
+    // lands on a section whose reveal hasn't fired yet.
+    const zone = () => window.innerHeight * 2;
+    const waiting = new Set(
+      Array.from(
+        document.querySelectorAll<HTMLElement>(".landing-root .reveal:not(.hero .reveal)"),
+      ).filter((el) => el.getBoundingClientRect().top > zone()),
+    );
+    waiting.forEach((el) => el.classList.add("rv-wait"));
+
+    const reveal = (el: HTMLElement, animate: boolean) => {
+      if (!waiting.delete(el)) return;
+      io.unobserve(el);
+      if (animate) {
+        const sibs = Array.from(el.parentNode?.children ?? []).filter((n) =>
+          (n as HTMLElement).classList.contains("reveal"),
+        );
+        const i = sibs.indexOf(el);
+        el.style.animationDelay = `${i > 0 ? i * 0.07 : 0}s`;
+        el.classList.add("in");
+      }
+      el.classList.remove("rv-wait");
+      if (waiting.size === 0) window.clearInterval(safety);
+    };
+
+    // Only fade while the element is still below the visible viewport; if it's
+    // already on screen we're late (fast jump), and a fade would just show a
+    // blank / half-faded block — so show it at once.
     const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (!e.isIntersecting) return;
-          const el = e.target as HTMLElement;
-          const sibs = Array.from(el.parentNode?.children ?? []).filter((n) =>
-            (n as HTMLElement).classList.contains("reveal"),
-          );
-          const i = sibs.indexOf(el);
-          el.style.animationDelay = `${i > 0 ? i * 0.07 : 0}s`;
-          el.classList.add("in");
-          io.unobserve(el);
-        });
-      },
-      // Pre-trigger well below the viewport so fast scrolling never lands on a
-      // section whose reveal hasn't fired yet (was: threshold 0.14, no margin —
-      // which produced blank frames on quick scrolls in dark mode).
+      (entries) =>
+        entries.forEach(
+          (e) =>
+            e.isIntersecting &&
+            reveal(e.target as HTMLElement, e.boundingClientRect.top > window.innerHeight),
+        ),
       { threshold: 0, rootMargin: "0px 0px 100% 0px" },
     );
-    items.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    waiting.forEach((el) => io.observe(el));
+
+    // Safety net for when the observer lags or never fires (no painted frames —
+    // then a CSS animation wouldn't run either): reveal instantly.
+    const safety = window.setInterval(() => {
+      waiting.forEach((el) => {
+        if (el.getBoundingClientRect().top < zone()) reveal(el, false);
+      });
+    }, 700);
+    const onPrint = () => waiting.forEach((el) => reveal(el, false));
+    window.addEventListener("beforeprint", onPrint);
+
+    return () => {
+      io.disconnect();
+      window.clearInterval(safety);
+      window.removeEventListener("beforeprint", onPrint);
+      waiting.forEach((el) => el.classList.remove("rv-wait"));
+    };
   }, []);
 
   return (
