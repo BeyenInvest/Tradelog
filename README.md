@@ -46,7 +46,7 @@ npm run build     # productie build
 
 ## 5. Publieke registratie aanzetten (eenmalig, per omgeving)
 
-> **Status 2026-09-09:** nog niet doorlopen — registratie staat dicht en Turnstile is tijdelijk volledig uit (zowel `VITE_TURNSTILE_SITE_KEY` op Vercel als de Supabase-CAPTCHA-toggle), zodat de app tijdens actieve ontwikkeling in elke browser laadt. Her-activatie is ingepland als blok G2/G3 van `docs/fixplan-2026-09.md` (launch-week).
+> **Status 2026-09-28: doorlopen op productie — registratie staat OPEN.** Turnstile aan (site key op Vercel, secret in Supabase Attack Protection), custom SMTP via Resend (`noreply@beyen.app`), Site URL `https://www.beyen.app` + `/login` en `/reset-password` op beyen.app én www.beyen.app in de redirect-allowlist, "Confirm email" aan. Smoke-test (signup → mail → wizard → journal → trade) en de volledige reset-flow zijn groen. Details en open punten: CLAUDE.md "Auth / multi-tenant status".
 
 Registratie staat by default nog uit op het Supabase-project (bewust, om misbruik te voorkomen zolang de flow niet volledig getest is). Volgorde om 'm aan te zetten:
 

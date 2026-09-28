@@ -40,11 +40,15 @@ Trading & backtesting journal. React + Vite + TypeScript + Tailwind, Supabase (P
 
 Multi-tenant signup is **built**, not hypothetical: `profiles` table + auto-provisioning trigger (`supabase/schema.sql`), `/signup`, `/forgot-password`, `/reset-password`, `/terms`, `/privacy` all exist and are routed (`src/router.tsx`), `useAuth.tsx` has `signUp`/`sendPasswordReset`/`updatePassword`. RLS is scoped per-user (`user_id = auth.uid()`) on every table.
 
-**Public registration is currently gated off** — `supabase.auth.signUp` will error until the owner completes the rollout steps in README.md §5 (Turnstile site, Supabase CAPTCHA protection, URL config, "Allow new users to sign up" toggle). Until then, new accounts are created manually via the Supabase dashboard.
+**Public registration is OPEN since 2026-09-28** (fixplan blok G2/G3, README.md §5 doorlopen): "Allow new users to sign up" + "Confirm email" aan (manual linking / anonymous sign-ins uit), smoke-test met een vers account groen (signup → mail → wizard → journal → trade → missed-isolatie).
 
-**Turnstile/CAPTCHA is temporarily fully disabled** (both `VITE_TURNSTILE_SITE_KEY` on Vercel and Supabase's CAPTCHA protection toggle) to allow the owner's real Chrome *and* this session's sandboxed Browser pane to load the app during active development — the widget previously crashed the Browser pane. `CaptchaWidget.tsx` already renders `null` with no site key, so this needed no code change. **Before public launch this must be re-enabled** (see README.md §5) — at that point, opening the production URL in the Browser pane needs re-confirmation with the user first (Turnstile is suspected incompatible with it).
+- **Turnstile/CAPTCHA staat AAN**: Cloudflare-widget "Beyen Invest" (hostnames `beyen.app`, `www.beyen.app`, `tradelog-three-alpha.vercel.app`), `VITE_TURNSTILE_SITE_KEY` op Vercel (Production, type Config), Supabase Attack Protection → Turnstile met de secret. Geldt voor signup, login én wachtwoord-reset (alle drie geven `captchaToken` mee). ⚠️ **De productie-URL niet meer in het Browser-paneel openen zonder eerst met de owner af te stemmen** — Turnstile crashte het paneel eerder.
+- **Auth-mail via Resend** (custom SMTP: `smtp.resend.com:465`, user `resend`, sender `noreply@beyen.app`; domein beyen.app EU-geverifieerd via 3 DNS-records in Combell). Gmail = inbox; Outlook = nog spam (nieuw domein + verify-link naar `*.supabase.co`) → post-launch: link via beyen.app (`token_hash`-flow) + NL-mailtemplates.
+- **URL-config:** Site URL `https://www.beyen.app` (beyen.app redirect naar www); redirect-allowlist bevat `/login` en `/reset-password` op beide hosts. `emailRedirectTo`/`redirectTo` gebruiken `window.location.origin`.
+- **Supabase blijft Free tot het einde van de beta** (owner-besluit 2026-09-28): leaked-password-protection vergt Pro en gaat dan pas aan. Tot dan: dagelijkse pg_dump-backup door de owner (Task Scheduler, buiten de repo; restore-recept in de kop van `scripts/backup-db.mjs`, 2026-09-25 getest).
+- **Analytics:** Plausible (cookieloos, EU), `trackEvent("Signup")` in `src/lib/analytics.ts`.
 
-Terms/Privacy pages carry full drafted copy but are **not yet legally reviewed** — flag this if asked about launch readiness (a legal review is a launch-week task, blocking before Stripe/paid but not before the free beta).
+Terms/Privacy pages carry full drafted copy but are **not yet legally reviewed** — owner-besluit 2026-09-27: live voor de gratis beta zonder jurist; de juridische review is **blocking vóór Stripe/paid**.
 
 ## Feature-gating status (bijgewerkt 2026-09-09, fixplan blok A)
 
