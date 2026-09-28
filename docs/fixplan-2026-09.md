@@ -23,7 +23,7 @@ Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 | D | Zichtbare motor-poets | **Fable** | ½ dag | ☑ 2026-09-10 |
 | E | UX / a11y / i18n / merk-poets | **Opus** | 1 dag | ☑ 2026-09-10 — E1-E8 gemerged+gepusht (727f0b3), groen |
 | F | Stabiliteit vóór gebruikers | **Fable** | 1 dag | ☑ 2026-09-10 (PA2 → H; vitest-advisory → H) |
-| G | Launch-week (B6) | owner + **Opus** | 2–3 dagen owner-werk | ☐ |
+| G | Launch-week (B6) | owner + **Opus** | 2–3 dagen owner-werk | ◐ 2026-09-28 — **signup OPEN** (G2–G5 ☑); G1 jurist → vóór betaald; G6 kanalen = volgende |
 | H | Post-launch (pas ná 2–4 weken echte gebruikers) | per item | — | ☐ |
 
 A → B → C mogen niet wisselen van volgorde. D/E/F mogen onderling schuiven maar komen ná C en vóór G.
@@ -50,9 +50,9 @@ Doel: er bestaat weer precies één werkelijkheid (main = prod = docs). Fable va
 Doel: de blinde vlek dicht — nooit meer onherstelbaar, nooit meer onzichtbaar.
 
 - [x] B1. **CI** — `.github/workflows/ci.yml` staat er en is **groen op main** (2026-09-10; eerste run was rood door een latente taal-afhankelijke errorMessage-test — gefixt in f00f517, Node ≥21 heeft een eigen global navigator). ☐ **Owner-klik open:** op GitHub als required check op main zetten (Settings → Branches → require status check "ci").
-- [ ] B2. **Backups** (owner-besluit open: Pro vs cron). Het pg_dump-script is geleverd: `scripts/backup-db.mjs` (public+auth, -Fc, rotatie 14, faalt hard op lege dump; `backups/` in .gitignore). Vereist eenmalig PostgreSQL client-tools (`winget install PostgreSQL.PostgreSQL.17`). Aanbeveling blijft Supabase Pro zodra één echte beta-gebruiker data heeft.
-- [ ] B3. **Restore één keer oefenen** (owner): stappen staan in de kop van `scripts/backup-db.mjs` (wegwerp-project + schema.sql + pg_restore --data-only). Combineert met C7.
-- [ ] B4. **Uptime-ping** (owner, 10 min): gratis monitor (bijv. UptimeRobot) op https://beyen.app + e-mail-alert.
+- [x] B2. **Backups** — ☑ 2026-09-25: dagelijkse Task Scheduler-run (21:00) van `scripts/backup-db.mjs`, dumps buiten de repo (`C:\Users\Beyen\BeyenBackups`); Supabase Pro pas op het einde van de beta (owner-besluit 2026-09-28). Oorspronkelijk: (owner-besluit open: Pro vs cron). Het pg_dump-script is geleverd: `scripts/backup-db.mjs` (public+auth, -Fc, rotatie 14, faalt hard op lege dump; `backups/` in .gitignore). Vereist eenmalig PostgreSQL client-tools (`winget install PostgreSQL.PostgreSQL.17`). Aanbeveling blijft Supabase Pro zodra één echte beta-gebruiker data heeft.
+- [x] B3. ☑ 2026-09-25 geslaagd op wegwerp-project (rij-aantallen identiek aan prod); het werkende recept staat nu in de kop van `backup-db.mjs`. **Restore één keer oefenen** (owner): stappen staan in de kop van `scripts/backup-db.mjs` (wegwerp-project + schema.sql + pg_restore --data-only). Combineert met C7.
+- [x] B4. ☑ 2026-09-17/28 (UptimeRobot-monitor + e-mail-alert). **Uptime-ping** (owner, 10 min): gratis monitor (bijv. UptimeRobot) op https://beyen.app + e-mail-alert.
 - [ ] B5. **Owner-dashboard-checklist** (uit audit Laag 7, ~15 min): Supabase-tier & backup-status · zijn 0053–0056 echt op prod gedraaid · Auth-wachtwoordminimum ≥8 + leaked-password-protection aan · projectregio = EU · `VITE_SENTRY_DSN` op Vercel gezet en komen events binnen · SMTP/e-mailtemplates klaar · DPA's Supabase/Vercel/Sentry/Cloudflare afgevinkt en bewaard. Uitkomsten terugmelden in de sessie → dit doc bijwerken.
 - [x] B6. Sentry-sourcemaps: `@sentry/vite-plugin` in vite.config.ts, volledig inert zonder `SENTRY_AUTH_TOKEN` (lokaal/CI bouwen zonder secrets; sourcemap "hidden", maps na upload verwijderd). ☐ **Owner:** `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` als env-vars op Vercel zetten.
 
@@ -66,7 +66,7 @@ Doel: de DB-waarheid verankerd. Werklijst = `docs/schema-sync-werklijst-2026-09.
 - [x] C4. Runner-TLS strict: verifieert tegen `supabase/prod-ca-2021.crt` (of env `SUPABASE_DB_CA`), weigert zonder CA (escape hatch `ALLOW_INSECURE_DB_TLS=1`). ☐ **Owner:** CA eenmalig downloaden — Dashboard → Project Settings → Database → SSL Certificate → opslaan als `supabase/prod-ca-2021.crt` (staat niet in git nodig; mag wel, het is een publiek certificaat).
 - [x] C5. `fetchCounts` faalt nu hard op elke count-error (geen stille `?? 0` meer).
 - [x] C6. `OWNER_BETA_EMAILS` uit `useAuth.tsx` verwijderd. ☐ **Owner draait éérst** (vóór of direct na de deploy): `update profiles set beta_features = true where email = 'superrrdun@gmail.com';`
-- [ ] C7. Verse-bootstrap-test: schema.sql tegen een wegwerp-project draaien (owner, combineert met B3). NB: het storage-blok vereist een Supabase-omgeving (staat zo gemarkeerd in schema.sql).
+- [x] C7. ☑ 2026-09-25: schema.sql (origin/main) laadde foutloos op een vers Supabase-project. Verse-bootstrap-test: schema.sql tegen een wegwerp-project draaien (owner, combineert met B3). NB: het storage-blok vereist een Supabase-omgeving (staat zo gemarkeerd in schema.sql).
 
 ## Blok D — Zichtbare motor-poets · **Fable** · ½ dag 🔴-randje
 
@@ -106,11 +106,11 @@ Doel: de 7 openstaande motorpunten (na twee audits 0/7) — waarvan één voor g
 
 Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 
-- [ ] G1. **Jurist-uur**: naam + contactweg van de aanbieder in Terms §1 / Privacy §1 (nu anoniem = AVG art. 13 / WER-blokker); leespas over Terms+Privacy; korte bevestiging MiFID-inschatting ("geen advies"). Opus verwerkt de tekstwijzigingen.
-- [ ] G2. Turnstile + Supabase-CAPTCHA weer aan (README §5). ⚠️ Memory: Browser-pane crashte eerder op Turnstile — na activatie prod niet meer in het Browser-paneel openen zonder eerst met owner af te stemmen.
-- [ ] G3. Supabase URL-config + SMTP/e-mailtemplates → "Allow new users to sign up" aan → smoke-test met een echt vers account (signup → mail → wizard → journal bouwen → trade → stats), door owner op eigen apparaat.
-- [ ] G4. Analytics (privacyvriendelijk, bijv. Plausible) + Privacy-policy-regel daarover mee laten lopen; Sentry-events verifiëren. Zonder meting is elke groeibeslissing blind.
-- [ ] G5. Landing publiek + wachtlijst/e-mail-capture als fallback zolang iets nog dicht staat.
+- [ ] G1. ⏸ Owner-besluit 2026-09-27: gratis beta gaat live zonder jurist (naam + contact staan al in Terms/Privacy §1); de review is blocking **vóór betaald**. **Jurist-uur**: naam + contactweg van de aanbieder in Terms §1 / Privacy §1 (nu anoniem = AVG art. 13 / WER-blokker); leespas over Terms+Privacy; korte bevestiging MiFID-inschatting ("geen advies"). Opus verwerkt de tekstwijzigingen.
+- [x] G2. ☑ 2026-09-28. Turnstile + Supabase-CAPTCHA weer aan (README §5). ⚠️ Memory: Browser-pane crashte eerder op Turnstile — na activatie prod niet meer in het Browser-paneel openen zonder eerst met owner af te stemmen.
+- [x] G3. ☑ 2026-09-28 (SMTP = Resend; smoke-test + reset-flow groen; signup OPEN). Supabase URL-config + SMTP/e-mailtemplates → "Allow new users to sign up" aan → smoke-test met een echt vers account (signup → mail → wizard → journal bouwen → trade → stats), door owner op eigen apparaat.
+- [x] G4. ☑ 2026-09-26 Plausible live + Signup-goal + privacytekst (Sentry-events verifiëren blijft open). Analytics (privacyvriendelijk, bijv. Plausible) + Privacy-policy-regel daarover mee laten lopen; Sentry-events verifiëren. Zonder meting is elke groeibeslissing blind.
+- [x] G5. ☑ vervallen: signup staat open, dus geen wachtlijst-fallback nodig. Landing publiek + wachtlijst/e-mail-capture als fallback zolang iets nog dicht staat.
 - [ ] G6. Kanaal-start (audit bril 17): NL/BE-communities (daytradingcommunity.nl, DeDaytrader, Trade & Connect, prop-Discords), build-in-public met eigen echte stats. Geen guru-partnerships.
 
 ## Blok H — Post-launch backlog (pas ná 2–4 weken echte gebruikers en data)
