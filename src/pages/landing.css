@@ -1641,15 +1641,17 @@ html:has(.landing-root) {
     transform: none;
   }
 }
-.landing-root .reveal {
+/* Fail-open: a .reveal is visible unless JS marked it `rv-wait` (see the
+   scroll-reveal effect in LandingPage.tsx). `both` keeps the 0-opacity start
+   frame applied during a stagger delay, so there's no flash-then-fade. */
+.landing-root .reveal.rv-wait {
   opacity: 0;
 }
 .landing-root .reveal.in {
-  animation: lp-fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation: lp-fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 .landing-root .hero .reveal {
-  opacity: 0;
-  animation: lp-fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation: lp-fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 .landing-root .hero .d1 {
   animation-delay: 0.02s;
