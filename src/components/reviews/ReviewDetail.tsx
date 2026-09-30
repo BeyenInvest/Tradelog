@@ -24,7 +24,7 @@ interface ReviewDetailProps {
   trades: Trade[];
   onEdit: () => void;
   onDelete: () => void;
-  onRelink: (reviewId: string, jaar: number, weekNummer: number) => Promise<number>;
+  onRelink: (reviewId: string) => Promise<number>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
   onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
   onDeleteTrade: (trade: Trade) => void;

@@ -175,7 +175,7 @@ function WeeklyReviewsTab({
       // linkTradesToReview is idempotent — it unlinks out-of-range trades and
       // links the new week's in one pass.
       if (input.jaar !== editingReview.jaar || input.week_nummer !== editingReview.week_nummer) {
-        await linkTradesToReview(editingReview.id, input.jaar, input.week_nummer);
+        await linkTradesToReview(editingReview.id);
         await refreshTrades();
       }
     } else {
@@ -206,8 +206,8 @@ function WeeklyReviewsTab({
     }
   }
 
-  async function handleRelink(reviewId: string, jaar: number, weekNummer: number): Promise<number> {
-    const count = await linkTradesToReview(reviewId, jaar, weekNummer);
+  async function handleRelink(reviewId: string): Promise<number> {
+    const count = await linkTradesToReview(reviewId);
     await refreshTrades();
     return count;
   }

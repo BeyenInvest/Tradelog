@@ -1,8 +1,20 @@
 import type { Trade } from "./types";
 import type { DateRange } from "./periodRanges";
 import type { Pair, Outcome, TradeEvaluation, Sessie, Direction } from "./constants";
+import { tradingDateOf } from "./isoWeek";
 
 export type { DateRange };
+
+/**
+ * Period scope for the Journal: a plain date range, except that the week
+ * preset marks itself `tradingWeek` — that range then filters on the trading
+ * week (tradingDateOf: zondag ≥ 22:00 hoort bij de week erna) instead of on
+ * the bare datum_open. Month/quarter/year/custom ranges stay purely
+ * date-based (owner-besluit 2026-09-30, plan-handelsweek-zondag §6).
+ */
+export interface JournalPeriod extends DateRange {
+  tradingWeek?: boolean;
+}
 
 export interface JournalFilters {
   pair?: Pair;
@@ -30,15 +42,16 @@ export function activeFilterCount(f: JournalFilters): number {
   return fixedCount + (custom ? Object.keys(custom).length : 0);
 }
 
-function inRange(dateIso: string, range: DateRange | null): boolean {
+function inRange(t: Trade, range: JournalPeriod | null): boolean {
   if (!range) return true;
-  return dateIso >= range.start && dateIso <= range.end;
+  const date = range.tradingWeek ? tradingDateOf(t.datum_open, t.tijd_open) : t.datum_open;
+  return date >= range.start && date <= range.end;
 }
 
 /** Period + Journal filters, applied together — the single gate everything in TradeJournalView flows through. */
-export function applyJournalFilters(trades: Trade[], range: DateRange | null, filters: JournalFilters): Trade[] {
+export function applyJournalFilters(trades: Trade[], range: JournalPeriod | null, filters: JournalFilters): Trade[] {
   return trades.filter((t) => {
-    if (!inRange(t.datum_open, range)) return false;
+    if (!inRange(t, range)) return false;
     if (filters.pair && t.pair !== filters.pair) return false;
     if (filters.instrument && !(t.instrument ?? t.pair).toLowerCase().includes(filters.instrument.toLowerCase())) return false;
     if (filters.direction && t.direction !== filters.direction) return false;

@@ -35,6 +35,20 @@ describe("groupTrades", () => {
     expect(groups[0].key).toBe("2025-W01");
   });
 
+  it("week: a Sunday trade ≥ 22:00 groups into the NEXT week (handelsweek-regel), earlier or timeless Sundays stay", () => {
+    // 2026-07-19 is the Sunday of week 29; 2026-07-20 the Monday of week 30.
+    const trades = [
+      makeTrade({ id: "late-sunday", datum_open: "2026-07-19", tijd_open: "23:00" }),
+      makeTrade({ id: "early-sunday", datum_open: "2026-07-19", tijd_open: "21:59" }),
+      makeTrade({ id: "timeless-sunday", datum_open: "2026-07-19", tijd_open: null }),
+      makeTrade({ id: "monday", datum_open: "2026-07-20" }),
+    ];
+    const groups = groupTrades(trades, "week");
+    const byKey = new Map(groups.map((g) => [g.key, g.trades.map((t) => t.id)]));
+    expect(byKey.get("2026-W30")).toEqual(["late-sunday", "monday"]);
+    expect(byKey.get("2026-W29")).toEqual(["early-sunday", "timeless-sunday"]);
+  });
+
   it("resultaatTotal sums the group's trades", () => {
     const trades = [
       makeTrade({ datum_open: "2026-07-01", resultaat_pct: 1.5 }),

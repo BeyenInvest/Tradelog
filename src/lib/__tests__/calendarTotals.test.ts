@@ -7,12 +7,17 @@ import {
   rawDayTotalsInUnit,
   rowWeekNumber,
   tradesByDayOfMonth,
-  weekTotalOf,
+  tradingWeekRowTotals,
 } from "@/lib/calendarTotals";
 import { round2 } from "@/lib/stats";
 
 function t(datum_open: string, resultaat_pct: number, risk_pct: number | null = null) {
   return { datum_open, resultaat_pct, risk_pct };
+}
+
+/** Trade shape for the week-row totals — same as t() plus the open time the handelsweek-regel reads. */
+function tw(datum_open: string, resultaat_pct: number, tijd_open: string | null = null) {
+  return { datum_open, tijd_open, resultaat_pct, risk_pct: null };
 }
 
 describe("mondayFirstOffset", () => {
@@ -82,18 +87,50 @@ describe("dayTotalsInUnit", () => {
   });
 });
 
-describe("weekTotalOf / monthTotalOf", () => {
+describe("tradingWeekRowTotals / monthTotalOf", () => {
   const byDay = tradesByDayOfMonth([t("2026-08-03", 1.1), t("2026-08-05", -0.4), t("2026-08-21", 2)], 2026, 7);
   const raw = rawDayTotalsInUnit(byDay, "percent");
-  const weeks = monthWeeks(2026, 7);
 
-  it("sums only the days inside the row, skipping padding", () => {
-    // Row 1 = Aug 3-9 (the first full week).
-    expect(weekTotalOf(weeks[1], raw)).toEqual({ total: 0.7, hasResult: true });
+  it("without rollover trades it matches the old cell-based row totals: only this month's days, padding skipped", () => {
+    const rows = tradingWeekRowTotals([tw("2026-08-03", 1.1), tw("2026-08-05", -0.4), tw("2026-08-21", 2)], 2026, 7, "percent");
+    // Row 1 = Aug 3-9 (the first full week); row 3 = Aug 17-23.
+    expect(rows[1]).toEqual({ total: 0.7, hasResult: true, hasShifted: false });
+    expect(rows[3]).toEqual({ total: 2, hasResult: true, hasShifted: false });
+    expect(rows[0]).toEqual({ total: 0, hasResult: false, hasShifted: false });
   });
 
-  it("hasResult is false for a week with no realized trades (row renders no total)", () => {
-    expect(weekTotalOf(weeks[0], raw)).toEqual({ total: 0, hasResult: false });
+  it("a Sunday trade ≥ 22:00 counts in the NEXT row's total; both rows flag the shift for the hint", () => {
+    // Sunday 2026-08-09 closes row 1; 23:00 rolls its result into row 2 (Aug 10-16).
+    const rows = tradingWeekRowTotals([tw("2026-08-03", 1), tw("2026-08-09", 2, "23:00"), tw("2026-08-12", 0.5)], 2026, 7, "percent");
+    expect(rows[1]).toEqual({ total: 1, hasResult: true, hasShifted: true });
+    expect(rows[2]).toEqual({ total: 2.5, hasResult: true, hasShifted: true });
+  });
+
+  it("a Sunday trade before 22:00 or without a time stays in its own row", () => {
+    const rows = tradingWeekRowTotals([tw("2026-08-09", 2, "21:59"), tw("2026-08-09", 1, null)], 2026, 7, "percent");
+    expect(rows[1]).toEqual({ total: 3, hasResult: true, hasShifted: false });
+    expect(rows[2]).toEqual({ total: 0, hasResult: false, hasShifted: false });
+  });
+
+  it("a row whose ONLY result rolled away renders no total but keeps the hint marker", () => {
+    const rows = tradingWeekRowTotals([tw("2026-08-09", 2, "22:00")], 2026, 7, "percent");
+    expect(rows[1]).toEqual({ total: 0, hasResult: false, hasShifted: true });
+    expect(rows[2]).toEqual({ total: 2, hasResult: true, hasShifted: true });
+  });
+
+  it("month boundary: a rolled trade on the month's last Sunday leaves that view and lands in the next month's first row", () => {
+    // May 2026 ends on Sunday the 31st; 22:00 rolls to Monday June 1 = row 0 of the June view.
+    const trades = [tw("2026-05-31", 2, "22:30"), tw("2026-05-25", 1)];
+    const mayRows = tradingWeekRowTotals(trades, 2026, 4, "percent");
+    expect(mayRows.at(-1)).toEqual({ total: 1, hasResult: true, hasShifted: true });
+    const juneRows = tradingWeekRowTotals(trades, 2026, 5, "percent");
+    expect(juneRows[0]).toEqual({ total: 2, hasResult: true, hasShifted: true });
+  });
+
+  it("a NON-rolled trade from the neighbouring month still never counts (padding rule unchanged)", () => {
+    // Same Sunday, but at 20:00: stays in May and must not leak into June's row 0.
+    const juneRows = tradingWeekRowTotals([tw("2026-05-31", 2, "20:00")], 2026, 5, "percent");
+    expect(juneRows[0]).toEqual({ total: 0, hasResult: false, hasShifted: false });
   });
 
   it("month total is the sum of the day totals", () => {

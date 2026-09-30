@@ -656,6 +656,7 @@
     "weekColHeader": "wk",
     "weekNum": "w{{n}}",
     "weekTotal": "Week total — counts only this month's days; the week number is the true ISO week",
+    "weekTotalShifted": "Week total — Sunday trades from 22:00 belong to the next trading week and count toward the next row's total; the day cell stays on the Sunday",
     "dayNet": "Net",
     "dayTrades": "Trades",
     "dayWinRate": "Win rate (excl. BE)"

@@ -4,7 +4,6 @@ import { fetchAllPages } from "@/lib/fetchAll";
 import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import type { WeeklyReview, WeeklyReviewInput } from "@/lib/types";
-import { isoWeekRange } from "@/lib/isoWeek";
 
 export function useWeeklyReviews() {
   const { session, profile } = useAuth();
@@ -76,39 +75,20 @@ export function useWeeklyReviews() {
   /**
    * Manual (re)link: a review created after its trades already exist won't be
    * caught by the trigger's INSERT-only auto-link, so this runs the same
-   * linking logic explicitly for that week's date range. Also unlinks trades
-   * currently pointing at this review whose datum_open no longer falls in the
-   * range — e.g. after editing a trade's date to a different week — so the
-   * relink is idempotent in both directions rather than only ever adding.
-   *
-   * Scoped to live trades only — weekly reviews are a Journal concept, and a
-   * backtest project's trades must never be pulled into one just because their
-   * dates happen to fall in the same week.
+   * linking logic explicitly. Since 0063 this is one RPC (security invoker,
+   * RLS blijft gelden) instead of two PostgREST date-range updates: the
+   * handelsweek-regel (zondag ≥ 22:00 → volgende week) is niet als datumrange
+   * uit te drukken, en de RPC deelt trading_date_of() met de DB-triggers, dus
+   * client en triggers kunnen nooit een andere week berekenen. The RPC unlinks
+   * out-of-week trades and links the week's live journal trades in one pass
+   * (idempotent in both directions), reading jaar/week/journal from the review
+   * row itself — call it AFTER an update that moves the review. Returns the
+   * number of linked trades.
    */
-  async function linkTradesToReview(reviewId: string, jaar: number, weekNummer: number): Promise<number> {
-    const { start, end } = isoWeekRange(jaar, weekNummer);
-
-    const { error: unlinkError } = await supabase
-      .from("trades")
-      .update({ weekly_review_id: null })
-      .eq("weekly_review_id", reviewId)
-      .or(`datum_open.lt.${start},datum_open.gt.${end}`);
-    if (unlinkError) throw unlinkError;
-
-    let linkQuery = supabase
-      .from("trades")
-      .update({ weekly_review_id: reviewId })
-      .is("backtest_project_id", null)
-      // Only this journal's trades — never blend another journal's week into this
-      // review (cyclus 3b). Mirrors the journal-aware DB auto-link triggers.
-      .gte("datum_open", start)
-      .lte("datum_open", end);
-    linkQuery = activeJournalId
-      ? linkQuery.eq("methodology_id", activeJournalId)
-      : linkQuery.is("methodology_id", null);
-    const { data, error: linkError } = await linkQuery.select("id");
-    if (linkError) throw linkError;
-    return (data ?? []).length;
+  async function linkTradesToReview(reviewId: string): Promise<number> {
+    const { data, error: rpcError } = await supabase.rpc("relink_weekly_review", { p_review_id: reviewId });
+    if (rpcError) throw rpcError;
+    return (data as number) ?? 0;
   }
 
   return { reviews, loading, error, refresh, createReview, updateReview, deleteReview, linkTradesToReview };

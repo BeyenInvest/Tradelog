@@ -2,21 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarRange, ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import { monthRange, quarterRange, yearRange, type DateRange } from "@/lib/periodRanges";
+import { monthRange, quarterRange, yearRange } from "@/lib/periodRanges";
+import type { JournalPeriod } from "@/lib/tradeFilters";
 import { localTodayIso, toLocalIso } from "@/lib/localDate";
 
 interface PeriodPickerProps {
-  value: DateRange | null;
-  onChange: (range: DateRange | null) => void;
+  value: JournalPeriod | null;
+  onChange: (range: JournalPeriod | null) => void;
 }
 
-function thisWeekRange(): DateRange {
+function thisWeekRange(): JournalPeriod {
   const now = new Date();
   const mondayOffset = (now.getDay() + 6) % 7; // 0=Mon..6=Sun
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
   const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
   // toLocalIso, not toISOString: these are *local*-midnight Dates — UTC would shift them a day back.
-  return { start: toLocalIso(monday), end: toLocalIso(sunday) };
+  // tradingWeek: het weekpreset volgt de handelsweek (zondag ≥ 22:00 → volgende week).
+  return { start: toLocalIso(monday), end: toLocalIso(sunday), tradingWeek: true };
 }
 
 function formatNl(iso: string): string {
@@ -24,12 +26,14 @@ function formatNl(iso: string): string {
   return `${d}-${m}-${y}`;
 }
 
-function sameRange(a: DateRange | null, b: DateRange | null): boolean {
+function sameRange(a: JournalPeriod | null, b: JournalPeriod | null): boolean {
   if (a === null || b === null) return a === b;
-  return a.start === b.start && a.end === b.end;
+  // Ook de tradingWeek-vlag vergelijken: een handmatige ma-zo-range is een
+  // datumfilter, geen handelsweek — die mag het weekpreset niet oplichten.
+  return a.start === b.start && a.end === b.end && (a.tradingWeek ?? false) === (b.tradingWeek ?? false);
 }
 
-const PRESETS: { labelKey: string; range: () => DateRange | null }[] = [
+const PRESETS: { labelKey: string; range: () => JournalPeriod | null }[] = [
   { labelKey: "period.presetAll", range: () => null },
   { labelKey: "period.thisWeek", range: thisWeekRange },
   {

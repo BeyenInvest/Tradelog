@@ -1,7 +1,7 @@
 import type { Trade } from "./types";
 import { type Outcome } from "./constants";
 import { monthName } from "./format";
-import { isoWeekOf } from "./isoWeek";
+import { tradingWeekOf } from "./isoWeek";
 import { isMissed, isOpen, round2 } from "./stats/core";
 
 export type GroupBy = "month" | "week" | "quarter" | "backtestDag";
@@ -36,11 +36,12 @@ function quarterKey(dateIso: string): { key: string; label: string } {
 }
 
 /** ISO 8601 week (Monday-first, week 1 = the week containing the year's first
- * Thursday). Gedelegeerd aan isoWeekOf() (H2, deep review): dit was een tweede,
- * eigen implementatie van dezelfde weeklogica — één bron voorkomt dat de
- * weekgroepering en het kalender-weeknummer ooit uit elkaar driften. */
-function weekKey(dateIso: string): { key: string; label: string } {
-  const { jaar, week_nummer } = isoWeekOf(dateIso);
+ * Thursday). Gedelegeerd aan de gedeelde weeklogica (H2, deep review): dit was
+ * een tweede, eigen implementatie — één bron voorkomt dat de weekgroepering en
+ * het kalender-weeknummer ooit uit elkaar driften. Sinds de handelsweek-regel
+ * via tradingWeekOf: een zondag-trade ≥ 22:00 groepeert bij de week erna. */
+function weekKey(t: Trade): { key: string; label: string } {
+  const { jaar, week_nummer } = tradingWeekOf(t.datum_open, t.tijd_open);
   return { key: `${jaar}-W${String(week_nummer).padStart(2, "0")}`, label: `Week ${week_nummer} · ${jaar}` };
 }
 
@@ -53,7 +54,7 @@ function backtestDagKey(createdAtIso: string, locale: string): { key: string; la
   };
 }
 
-/** Groups trades by month, quarter, or ISO week (all keyed on `datum_open`, the historical trade date), or by backtest session day (keyed on `created_at`, the day the trade was actually logged) — input order is preserved per bucket (pass already-sorted trades in). `locale` (BCP47, from dateLocale(i18n.language)) drives the localized month/day labels. */
+/** Groups trades by month or quarter (keyed on `datum_open`, the historical trade date), by trading week (`tradingWeekOf` — Sunday >= 22:00 belongs to the next week), or by backtest session day (keyed on `created_at`, the day the trade was actually logged) — input order is preserved per bucket (pass already-sorted trades in). `locale` (BCP47, from dateLocale(i18n.language)) drives the localized month/day labels. */
 export function groupTrades(trades: Trade[], groupBy: GroupBy, locale = "en-GB"): TradeGroup[] {
   const keyFn =
     groupBy === "backtestDag"
@@ -62,7 +63,7 @@ export function groupTrades(trades: Trade[], groupBy: GroupBy, locale = "en-GB")
         ? (t: Trade) => monthKey(t.datum_open, locale)
         : groupBy === "quarter"
           ? (t: Trade) => quarterKey(t.datum_open)
-          : (t: Trade) => weekKey(t.datum_open);
+          : (t: Trade) => weekKey(t);
   const buckets = new Map<string, Trade[]>();
   const labels = new Map<string, string>();
   const order: string[] = [];

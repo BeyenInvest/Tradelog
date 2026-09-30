@@ -20,6 +20,21 @@ describe("applyJournalFilters", () => {
     expect(result.map((t) => t.id)).toEqual(["start", "inside", "end"]);
   });
 
+  it("a tradingWeek range follows the handelsweek-regel: Sunday ≥ 22:00 belongs to the NEXT week", () => {
+    // Week 29 of 2026 = Mon 2026-07-13 t/m Sun 2026-07-19.
+    const trades = [
+      makeTrade({ id: "monday", datum_open: "2026-07-13" }),
+      makeTrade({ id: "early-sunday", datum_open: "2026-07-19", tijd_open: "21:59" }),
+      makeTrade({ id: "late-sunday", datum_open: "2026-07-19", tijd_open: "22:00" }),
+      makeTrade({ id: "prev-late-sunday", datum_open: "2026-07-12", tijd_open: "23:00" }),
+    ];
+    const week29 = { start: "2026-07-13", end: "2026-07-19", tradingWeek: true };
+    expect(applyJournalFilters(trades, week29, {}).map((t) => t.id)).toEqual(["monday", "early-sunday", "prev-late-sunday"]);
+    // Without the flag the same dates filter purely on datum_open (month/quarter/year/custom behaviour).
+    const plain = { start: "2026-07-13", end: "2026-07-19" };
+    expect(applyJournalFilters(trades, plain, {}).map((t) => t.id)).toEqual(["monday", "early-sunday", "late-sunday"]);
+  });
+
   it("combines period and dimension filters with AND semantics", () => {
     const trades = [
       makeTrade({ id: "match", datum_open: "2026-07-10", pair: "EURUSD", custom: { fase: "Fase 2" } }),

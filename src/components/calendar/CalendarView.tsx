@@ -6,7 +6,7 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
-import { dayTotalsInUnit, monthTotalOf, monthWeeks, rawDayTotalsInUnit, rowWeekNumber, tradesByDayOfMonth, weekTotalOf } from "@/lib/calendarTotals";
+import { dayTotalsInUnit, monthTotalOf, monthWeeks, rawDayTotalsInUnit, rowWeekNumber, tradesByDayOfMonth, tradingWeekRowTotals } from "@/lib/calendarTotals";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 
 interface PairChip {
@@ -137,6 +137,12 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
   // Full weeks (each 7 cells, null = padding) so every row can carry a leading
   // week-total cell — construction lives in calendarTotals.ts.
   const weeks = useMemo(() => monthWeeks(year, month), [year, month]);
+  // Handelsweek-regel: zondag ≥ 22:00 telt in de VOLGENDE rij (ook over de
+  // maandgrens) — daarom over de volle trades-lijst, niet over byDay/rawResultByDay.
+  const weekRowTotals = useMemo(
+    () => tradingWeekRowTotals(trades, year, month, resultUnit, saldo),
+    [trades, year, month, resultUnit, saldo]
+  );
 
   const monthLabel = monthDate.toLocaleDateString(dateLocale(i18n.language), { month: "long", year: "numeric" });
 
@@ -312,17 +318,23 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
       <div className="grid gap-1.5" style={GRID_TEMPLATE}>
         {weeks.map((week, wi) => {
-          const { total: weekTotal, hasResult } = weekTotalOf(week, rawResultByDay);
+          const { total: weekTotal, hasResult, hasShifted } = weekRowTotals[wi];
           const weekNum = rowWeekNumber(year, month, wi);
           return (
             <div key={wi} className="contents">
-              <div className="flex flex-col items-center justify-center gap-0.5 leading-none" title={t("calendar.weekTotal")}>
+              <div
+                className="flex flex-col items-center justify-center gap-0.5 leading-none"
+                title={hasShifted ? t("calendar.weekTotalShifted") : t("calendar.weekTotal")}
+              >
                 <span className="font-mono text-[10px] text-faint">{t("calendar.weekNum", { n: weekNum })}</span>
                 {hasResult && (
                   <span className="font-mono text-[11px]" style={{ color: totalColor(weekTotal) }}>
                     {formatAggregate(weekTotal, resultUnit, { decimals: resultUnit === "currency" ? 0 : 1 })}
+                    {/* Subtiele hint (plan-punt 7): zonder marker lijkt de rij "zichtbaar" niet te kloppen. */}
+                    {hasShifted && <span className="text-faint">*</span>}
                   </span>
                 )}
+                {!hasResult && hasShifted && <span className="font-mono text-[11px] text-faint">*</span>}
               </div>
               {week.map((d, di) => renderDayCell(d, wi * 7 + di))}
             </div>
