@@ -21,6 +21,8 @@ export interface FieldInput {
   /** Show this field only when show_when_field_id's value is in show_when_values; null = always. */
   show_when_field_id: string | null;
   show_when_values: string[] | null;
+  /** boolean only: show as a checkbox (0066). Omitted = leave as is / false on insert. */
+  checkbox?: boolean;
 }
 
 /**

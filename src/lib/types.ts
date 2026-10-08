@@ -425,6 +425,12 @@ export interface MethodologyField {
   show_when_field_id: string | null;
   show_when_values: string[] | null;
   sort_order: number;
+  /**
+   * boolean only: render as a checkbox (empty = "Nee") instead of the Ja/Nee
+   * toggle (empty = unanswered). See 0066 and booleanFieldValue(). Optional so
+   * drafts (presets/builder) and pre-0066 rows read as false.
+   */
+  checkbox?: boolean;
 }
 
 /**

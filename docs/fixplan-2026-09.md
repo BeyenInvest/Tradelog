@@ -9,6 +9,8 @@
 - Model-per-fase-regel (bindend, zie memory): **Fable** = migraties/SQL/security/stats-motor/git-chirurgie · **Opus** = UI/copy/polish. Elke sessie checkt bij start zijn eigen model tegen dit plan.
 - Migratienummers: eerstvolgende vrij = **0057**. Nummers nooit hergebruiken; elke migratie werkt schema.sql mee bij (conventie is na 0053 gaan slippen — vanaf nu weer hard).
 
+**Freeze-uitzondering (owner-besluit 2026-10-08): aanvinkvakje-velden + WPM-kenmerk-volgorde.** Ja/nee-velden kunnen per veld als aanvinkvakje (leeg = nee; migratie **0066**) en staan dan als vlag bij het resultaat (web-form + TV-paneel), bv. "Scale-in". Plus: "Weekly kenmerk" direct onder "Fase" voor alle WPM-journals op de standaard-volgorde (migratie **0067**). Branch `checkbox-fields` (bevat ook de TV-ext laatste-position-tool-fix, v0.2.11). ⚠️ Migraties door Opus geschreven → korte Fable-check vóór merge.
+
 Ernst-legenda: 🔴 vóór beta · 🟠 vóór betaald/schaal · 🟡 poets.
 
 ---

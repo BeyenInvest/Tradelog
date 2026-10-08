@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  booleanFieldValue,
+  checkboxFieldKeys,
   dynamicMethodologyFields,
   isFieldVisible,
   missingRequiredCustomFields,
@@ -127,5 +129,23 @@ describe("parseFieldOptions", () => {
 
   it("returns an empty list for blank input", () => {
     expect(parseFieldOptions("  ,  \n ")).toEqual([]);
+  });
+});
+
+describe("checkbox fields (0066)", () => {
+  const box = field({ field_key: "scale_in", field_type: "boolean", checkbox: true, required: true });
+  const toggle = field({ field_key: "news", field_type: "boolean" });
+
+  it("booleanFieldValue: a checkbox reads empty as false, the toggle keeps unanswered", () => {
+    expect(booleanFieldValue(box, undefined)).toBe(false);
+    expect(booleanFieldValue(box, true)).toBe(true);
+    expect(booleanFieldValue(toggle, undefined)).toBeNull();
+    expect(booleanFieldValue(toggle, false)).toBe(false);
+  });
+
+  it("a required checkbox never blocks submit; only boolean checkboxes count as checkbox keys", () => {
+    expect(missingRequiredCustomFields([box], {})).toEqual([]);
+    const enumWithFlag = field({ field_key: "setup", checkbox: true }); // stray flag on a non-boolean
+    expect([...checkboxFieldKeys([box, toggle, enumWithFlag])]).toEqual(["scale_in"]);
   });
 });

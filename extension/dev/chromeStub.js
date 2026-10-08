@@ -64,16 +64,21 @@
         groupLabel: null, sortOrder: 8, showWhenFieldId: null, showWhenValues: null,
       },
       {
-        // Rauwe journal-data: kenmerk + nieuws staan ná de confirms onder een
-        // "Markt"-kop — exact de stand die orderedFormFields op WPM herordent.
+        // Sinds 0067 staat weekly kenmerk direct onder fase (sortOrder ertussen).
         id: "f-weekly-kenmerk", fieldKey: "weekly_kenmerk", label: "Weekly kenmerk", labelKey: null, fieldType: "enum",
-        options: ["High/Low", "Peak formation"], required: false, isComputed: false,
-        groupLabel: "Markt", sortOrder: 9, showWhenFieldId: null, showWhenValues: null,
+        options: ["Trending market", "Corrective market", "Ranging market"], required: false, isComputed: false,
+        groupLabel: "Setup", sortOrder: 0.5, showWhenFieldId: null, showWhenValues: null,
       },
       {
         id: "f-nieuws", fieldKey: "nieuws", label: "Nieuws nabij trade?", labelKey: null, fieldType: "boolean",
         options: null, required: false, isComputed: false,
         groupLabel: "Markt", sortOrder: 10, showWhenFieldId: null, showWhenValues: null,
+      },
+      {
+        // 0066: aanvinkvakje → staat als vlag onder Running | Win | Loss | BE.
+        id: "f-scale-in", fieldKey: "scale_in", label: "Scale-in", labelKey: null, fieldType: "boolean",
+        options: null, required: false, isComputed: false,
+        groupLabel: "Markt", sortOrder: 11, showWhenFieldId: null, showWhenValues: null, checkbox: true,
       },
     ],
   };

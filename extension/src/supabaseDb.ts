@@ -70,7 +70,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
 
       const { data: fields, error: fieldsErr } = await client
         .from("methodology_fields")
-        .select("id, field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order, show_when_field_id, show_when_values")
+        .select("id, field_key, label, label_key, field_type, options, required, is_computed, group_label, sort_order, show_when_field_id, show_when_values, checkbox")
         .eq("methodology_id", methodologyId)
         .order("sort_order", { ascending: true });
       if (fieldsErr) return null;
@@ -88,6 +88,7 @@ export function createSupabaseDb(client: SupabaseClient): ExtensionDb {
         sortOrder: f.sort_order,
         showWhenFieldId: f.show_when_field_id ?? null,
         showWhenValues: f.show_when_values ?? null,
+        checkbox: f.field_type === "boolean" && f.checkbox === true,
       }));
 
       return {

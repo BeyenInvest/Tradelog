@@ -29,7 +29,7 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, missingRequired, orderedFormFields, type FormValues,
+  ccFromTime, customFromValues, formFields, isVisible, missingRequired, orderedFormFields, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
 import {
@@ -774,9 +774,28 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     }
     resultWrap.appendChild(choices);
 
-    // "Gemiste trade" bewust géén vijfde knop (de rij blijft rustig): een stille
-    // schakelaar eronder, alleen op het live journal — zoals de web-form
+    // Vlaggen-rij onder Running | Win | Loss | BE. Links: de journal-velden die
+    // de user als aanvinkvakje instelde (0066, bv. "Scale-in") — owner
+    // 2026-10-08: zo'n vlag hoort bij het resultaat, niet verdwaald tussen de
+    // setup-velden. Rechts: "Gemiste trade", bewust géén vijfde knop (de rij
+    // blijft rustig), alleen op het live journal — zoals de web-form
     // (allowMissedTrade) 'm in een backtest-project ook niet aanbiedt.
+    const flags = el("div", { class: "by-flags" });
+    for (const field of flagFields()) {
+      const on_ = values[field.fieldKey] === true;
+      const flag = el("button", {
+        class: on_ ? "by-missed is-active" : "by-missed",
+        text: field.label,
+        attrs: { type: "button", "aria-pressed": String(on_), "data-field": field.fieldKey },
+      });
+      on(flag, "click", () => {
+        values[field.fieldKey] = !on_; // leeg vakje = nee: uitzetten schrijft expliciet false
+        renderResult();
+        updatePending();
+      });
+      flags.appendChild(flag);
+    }
+    const flagRow = el("div", { class: "by-missed-row" }, [flags]);
     if (targetKey === "live") {
       const toggle = el("button", {
         class: missed ? "by-missed is-active" : "by-missed",
@@ -790,8 +809,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         renderResult();
         updatePending();
       });
-      resultWrap.appendChild(el("div", { class: "by-missed-row" }, [toggle]));
+      flagRow.appendChild(toggle);
     }
+    if (flags.childElementCount > 0 || targetKey === "live") resultWrap.appendChild(flagRow);
     if (missed) {
       resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:4px 0 0;", text: t("panel.missedHint") }));
     }
@@ -889,6 +909,18 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     else values["cc"] = cc;
   }
 
+  /** Aanvinkvakje-velden (0066) die nu zichtbaar zijn — die staan als vlag in de
+   * resultaat-rij i.p.v. tussen de journal-velden; hun waarde reist gewoon mee
+   * via `values` + formFieldList. */
+  function isFlagField(field: JournalField): boolean {
+    return field.fieldType === "boolean" && field.checkbox === true;
+  }
+  function flagFields(): JournalField[] {
+    if (!journal) return [];
+    const all = journal.fields;
+    return formFields(all).filter((f) => isFlagField(f) && isVisible(f, all, values));
+  }
+
   function renderJournalFields(): void {
     clear(journalSec.body);
     form = null;
@@ -910,7 +942,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // WPM-journal: zelfde vaste volgorde als de web-app (kenmerk+nieuws boven de
     // confirms, geen "Markt"-kop); andere journals blijven op sortOrder. `cc`
     // blijft uit de getoonde rijen (machinaal), maar zit wél in formFieldList.
-    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc"));
+    // Aanvinkvakjes (0066) staan als vlag in de resultaat-rij, niet hier.
+    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc" && !isFlagField(f)));
+    // Een vlag met een show_when-conditie moet meeschuiven als de ouder wijzigt.
+    const conditionalFlags = formFieldList.some((f) => isFlagField(f) && f.showWhenFieldId);
     if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
@@ -920,6 +955,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
           // Een keuze kan een show_when-veld openen of dichtklappen; sync werkt
           // meteen ook de select-waarden bij.
           form?.sync();
+          if (conditionalFlags) renderResult();
           updatePending();
         },
       });
@@ -929,6 +965,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
       );
     }
+    // De vlaggen-rij hangt van het journal af; het journal kan ná de
+    // resultaat-rij binnenkomen.
+    renderResult();
   }
 
   function renderExtra(): void {

@@ -346,7 +346,10 @@
 /* Gemiste trade: geen vijfde knop maar een stille schakelaar onder de rij; aan
  * = de uitkomst is hypothetisch, dus de knoppen krijgen een gestippelde rand. */
 .by-outcomes.is-missed .by-oc { border-style: dashed; }
-.by-missed-row { display: flex; justify-content: flex-end; margin-top: 7px; }
+/* Vlaggen-rij: links de aanvinkvakje-velden van het journal (0066, bv.
+ * Scale-in), rechts "Gemiste trade" — dezelfde stille schakelaar-stijl. */
+.by-missed-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 7px; }
+.by-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; min-width: 0; }
 .by-missed {
   display: inline-flex;
   align-items: center;

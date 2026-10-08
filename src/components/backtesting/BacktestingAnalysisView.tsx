@@ -22,6 +22,7 @@ import { useAnalyseLayout } from "@/hooks/useAnalyseLayout";
 import { BREAKDOWN_DIMENSIONS, customFieldDimensions, type DimensionConfig } from "@/lib/breakdownDimensions";
 import { OUTCOMES } from "@/lib/constants";
 import { applyJournalFilters, EMPTY_FILTERS, type JournalFilters } from "@/lib/tradeFilters";
+import { checkboxFieldKeys } from "@/lib/methodologyFields";
 import { formatAggregate, formatProfitFactor, formatResult, pctToAmount, resultDisplayValue, tradesInResultUnit } from "@/lib/format";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import type { DateRange } from "@/lib/periodRanges";
@@ -74,9 +75,10 @@ export function BacktestingAnalysisView({
   // Backtest projects don't offer "Missed trade" (or a still-running "open") trade
   // in the UI, but there's no DB constraint enforcing that — filter defensively via
   // takenTrades + closedTrades so a stray one can never dilute these KPIs.
+  const checkboxKeys = useMemo(() => checkboxFieldKeys(fields), [fields]);
   const scopedTrades = useMemo(
-    () => closedTrades(takenTrades(applyJournalFilters(trades, period, filters))),
-    [trades, period, filters]
+    () => closedTrades(takenTrades(applyJournalFilters(trades, period, filters, checkboxKeys))),
+    [trades, period, filters, checkboxKeys]
   );
 
   const kpis = useMemo(() => computeOverviewKpis(scopedTrades), [scopedTrades]);
