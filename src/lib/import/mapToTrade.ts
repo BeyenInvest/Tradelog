@@ -63,9 +63,9 @@ export function dealToImportRow(
   const datumSluiting = deal.closeTime != null && deal.closeTime >= datumOpen ? deal.closeTime : null;
   return {
     datum_open: datumOpen,
-    // The parsers currently truncate broker datetimes to a date (parseDateOnly),
-    // so there's no time to carry yet — wiring it through is S2 follow-up work.
-    tijd_open: null,
+    // The file parsers truncate broker datetimes to a date (parseDateOnly), so
+    // only the cTrader API sync carries an exact open-time.
+    tijd_open: deal.openClock ?? null,
     datum_sluiting: datumSluiting,
     pair,
     instrument,

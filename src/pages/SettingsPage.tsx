@@ -10,6 +10,7 @@ import { JournalInstruments } from "@/components/settings/JournalInstruments";
 import { NewJournalCard } from "@/components/settings/JournalBuilder";
 import { JournalOverview } from "@/components/settings/JournalOverview";
 import { ExtensionLinkCard } from "@/components/settings/ExtensionLinkCard";
+import { CtraderConnectCard } from "@/components/settings/CtraderConnectCard";
 import { DeleteAccountModal } from "@/components/layout/DeleteAccountModal";
 import { RESULT_UNITS, SUPPORT_EMAIL, type ResultUnit } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +22,7 @@ import { SUPPORTED_LANGS, type Lang } from "@/i18n";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+  const { betaFeatures } = useAuth();
   const location = useLocation();
   // Set by the journal-switcher's "+ Nieuw journal" (route state): auto-open and
   // scroll to the preset picker, so that click completes its intent here.
@@ -74,6 +76,9 @@ export default function SettingsPage() {
           {/* F1c: koppelt de TradingView-extensie aan dit account (zichtbaar voor
               alle leden sinds de extensie un-gate is). */}
           <ExtensionLinkCard />
+
+          {/* cTrader-koppeling (0065): beta-gated zoals de CSV-import (gating-regel). */}
+          {betaFeatures && <CtraderConnectCard />}
 
           <SupportSettings />
 

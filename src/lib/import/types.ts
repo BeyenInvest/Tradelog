@@ -24,6 +24,12 @@ export interface ParsedDeal {
   /** ISO-ish open/close timestamps as they appeared, best-effort normalised to `yyyy-mm-dd` downstream. */
   openTime: string | null;
   closeTime: string | null;
+  /**
+   * Optional "HH:MM" open-time (wall-clock in the user's timezone). Only the
+   * cTrader API sync knows it exactly; the file parsers truncate to a date and
+   * leave it unset. Feeds tijd_open (session breakdown, handelsweek-zondag).
+   */
+  openClock?: string | null;
   /** Net account impact of the deal in account currency (profit incl. swap/commission where derivable). */
   pnlAmount: number | null;
   /** Broker-provided return %, if the export carried one directly. */

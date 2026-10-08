@@ -142,6 +142,11 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 1. Un-gate-richting = **optie 1**: Settings-journalsectie + switcher live voor iedereen (i.p.v. copy afzwakken) — zet meteen de differentiator voor.
 2. Habits/Dagboek blijven live (owner-besluit van 07-09) maar bevroren; Contract blijft owner-only.
 3. Fase-2-server-aggregatie geschrapt van de roadmap ten gunste van kolomselectie + parallelle fetch (audit bril 7).
+4. **Freeze-uitzondering 2026-10-08 (owner): cTrader-koppeling** — automatische trade-import via de cTrader Open API, beta-gated, migratie 0065. Plan + owner-stappen: `docs/plan-ctrader-sync.md`.
+   - [x] Code + tests op branch `ctrader-sync`
+   - [ ] cTrader-app geregistreerd + Vercel-env (owner)
+   - [ ] 0065 op prod + read-only verificatie
+   - [ ] Fable-security-review → PR gemerged
 
 ## Voortgang bijhouden
 

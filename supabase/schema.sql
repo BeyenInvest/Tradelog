@@ -2,10 +2,10 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0064 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0065 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
 -- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
--- 0064 = admin-select op de screenshots-bucket).
+-- 0064 = admin-select op de screenshots-bucket; 0065 = broker-koppeling cTrader).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -1881,6 +1881,81 @@ create policy "prop_accounts_admin_select" on prop_accounts
 create policy "payouts_admin_select" on payouts
   for select to authenticated using (is_admin());
 
+-- ---------- BROKER-KOPPELING (0065, cTrader Open API) ----------
+-- broker_connections draagt de versleutelde OAuth-tokens: geen grants voor app-
+-- rollen, alleen de server (service role) komt eraan. broker_accounts is de
+-- door de eigenaar leesbare account-lijst; alleen de koppel-instellingen zijn
+-- bij te werken (kolom-grants). Zie docs/plan-ctrader-sync.md.
+create table broker_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null check (provider in ('ctrader')),
+  access_token_enc text not null,
+  refresh_token_enc text not null,
+  token_expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index idx_broker_connections_user on broker_connections(user_id);
+alter table broker_connections enable row level security;
+revoke all on broker_connections from anon, authenticated;
+create trigger trg_broker_connections_updated_at before update on broker_connections
+  for each row execute function set_updated_at();
+
+create table broker_accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  connection_id uuid not null references broker_connections(id) on delete cascade,
+  provider text not null check (provider in ('ctrader')),
+  external_account_id bigint not null,
+  is_live boolean not null,
+  account_login text,
+  broker_name text,
+  methodology_id uuid references methodologies(id) on delete set null,
+  enabled boolean not null default false,
+  synced_until timestamptz not null default (now() - interval '30 days'),
+  last_synced_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index broker_accounts_user_provider_ext_unique
+  on broker_accounts(user_id, provider, external_account_id);
+create index idx_broker_accounts_connection on broker_accounts(connection_id);
+create index idx_broker_accounts_methodology on broker_accounts(methodology_id);
+alter table broker_accounts enable row level security;
+create policy "broker_accounts_owner_select" on broker_accounts
+  for select to authenticated using (user_id = auth.uid());
+create policy "broker_accounts_owner_update" on broker_accounts
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "broker_accounts_admin_select" on broker_accounts
+  for select to authenticated using (is_admin());
+revoke all on broker_accounts from anon, authenticated;
+grant select on broker_accounts to authenticated;
+grant update (methodology_id, enabled, synced_until, last_synced_at) on broker_accounts to authenticated;
+
+create or replace function enforce_broker_accounts_journal_ownership() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.methodology_id is not null and not exists (
+    select 1 from methodologies m
+    where m.id = new.methodology_id
+      and m.user_id = new.user_id
+      and not m.is_system
+  ) then
+    raise exception 'broker_accounts.methodology_id must reference one of the owner''s own journals'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+create trigger trg_broker_accounts_journal_ownership
+  before insert or update of methodology_id, user_id on broker_accounts
+  for each row execute function enforce_broker_accounts_journal_ownership();
+create trigger trg_broker_accounts_updated_at before update on broker_accounts
+  for each row execute function set_updated_at();
+
 -- ---------- MIGRATIE-REGISTRY (0057, fixplan C3) ----------
 -- scripts/run-migration.mjs registreert elke gedraaide migratie hier en weigert
 -- een tweede run van hetzelfde bestand. Geen RLS/grants voor app-rollen: dit is
@@ -1891,7 +1966,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0064 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0065 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -1957,4 +2032,5 @@ insert into schema_migrations (filename) values
   ('0061_methodology_screenshot_timeframes.sql'),
   ('0062_db_hardening.sql'),
   ('0063_handelsweek_zondag.sql'),
-  ('0064_screenshots_admin_select.sql');
+  ('0064_screenshots_admin_select.sql'),
+  ('0065_broker_connections.sql');

@@ -13,6 +13,7 @@ import { TradeList } from "@/components/trades/TradeList";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { QuickLogForm } from "@/components/trades/QuickLogForm";
 import { ImportModal } from "@/components/trades/ImportModal";
+import { CtraderSyncBar } from "@/components/trades/CtraderSyncBar";
 import { ShareJournalModal } from "@/components/share/ShareJournalModal";
 import { JournalEmptyState } from "@/components/trades/JournalEmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -21,6 +22,7 @@ import { FilterPanel } from "@/components/trades/FilterPanel";
 import { type TradeScope, type TradesApi } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
+import { useCtraderSync } from "@/hooks/useCtraderSync";
 import {
   computeOverviewKpis,
   computeDisciplineCurve,
@@ -79,6 +81,9 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const [formOpen, setFormOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  // cTrader-koppeling (0065): auto-sync in het live journal, beta-gated zoals de
+  // CSV-import. ctraderResolveOpen = wizard voor posities met onbekend symbool.
+  const [ctraderResolveOpen, setCtraderResolveOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined);
   const [newTradeDate, setNewTradeDate] = useState<string | null>(null);
@@ -99,6 +104,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const [chartPanel, setChartPanel] = useState<"equity" | "discipline">("equity");
 
   const isLive = scope.type === "live";
+  const ctrader = useCtraderSync(tradesApi, isLive && betaFeatures);
   // First-run empty state: an untouched live journal (zero trades in the whole
   // book, before any filter). Replaces the all-zero KPI row/charts with a wayfinder.
   const showOnboarding = onboarding != null && trades.length === 0;
@@ -238,6 +244,12 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
           )
         }
       />
+
+      {ctrader.accounts.length > 0 && (
+        <div className="mb-5">
+          <CtraderSyncBar sync={ctrader} onResolve={() => setCtraderResolveOpen(true)} />
+        </div>
+      )}
 
       {(error || deleteError) && (
         <Card className="mb-5 border-loss/40">
@@ -539,6 +551,21 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
       )}
 
       {importOpen && <ImportModal tradesApi={tradesApi} scope={scope} onClose={() => setImportOpen(false)} />}
+
+      {ctraderResolveOpen && ctrader.pending && (
+        <ImportModal
+          tradesApi={tradesApi}
+          scope={scope}
+          initialDeals={ctrader.pending.deals}
+          initialBroker="ctrader"
+          onClose={() => {
+            setCtraderResolveOpen(false);
+            // Opgeslagen symbool-koppelingen meteen toepassen; de cursor schuift
+            // pas als nu echt alles verwerkt is.
+            void ctrader.resolvePending();
+          }}
+        />
+      )}
 
       {shareOpen && profile && (
         // Keyed by journal: ShareLinksModal fetches its list once on mount, so if the
