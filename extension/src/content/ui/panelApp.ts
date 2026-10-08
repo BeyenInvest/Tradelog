@@ -41,7 +41,7 @@ import {
 } from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
-import { chartStateStale } from "./staleness";
+import { chartStateStale, pickPosition, positionsNewestFirst } from "./staleness";
 
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
 const TARGET_KEY = "beyen-tv-ext:target";
@@ -178,8 +178,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     return chart?.positions.ok ? chart.positions.value : [];
   }
   function selectedPosition(): PositionState | null {
-    const list = positions();
-    return list.find((p) => p.id === selectedPositionId) ?? list[0] ?? null;
+    return pickPosition(positions(), selectedPositionId);
   }
   function chartPrice(key: PriceKey): number | null {
     const prices = selectedPosition()?.prices;
@@ -410,22 +409,33 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       renderManualTime();
       return;
     }
-    if (!list.some((p) => p.id === selectedPositionId)) selectedPositionId = list[0]?.id ?? null;
+    // selectedPositionId = alléén een expliciete keuze uit de dropdown. Zonder
+    // keuze volgt het paneel de nieuwste tool, ook na verversen — anders bleef
+    // een eerder automatisch gekozen (oude) tool plakken zodra er een nieuwe bij
+    // kwam. Een gekozen tool die verdween valt terug op die default.
+    if (selectedPositionId != null && !list.some((p) => p.id === selectedPositionId)) selectedPositionId = null;
 
     if (list.length > 1) {
       const select = el("select", { class: "by-select", attrs: { "aria-label": t("panel.positionSelectLabel") } });
-      for (const position of list) {
+      // Nieuwste bovenaan (= de default); de entry-tijd erbij, want bij een
+      // chart vol oude backtest-tools zegt "Long · entry 1.08" alleen te weinig.
+      for (const position of positionsNewestFirst(list)) {
+        const when =
+          position.entryTimeSec != null && targets?.timezone
+            ? wallClockInTimezone(position.entryTimeSec * 1000, targets.timezone)
+            : null;
+        const label = t("panel.positionOption", {
+          direction: position.direction,
+          price: formatPrice(position.prices?.entry ?? position.entry),
+        });
         select.appendChild(
           el("option", {
-            text: t("panel.positionOption", {
-              direction: position.direction,
-              price: formatPrice(position.prices?.entry ?? position.entry),
-            }),
+            text: when ? `${label} · ${when.date} ${when.time}` : label,
             attrs: { value: position.id },
           })
         );
       }
-      select.value = selectedPositionId ?? "";
+      select.value = selectedPosition()?.id ?? "";
       on(select, "change", () => {
         selectedPositionId = select.value;
         overrides = {}; // overrides horen bij één tool, niet bij de volgende
@@ -1129,6 +1139,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     loggedScreenshots = null;
     values = {};
     overrides = {};
+    selectedPositionId = null; // volgende trade = weer de nieuwste tool
     result = defaultResult();
     resultPct = "";
     resultAuto = null;
@@ -1150,6 +1161,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
   // ── Laden ───────────────────────────────────────────────────────────────
   async function refreshChart(): Promise<void> {
+    const shownId = selectedPosition()?.id ?? null;
     chartLoading = true;
     chartError = null;
     renderChart();
@@ -1162,6 +1174,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       chart = null;
       chartError = { key: "panel.reload.short" };
     }
+    // Verversen kan op een andere tool uitkomen (er kwam een nieuwere bij):
+    // overrides horen bij één tool, niet bij de volgende.
+    if (chart && (selectedPosition()?.id ?? null) !== shownId) overrides = {};
     chartLoading = false;
     renderChart();
     renderPosition();
