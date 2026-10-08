@@ -112,6 +112,7 @@
           }],
         },
         lastBar: { ok: true, value: { timeSec: 1789491600, close: 110.92, inReplay: false } },
+        dropped: [],
       },
     },
     "log-trade": { ok: true, tradeId: "t-demo-1", duplicate: false },

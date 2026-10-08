@@ -171,6 +171,38 @@ describe("buildTradePayload — post-hoc (backtest)", () => {
   });
 });
 
+describe("buildTradePayload — missed trade (hypothetisch)", () => {
+  it("zet trade_evaluation op 'Missed trade' op een gesloten live-log", () => {
+    const result = buildTradePayload(
+      baseInput({ mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2, missed: true } })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.trade_evaluation).toBe("Missed trade");
+    expect(result.payload.is_open).toBe(false);
+    expect(result.payload.outcome).toBe("Win");
+    expect(result.payload.resultaat_pct).toBe(2);
+    expect(result.payload.backtest_project_id).toBeNull();
+  });
+
+  it("zonder missed-vlag blijft de evaluatie leeg", () => {
+    const result = buildTradePayload(
+      baseInput({ mode: { kind: "post-hoc", outcome: "Loss", resultaatPct: -1 } })
+    );
+    expect(result.ok && result.payload.trade_evaluation).toBeNull();
+  });
+
+  it("weigert een missed trade in een backtest-project", () => {
+    const result = buildTradePayload(
+      baseInput({
+        target: { type: "project", projectId: "proj-9", methodologyId: null },
+        mode: { kind: "post-hoc", outcome: "Win", resultaatPct: 2, missed: true },
+      })
+    );
+    expect(result).toMatchObject({ ok: false, error: "missed-in-project" });
+  });
+});
+
 describe("buildTradePayload — degradatie (nooit stil gokken)", () => {
   it("forex-journal + onbekend symbool = expliciete fout (M5)", () => {
     const result = buildTradePayload(baseInput({ symbol: ES }));
