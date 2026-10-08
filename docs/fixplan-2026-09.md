@@ -145,7 +145,7 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 4. **Freeze-uitzondering 2026-10-08 (owner): cTrader-koppeling** — automatische trade-import via de cTrader Open API, beta-gated, migratie 0065. Plan + owner-stappen: `docs/plan-ctrader-sync.md`.
    - [x] Code + tests op branch `ctrader-sync`
    - [ ] cTrader-app geregistreerd + Vercel-env (owner)
-   - [ ] 0065 op prod + read-only verificatie
+   - [x] 0065 op prod + read-only verificatie (2026-10-08)
    - [ ] Fable-security-review → PR gemerged
 
 ## Voortgang bijhouden
