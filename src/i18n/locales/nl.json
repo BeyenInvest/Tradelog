@@ -656,6 +656,7 @@
     "weekColHeader": "wk",
     "weekNum": "w{{n}}",
     "weekTotal": "Weektotaal — telt alleen dagen van deze maand mee; het weeknummer is de echte ISO-week",
+    "weekTotalShifted": "Weektotaal — zondagtrades vanaf 22:00 horen bij de handelsweek erna en tellen daarom in het totaal van de volgende rij; de dagcel blijft op de zondag staan",
     "dayNet": "Netto",
     "dayTrades": "Trades",
     "dayWinRate": "Win rate (excl. BE)"

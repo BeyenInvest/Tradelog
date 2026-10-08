@@ -1,6 +1,6 @@
 import { round2, type ClosedTrade } from "@/lib/stats";
 import { resultInUnit } from "@/lib/format";
-import { isoWeekOf } from "@/lib/isoWeek";
+import { isoWeekOf, tradingDateOf } from "@/lib/isoWeek";
 import { toLocalIso } from "@/lib/localDate";
 import type { ResultUnit } from "@/lib/constants";
 
@@ -95,14 +95,52 @@ export function monthTotalOf(rawDayTotals: Map<number, number>): number {
   return round2(sum);
 }
 
-/** Week-row total (over RAW day totals, rounded once) + whether any day in the row carries a realized result. */
-export function weekTotalOf(
-  week: (number | null)[],
-  rawDayTotals: Map<number, number>
-): { total: number; hasResult: boolean } {
-  const total = round2(week.reduce<number>((s, d) => s + (d != null ? rawDayTotals.get(d) ?? 0 : 0), 0));
-  const hasResult = week.some((d) => d != null && rawDayTotals.has(d));
-  return { total, hasResult };
+export interface TradingWeekRowTotal {
+  total: number;
+  hasResult: boolean;
+  /** The Sunday-rollover rule moved a trade into or out of this row's total, so the total no longer matches the visible day cells — drives the calendar's hint/tooltip. */
+  hasShifted: boolean;
+}
+
+/**
+ * Week-row totals for the month grid, per handelsweek-regel: a Sunday trade
+ * with tijd_open >= 22:00 counts in the NEXT row's total (also across the
+ * month boundary — it then lands in the first row of the next month's view,
+ * and a rolled trade on the Sunday right before this month's first Monday
+ * counts into row 0 here). Day CELLS keep the trade on its Sunday; only the
+ * row totals shift. Everything else keeps the existing rules: only this
+ * month's days count (padding cells never did), raw sums in the chosen unit,
+ * rounded once per row (D1). `trades` is the same unbucketed list the day
+ * cells are built from — it still carries the neighbouring months, which the
+ * cross-boundary cases above need.
+ */
+export function tradingWeekRowTotals<
+  T extends Pick<ClosedTrade, "datum_open" | "tijd_open" | "resultaat_pct" | "risk_pct">,
+>(trades: T[], year: number, month: number, unit: ResultUnit, saldo?: number | null): TradingWeekRowTotal[] {
+  const startOffset = mondayFirstOffset(year, month);
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+  return monthWeeks(year, month).map((_, wi) => {
+    const mondayIso = toLocalIso(new Date(year, month, 1 - startOffset + wi * 7));
+    const sundayIso = toLocalIso(new Date(year, month, 1 - startOffset + wi * 7 + 6));
+    let raw = 0;
+    let hasResult = false;
+    let hasShifted = false;
+    for (const t of trades) {
+      const tradingDate = tradingDateOf(t.datum_open, t.tijd_open);
+      const shifted = tradingDate !== t.datum_open;
+      const inMonth = t.datum_open.startsWith(monthPrefix);
+      if (tradingDate >= mondayIso && tradingDate <= sundayIso && (inMonth || (shifted && tradingDate === mondayIso))) {
+        raw += resultInUnit(t, unit, saldo);
+        hasResult = true;
+        if (shifted) hasShifted = true;
+      } else if (shifted && inMonth && t.datum_open >= mondayIso && t.datum_open <= sundayIso) {
+        // Shifted OUT of this row: its Sunday cell still shows the trade but the
+        // total no longer includes it — that row needs the hint just as much.
+        hasShifted = true;
+      }
+    }
+    return { total: round2(raw), hasResult, hasShifted };
+  });
 }
 
 /**

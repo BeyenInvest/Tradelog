@@ -133,6 +133,8 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 
 **Trade Contract verwijderd (owner-besluit 2026-09-15):** de volledige `/contract`-feature (owner-only tool, migratie 0053) is uit de app gehaald — `ContractPage`, `useTradeContracts`, `components/contract/`, de route (`BetaRoute` daarmee ook weg), de Sidebar-nav-link, de `TradeContract*`-types en de i18n-`contract`-namespace (NL+EN). lint/tsc + 422 tests + build groen. De `trade_contracts`-tabel blijft in de prod-DB tot een aparte drop-migratie (Fable + owner draait 'm); de data blijft dus veilig recupereerbaar tot dan.
 
+**Ontdooid (owner-besluit 2026-09-30): handelsweek-zondag.** Een trade op zondag met `tijd_open >= 22:00` hoort bij de volgende week, overal: weekly-review-koppeling (DB-triggers + herkoppelen), weekgroepering, "Deze week" en het kalender-weektotaal. **Fable**, migratie **0063**. Leidend plan = `docs/plan-handelsweek-zondag.md`. Status: ☐
+
 ---
 
 ## Besluiten genomen bij opstellen (terugdraaien = hier noteren)

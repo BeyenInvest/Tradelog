@@ -2,9 +2,10 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0062 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0064 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
--- 0062 = DB-hardening, deep review blok C).
+-- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
+-- 0064 = admin-select op de screenshots-bucket).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -1082,11 +1083,28 @@ revoke all on function fork_methodology(uuid) from public, anon;
 grant execute on function fork_methodology(uuid) to authenticated;
 
 -- ---------- auto-link trade <-> weekly_review ----------
+-- Handelsweek-regel (0063, owner-besluit 2026-09-30): een zondag-trade met
+-- tijd_open >= 22:00 hoort bij de ISO-week van de maandag erna (Asia-/futures-
+-- open). tijd_open is naïef-lokaal (0051); zondag ZONDER tijd blijft bewust in
+-- de oude week. Eén SQL-bron: trading_date_of() hieronder — de TS-kant is
+-- tradingDateOf()/SUNDAY_ROLLOVER in src/lib/isoWeek.ts, in sync houden.
+create or replace function trading_date_of(d date, t time) returns date
+language sql
+immutable
+set search_path = public
+as $$
+  -- t is null => case is null => else-tak: zondag zonder tijd blijft de oude week.
+  select case when extract(isodow from d) = 7 and t >= time '22:00' then d + 1 else d end;
+$$;
+
+revoke all on function trading_date_of(date, time) from public, anon;
+grant execute on function trading_date_of(date, time) to authenticated;
+
 -- Two triggers keep the link in sync in both directions:
---   * new/edited trade -> find existing review for its ISO week (below; since
---     0052 an UPDATE that really changes datum_open/methodology_id re-resolves
---     the link — M1-a: a trade edited into another week no longer sticks to the
---     old review)
+--   * new/edited trade -> find existing review for its trading week (below;
+--     since 0052 an UPDATE that really changes datum_open/tijd_open (0063)/
+--     methodology_id re-resolves the link — M1-a: a trade edited into another
+--     week no longer sticks to the old review)
 --   * new review -> backfill existing live trades of that week (further down)
 create or replace function link_trade_to_weekly_review() returns trigger as $$
 declare
@@ -1107,13 +1125,15 @@ begin
     -- UPDATE: alleen her-resolven als de week-bepalende velden écht wijzigen —
     -- de kolomlijst van de trigger vuurt al bij het NOEMEN van de kolom in SET
     -- (het volle trade-formulier stuurt altijd alles mee), dus vergelijk zelf.
+    -- tijd_open telt sinds 0063 mee: 23:00 -> 20:00 op een zondag = andere week.
     if new.datum_open is not distinct from old.datum_open
+       and new.tijd_open is not distinct from old.tijd_open
        and new.methodology_id is not distinct from old.methodology_id then
       return new;
     end if;
   end if;
-  iso_year := extract(isoyear from new.datum_open);
-  iso_week := extract(week from new.datum_open);
+  iso_year := extract(isoyear from trading_date_of(new.datum_open, new.tijd_open));
+  iso_week := extract(week from trading_date_of(new.datum_open, new.tijd_open));
   select id into found_id from weekly_reviews
     where user_id = new.user_id
       and methodology_id is not distinct from new.methodology_id
@@ -1125,7 +1145,7 @@ end;
 $$ language plpgsql;
 
 create trigger trg_link_trade_weekly_review
-  before insert or update of datum_open, methodology_id on trades
+  before insert or update of datum_open, tijd_open, methodology_id on trades
   for each row execute function link_trade_to_weekly_review();
 
 -- reverse direction: a review created after its week's trades already exist
@@ -1138,8 +1158,8 @@ begin
       and backtest_project_id is null
       and methodology_id is not distinct from new.methodology_id
       and weekly_review_id is null
-      and extract(isoyear from datum_open) = new.jaar
-      and extract(week from datum_open) = new.week_nummer;
+      and extract(isoyear from trading_date_of(datum_open, tijd_open)) = new.jaar
+      and extract(week from trading_date_of(datum_open, tijd_open)) = new.week_nummer;
   return new;
 end;
 $$ language plpgsql;
@@ -1147,6 +1167,49 @@ $$ language plpgsql;
 create trigger trg_link_weekly_review_trades
   after insert on weekly_reviews
   for each row execute function link_weekly_review_to_trades();
+
+-- Handmatige (her)koppeling vanuit de client (0063) — vervangt de twee
+-- PostgREST-datumrange-updates: de handelsweek is geen datumrange, en zo delen
+-- client-relink en triggers exact dezelfde weekberekening. SECURITY INVOKER
+-- (default): de select ziet alleen eigen reviews en de updates lopen door de
+-- eigen trades-RLS. Leest jaar/week/journal uit de review-rij zelf (dus ná een
+-- week-edit eerst de review updaten, dan deze RPC). Retourneert het aantal
+-- gekoppelde trades (alle matches, ook al gekoppelde).
+create or replace function relink_weekly_review(p_review_id uuid) returns integer
+language plpgsql
+set search_path = public
+as $$
+declare
+  r record;
+  v_linked integer;
+begin
+  select id, user_id, methodology_id, jaar, week_nummer into r
+    from weekly_reviews where id = p_review_id;
+  if not found then
+    return 0; -- bestaat niet of niet van de aanroeper (RLS)
+  end if;
+  -- Ontkoppelen wat niet meer in de handelsweek valt (bv. trade-datum gewijzigd).
+  update trades
+    set weekly_review_id = null
+    where weekly_review_id = r.id
+      and (extract(isoyear from trading_date_of(datum_open, tijd_open)) is distinct from r.jaar
+        or extract(week from trading_date_of(datum_open, tijd_open)) is distinct from r.week_nummer);
+  -- Koppelen: live trades van hetzelfde journal in de handelsweek — nooit een
+  -- ander journal of een backtest-project de review in trekken (cyclus 3b).
+  update trades
+    set weekly_review_id = r.id
+    where user_id = r.user_id
+      and backtest_project_id is null
+      and methodology_id is not distinct from r.methodology_id
+      and extract(isoyear from trading_date_of(datum_open, tijd_open)) = r.jaar
+      and extract(week from trading_date_of(datum_open, tijd_open)) = r.week_nummer;
+  get diagnostics v_linked = row_count;
+  return v_linked;
+end;
+$$;
+
+revoke all on function relink_weekly_review(uuid) from public, anon;
+grant execute on function relink_weekly_review(uuid) to authenticated;
 
 -- ---------- rename_field_option (Fase R — M5, see 0045) ----------
 -- Transactional option rename: option list + sibling show_when conditions +
@@ -1659,6 +1722,14 @@ create policy "screenshots_select_own" on storage.objects
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+-- Admin-leesrecht (0064): de admin-trade-popup mint signed URLs voor
+-- andermans screenshots. Zelfde is_admin()-patroon als de admin-select-
+-- policies op de tabellen; `to authenticated` zodat anon is_admin() nooit
+-- evalueert (0036).
+create policy "screenshots_select_admin" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'screenshots' and is_admin());
+
 create policy "screenshots_insert_own" on storage.objects
   for insert to authenticated
   with check (
@@ -1820,7 +1891,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0059 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0064 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -1884,4 +1955,6 @@ insert into schema_migrations (filename) values
   ('0059_retire_wpm_fase.sql'),
   ('0060_methodology_screenshot_labels.sql'),
   ('0061_methodology_screenshot_timeframes.sql'),
-  ('0062_db_hardening.sql');
+  ('0062_db_hardening.sql'),
+  ('0063_handelsweek_zondag.sql'),
+  ('0064_screenshots_admin_select.sql');

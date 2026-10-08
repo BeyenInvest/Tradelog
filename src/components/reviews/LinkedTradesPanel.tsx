@@ -14,7 +14,7 @@ import { ReviewTradeGroups } from "./ReviewTradeGroups";
 interface LinkedTradesPanelProps {
   review: WeeklyReview;
   trades: Trade[];
-  onRelink: (reviewId: string, jaar: number, weekNummer: number) => Promise<number>;
+  onRelink: (reviewId: string) => Promise<number>;
   onAddTrade: (input: TradeSubmitInput) => Promise<void>;
   onUpdateTrade: (id: string, input: TradeSubmitInput) => Promise<void>;
   onDeleteTrade: (trade: Trade) => void;
@@ -40,7 +40,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade, onUpda
     setRelinking(true);
     setError(null);
     try {
-      const count = await onRelink(review.id, review.jaar, review.week_nummer);
+      const count = await onRelink(review.id);
       setLastCount(count);
     } catch (err) {
       setError(toErrorMessage(err, t("reviews.relinkFailed")));
@@ -53,7 +53,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade, onUpda
   // appear until it's linked. Relinking this review's ISO week picks it up (it's dated into the week).
   async function handleAddTrade(input: TradeSubmitInput) {
     await onAddTrade(input);
-    await onRelink(review.id, review.jaar, review.week_nummer);
+    await onRelink(review.id);
   }
 
   // Editing a linked trade can move its date out of this ISO week — the DB
@@ -62,7 +62,7 @@ export function LinkedTradesPanel({ review, trades, onRelink, onAddTrade, onUpda
   async function handleEditTrade(input: TradeSubmitInput) {
     if (!editing) return;
     await onUpdateTrade(editing.id, input);
-    await onRelink(review.id, review.jaar, review.week_nummer);
+    await onRelink(review.id);
   }
 
   return (

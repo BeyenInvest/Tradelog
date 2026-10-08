@@ -31,10 +31,9 @@ import {
   closedTrades,
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
-import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters } from "@/lib/tradeFilters";
+import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters, type JournalPeriod } from "@/lib/tradeFilters";
 import { AvgRStatCard, MaxDrawdownStatCard, ProfitFactorStatCard, ResultStatCard } from "@/components/trades/JournalKpiCards";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-import type { DateRange } from "@/lib/periodRanges";
 import { toErrorMessage } from "@/lib/errorMessage";
 import type { Trade } from "@/lib/types";
 
@@ -89,7 +88,7 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   const [showMissed, setShowMissed] = useState(true);
   const [deletingTrade, setDeletingTrade] = useState<Trade | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<DateRange | null>(null);
+  const [period, setPeriod] = useState<JournalPeriod | null>(null);
   const [filters, setFilters] = useState<JournalFilters>(EMPTY_FILTERS);
   const [viewMode, setViewMode] = useState<"calendar" | "list" | "sessies">("calendar");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);

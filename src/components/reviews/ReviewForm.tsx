@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Trade, WeeklyReview, WeeklyReviewInput } from "@/lib/types";
 import type { TradeSubmitInput } from "@/hooks/useTrades";
-import { isoWeekOf, isoWeekRange, weeksInIsoYear } from "@/lib/isoWeek";
+import { isoWeekOf, isoWeekRange, tradingWeekOf, weeksInIsoYear } from "@/lib/isoWeek";
 import { localTodayIso } from "@/lib/localDate";
 import { takenTrades, missedTrades, closedTrades, computeErrorCounts } from "@/lib/stats";
 import { tradesInResultUnit } from "@/lib/format";
@@ -63,9 +63,15 @@ export function ReviewForm({ review, sections, trades, onSubmit, onAddTrade, onU
   const handleContentChange = withDirty(setContent);
 
   const weekRange = useMemo(() => isoWeekRange(jaar, weekNummer), [jaar, weekNummer]);
+  // Handelsweek, niet de kale datumrange: een zondag-trade ≥ 22:00 hoort bij de
+  // week erna — zo matcht de preview exact wat de DB-triggers/relink koppelen.
   const tradesInWeek = useMemo(
-    () => trades.filter((t) => t.datum_open >= weekRange.start && t.datum_open <= weekRange.end),
-    [trades, weekRange]
+    () =>
+      trades.filter((t) => {
+        const w = tradingWeekOf(t.datum_open, t.tijd_open);
+        return w.jaar === jaar && w.week_nummer === weekNummer;
+      }),
+    [trades, jaar, weekNummer]
   );
   // A trade added inline should default into the week under review: today if it falls in that
   // week (the common "I just spotted a missed trade" case), otherwise the week's first day.
