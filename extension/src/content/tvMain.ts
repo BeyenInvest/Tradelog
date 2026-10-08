@@ -311,11 +311,9 @@ async function waitChartReady(resolution: string): Promise<unknown> {
     });
   await frame();
   await frame();
-  // Alleen als er echt gewacht is nog een korte grace — geeft trage studies
-  // ("… loading") lucht zonder de vlotte slots te vertragen.
-  if (outcome.ready && (outcome.polls > 1 || outcome.waitedMs > 0)) {
-    await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
-  }
+  // Altijd nog een vaste grace: "data binnen + 2 frames" bleek niet altijd
+  // genoeg (sporadisch lege chart), en na een timeout is hij juist nog bezig.
+  await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
   return { ok: true, ...outcome };
 }
 
