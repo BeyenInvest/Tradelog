@@ -250,6 +250,7 @@
       "emotion": { "label": "Emotie", "options": ["Kalm/gedisciplineerd", "FOMO", "Angst", "Hebzucht", "Overmoed", "Revenge", "Verveling"] },
       "mistake": { "label": "Fout", "options": ["Geen", "Geen stop", "Stop verzet", "Oversized", "Chased entry", "Te vroeg uit", "Te laat uit", "Off-plan"] },
       "followed_plan": { "label": "Volgde ik mijn plan?" },
+      "scale_in": { "label": "Scale-in" },
       "fase": { "label": "Fase", "options": ["Fase 1", "Fase 2", "Fase 3", "Fase 4"] },
       "weekly_criteria": { "label": "Weekly criteria", "options": ["Pattern", "High/Low", "IC", "Region"] },
       "trade_concept": { "label": "Trade concept", "options": ["Reversal", "Continuation", "Daily retrace", "Pattern in Pattern", "Push IC Push", "Weekly-4H", "Reclaim", "Small daily pattern"] },

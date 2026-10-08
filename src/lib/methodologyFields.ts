@@ -42,6 +42,19 @@ export function dynamicMethodologyFields(fields: MethodologyField[]): Methodolog
   return fields.filter((f) => !f.is_computed);
 }
 
+/**
+ * Standard fields every journal is born with (0068: Scale-in as a checkbox). They
+ * don't make a journal "configured" — a fresh signup journal holding only these
+ * still counts as empty, so the first-run preset picker keeps showing (mirrors
+ * the reuse rule in the create_journal RPC).
+ */
+export const STANDARD_FIELD_KEYS: readonly string[] = ["scale_in"];
+
+/** True once the journal has a field of its own beyond the standard ones. */
+export function hasOwnFields(fields: Pick<MethodologyField, "field_key">[]): boolean {
+  return fields.some((f) => !STANDARD_FIELD_KEYS.includes(f.field_key));
+}
+
 /** A boolean field shown as a checkbox (0066) — a flag: unticked means "no". */
 export function isCheckboxField(field: Pick<MethodologyField, "field_type" | "checkbox">): boolean {
   return field.field_type === "boolean" && field.checkbox === true;
