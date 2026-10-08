@@ -2,10 +2,12 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0064 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0067 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
 -- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
--- 0064 = admin-select op de screenshots-bucket).
+-- 0064 = admin-select op de screenshots-bucket; 0066 = vakje-weergave voor
+-- ja/nee-velden; 0067 = WPM: weekly kenmerk onder fase. 0065 = cTrader-
+-- koppeling, branch ctrader-sync).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -421,6 +423,7 @@ create table methodology_fields (
   show_when_field_id uuid references methodology_fields(id) on delete set null, -- conditional visibility (see 0022)
   show_when_values jsonb,              -- values of show_when_field_id that reveal this field
   sort_order integer not null default 0,
+  checkbox boolean not null default false, -- boolean-veld als aanvinkvakje (leeg = Nee) i.p.v. Ja/Nee-knoppen (see 0066)
   unique (methodology_id, field_key) -- fase is now a field; field_key is unique per methodology (see 0023)
 );
 
@@ -468,15 +471,16 @@ select
   '00000000-0000-4000-8000-000000000001',
   v.field_key, v.label, v.field_key, v.field_type, v.options, false, v.group_label, v.group_key, v.required, v.sort_order
 from (values
+  -- 0067: weekly_kenmerk direct onder fase (en in Setup i.p.v. Markt).
   ('fase',            'Fase',                     'enum',    '["Fase 1","Fase 2","Fase 3","Fase 4"]'::jsonb,                                                                         'Setup', 'setup', true,   1),
-  ('weekly_criteria', 'Weekly criteria',          'enum',    '["Pattern","High/Low","IC","Region"]'::jsonb,                                                                          'Setup', 'setup', false,  2),
-  ('trade_concept',   'Trade concept',            'enum',    '["Reversal","Continuation","Daily retrace","Pattern in Pattern","Push IC Push","Weekly-4H","Reclaim","Small daily pattern"]'::jsonb, 'Setup', 'setup', false, 3),
-  ('entry',           'Entry',                    'enum',    '["Decel","Reversal","Continuation met ruimte","Continuation zonder ruimte","2H Entry","Reclaim","100 Fib","Instant limiet"]'::jsonb, 'Setup', 'setup', false, 4),
-  ('w_confirm',       'Weekly richting mee?',     'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  5),
-  ('d_confirm',       'Daily richting mee?',      'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  6),
-  ('h4_confirm',      '4H richting mee?',         'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  7),
-  ('extra_d_conf',    'Extra Daily confirmatie?', 'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  8),
-  ('weekly_kenmerk',  'Weekly kenmerk',           'enum',    '["Trending market","Corrective market","Ranging market"]'::jsonb,                                                      'Markt', 'markt', false,  9),
+  ('weekly_kenmerk',  'Weekly kenmerk',           'enum',    '["Trending market","Corrective market","Ranging market"]'::jsonb,                                                      'Setup', 'setup', false,  2),
+  ('weekly_criteria', 'Weekly criteria',          'enum',    '["Pattern","High/Low","IC","Region"]'::jsonb,                                                                          'Setup', 'setup', false,  3),
+  ('trade_concept',   'Trade concept',            'enum',    '["Reversal","Continuation","Daily retrace","Pattern in Pattern","Push IC Push","Weekly-4H","Reclaim","Small daily pattern"]'::jsonb, 'Setup', 'setup', false, 4),
+  ('entry',           'Entry',                    'enum',    '["Decel","Reversal","Continuation met ruimte","Continuation zonder ruimte","2H Entry","Reclaim","100 Fib","Instant limiet"]'::jsonb, 'Setup', 'setup', false, 5),
+  ('w_confirm',       'Weekly richting mee?',     'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  6),
+  ('d_confirm',       'Daily richting mee?',      'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  7),
+  ('h4_confirm',      '4H richting mee?',         'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  8),
+  ('extra_d_conf',    'Extra Daily confirmatie?', 'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  9),
   ('cc',              '4H Candle Close (CC)',     'enum',    '["03","07","11","15","19","23"]'::jsonb,                                                                               'Markt', 'markt', false, 10),
   ('nieuws',          'Nieuws nabij trade?',      'boolean', null::jsonb,                                                                                                            'Markt', 'markt', false, 11)
 ) as v(field_key, label, field_type, options, group_label, group_key, required, sort_order);
@@ -1052,12 +1056,12 @@ begin
     raise exception 'source methodology % not found or not visible', source_id;
   end if;
 
-  -- (fase_id viel weg in 0059 — body verder = 0057-eindstand.)
+  -- checkbox (0066) reist mee; verder = 0061-eindstand.
   insert into methodology_fields
     (methodology_id, field_key, label, label_key, field_type, options, is_computed,
-     group_label, group_key, required, show_when_values, sort_order)
+     group_label, group_key, required, show_when_values, sort_order, checkbox)
   select new_id, field_key, label, label_key, field_type, options, is_computed,
-         group_label, group_key, required, show_when_values, sort_order
+         group_label, group_key, required, show_when_values, sort_order, checkbox
   from methodology_fields where methodology_id = source_id;
 
   update methodology_fields nf
@@ -1891,7 +1895,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0064 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0067 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -1957,4 +1961,6 @@ insert into schema_migrations (filename) values
   ('0061_methodology_screenshot_timeframes.sql'),
   ('0062_db_hardening.sql'),
   ('0063_handelsweek_zondag.sql'),
-  ('0064_screenshots_admin_select.sql');
+  ('0064_screenshots_admin_select.sql'),
+  ('0066_field_checkbox.sql'),
+  ('0067_wpm_kenmerk_order.sql');

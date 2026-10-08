@@ -42,6 +42,30 @@ export function dynamicMethodologyFields(fields: MethodologyField[]): Methodolog
   return fields.filter((f) => !f.is_computed);
 }
 
+/** A boolean field shown as a checkbox (0066) — a flag: unticked means "no". */
+export function isCheckboxField(field: Pick<MethodologyField, "field_type" | "checkbox">): boolean {
+  return field.field_type === "boolean" && field.checkbox === true;
+}
+
+/** field_keys of the checkbox-style fields — what applyJournalFilters needs to read empty as "Nee". */
+export function checkboxFieldKeys(fields: MethodologyField[]): Set<string> {
+  return new Set(fields.filter(isCheckboxField).map((f) => f.field_key));
+}
+
+/**
+ * The effective answer of a boolean field. A checkbox has no "unanswered"
+ * state — an empty box (also a missing value, e.g. on an imported trade or one
+ * logged before the field existed) reads as `false`, so every trade lands in
+ * the Ja/Nee analysis. The Ja/Nee-toggle keeps `null` = unanswered.
+ */
+export function booleanFieldValue(
+  field: Pick<MethodologyField, "field_type" | "checkbox">,
+  raw: unknown
+): boolean | null {
+  if (isCheckboxField(field)) return raw === true;
+  return typeof raw === "boolean" ? raw : null;
+}
+
 /**
  * Whether a field is currently visible given its show_when condition, read
  * against the trade's `custom` bag (every field, incl. fase, lives there since
@@ -56,7 +80,8 @@ export function isFieldVisible(
   if (!field.show_when_field_id || !field.show_when_values || field.show_when_values.length === 0) return true;
   const parent = allFields.find((p) => p.id === field.show_when_field_id);
   if (!parent) return true;
-  return field.show_when_values.includes(String(custom[parent.field_key] ?? ""));
+  const raw = isCheckboxField(parent) ? booleanFieldValue(parent, custom[parent.field_key]) : custom[parent.field_key];
+  return field.show_when_values.includes(String(raw ?? ""));
 }
 
 /** Unanswered = missing, empty string, or NaN. `false` is a real boolean answer. */
@@ -74,6 +99,7 @@ export function missingRequiredCustomFields(
   custom: Record<string, unknown>
 ): MethodologyField[] {
   return dynamicMethodologyFields(fields).filter(
-    (f) => f.required && isFieldVisible(f, fields, custom) && isBlank(custom[f.field_key])
+    // A checkbox is never "unanswered" (empty = no), so required never blocks it.
+    (f) => f.required && !isCheckboxField(f) && isFieldVisible(f, fields, custom) && isBlank(custom[f.field_key])
   );
 }

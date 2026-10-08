@@ -9,6 +9,7 @@ import { EnumSelect } from "@/components/ui/EnumSelect";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodology } from "@/hooks/useMethodology";
 import { Field } from "./Field";
+import { CustomFlagFields } from "./CustomFieldsSection";
 
 function durationDays(open: string, close: string | null | undefined): number | null {
   if (!open || !close) return null;
@@ -96,6 +97,10 @@ export function ResultSection({ allowMissedTrade, closeDateTouchedRef }: ResultS
           {isOpen && <span className="font-body text-xs text-muted">{t("tradeForm.stillOpenHint")}</span>}
         </div>
       )}
+
+      {/* Aanvinkvakje-velden van het journal (0066, bv. Scale-in) — horen bij het
+          resultaat, ook bij een lopende trade. */}
+      <CustomFlagFields />
 
       {isOpen ? (
         // Running trade: no realized result yet — only capture the planned risk it

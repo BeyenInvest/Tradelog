@@ -6,12 +6,29 @@
 // Pure functie — geen DOM, geen chrome — zodat de vergelijking testbaar is.
 import type { ChartState, PositionState } from "../../adapter/parse";
 
+/**
+ * Position-tools van nieuw naar oud: de tool het verst naar rechts op de chart
+ * (laatste entry-bar) eerst; gelijke of ontbrekende tijd → later in TV's lijst
+ * eerst. Backtesters laten oude tools bewust staan om later terug te kijken —
+ * de trade die ze nú loggen is de laatste, niet de eerste (owner 2026-10-08).
+ * Een tool zonder leesbare entry-tijd zakt achteraan.
+ */
+export function positionsNewestFirst(list: readonly PositionState[]): PositionState[] {
+  return list
+    .map((p, index) => ({ p, index }))
+    .sort((a, b) => {
+      const ta = a.p.entryTimeSec ?? -Infinity;
+      const tb = b.p.entryTimeSec ?? -Infinity;
+      return ta !== tb ? tb - ta : b.index - a.index;
+    })
+    .map(({ p }) => p);
+}
+
 /** Welke tool het paneel als "de geselecteerde" ziet: expliciete keuze, anders
- * de eerste — exact de fallback van selectedPosition() in panelApp. */
-function pickPosition(state: ChartState, selectedId: string | null): PositionState | null {
-  if (!state.positions.ok) return null;
-  const list = state.positions.value;
-  return list.find((p) => p.id === selectedId) ?? list[0] ?? null;
+ * de nieuwste — gedeeld met selectedPosition() in panelApp, zodat de
+ * staleness-guard exact dezelfde tool vergelijkt als het paneel toont. */
+export function pickPosition(list: readonly PositionState[], selectedId: string | null): PositionState | null {
+  return list.find((p) => p.id === selectedId) ?? positionsNewestFirst(list)[0] ?? null;
 }
 
 /**
@@ -35,7 +52,7 @@ export function chartStateStale(
 
   // Position-tool: alleen relevant als het paneel er één toont (zonder tool is
   // alles handmatige invoer en valt er tool-kant niets te verouderen).
-  const shownPos = pickPosition(shown, selectedId);
+  const shownPos = shown.positions.ok ? pickPosition(shown.positions.value, selectedId) : null;
   if (!shownPos) return false;
   if (!fresh.positions.ok) return true; // eerst leesbaar, nu niet → niet te bevestigen
   const freshPos = fresh.positions.value.find((p) => p.id === shownPos.id);
