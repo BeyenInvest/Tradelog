@@ -100,6 +100,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let overrides: Partial<Record<PriceKey, number | null>> & { direction?: Direction | null } = {};
   let targetKey = storedTarget();
   let result: Result | null = defaultResult();
+  /** Gemiste setup (hypothetisch, trade_evaluation "Missed trade"). Alleen op
+   * het live journal en nooit samen met Running (missed-trade-contract). */
+  let missed = false;
   let resultPct = "";
   /** Het laatst automatisch ingevulde resultaat%; wat de user zelf typte wijkt
    * hiervan af en wordt daarom nooit overschreven. */
@@ -685,8 +688,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       targetKey = select.value;
       storeTarget(targetKey);
       // De resultaat-keuze volgt het nieuwe doel, maar blijft daarna gewoon
-      // omschakelbaar — een lopende backtest-trade mag.
+      // omschakelbaar — een lopende backtest-trade mag. "Gemist" bestaat
+      // alleen op het live journal, dus die valt bij elke doelwissel weg.
       result = defaultResult();
+      missed = false;
       renderResult();
       updatePending();
     });
@@ -732,7 +737,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultHint = null;
 
     const choices = el("div", {
-      class: "by-outcomes is-quad",
+      class: missed ? "by-outcomes is-quad is-missed" : "by-outcomes is-quad",
       attrs: { role: "group", "aria-label": t("panel.resultGroupLabel") },
     });
     for (const value of ["running", "Win", "Loss", "BE"] as const) {
@@ -744,6 +749,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         attrs: { type: "button", "data-outcome": value },
       });
       btn.classList.toggle("is-active", result === value);
+      // Een gemiste setup liep nooit: Running past er niet bij.
+      if (value === "running" && missed) btn.disabled = true;
       on(btn, "click", () => {
         result = value;
         // Een nieuwe keuze mag het voorstel weer invullen — maar alleen als er
@@ -756,6 +763,28 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       choices.appendChild(btn);
     }
     resultWrap.appendChild(choices);
+
+    // "Gemiste trade" bewust géén vijfde knop (de rij blijft rustig): een stille
+    // schakelaar eronder, alleen op het live journal — zoals de web-form
+    // (allowMissedTrade) 'm in een backtest-project ook niet aanbiedt.
+    if (targetKey === "live") {
+      const toggle = el("button", {
+        class: missed ? "by-missed is-active" : "by-missed",
+        text: t("panel.missedToggle"),
+        attrs: { type: "button", "aria-pressed": String(missed) },
+      });
+      on(toggle, "click", () => {
+        missed = !missed;
+        // Running en gemist sluiten elkaar uit: de user kiest dan zelf Win/Loss/BE.
+        if (missed && result === "running") result = null;
+        renderResult();
+        updatePending();
+      });
+      resultWrap.appendChild(el("div", { class: "by-missed-row" }, [toggle]));
+    }
+    if (missed) {
+      resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:4px 0 0;", text: t("panel.missedHint") }));
+    }
 
     if (result === "running") {
       resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:8px 0 0;", text: t("panel.runningHint") }));
@@ -784,7 +813,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultWrap.appendChild(
       el("div", { style: "margin-top:8px;" }, [
         el("span", { class: "by-label" }, [
-          document.createTextNode(t("panel.resultLabel")),
+          document.createTextNode(t(missed ? "panel.resultLabelMissed" : "panel.resultLabel")),
           el("span", { class: "by-req", text: " *" }),
         ]),
         input,
@@ -941,7 +970,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       manualDateTime = { date: manualDate, time: manualTime };
     }
 
-    if (result == null) return { ok: false, message: t("panel.v.pickResult") };
+    if (result == null || (missed && result === "running")) {
+      return { ok: false, message: t(missed ? "panel.v.pickResultMissed" : "panel.v.pickResult") };
+    }
     let tradeMode: LogTradeRequest["mode"] = { kind: "live-open" };
     if (result !== "running") {
       const pct = parseNumberInput(resultPct);
@@ -951,7 +982,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       // Sluitdatum expliciet mee: wat de user aanpaste, anders de box-rand.
       // Leeg/null → tradePayload valt terug op de laatste bar (closeTimeUtcSec).
       const datumSluiting = closeDateTouched && closeDate ? closeDate : closeDatePrefill();
-      tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct, datumSluiting };
+      tradeMode = {
+        kind: "post-hoc",
+        outcome: result,
+        resultaatPct: pct,
+        datumSluiting,
+        missed: missed && targetKey === "live",
+      };
     }
 
     // cc is een onzichtbaar, machinaal veld (owner 18-09): het mag de submit
@@ -1130,6 +1167,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     values = {};
     overrides = {};
     result = defaultResult();
+    missed = false;
     resultPct = "";
     resultAuto = null;
     resultTouched = false;
