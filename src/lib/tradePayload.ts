@@ -40,7 +40,15 @@ export type TradeTarget =
 
 export type TradeMode =
   | { kind: "live-open" }
-  | { kind: "post-hoc"; outcome: Outcome; resultaatPct: number; datumSluiting?: string | null };
+  | {
+      kind: "post-hoc";
+      outcome: Outcome;
+      resultaatPct: number;
+      datumSluiting?: string | null;
+      /** Gemiste setup (hypothetisch) → trade_evaluation = "Missed trade". Alleen
+       * live journal — net als de web-form (allowMissedTrade) nooit in een project. */
+      missed?: boolean;
+    };
 
 export interface BuildTradeInput {
   symbol: NormalizedSymbol;
@@ -100,6 +108,7 @@ export interface BuildTradeError {
     | "direction-price-mismatch"
     | "stop-equals-entry"
     | "empty-client-uuid"
+    | "missed-in-project"
     | "schema-invalid";
   detail?: string;
 }
@@ -164,6 +173,13 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
     values.mae_pct = null;
     values.mfe_pct = null;
   } else {
+    // Missed-trade-contract: een gemiste setup is hypothetisch en hoort alleen in
+    // het live journal (de stats filteren 'm via isMissed()); in een backtest-
+    // project is "gemist" betekenisloos — hard weigeren i.p.v. stil droppen.
+    if (input.mode.missed) {
+      if (input.target.type === "project") return { ok: false, error: "missed-in-project" };
+      values.trade_evaluation = "Missed trade";
+    }
     values.is_open = false;
     values.outcome = input.mode.outcome;
     values.resultaat_pct = input.mode.resultaatPct;
