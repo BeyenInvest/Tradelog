@@ -14,6 +14,10 @@ import type { TradesApi } from "@/hooks/useTrades";
 
 /** Auto-sync bij het openen van het journal hooguit om de zoveel tijd per account. */
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+/** Zolang het journal open én zichtbaar is: zo vaak opnieuw syncen. */
+const POLL_INTERVAL_MS = 2 * 60 * 1000;
+/** Terug naar het tabblad: meteen syncen als de vorige poging minstens zo oud is. */
+const FOCUS_MIN_AGE_MS = 60 * 1000;
 /** Max opeenvolgende server-rondes per sync (elk ≤ 26 weken historiek). */
 const MAX_ROUNDS = 4;
 
@@ -54,6 +58,9 @@ export interface CtraderSyncState {
  *
  * Alleen accounts waarvan het doel-journal het actieve journal is: een sync
  * schrijft nooit in een journal dat de gebruiker niet voor zich heeft.
+ *
+ * Wanneer: bij het openen (als de vorige sync > 5 min oud is), elke 2 min zolang
+ * het tabblad zichtbaar is, en bij terugkeer naar het tabblad. Geen server-cron.
  */
 export function useCtraderSync(tradesApi: TradesApi, active: boolean): CtraderSyncState {
   const { session, profile } = useAuth();
@@ -69,6 +76,8 @@ export function useCtraderSync(tradesApi: TradesApi, active: boolean): CtraderSy
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const busyRef = useRef(false);
+  /** Starttijd van de laatste sync-poging (ms) — voor de poll/focus-drempels. */
+  const lastRunRef = useRef(0);
   const autoDoneRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -114,6 +123,7 @@ export function useCtraderSync(tradesApi: TradesApi, active: boolean): CtraderSy
   const syncNow = useCallback(async () => {
     if (busyRef.current || !userId || !ready) return;
     busyRef.current = true;
+    lastRunRef.current = Date.now();
     setSyncing(true);
     setError(null);
     let total = 0;
@@ -170,6 +180,27 @@ export function useCtraderSync(tradesApi: TradesApi, active: boolean): CtraderSy
     );
     if (stale) void syncNow();
   }, [ready, accounts, journalId, syncNow]);
+
+  // Zolang het journal open staat: periodiek + bij terugkeer naar het tabblad.
+  // Via een ref naar de laatste syncNow, zodat een nieuwe tradesApi-identiteit
+  // (na elke import) de timer niet telkens opnieuw start.
+  const syncRef = useRef(syncNow);
+  syncRef.current = syncNow;
+  useEffect(() => {
+    if (!ready) return;
+    const visible = () => document.visibilityState === "visible";
+    const id = window.setInterval(() => {
+      if (visible() && Date.now() - lastRunRef.current >= POLL_INTERVAL_MS - 5_000) void syncRef.current();
+    }, POLL_INTERVAL_MS);
+    const onVisibility = () => {
+      if (visible() && Date.now() - lastRunRef.current >= FOCUS_MIN_AGE_MS) void syncRef.current();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [ready]);
 
   // De wizard heeft de symbool-koppelingen opgeslagen (pairMap); een verse sync
   // importeert wat nog ontbreekt (dedup slaat de rest over) en schuift de cursor

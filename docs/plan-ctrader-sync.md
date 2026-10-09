@@ -6,7 +6,7 @@
 
 1. Settings → **Koppel cTrader** → cTrader-login + "Allow access" (scope `accounts` = **alleen lezen**, Beyen kan nooit handelen).
 2. Terug in Settings: per cTrader-account (live/demo) een **doel-journal** kiezen, **automatisch importeren** aan, optioneel **importeer vanaf**-datum (default 30 dagen terug).
-3. Bij het openen van dat journal (en via de ↻-knop) komen **gesloten posities** binnen als trades: datum + `tijd_open` (profiel-tijdzone), richting, instrument, exact resultaat-% (netto P&L incl. commissie/swap ÷ saldo vóór de sluiting), Win/Loss/BE. Nooit "Missed". Open posities wachten tot ze dicht zijn.
+3. Bij het openen van dat journal, daarna elke 2 minuten zolang het tabblad zichtbaar is, bij terugkeer naar het tabblad, en via de ↻-knop komen **gesloten posities** binnen als trades: datum + `tijd_open` (profiel-tijdzone), richting, instrument, exact resultaat-% (netto P&L incl. commissie/swap ÷ saldo vóór de sluiting), Win/Loss/BE. Nooit "Missed". Open posities wachten tot ze dicht zijn.
 4. Onbekend symbool in een forex-journal (bv. US30) → statusbalk "wacht op symbool-koppeling" → **Koppelen** (bestaande import-wizard) of **Negeren**.
 
 ## 2. Architectuur
