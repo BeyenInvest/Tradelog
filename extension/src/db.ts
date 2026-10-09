@@ -30,6 +30,8 @@ export interface JournalField {
    * één van showWhenValues heeft (zelfde contract als de web-form, plan M6). */
   showWhenFieldId: string | null;
   showWhenValues: unknown;
+  /** Boolean-veld als aanvinkvakje (0066): aangevinkt = ja, leeg = nee (geen "onbeantwoord"). */
+  checkbox?: boolean;
 }
 
 export interface JournalSchema {

@@ -6,6 +6,7 @@ import { useTrades } from "@/hooks/useTrades";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { takenTrades } from "@/lib/stats";
+import { hasOwnFields } from "@/lib/methodologyFields";
 
 /** Live market trades only — backtest project trades never appear here. */
 export default function JournalPage() {
@@ -26,9 +27,11 @@ export default function JournalPage() {
   // the methodology is still loading so we never flash the big preset picker before
   // we know the field count. Shown to every new user (un-gated at the beta launch);
   // a legacy WPM user always has fields, so they never reach the picker variant.
+  // Standard fields (Scale-in, 0068) don't count — every journal is born with them.
+  const ownFields = hasOwnFields(fields);
   const onboarding = useMemo(
-    () => ({ hasFields: methLoading || fields.length > 0, showPresetPicker: true }),
-    [methLoading, fields.length]
+    () => ({ hasFields: methLoading || ownFields, showPresetPicker: true }),
+    [methLoading, ownFields]
   );
 
   return (

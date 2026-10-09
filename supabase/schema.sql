@@ -2,10 +2,12 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0065 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0068 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
 -- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
--- 0064 = admin-select op de screenshots-bucket; 0065 = broker-koppeling cTrader).
+-- 0064 = admin-select op de screenshots-bucket; 0066 = vakje-weergave voor
+-- ja/nee-velden; 0067 = WPM: weekly kenmerk onder fase; 0068 = Scale-in
+-- standaard in elk journal; 0065 = broker-koppeling cTrader).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -421,6 +423,7 @@ create table methodology_fields (
   show_when_field_id uuid references methodology_fields(id) on delete set null, -- conditional visibility (see 0022)
   show_when_values jsonb,              -- values of show_when_field_id that reveal this field
   sort_order integer not null default 0,
+  checkbox boolean not null default false, -- boolean-veld als aanvinkvakje (leeg = Nee) i.p.v. Ja/Nee-knoppen (see 0066)
   unique (methodology_id, field_key) -- fase is now a field; field_key is unique per methodology (see 0023)
 );
 
@@ -468,15 +471,16 @@ select
   '00000000-0000-4000-8000-000000000001',
   v.field_key, v.label, v.field_key, v.field_type, v.options, false, v.group_label, v.group_key, v.required, v.sort_order
 from (values
+  -- 0067: weekly_kenmerk direct onder fase (en in Setup i.p.v. Markt).
   ('fase',            'Fase',                     'enum',    '["Fase 1","Fase 2","Fase 3","Fase 4"]'::jsonb,                                                                         'Setup', 'setup', true,   1),
-  ('weekly_criteria', 'Weekly criteria',          'enum',    '["Pattern","High/Low","IC","Region"]'::jsonb,                                                                          'Setup', 'setup', false,  2),
-  ('trade_concept',   'Trade concept',            'enum',    '["Reversal","Continuation","Daily retrace","Pattern in Pattern","Push IC Push","Weekly-4H","Reclaim","Small daily pattern"]'::jsonb, 'Setup', 'setup', false, 3),
-  ('entry',           'Entry',                    'enum',    '["Decel","Reversal","Continuation met ruimte","Continuation zonder ruimte","2H Entry","Reclaim","100 Fib","Instant limiet"]'::jsonb, 'Setup', 'setup', false, 4),
-  ('w_confirm',       'Weekly richting mee?',     'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  5),
-  ('d_confirm',       'Daily richting mee?',      'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  6),
-  ('h4_confirm',      '4H richting mee?',         'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  7),
-  ('extra_d_conf',    'Extra Daily confirmatie?', 'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  8),
-  ('weekly_kenmerk',  'Weekly kenmerk',           'enum',    '["Trending market","Corrective market","Ranging market"]'::jsonb,                                                      'Markt', 'markt', false,  9),
+  ('weekly_kenmerk',  'Weekly kenmerk',           'enum',    '["Trending market","Corrective market","Ranging market"]'::jsonb,                                                      'Setup', 'setup', false,  2),
+  ('weekly_criteria', 'Weekly criteria',          'enum',    '["Pattern","High/Low","IC","Region"]'::jsonb,                                                                          'Setup', 'setup', false,  3),
+  ('trade_concept',   'Trade concept',            'enum',    '["Reversal","Continuation","Daily retrace","Pattern in Pattern","Push IC Push","Weekly-4H","Reclaim","Small daily pattern"]'::jsonb, 'Setup', 'setup', false, 4),
+  ('entry',           'Entry',                    'enum',    '["Decel","Reversal","Continuation met ruimte","Continuation zonder ruimte","2H Entry","Reclaim","100 Fib","Instant limiet"]'::jsonb, 'Setup', 'setup', false, 5),
+  ('w_confirm',       'Weekly richting mee?',     'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  6),
+  ('d_confirm',       'Daily richting mee?',      'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  7),
+  ('h4_confirm',      '4H richting mee?',         'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  8),
+  ('extra_d_conf',    'Extra Daily confirmatie?', 'boolean', null::jsonb,                                                                                                            'Setup', 'setup', false,  9),
   ('cc',              '4H Candle Close (CC)',     'enum',    '["03","07","11","15","19","23"]'::jsonb,                                                                               'Markt', 'markt', false, 10),
   ('nieuws',          'Nieuws nabij trade?',      'boolean', null::jsonb,                                                                                                            'Markt', 'markt', false, 11)
 ) as v(field_key, label, field_type, options, group_label, group_key, required, sort_order);
@@ -682,6 +686,19 @@ end
 where group_key is null
   and group_label in ('Setup & uitvoering', 'Setup & execution', 'Setup',
                       'Markt', 'Market', 'Mindset & discipline', 'Mindset');
+
+-- Standaardveld (0068): elk journal — ook elke seed-template — draagt Scale-in
+-- als aanvinkvakje, achteraan. handle_new_user() en create_journal() zetten 'm
+-- bij nieuwe journals; fork_methodology kopieert 'm mee.
+insert into methodology_fields
+  (methodology_id, field_key, label, label_key, field_type, options,
+   required, group_label, group_key, sort_order, checkbox)
+select m.id, 'scale_in', 'Scale-in', 'scale_in', 'boolean', null,
+       false, 'Setup', 'setup',
+       coalesce((select max(f.sort_order) from methodology_fields f where f.methodology_id = m.id), 0) + 1,
+       true
+from methodologies m
+on conflict (methodology_id, field_key) do nothing;
 
 -- New methodology columns on trades/profiles (see 0020). Added via alter so the
 -- methodologies table (created here, after trades/profiles above) is referenceable.
@@ -935,6 +952,14 @@ begin
   values (new.id, 'Journal', false, null)
   returning id into new_meth;
 
+  -- Standaardveld (0068): Scale-in als aanvinkvakje in elk journal.
+  insert into public.methodology_fields
+    (methodology_id, field_key, label, label_key, field_type, options,
+     required, group_label, group_key, sort_order, checkbox)
+  values (new_meth, 'scale_in', 'Scale-in', 'scale_in', 'boolean', null,
+          false, 'Setup', 'setup', 1, true)
+  on conflict (methodology_id, field_key) do nothing;
+
   insert into public.profiles (id, email, display_name, methodology_id)
   values (new.id, new.email, new.raw_user_meta_data ->> 'display_name', new_meth);
   return new;
@@ -1052,12 +1077,12 @@ begin
     raise exception 'source methodology % not found or not visible', source_id;
   end if;
 
-  -- (fase_id viel weg in 0059 — body verder = 0057-eindstand.)
+  -- checkbox (0066) reist mee; verder = 0061-eindstand.
   insert into methodology_fields
     (methodology_id, field_key, label, label_key, field_type, options, is_computed,
-     group_label, group_key, required, show_when_values, sort_order)
+     group_label, group_key, required, show_when_values, sort_order, checkbox)
   select new_id, field_key, label, label_key, field_type, options, is_computed,
-         group_label, group_key, required, show_when_values, sort_order
+         group_label, group_key, required, show_when_values, sort_order, checkbox
   from methodology_fields where methodology_id = source_id;
 
   update methodology_fields nf
@@ -1315,7 +1340,8 @@ begin
 
   -- Onboarding/empty-state: hergebruik het actieve journal als dat je eigen,
   -- nog lege journal is (zelfde reuseActiveIfEmpty-regel die de client had) —
-  -- zo blijft er geen leeg trigger-journal als wees achter.
+  -- zo blijft er geen leeg trigger-journal als wees achter. "Leeg" = geen
+  -- velden behalve het standaardveld scale_in (0068).
   if p_reuse_active_if_empty then
     select m.id into target_id
     from profiles p
@@ -1323,7 +1349,10 @@ begin
     where p.id = uid
       and m.user_id = uid
       and not m.is_system
-      and not exists (select 1 from methodology_fields f where f.methodology_id = m.id);
+      and not exists (
+        select 1 from methodology_fields f
+        where f.methodology_id = m.id and f.field_key <> 'scale_in'
+      );
   end if;
 
   if target_id is not null then
@@ -1341,7 +1370,7 @@ begin
 
   insert into methodology_fields
     (methodology_id, field_key, label, label_key, field_type, options,
-     required, group_label, group_key, show_when_field_id, show_when_values, sort_order)
+     required, group_label, group_key, show_when_field_id, show_when_values, sort_order, checkbox)
   select target_id,
          ord.f->>'field_key',
          ord.f->>'label',
@@ -1353,8 +1382,25 @@ begin
          ord.f->>'group_key',
          (ord.f->>'show_when_field_id')::uuid,
          nullif(ord.f->'show_when_values', 'null'::jsonb),
-         ord.n::int
-  from jsonb_array_elements(coalesce(p_fields, '[]'::jsonb)) with ordinality as ord(f, n);
+         ord.n::int,
+         coalesce((ord.f->>'checkbox')::boolean, false)
+  from jsonb_array_elements(coalesce(p_fields, '[]'::jsonb)) with ordinality as ord(f, n)
+  on conflict (methodology_id, field_key) do nothing;
+
+  -- Standaardveld (0068): Scale-in gegarandeerd, achteraan in de volgorde.
+  insert into methodology_fields
+    (methodology_id, field_key, label, label_key, field_type, options,
+     required, group_label, group_key, sort_order, checkbox)
+  values (target_id, 'scale_in', 'Scale-in', 'scale_in', 'boolean', null,
+          false, 'Setup', 'setup', 0, true)
+  on conflict (methodology_id, field_key) do nothing;
+
+  update methodology_fields
+     set sort_order = coalesce((
+           select max(o.sort_order) from methodology_fields o
+           where o.methodology_id = target_id and o.field_key <> 'scale_in'
+         ), 0) + 1
+   where methodology_id = target_id and field_key = 'scale_in';
 
   update profiles set methodology_id = target_id where id = uid;
 
@@ -1966,7 +2012,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0065 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0068 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -2033,4 +2079,7 @@ insert into schema_migrations (filename) values
   ('0062_db_hardening.sql'),
   ('0063_handelsweek_zondag.sql'),
   ('0064_screenshots_admin_select.sql'),
-  ('0065_broker_connections.sql');
+  ('0065_broker_connections.sql'),
+  ('0066_field_checkbox.sql'),
+  ('0067_wpm_kenmerk_order.sql'),
+  ('0068_standard_scale_in.sql');

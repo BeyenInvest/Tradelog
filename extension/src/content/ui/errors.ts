@@ -99,6 +99,8 @@ export function logTradeErrorCopy(failure: LogTradeFailure): ErrorCopy {
       return { message: t("err.noEntryTime") };
     case "empty-client-uuid":
       return { message: t("err.emptyClientUuid") };
+    case "missed-in-project":
+      return { message: t("err.missedInProject") };
     case "schema-invalid":
       return { message: t("err.schemaInvalid"), detail: humanizeSchemaDetail(detail) };
     // Alleen het update-pad (F5, "Nog aanpassen"): de rij is intussen weg.

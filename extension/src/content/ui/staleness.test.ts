@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ChartState, PositionState } from "../../adapter/parse";
-import { chartStateStale } from "./staleness";
+import { chartStateStale, pickPosition, positionsNewestFirst } from "./staleness";
 
 function pos(overrides: Partial<PositionState> = {}): PositionState {
   return {
@@ -68,12 +68,14 @@ describe("chartStateStale — D1-staleness-guard van submit()", () => {
     }
   });
 
-  it("vergelijkt de GESELECTEERDE tool, niet de eerste", () => {
+  it("vergelijkt de GESELECTEERDE tool, niet een andere", () => {
     const shown = state({ positions: { ok: true, value: [pos(), pos({ id: "tweede", entry: 108 })] } });
     // De eerste tool veranderde, maar de selectie ("tweede") niet.
     const fresh = state({ positions: { ok: true, value: [pos({ entry: 999 }), pos({ id: "tweede", entry: 108 })] } });
     expect(chartStateStale(shown, fresh, "tweede")).toBe(false);
-    expect(chartStateStale(shown, fresh, null)).toBe(true); // fallback = eerste
+    expect(chartStateStale(shown, fresh, "WJJ3zr")).toBe(true);
+    // Zonder keuze = de nieuwste (gelijke tijd → laatste in de lijst = "tweede").
+    expect(chartStateStale(shown, fresh, null)).toBe(false);
   });
 
   it("paneel zonder tool (handmatige invoer) blokkeert niet op tool-wijzigingen", () => {
@@ -85,5 +87,32 @@ describe("chartStateStale — D1-staleness-guard van submit()", () => {
   it("positions die eerst leesbaar waren en nu niet = stale", () => {
     const fresh = state({ positions: { ok: false, reason: "shapes: lezen faalde" } });
     expect(chartStateStale(state(), fresh, null)).toBe(true);
+  });
+});
+
+describe("positionsNewestFirst / pickPosition — default = de laatste tool", () => {
+  const oud = pos({ id: "oud", entryTimeSec: 1789000000 });
+  const nieuw = pos({ id: "nieuw", entryTimeSec: 1789900000 });
+  const midden = pos({ id: "midden", entryTimeSec: 1789500000 });
+
+  it("sorteert op entry-tijd, nieuwste eerst — ongeacht TV's lijstvolgorde", () => {
+    expect(positionsNewestFirst([oud, nieuw, midden]).map((p) => p.id)).toEqual(["nieuw", "midden", "oud"]);
+    expect(positionsNewestFirst([nieuw, oud]).map((p) => p.id)).toEqual(["nieuw", "oud"]);
+  });
+
+  it("gelijke tijd → later in de lijst eerst; zonder tijd achteraan", () => {
+    const a = pos({ id: "a" });
+    const b = pos({ id: "b" });
+    const zonder = pos({ id: "zonder", entryTimeSec: null });
+    expect(positionsNewestFirst([a, b]).map((p) => p.id)).toEqual(["b", "a"]);
+    expect(positionsNewestFirst([zonder, oud]).map((p) => p.id)).toEqual(["oud", "zonder"]);
+    expect(positionsNewestFirst([pos({ id: "x", entryTimeSec: null }), zonder]).map((p) => p.id)).toEqual(["zonder", "x"]);
+  });
+
+  it("zonder keuze de nieuwste; een expliciete keuze wint; een verdwenen keuze valt terug", () => {
+    expect(pickPosition([oud, nieuw, midden], null)?.id).toBe("nieuw");
+    expect(pickPosition([oud, nieuw, midden], "oud")?.id).toBe("oud");
+    expect(pickPosition([oud, midden], "nieuw")?.id).toBe("midden");
+    expect(pickPosition([], null)).toBeNull();
   });
 });

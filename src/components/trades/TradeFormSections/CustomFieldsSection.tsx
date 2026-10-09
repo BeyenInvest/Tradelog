@@ -8,6 +8,7 @@ import type { MethodologyField } from "@/lib/types";
 import { useMethodology, type InlineFieldInput } from "@/hooks/useMethodology";
 import {
   dynamicMethodologyFields,
+  isCheckboxField,
   isFieldVisible,
   parseFieldOptions,
   slugifyFieldKey,
@@ -96,6 +97,7 @@ export function CustomFieldGroup({
     (f) =>
       groupKeys.includes(f.group_key ?? "") &&
       !excludeKeys?.includes(f.field_key) &&
+      !isCheckboxField(f) && // aanvinkvakjes staan in het resultaat-blok (CustomFlagFields)
       isFieldVisible(f, fields, customVals)
   );
   if (visible.length === 0) return null;
@@ -155,6 +157,46 @@ export function SingleCustomField({ fieldKey }: { fieldKey: string }) {
 }
 
 /**
+ * The journal's checkbox-style fields (0066, e.g. "Scale-in") as one row of
+ * tick boxes — rendered in ResultSection, not between the setup fields (owner
+ * 2026-10-08: such a flag belongs with the result, same as the TV-extension
+ * panel puts it under Running | Win | Loss | BE). Ticked = ja, empty = nee.
+ */
+export function CustomFlagFields() {
+  const { t } = useTranslation();
+  const { fields } = useMethodology();
+  const { control, watch } = useFormContext<TradeFormValues>();
+  const customVals = (watch("custom") ?? {});
+  const flags = dynamicMethodologyFields(fields).filter(
+    (f) => isCheckboxField(f) && isFieldVisible(f, fields, customVals)
+  );
+  if (flags.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-x-6 gap-y-2">
+      {flags.map((f) => (
+        <Controller
+          key={f.id}
+          name={`custom.${f.field_key}`}
+          control={control}
+          render={({ field }) => (
+            <label className="inline-flex items-center gap-2 cursor-pointer font-body text-sm text-ink">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer accent-gold"
+                checked={field.value === true}
+                onChange={(e) => field.onChange(e.target.checked)}
+                onBlur={field.onBlur}
+              />
+              {fieldLabel(t, f)}
+            </label>
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
  * Field-management surface (gear: rename/edit/delete + inline add) and the home for
  * any custom field NOT woven into a native section — a user's own inline-added field
  * (no group_key) or any group outside setup/markt/mindset. Own-journal only for the
@@ -180,7 +222,9 @@ export function CustomFieldsManager() {
   // Entry/Technical); only the ungrouped ones render their inputs here.
   const dynamicFields = dynamicMethodologyFields(fields);
   const isVisible = (f: MethodologyField) => isFieldVisible(f, fields, customVals);
-  const ungrouped = dynamicFields.filter((f) => !PLACED_GROUP_KEYS.includes(f.group_key ?? ""));
+  const ungrouped = dynamicFields.filter(
+    (f) => !PLACED_GROUP_KEYS.includes(f.group_key ?? "") && !isCheckboxField(f) // vakjes: CustomFlagFields
+  );
   const visibleUngrouped = ungrouped.filter(isVisible);
 
   // Inline field creation (add-while-logging): own journal only — a read-only

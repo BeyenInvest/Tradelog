@@ -48,8 +48,17 @@ function inRange(t: Trade, range: JournalPeriod | null): boolean {
   return date >= range.start && date <= range.end;
 }
 
-/** Period + Journal filters, applied together — the single gate everything in TradeJournalView flows through. */
-export function applyJournalFilters(trades: Trade[], range: JournalPeriod | null, filters: JournalFilters): Trade[] {
+/**
+ * Period + Journal filters, applied together — the single gate everything in TradeJournalView flows through.
+ * `checkboxKeys` = field_keys of checkbox-style boolean fields (0066): for those an
+ * empty value counts as `false`, so "Nee" also matches trades where the box was never ticked.
+ */
+export function applyJournalFilters(
+  trades: Trade[],
+  range: JournalPeriod | null,
+  filters: JournalFilters,
+  checkboxKeys: ReadonlySet<string> = new Set()
+): Trade[] {
   return trades.filter((t) => {
     if (!inRange(t, range)) return false;
     if (filters.pair && t.pair !== filters.pair) return false;
@@ -60,7 +69,8 @@ export function applyJournalFilters(trades: Trade[], range: JournalPeriod | null
     if (filters.sessie && t.sessie !== filters.sessie) return false;
     if (filters.custom) {
       for (const [key, want] of Object.entries(filters.custom)) {
-        const have = t.custom?.[key];
+        const raw = t.custom?.[key];
+        const have = checkboxKeys.has(key) ? raw === true : raw;
         if (typeof want === "boolean") {
           // A boolean field only matches its exact value; missing (null) matches neither
           // true nor false — same "unset is not false" rule the nieuws filter follows.

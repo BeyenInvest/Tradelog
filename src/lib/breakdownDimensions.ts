@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import type { MethodologyField, Trade } from "./types";
 import { currenciesOfPair, DIRECTIONS, SESSIES, WEEKDAYS, QUARTERS } from "./constants";
 import { weekdayKey, quarterKey } from "./stats/breakdown";
-import { dynamicMethodologyFields } from "./methodologyFields";
+import { dynamicMethodologyFields, isCheckboxField } from "./methodologyFields";
 import { fieldLabel } from "./fieldBlocks";
 import { numberBucketer } from "./numberBuckets";
 
@@ -100,6 +100,8 @@ export function customFieldDimensions(fields: MethodologyField[], trades: Trade[
         labelFn: f.field_type === "boolean" ? boolLabel : undefined,
         keyFn: (t: Trade) => {
           const raw = t.custom?.[f.field_key];
+          // A checkbox reads empty as "Nee" (0066) — every trade lands in the split.
+          if (isCheckboxField(f)) return raw === true ? "Ja" : "Nee";
           if (raw == null || raw === "") return null;
           if (f.field_type === "boolean") return raw ? "Ja" : "Nee";
           return String(raw);

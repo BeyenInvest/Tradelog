@@ -108,8 +108,9 @@ export function missingRequired(
   allFields: JournalField[],
   values: FormValues
 ): JournalField[] {
+  // Een aanvinkvakje (0066) is nooit "onbeantwoord" — leeg = nee — dus nooit blokkerend.
   return fields.filter(
-    (f) => f.required && isVisible(f, allFields, values) && isBlank(values[f.fieldKey])
+    (f) => f.required && !f.checkbox && isVisible(f, allFields, values) && isBlank(values[f.fieldKey])
   );
 }
 

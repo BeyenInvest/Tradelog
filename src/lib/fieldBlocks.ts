@@ -77,7 +77,8 @@ export const FIELD_BLOCKS: FieldBlock[] = [
   { key: "market_regime", group: "markt", field_type: "enum", hasOptions: true },
   { key: "targets", group: "markt", field_type: "text", hasOptions: false },
   // — Weekly Phase Method market fields (see WPM note above) —
-  { key: "weekly_kenmerk", group: "markt", field_type: "enum", hasOptions: true },
+  // weekly_kenmerk hoort bij de fase-bepaling → Setup, direct onder fase (0067).
+  { key: "weekly_kenmerk", group: "setup", field_type: "enum", hasOptions: true },
   { key: "cc", group: "markt", field_type: "enum", hasOptions: true },
   { key: "nieuws", group: "markt", field_type: "boolean", hasOptions: false },
   // — Mindset & discipline —
@@ -210,7 +211,8 @@ export const STRATEGY_STARTSETS: StrategyStartset[] = [
     // (fase-retirement 0059). Matches the seeded WPM template's field set so a new
     // WPM journal built here == the migrated template.
     key: "wpm",
-    blockKeys: ["fase", "weekly_criteria", "trade_concept", "entry", "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf", "weekly_kenmerk", "cc", "nieuws"],
+    // Weekly kenmerk direct onder fase (owner 2026-10-08, 0067 trekt bestaande journals gelijk).
+    blockKeys: ["fase", "weekly_kenmerk", "weekly_criteria", "trade_concept", "entry", "w_confirm", "d_confirm", "h4_confirm", "extra_d_conf", "cc", "nieuws"],
   },
 ];
 

@@ -5,7 +5,7 @@ import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, Plus, GripVertical } 
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
-import { slugifyFieldKey } from "@/lib/methodologyFields";
+import { isCheckboxField, slugifyFieldKey } from "@/lib/methodologyFields";
 import {
   customTimeframeLabel, DEFAULT_SLOT_TIMEFRAMES, isSnapshotTimeframe, SNAPSHOT_TIMEFRAMES, timeframeLabel,
 } from "@/lib/screenshotSlots";
@@ -492,6 +492,7 @@ function FieldRow({
             group_label: input.group_label,
             show_when_field_id: input.show_when_field_id,
             show_when_values: input.show_when_values,
+            ...(input.checkbox !== undefined ? { checkbox: input.checkbox } : {}),
           });
           setEditing(false);
         }}
@@ -554,7 +555,7 @@ function FieldRow({
           {fieldLabel(t, field)}
           {field.required && <span className="ml-1.5 text-loss">*</span>}
           <span className="ml-2 font-mono text-[10px] uppercase tracking-wide text-muted">
-            {typeLabel(t, field.field_type)}
+            {isCheckboxField(field) ? t("methodology.boolDisplayCheckbox") : typeLabel(t, field.field_type)}
           </span>
           {field.is_computed && (
             <span className="ml-2 font-mono text-[10px] uppercase tracking-wide text-muted">
@@ -802,6 +803,9 @@ function FieldForm({
   const [fieldType, setFieldType] = useState<MethodologyField["field_type"]>(initial?.field_type ?? "boolean");
   const [options, setOptions] = useState<string[]>(initial?.options ?? []);
   const [required, setRequired] = useState(initial?.required ?? false);
+  // boolean only (0066): checkbox = a flag, empty = "nee"; toggle = Ja/Nee, empty = unanswered.
+  const [checkbox, setCheckbox] = useState(initial?.checkbox ?? false);
+  const asCheckbox = fieldType === "boolean" && checkbox;
   // Section is picked from the methodology's existing sections (raw group_key +
   // group_label, so re-attaching never drifts) — or a brand-new one, or none.
   const sections = collectSections(allFields, t);
@@ -881,11 +885,14 @@ function FieldForm({
         label_key: null, // hand-made/edited here — free text is the source; edits keep keys via the FieldRow patch, the DB trigger clears them on a real rename
         field_type: fieldType,
         options: fieldType === "enum" ? options : null,
-        required,
+        // A checkbox can't be "unanswered", so required is meaningless there.
+        required: asCheckbox ? false : required,
         group_label: group.group_label,
         group_key: group.group_key,
         show_when_field_id: showWhenFieldId,
         show_when_values: showWhenFieldId ? showWhenValues : null,
+        // Only sent when it changes — every other save stays independent of the 0066 column.
+        ...(asCheckbox !== (initial?.checkbox ?? false) ? { checkbox: asCheckbox } : {}),
       });
     } finally {
       setSaving(false);
@@ -943,11 +950,27 @@ function FieldForm({
             <option value="__new__">{t("methodology.groupNew")}</option>
           </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-[11px] text-muted">{t("methodology.required")}</label>
-          <BooleanToggle value={required} onChange={setRequired} labels={[t("settings.on"), t("settings.off")]} />
-        </div>
+        {fieldType === "boolean" && (
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-[11px] text-muted">{t("methodology.boolDisplay")}</label>
+            <select
+              value={checkbox ? "checkbox" : "toggle"}
+              onChange={(e) => setCheckbox(e.target.value === "checkbox")}
+              className="rounded-lg px-3 py-2 bg-surface-2 border border-border text-ink text-sm outline-none focus:border-gold"
+            >
+              <option value="toggle">{t("methodology.boolDisplayToggle")}</option>
+              <option value="checkbox">{t("methodology.boolDisplayCheckbox")}</option>
+            </select>
+          </div>
+        )}
+        {!asCheckbox && (
+          <div className="flex flex-col gap-1">
+            <label className="font-mono text-[11px] text-muted">{t("methodology.required")}</label>
+            <BooleanToggle value={required} onChange={setRequired} labels={[t("settings.on"), t("settings.off")]} />
+          </div>
+        )}
       </div>
+      {asCheckbox && <p className="font-mono text-[10px] text-muted -mt-1">{t("methodology.boolDisplayCheckboxHint")}</p>}
 
       {newSection && (
         <div className="flex flex-col gap-1">

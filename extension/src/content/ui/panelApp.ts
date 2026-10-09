@@ -29,7 +29,7 @@ import { mergeScreenshots } from "./closeState";
 import { clear, el, on } from "./dom";
 import { logTradeErrorCopy, type ErrorCopy } from "./errors";
 import {
-  ccFromTime, customFromValues, formFields, missingRequired, orderedFormFields, type FormValues,
+  ccFromTime, customFromValues, formFields, isVisible, missingRequired, orderedFormFields, type FormValues,
 } from "./fields";
 import { renderDynamicForm, type DynamicForm } from "./form";
 import {
@@ -41,7 +41,7 @@ import {
 } from "./icons";
 import { isOnboardingDismissed, renderOnboardingCard } from "./onboarding";
 import { renderSnapshotsSection } from "./snapshotsSection";
-import { chartStateStale } from "./staleness";
+import { chartStateStale, pickPosition, positionsNewestFirst } from "./staleness";
 
 /** Per tab onthouden (sessionStorage = precies één tab, plan F2d). */
 const TARGET_KEY = "beyen-tv-ext:target";
@@ -100,6 +100,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let overrides: Partial<Record<PriceKey, number | null>> & { direction?: Direction | null } = {};
   let targetKey = storedTarget();
   let result: Result | null = defaultResult();
+  /** Gemiste setup (hypothetisch, trade_evaluation "Missed trade"). Alleen op
+   * het live journal en nooit samen met Running (missed-trade-contract). */
+  let missed = false;
   let resultPct = "";
   /** Het laatst automatisch ingevulde resultaat%; wat de user zelf typte wijkt
    * hiervan af en wordt daarom nooit overschreven. */
@@ -178,8 +181,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     return chart?.positions.ok ? chart.positions.value : [];
   }
   function selectedPosition(): PositionState | null {
-    const list = positions();
-    return list.find((p) => p.id === selectedPositionId) ?? list[0] ?? null;
+    return pickPosition(positions(), selectedPositionId);
   }
   function chartPrice(key: PriceKey): number | null {
     const prices = selectedPosition()?.prices;
@@ -410,22 +412,33 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       renderManualTime();
       return;
     }
-    if (!list.some((p) => p.id === selectedPositionId)) selectedPositionId = list[0]?.id ?? null;
+    // selectedPositionId = alléén een expliciete keuze uit de dropdown. Zonder
+    // keuze volgt het paneel de nieuwste tool, ook na verversen — anders bleef
+    // een eerder automatisch gekozen (oude) tool plakken zodra er een nieuwe bij
+    // kwam. Een gekozen tool die verdween valt terug op die default.
+    if (selectedPositionId != null && !list.some((p) => p.id === selectedPositionId)) selectedPositionId = null;
 
     if (list.length > 1) {
       const select = el("select", { class: "by-select", attrs: { "aria-label": t("panel.positionSelectLabel") } });
-      for (const position of list) {
+      // Nieuwste bovenaan (= de default); de entry-tijd erbij, want bij een
+      // chart vol oude backtest-tools zegt "Long · entry 1.08" alleen te weinig.
+      for (const position of positionsNewestFirst(list)) {
+        const when =
+          position.entryTimeSec != null && targets?.timezone
+            ? wallClockInTimezone(position.entryTimeSec * 1000, targets.timezone)
+            : null;
+        const label = t("panel.positionOption", {
+          direction: position.direction,
+          price: formatPrice(position.prices?.entry ?? position.entry),
+        });
         select.appendChild(
           el("option", {
-            text: t("panel.positionOption", {
-              direction: position.direction,
-              price: formatPrice(position.prices?.entry ?? position.entry),
-            }),
+            text: when ? `${label} · ${when.date} ${when.time}` : label,
             attrs: { value: position.id },
           })
         );
       }
-      select.value = selectedPositionId ?? "";
+      select.value = selectedPosition()?.id ?? "";
       on(select, "change", () => {
         selectedPositionId = select.value;
         overrides = {}; // overrides horen bij één tool, niet bij de volgende
@@ -685,8 +698,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       targetKey = select.value;
       storeTarget(targetKey);
       // De resultaat-keuze volgt het nieuwe doel, maar blijft daarna gewoon
-      // omschakelbaar — een lopende backtest-trade mag.
+      // omschakelbaar — een lopende backtest-trade mag. "Gemist" bestaat
+      // alleen op het live journal, dus die valt bij elke doelwissel weg.
       result = defaultResult();
+      missed = false;
       renderResult();
       updatePending();
     });
@@ -732,7 +747,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultHint = null;
 
     const choices = el("div", {
-      class: "by-outcomes is-quad",
+      class: missed ? "by-outcomes is-quad is-missed" : "by-outcomes is-quad",
       attrs: { role: "group", "aria-label": t("panel.resultGroupLabel") },
     });
     for (const value of ["running", "Win", "Loss", "BE"] as const) {
@@ -744,6 +759,8 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         attrs: { type: "button", "data-outcome": value },
       });
       btn.classList.toggle("is-active", result === value);
+      // Een gemiste setup liep nooit: Running past er niet bij.
+      if (value === "running" && missed) btn.disabled = true;
       on(btn, "click", () => {
         result = value;
         // Een nieuwe keuze mag het voorstel weer invullen — maar alleen als er
@@ -756,6 +773,48 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       choices.appendChild(btn);
     }
     resultWrap.appendChild(choices);
+
+    // Vlaggen-rij onder Running | Win | Loss | BE. Links: de journal-velden die
+    // de user als aanvinkvakje instelde (0066, bv. "Scale-in") — owner
+    // 2026-10-08: zo'n vlag hoort bij het resultaat, niet verdwaald tussen de
+    // setup-velden. Rechts: "Gemiste trade", bewust géén vijfde knop (de rij
+    // blijft rustig), alleen op het live journal — zoals de web-form
+    // (allowMissedTrade) 'm in een backtest-project ook niet aanbiedt.
+    const flags = el("div", { class: "by-flags" });
+    for (const field of flagFields()) {
+      const on_ = values[field.fieldKey] === true;
+      const flag = el("button", {
+        class: on_ ? "by-missed is-active" : "by-missed",
+        text: field.label,
+        attrs: { type: "button", "aria-pressed": String(on_), "data-field": field.fieldKey },
+      });
+      on(flag, "click", () => {
+        values[field.fieldKey] = !on_; // leeg vakje = nee: uitzetten schrijft expliciet false
+        renderResult();
+        updatePending();
+      });
+      flags.appendChild(flag);
+    }
+    const flagRow = el("div", { class: "by-missed-row" }, [flags]);
+    if (targetKey === "live") {
+      const toggle = el("button", {
+        class: missed ? "by-missed is-active" : "by-missed",
+        text: t("panel.missedToggle"),
+        attrs: { type: "button", "aria-pressed": String(missed) },
+      });
+      on(toggle, "click", () => {
+        missed = !missed;
+        // Running en gemist sluiten elkaar uit: de user kiest dan zelf Win/Loss/BE.
+        if (missed && result === "running") result = null;
+        renderResult();
+        updatePending();
+      });
+      flagRow.appendChild(toggle);
+    }
+    if (flags.childElementCount > 0 || targetKey === "live") resultWrap.appendChild(flagRow);
+    if (missed) {
+      resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:4px 0 0;", text: t("panel.missedHint") }));
+    }
 
     if (result === "running") {
       resultWrap.appendChild(el("p", { class: "by-hint", style: "margin:8px 0 0;", text: t("panel.runningHint") }));
@@ -784,7 +843,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultWrap.appendChild(
       el("div", { style: "margin-top:8px;" }, [
         el("span", { class: "by-label" }, [
-          document.createTextNode(t("panel.resultLabel")),
+          document.createTextNode(t(missed ? "panel.resultLabelMissed" : "panel.resultLabel")),
           el("span", { class: "by-req", text: " *" }),
         ]),
         input,
@@ -850,6 +909,18 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     else values["cc"] = cc;
   }
 
+  /** Aanvinkvakje-velden (0066) die nu zichtbaar zijn — die staan als vlag in de
+   * resultaat-rij i.p.v. tussen de journal-velden; hun waarde reist gewoon mee
+   * via `values` + formFieldList. */
+  function isFlagField(field: JournalField): boolean {
+    return field.fieldType === "boolean" && field.checkbox === true;
+  }
+  function flagFields(): JournalField[] {
+    if (!journal) return [];
+    const all = journal.fields;
+    return formFields(all).filter((f) => isFlagField(f) && isVisible(f, all, values));
+  }
+
   function renderJournalFields(): void {
     clear(journalSec.body);
     form = null;
@@ -871,7 +942,10 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // WPM-journal: zelfde vaste volgorde als de web-app (kenmerk+nieuws boven de
     // confirms, geen "Markt"-kop); andere journals blijven op sortOrder. `cc`
     // blijft uit de getoonde rijen (machinaal), maar zit wél in formFieldList.
-    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc"));
+    // Aanvinkvakjes (0066) staan als vlag in de resultaat-rij, niet hier.
+    const shownFields = orderedFormFields(formFieldList.filter((f) => f.fieldKey !== "cc" && !isFlagField(f)));
+    // Een vlag met een show_when-conditie moet meeschuiven als de ouder wijzigt.
+    const conditionalFlags = formFieldList.some((f) => isFlagField(f) && f.showWhenFieldId);
     if (shownFields.length > 0) {
       form = renderDynamicForm({
         allFields: journal.fields,
@@ -881,6 +955,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
           // Een keuze kan een show_when-veld openen of dichtklappen; sync werkt
           // meteen ook de select-waarden bij.
           form?.sync();
+          if (conditionalFlags) renderResult();
           updatePending();
         },
       });
@@ -890,6 +965,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         el("p", { class: "by-hint", style: "margin:0;", text: t("panel.noJournalFields") })
       );
     }
+    // De vlaggen-rij hangt van het journal af; het journal kan ná de
+    // resultaat-rij binnenkomen.
+    renderResult();
   }
 
   function renderExtra(): void {
@@ -941,7 +1019,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       manualDateTime = { date: manualDate, time: manualTime };
     }
 
-    if (result == null) return { ok: false, message: t("panel.v.pickResult") };
+    if (result == null || (missed && result === "running")) {
+      return { ok: false, message: t(missed ? "panel.v.pickResultMissed" : "panel.v.pickResult") };
+    }
     let tradeMode: LogTradeRequest["mode"] = { kind: "live-open" };
     if (result !== "running") {
       const pct = parseNumberInput(resultPct);
@@ -951,7 +1031,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       // Sluitdatum expliciet mee: wat de user aanpaste, anders de box-rand.
       // Leeg/null → tradePayload valt terug op de laatste bar (closeTimeUtcSec).
       const datumSluiting = closeDateTouched && closeDate ? closeDate : closeDatePrefill();
-      tradeMode = { kind: "post-hoc", outcome: result, resultaatPct: pct, datumSluiting };
+      tradeMode = {
+        kind: "post-hoc",
+        outcome: result,
+        resultaatPct: pct,
+        datumSluiting,
+        missed: missed && targetKey === "live",
+      };
     }
 
     // cc is een onzichtbaar, machinaal veld (owner 18-09): het mag de submit
@@ -1129,7 +1215,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     loggedScreenshots = null;
     values = {};
     overrides = {};
+    selectedPositionId = null; // volgende trade = weer de nieuwste tool
     result = defaultResult();
+    missed = false;
     resultPct = "";
     resultAuto = null;
     resultTouched = false;
@@ -1150,6 +1238,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
   // ── Laden ───────────────────────────────────────────────────────────────
   async function refreshChart(): Promise<void> {
+    const shownId = selectedPosition()?.id ?? null;
     chartLoading = true;
     chartError = null;
     renderChart();
@@ -1162,6 +1251,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       chart = null;
       chartError = { key: "panel.reload.short" };
     }
+    // Verversen kan op een andere tool uitkomen (er kwam een nieuwere bij):
+    // overrides horen bij één tool, niet bij de volgende.
+    if (chart && (selectedPosition()?.id ?? null) !== shownId) overrides = {};
     chartLoading = false;
     renderChart();
     renderPosition();

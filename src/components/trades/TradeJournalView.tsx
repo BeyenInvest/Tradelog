@@ -34,6 +34,7 @@ import {
   missedTrades as filterMissedTrades,
 } from "@/lib/stats";
 import { applyJournalFilters, EMPTY_FILTERS, activeFilterCount, type JournalFilters, type JournalPeriod } from "@/lib/tradeFilters";
+import { checkboxFieldKeys } from "@/lib/methodologyFields";
 import { AvgRStatCard, MaxDrawdownStatCard, ProfitFactorStatCard, ResultStatCard } from "@/components/trades/JournalKpiCards";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
 import { toErrorMessage } from "@/lib/errorMessage";
@@ -75,7 +76,8 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
   // import (untested against real exports) and share-link management. The Fase-E
   // stats (profit factor, current-streak) are live for everyone now.
   const { betaFeatures, profile } = useAuth();
-  const { trackExit } = useMethodology();
+  const { trackExit, fields } = useMethodology();
+  const checkboxKeys = useMemo(() => checkboxFieldKeys(fields), [fields]);
   const { unit: resultUnit, saldo } = useResultDisplay();
   const { trades, loading, error, createTrade, updateTrade, deleteTrade } = tradesApi;
   const [formOpen, setFormOpen] = useState(false);
@@ -113,7 +115,10 @@ export function TradeJournalView({ scope, tradesApi, title, subtitle, onboarding
     setPeriod(null);
     setFilters(EMPTY_FILTERS);
   }
-  const scopedTrades = useMemo(() => applyJournalFilters(trades, period, filters), [trades, period, filters]);
+  const scopedTrades = useMemo(
+    () => applyJournalFilters(trades, period, filters, checkboxKeys),
+    [trades, period, filters, checkboxKeys]
+  );
   // takenList = shown in the trade list (includes still-running open trades, badged);
   // realTrades = the realized-performance set for KPIs/charts/calendar (open trades
   // excluded via closedTrades, on top of the missed-trade exclusion of takenTrades).

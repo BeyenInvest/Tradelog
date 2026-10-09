@@ -71,6 +71,17 @@ describe("applyJournalFilters", () => {
     expect(applyJournalFilters(trades, null, { custom: { at_key_level: false } }).map((t) => t.id)).toEqual(["f"]);
   });
 
+  it("a checkbox field (0066) reads empty as false — 'Nee' also matches never-ticked trades", () => {
+    const trades = [
+      makeTrade({ id: "t", custom: { scale_in: true } }),
+      makeTrade({ id: "f", custom: { scale_in: false } }),
+      makeTrade({ id: "unset", custom: {} }),
+    ];
+    const keys = new Set(["scale_in"]);
+    expect(applyJournalFilters(trades, null, { custom: { scale_in: true } }, keys).map((t) => t.id)).toEqual(["t"]);
+    expect(applyJournalFilters(trades, null, { custom: { scale_in: false } }, keys).map((t) => t.id)).toEqual(["f", "unset"]);
+  });
+
   it("ANDs multiple custom filters together", () => {
     const trades = [
       makeTrade({ id: "both", custom: { setup: "Reversal", at_key_level: true } }),

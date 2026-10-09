@@ -336,6 +336,42 @@
   border-color: rgb(var(--color-be) / 0.6);
   background: rgb(var(--color-be) / 0.14);
 }
+.by-oc:disabled,
+.by-oc:disabled:hover {
+  opacity: 0.35;
+  cursor: default;
+  border-color: rgb(var(--color-border));
+  color: rgb(var(--color-muted));
+}
+/* Gemiste trade: geen vijfde knop maar een stille schakelaar onder de rij; aan
+ * = de uitkomst is hypothetisch, dus de knoppen krijgen een gestippelde rand. */
+.by-outcomes.is-missed .by-oc { border-style: dashed; }
+/* Vlaggen-rij: links de aanvinkvakje-velden van het journal (0066, bv.
+ * Scale-in), rechts "Gemiste trade" — dezelfde stille schakelaar-stijl. */
+.by-missed-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 7px; }
+.by-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; min-width: 0; }
+.by-missed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 2px 0;
+  color: rgb(var(--color-faint));
+  font: 500 12px/1.2 var(--font-body);
+  cursor: pointer;
+}
+.by-missed::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  box-sizing: border-box;
+}
+.by-missed:hover { color: rgb(var(--color-muted)); }
+.by-missed.is-active { color: rgb(var(--color-gold)); }
+.by-missed.is-active::before { background: currentColor; }
 
 /* ── Dynamische form ─────────────────────────────────────────────────────── */
 .by-group + .by-group { margin-top: 12px; }

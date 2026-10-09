@@ -106,4 +106,11 @@ describe("customFieldDimensions", () => {
     expect(newsDim.keyFn(makeTrade({ custom: { news: false } }))).toBe("Nee");
     expect(newsDim.keyFn(makeTrade({ custom: {} }))).toBeNull();
   });
+
+  it("a checkbox field (0066) reads empty as Nee, so every trade lands in the split", () => {
+    const [dim] = customFieldDimensions([field({ field_key: "scale_in", field_type: "boolean", checkbox: true })]);
+    expect(dim.keyFn(makeTrade({ custom: { scale_in: true } }))).toBe("Ja");
+    expect(dim.keyFn(makeTrade({ custom: { scale_in: false } }))).toBe("Nee");
+    expect(dim.keyFn(makeTrade({ custom: {} }))).toBe("Nee");
+  });
 });
