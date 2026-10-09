@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// index.ts importeert de Supabase-client (voor ctraderApi); die gooit zonder
+// VITE_SUPABASE_*-env, en CI heeft geen .env.local. Deze tests raken hem niet.
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 import { positionsToDeals } from "./index";
 import { prepareImport } from "@/lib/import";
 
