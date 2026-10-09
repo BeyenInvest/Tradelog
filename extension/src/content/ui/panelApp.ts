@@ -122,6 +122,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   /** Sluitdatum bij Win/Loss/BE; een eigen waarde wint van de tool-prefill. */
   let closeDate = "";
   let closeDateTouched = false;
+  /** Het getoonde sluitdatum-veld (alleen bij Win/Loss/BE) — updatePending houdt
+   * z'n prefill gelijk met wat er werkelijk meegaat. */
+  let closeInputEl: HTMLInputElement | null = null;
   let values: FormValues = {};
   /** Eén keer per formulier-sessie; blijft gelijk bij een retry (idempotentie). */
   let clientUuid = newClientUuid();
@@ -227,12 +230,29 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     return wallClockInTimezone(entryTimeSec * 1000, targets.timezone);
   }
 
+  /** De entry-datum die écht meegaat: de aangepaste datum (timeTouched, of geen
+   * tool-tijd), anders de tool-prefill — exact de keuze van buildRequest. */
+  function entryDate(): string | null {
+    if (!timeTouched && selectedPosition()?.entryTimeSec != null) return entryPrefill()?.date ?? null;
+    return manualDate || null;
+  }
+
   /** Sluitdatum-prefill: de rechterrand van de position-box (waar de trade
-   * "stopt"), anders de laatste bar (chart-"nu" — alleen in replay betrouwbaar). */
+   * "stopt"), anders de laatste bar (chart-"nu" — alleen in replay betrouwbaar).
+   * Nooit vóór de entry-datum: wie de entry naar de candle-close schuift (vaak
+   * over middernacht) of een andere tool kiest, kreeg anders een sluitdatum
+   * vóór de opening voorgesteld — en een onverklaarbare schema-fout bij loggen. */
   function closeDatePrefill(): string | null {
     const sec = selectedPosition()?.endTimeSec ?? (chart?.lastBar.ok ? chart.lastBar.value.timeSec : null);
     if (sec == null || !targets?.timezone) return null;
-    return wallClockInTimezone(sec * 1000, targets.timezone)?.date ?? null;
+    const date = wallClockInTimezone(sec * 1000, targets.timezone)?.date ?? null;
+    const open = entryDate();
+    return date && open && date < open ? open : date;
+  }
+
+  /** De sluitdatum die buildRequest meestuurt: wat de user typte, anders de prefill. */
+  function effectiveCloseDate(): string | null {
+    return closeDateTouched && closeDate ? closeDate : closeDatePrefill();
   }
 
   /**
@@ -745,6 +765,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     clear(resultWrap);
     resultInput = null;
     resultHint = null;
+    closeInputEl = null;
 
     const choices = el("div", {
       class: missed ? "by-outcomes is-quad is-missed" : "by-outcomes is-quad",
@@ -853,9 +874,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
 
     // Sluitdatum: zichtbaar en aanpasbaar (issue Mathias 2026-09-23 — de
     // laatste zichtbare bar is buiten replay niet waar de trade stopt; de
-    // rechterrand van de position-box wél). Prefill = closeDatePrefill().
+    // rechterrand van de position-box wél). Prefill = closeDatePrefill(); zolang
+    // de user niets typte houdt syncCloseInput() 'm bij (verversen, andere tool,
+    // aangepaste entry) — anders toonde het veld een oude datum terwijl er een
+    // andere meeging.
     const closeInput = el("input", { class: "by-input", attrs: { type: "date" } });
     closeInput.value = closeDateTouched ? closeDate : closeDatePrefill() ?? "";
+    closeInputEl = closeInput;
     on(closeInput, "input", () => {
       closeDate = closeInput.value;
       closeDateTouched = true;
@@ -1030,7 +1055,13 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       if (result === "Win" && pct < 0) return { ok: false, message: t("panel.v.winPositive") };
       // Sluitdatum expliciet mee: wat de user aanpaste, anders de box-rand.
       // Leeg/null → tradePayload valt terug op de laatste bar (closeTimeUtcSec).
-      const datumSluiting = closeDateTouched && closeDate ? closeDate : closeDatePrefill();
+      const datumSluiting = effectiveCloseDate();
+      // Zelfde regel als tradeSchema (closeBeforeOpen), maar hier — vóór het
+      // verzenden en mét beide datums in de zin — i.p.v. als kale schema-fout.
+      const open = entryDate();
+      if (datumSluiting && open && datumSluiting < open) {
+        return { ok: false, message: t("panel.v.closeBeforeOpen", { close: datumSluiting, open }) };
+      }
       tradeMode = {
         kind: "post-hoc",
         outcome: result,
@@ -1094,9 +1125,20 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     // invoer (prijs, risico, tijd, keuze) net veranderd is.
     syncResultSuggestion();
     syncCc();
+    syncCloseInput();
     const built = buildRequest();
     pendingLine.textContent = built.ok ? "" : built.message;
     pendingLine.hidden = built.ok;
+    // Een fout van de vorige poging hoort bij de vorige invoer: blijft hij staan
+    // na een correctie, dan lijkt de (nu kloppende) invoer de schuldige.
+    if (!errorBox.hidden) showError(null);
+  }
+
+  /** Niet-aangeraakt sluitdatum-veld = altijd de prefill van dít moment. */
+  function syncCloseInput(): void {
+    if (!closeInputEl || closeDateTouched) return;
+    const prefill = closeDatePrefill() ?? "";
+    if (closeInputEl.value !== prefill) closeInputEl.value = prefill;
   }
 
   async function submit(): Promise<void> {
