@@ -2,18 +2,20 @@
 //
 // GET /api/ctrader-callback?code=…&state=… — cTrader stuurt de browser hierheen
 // na "Allow access". Geen Supabase-JWT (top-level navigatie): de HMAC-gesigneerde
-// state uit api/ctrader.ts?action=start bewijst wie de koppeling startte.
+// state uit api/ctrader.ts?action=start bewijst wie de koppeling startte, en de
+// nonce-cookie bewijst dat het dezelfde browser is (anti-CSRF bij het koppelen).
 // Wisselt de code in, slaat de tokens versleuteld op, registreert de accounts
 // (standaard uit — de gebruiker kiest in Settings het doel-journal) en stuurt
 // terug naar /settings?ctrader=connected|error.
 
 import { readAppConfig } from "./_lib/ctrader/config.js";
-import { encryptToken, verifyState } from "./_lib/ctrader/secrets.js";
+import { OAUTH_COOKIE, encryptToken, nonceMatches, readCookie, verifyState } from "./_lib/ctrader/secrets.js";
 import { exchangeCode, listAccounts, type CtraderAccountInfo, type TokenSet } from "./_lib/ctrader/sync.js";
 
 interface VercelStyleRequest {
   method?: string;
   query?: Record<string, string | string[] | undefined>;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 interface VercelStyleResponse {
@@ -33,6 +35,8 @@ export interface CallbackDeps {
 
 function redirect(res: VercelStyleResponse, outcome: "connected" | "error" | "denied" | "noaccounts") {
   res.setHeader("cache-control", "no-store");
+  // Eenmalig: de nonce-cookie gaat bij elke uitkomst weg (geen state-replay).
+  res.setHeader("set-cookie", `${OAUTH_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
   res.setHeader("location", `/settings?ctrader=${outcome}`);
   res.status(302).end();
 }
@@ -45,7 +49,7 @@ export function createCallbackHandler(deps: CallbackDeps) {
       return;
     }
     const state = q("state") ? verifyState(q("state")!, deps.secret, (deps.now ?? Date.now)()) : null;
-    if (!state) {
+    if (!state || !nonceMatches(readCookie(req.headers?.cookie, OAUTH_COOKIE), state.nonce)) {
       redirect(res, "error");
       return;
     }

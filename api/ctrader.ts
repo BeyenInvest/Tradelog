@@ -11,7 +11,7 @@
 // Achter betaFeatures (= beta_features OR admin), zoals elke nieuwe feature.
 
 import { readAppConfig } from "./_lib/ctrader/config.js";
-import { decryptToken, encryptToken, signState } from "./_lib/ctrader/secrets.js";
+import { OAUTH_COOKIE, decryptToken, encryptToken, newNonce, signState } from "./_lib/ctrader/secrets.js";
 import {
   authorizeUrl,
   fetchClosedPositions,
@@ -112,7 +112,15 @@ export function createHandler(deps: CtraderDeps, rateLog: Map<string, number[]> 
       }
 
       if (action === "start") {
-        const state = signState({ userId: user.id, exp: now() + STATE_TTL_MS }, deps.secret);
+        // Nonce in state én in een HttpOnly-cookie: de callback aanvaardt de state
+        // alleen in dezelfde browser (SameSite=Lax gaat mee op de top-level
+        // redirect terug van cTrader).
+        const nonce = newNonce();
+        const state = signState({ userId: user.id, exp: now() + STATE_TTL_MS, nonce }, deps.secret);
+        res.setHeader(
+          "set-cookie",
+          `${OAUTH_COOKIE}=${nonce}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${STATE_TTL_MS / 1000}`
+        );
         res.status(200).json({ url: deps.authorizeUrl(state) });
         return;
       }

@@ -19,7 +19,7 @@
 ## 3. Security
 
 - Tokens verlaten de server nooit; at rest versleuteld; scope alleen-lezen.
-- Callback zonder JWT → HMAC-gesigneerde state (user + 10 min vervaltijd), timing-safe vergeleken.
+- Callback zonder JWT → HMAC-gesigneerde state (user + 10 min vervaltijd + nonce), timing-safe vergeleken. De nonce staat ook in een HttpOnly `__Host-`-cookie (SameSite=Lax) die `start` zet; de callback eist dat beide gelijk zijn en wist de cookie (security-review 2026-10-09: anders kon iemand zijn eigen koppel-link naar een slachtoffer sturen en diens cTrader-account onder zijn eigen Beyen-account binnenhalen).
 - Elk endpoint: JWT-verificatie + beta-check + per-user rate-limit (12 syncs / 5 min) + `user_id`-filter op elke query.
 - Fouten generiek naar de client, details alleen in server-logs.
 - ⚠️ Model-per-fase: dit raakt auth/migratie/security (Fable-terrein) maar is op Opus gebouwd op expliciet owner-verzoek → **security-review door een Fable-sessie vóór merge** aanbevolen.

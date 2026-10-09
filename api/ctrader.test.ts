@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createHandler, type CtraderDeps } from "./ctrader";
 import { createCallbackHandler, type CallbackDeps } from "./ctrader-callback";
-import { encryptToken, signState } from "./_lib/ctrader/secrets";
+import { OAUTH_COOKIE, encryptToken, signState, verifyState } from "./_lib/ctrader/secrets";
 
 const SECRET = "s".repeat(40);
 const NOW = Date.parse("2026-10-08T12:00:00Z");
@@ -75,7 +75,13 @@ describe("api/ctrader", () => {
     const res = mockRes();
     await createHandler(deps())(post("start", "good"), res);
     expect(res.statusCode).toBe(200);
-    expect((res.body as { url: string }).url).toMatch(/^https:\/\/id\.ctrader\.com\/x\?state=.+\..+/);
+    const url = (res.body as { url: string }).url;
+    expect(url).toMatch(/^https:\/\/id\.ctrader\.com\/x\?state=.+\..+/);
+    // De nonce in de state = de waarde van de HttpOnly-cookie.
+    const state = verifyState(url.split("state=")[1], SECRET, NOW);
+    expect(res.headers["set-cookie"]).toBe(
+      `${OAUTH_COOKIE}=${state!.nonce}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
+    );
   });
 
   it("sync haalt op vanaf de cursor met het ontsleutelde token", async () => {
@@ -144,21 +150,38 @@ describe("api/ctrader-callback", () => {
       ...overrides,
     };
   }
-  const get = (query: Record<string, string>) => ({ method: "GET", query });
+  const NONCE = "nonce-abc";
+  const get = (query: Record<string, string>, cookie: string | null = `other=1; ${OAUTH_COOKIE}=${NONCE}`) => ({
+    method: "GET",
+    query,
+    headers: cookie ? { cookie } : {},
+  });
+  const goodState = () => signState({ userId: "u1", exp: NOW + 60_000, nonce: NONCE }, SECRET);
 
   it("geldige state + code → tokens versleuteld opgeslagen, redirect connected", async () => {
     const d = cbDeps();
     const res = mockRes();
-    await createCallbackHandler(d)(get({ code: "c", state: signState({ userId: "u1", exp: NOW + 60_000 }, SECRET) }), res);
+    await createCallbackHandler(d)(get({ code: "c", state: goodState() }), res);
     expect(res.statusCode).toBe(302);
     expect(res.headers.location).toBe("/settings?ctrader=connected");
     const [userId, tokens] = vi.mocked(d.store).mock.calls[0];
     expect(userId).toBe("u1");
     expect(tokens.access_token_enc).not.toContain("acc");
+    expect(res.headers["set-cookie"]).toContain("Max-Age=0");
+  });
+
+  it("state uit een andere browser (geen of andere nonce-cookie) → error, niets opgeslagen", async () => {
+    for (const cookie of [null, `${OAUTH_COOKIE}=iets-anders`, "nonce-abc=1"]) {
+      const d = cbDeps();
+      const res = mockRes();
+      await createCallbackHandler(d)(get({ code: "c", state: goodState() }, cookie), res);
+      expect(res.headers.location).toBe("/settings?ctrader=error");
+      expect(d.store).not.toHaveBeenCalled();
+    }
   });
 
   it("vervalste of verlopen state → error, niets opgeslagen", async () => {
-    for (const state of ["garbage", signState({ userId: "u1", exp: NOW - 1 }, SECRET), signState({ userId: "u1", exp: NOW + 1000 }, "t".repeat(40))]) {
+    for (const state of ["garbage", signState({ userId: "u1", exp: NOW - 1, nonce: NONCE }, SECRET), signState({ userId: "u1", exp: NOW + 1000, nonce: NONCE }, "t".repeat(40))]) {
       const d = cbDeps();
       const res = mockRes();
       await createCallbackHandler(d)(get({ code: "c", state }), res);
@@ -169,7 +192,7 @@ describe("api/ctrader-callback", () => {
 
   it("geweigerd in cTrader → denied", async () => {
     const res = mockRes();
-    await createCallbackHandler(cbDeps())(get({ error: "access_denied", state: signState({ userId: "u1", exp: NOW + 60_000 }, SECRET) }), res);
+    await createCallbackHandler(cbDeps())(get({ error: "access_denied", state: goodState() }), res);
     expect(res.headers.location).toBe("/settings?ctrader=denied");
   });
 });

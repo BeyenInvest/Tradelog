@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
-import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useJournals } from "@/hooks/useJournals";
@@ -21,8 +20,9 @@ const FLASH_KEY: Record<Flash, string> = {
 /**
  * cTrader-koppeling (docs/plan-ctrader-sync.md §4). Start de OAuth-flow via
  * api/ctrader.ts?action=start, toont na de callback (/settings?ctrader=…) de
- * gekoppelde accounts en laat per account het doel-journal, aan/uit en de
- * startdatum kiezen. De tokens zelf zijn nooit client-side zichtbaar.
+ * gekoppelde accounts en laat per account het doel-journal en de startdatum
+ * kiezen. Een journal kiezen = automatisch importeren aan; "geen" = uit (de
+ * `enabled`-kolom volgt de keuze, geen aparte schakelaar). De tokens zelf zijn nooit client-side zichtbaar.
  * Beta-gated (gating-regel) — de SettingsPage rendert dit alleen voor betaFeatures.
  */
 export function CtraderConnectCard() {
@@ -120,7 +120,11 @@ export function CtraderConnectCard() {
       )}
 
       {accounts.length === 0 ? (
-        <p className="font-mono text-[11px] mt-3 text-muted">{t("ctrader.noAccounts")}</p>
+        <ol className="list-decimal pl-5 mt-3 flex flex-col gap-1 font-body text-xs text-muted">
+          <li>{t("ctrader.step1")}</li>
+          <li>{t("ctrader.step2")}</li>
+          <li>{t("ctrader.step3")}</li>
+        </ol>
       ) : (
         <div className="flex flex-col gap-3 mt-3">
           {accounts.map((a) => (
@@ -140,11 +144,14 @@ export function CtraderConnectCard() {
               <label className="flex items-center justify-between gap-3 font-body text-xs text-muted">
                 {t("ctrader.journal")}
                 <select
-                  value={a.methodology_id ?? ""}
-                  onChange={(e) => void patch(a, { methodology_id: e.target.value || null })}
+                  value={a.enabled ? (a.methodology_id ?? "") : ""}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    void patch(a, { methodology_id: id, enabled: id != null });
+                  }}
                   className="input text-xs py-1.5 max-w-[60%]"
                 >
-                  <option value="">{t("ctrader.chooseJournal")}</option>
+                  <option value="">{t("ctrader.noJournal")}</option>
                   {journals.map((j) => (
                     <option key={j.id} value={j.id}>
                       {j.naam}
@@ -153,14 +160,11 @@ export function CtraderConnectCard() {
                 </select>
               </label>
 
-              <div className="flex items-center justify-between gap-3 font-body text-xs text-muted">
-                {t("ctrader.syncOn")}
-                <BooleanToggle
-                  value={a.enabled}
-                  labels={[t("ctrader.on"), t("ctrader.off")]}
-                  onChange={(v) => void patch(a, { enabled: v && a.methodology_id != null })}
-                />
-              </div>
+              <p className={`font-mono text-[11px] ${a.enabled && a.methodology_id ? "text-win" : "text-faint"}`}>
+                {a.enabled && a.methodology_id
+                  ? t("ctrader.statusOn", { journal: journals.find((j) => j.id === a.methodology_id)?.naam ?? "" })
+                  : t("ctrader.statusOff")}
+              </p>
 
               {a.last_synced_at == null ? (
                 <label className="flex flex-col gap-1 font-body text-xs text-muted">

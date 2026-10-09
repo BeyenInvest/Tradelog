@@ -98,12 +98,12 @@ describe("secrets", () => {
   });
 
   it("state: geldig, vervalst en verlopen", () => {
-    const token = signState({ userId: "u1", exp: 10_000 }, SECRET);
-    expect(verifyState(token, SECRET, 5_000)).toEqual({ userId: "u1", exp: 10_000 });
+    const token = signState({ userId: "u1", exp: 10_000, nonce: "n1" }, SECRET);
+    expect(verifyState(token, SECRET, 5_000)).toEqual({ userId: "u1", exp: 10_000, nonce: "n1" });
     expect(verifyState(token, SECRET, 20_000)).toBeNull();
     expect(verifyState(token, "y".repeat(40), 5_000)).toBeNull();
     const [body, sig] = token.split(".");
-    const forged = Buffer.from(JSON.stringify({ u: "attacker", e: 10_000 })).toString("base64url");
+    const forged = Buffer.from(JSON.stringify({ u: "attacker", e: 10_000, n: "n1" })).toString("base64url");
     expect(verifyState(`${forged}.${sig}`, SECRET, 5_000)).toBeNull();
     expect(verifyState(body, SECRET, 5_000)).toBeNull();
   });
