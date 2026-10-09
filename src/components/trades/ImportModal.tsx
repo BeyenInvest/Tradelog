@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Upload, X, FileText } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { OutcomePill } from "@/components/ui/OutcomePill";
-import { supabase } from "@/lib/supabase";
-import { fetchAllPages } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { PAIRS, type Pair } from "@/lib/constants";
@@ -19,12 +17,9 @@ import {
   type ParsedDeal,
   type ParseWarning,
 } from "@/lib/import";
+import { fetchExistingImportRefs, loadStoredPairMap, storePairMap } from "@/lib/import/pairMap";
 import type { TradesApi, TradeScope } from "@/hooks/useTrades";
 
-// Per-user (C6): the remembered symbol→pair mapping was a single global key,
-// so a second account on the same browser inherited the first's mappings.
-const PAIR_MAP_STORAGE_BASE = "beyen.import.pairMap";
-const pairMapKey = (userId: string) => `${PAIR_MAP_STORAGE_BASE}:${userId}`;
 const PREVIEW_LIMIT = 8;
 const BROKERS: ImportBroker[] = ["ctrader", "mt", "tradingview", "generic"];
 const BROKER_LABEL_KEY: Record<ImportBroker, string> = {
@@ -34,26 +29,20 @@ const BROKER_LABEL_KEY: Record<ImportBroker, string> = {
   generic: "import.brokerGeneric",
 };
 
-function loadStoredPairMap(userId: string): Record<string, Pair> {
-  try {
-    const raw = localStorage.getItem(pairMapKey(userId));
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, string>;
-    const valid: Record<string, Pair> = {};
-    for (const [k, v] of Object.entries(parsed)) {
-      if ((PAIRS as readonly string[]).includes(v)) valid[k] = v as Pair;
-    }
-    return valid;
-  } catch {
-    return {};
-  }
-}
-
 interface ImportModalProps {
   tradesApi: TradesApi;
   /** Where the imported trades land: the live Journal (active journal) or one backtest project. */
   scope: TradeScope;
   onClose: () => void;
+  /**
+   * Pre-parsed deals instead of a file (the cTrader API sync hands over the
+   * positions it couldn't auto-import, e.g. unknown symbols). Hides the file
+   * picker; the rest of the wizard (symbol mapping, preview, dedup) is identical.
+   */
+  initialDeals?: ParsedDeal[];
+  initialBroker?: ImportBroker;
+  /** Called after a successful insert (before the user closes the done screen). */
+  onImported?: () => void;
 }
 
 /**
@@ -67,7 +56,7 @@ interface ImportModalProps {
  * was opened from: the live Journal's active journal, or the open backtest
  * project (TradingView backtests belong there).
  */
-export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
+export function ImportModal({ tradesApi, scope, onClose, initialDeals, initialBroker, onImported }: ImportModalProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const { isForexJournal, methodology } = useMethodology();
@@ -75,11 +64,11 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
 
   const [rawText, setRawText] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
-  const [broker, setBroker] = useState<ImportBroker>("ctrader");
+  const [broker, setBroker] = useState<ImportBroker>(initialBroker ?? "ctrader");
   // How ambiguous "a/b/yyyy" dates are read (N9). Day-first default (EU brokers);
   // the choice UI appears only when the file actually contains ambiguous dates.
   const [dateOrder, setDateOrder] = useState<DateOrder>("dmy");
-  const [deals, setDeals] = useState<ParsedDeal[]>([]);
+  const [deals, setDeals] = useState<ParsedDeal[]>(initialDeals ?? []);
   const [parseWarnings, setParseWarnings] = useState<ParseWarning[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
@@ -104,21 +93,15 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
   const loadExistingRefs = useCallback(async () => {
     const requestId = ++refsRequestRef.current;
     setRefsStatus("loading");
-    const { data, error } = await fetchAllPages<{ import_ref: string }>((from, to) =>
-      supabase
-        .from("trades")
-        .select("import_ref")
-        .eq("user_id", userId)
-        .not("import_ref", "is", null)
-        .order("id", { ascending: true })
-        .range(from, to)
-    );
-    if (requestId !== refsRequestRef.current) return; // superseded / modal closed
-    if (error) {
-      setRefsStatus("error");
+    let refs: Set<string>;
+    try {
+      refs = await fetchExistingImportRefs(userId);
+    } catch {
+      if (requestId === refsRequestRef.current) setRefsStatus("error");
       return;
     }
-    setExistingRefs(new Set((data ?? []).map((r) => r.import_ref)));
+    if (requestId !== refsRequestRef.current) return; // superseded / modal closed
+    setExistingRefs(refs);
     setRefsStatus("ready");
   }, [userId]);
 
@@ -196,11 +179,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
       const next = { ...prev };
       if (pair === "") delete next[symbol];
       else next[symbol] = pair as Pair;
-      try {
-        localStorage.setItem(pairMapKey(userId), JSON.stringify(next));
-      } catch {
-        /* ignore quota/availability errors — mapping still works this session */
-      }
+      storePairMap(userId, next);
       return next;
     });
   }
@@ -212,6 +191,7 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
     try {
       const count = await tradesApi.createTradesBulk(prepared.rows);
       setDoneCount(count);
+      onImported?.();
     } catch (err) {
       setImportError(toErrorMessage(err, t("import.importFailed")));
     } finally {
@@ -261,7 +241,8 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
                   : t("import.introProject")}
               </p>
 
-              {/* File picker + broker */}
+              {/* File picker + broker (not for API-supplied deals) */}
+              {!initialDeals && (
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm bg-surface-2 text-ink hover:bg-ink/5 cursor-pointer">
                   <Upload size={15} />
@@ -298,8 +279,9 @@ export function ImportModal({ tradesApi, scope, onClose }: ImportModalProps) {
                   </label>
                 )}
               </div>
+              )}
 
-              {parseError && <p className="text-sm text-loss">{parseError}</p>}
+              {parseError &&<p className="text-sm text-loss">{parseError}</p>}
 
               {deals.length > 0 && (
                 <>

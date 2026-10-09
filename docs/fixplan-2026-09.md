@@ -135,7 +135,7 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 
 **Trade Contract verwijderd (owner-besluit 2026-09-15):** de volledige `/contract`-feature (owner-only tool, migratie 0053) is uit de app gehaald — `ContractPage`, `useTradeContracts`, `components/contract/`, de route (`BetaRoute` daarmee ook weg), de Sidebar-nav-link, de `TradeContract*`-types en de i18n-`contract`-namespace (NL+EN). lint/tsc + 422 tests + build groen. De `trade_contracts`-tabel blijft in de prod-DB tot een aparte drop-migratie (Fable + owner draait 'm); de data blijft dus veilig recupereerbaar tot dan.
 
-**Ontdooid (owner-besluit 2026-09-30): handelsweek-zondag.** Een trade op zondag met `tijd_open >= 22:00` hoort bij de volgende week, overal: weekly-review-koppeling (DB-triggers + herkoppelen), weekgroepering, "Deze week" en het kalender-weektotaal. **Fable**, migratie **0063**. Leidend plan = `docs/plan-handelsweek-zondag.md`. Status: ☐
+**Ontdooid (owner-besluit 2026-09-30): handelsweek-zondag.** Een trade op zondag met `tijd_open >= 22:00` hoort bij de volgende week, overal: weekly-review-koppeling (DB-triggers + herkoppelen), weekgroepering, "Deze week" en het kalender-weektotaal. **Fable**, migratie **0063**. Leidend plan = `docs/plan-handelsweek-zondag.md`. Status: ☑ gemerged (PR #57, 2026-10-08), 0063/0064 op prod.
 
 ---
 
@@ -144,6 +144,11 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
 1. Un-gate-richting = **optie 1**: Settings-journalsectie + switcher live voor iedereen (i.p.v. copy afzwakken) — zet meteen de differentiator voor.
 2. Habits/Dagboek blijven live (owner-besluit van 07-09) maar bevroren; Contract blijft owner-only.
 3. Fase-2-server-aggregatie geschrapt van de roadmap ten gunste van kolomselectie + parallelle fetch (audit bril 7).
+4. **Freeze-uitzondering 2026-10-08 (owner): cTrader-koppeling** — automatische trade-import via de cTrader Open API, beta-gated, migratie 0065. Plan + owner-stappen: `docs/plan-ctrader-sync.md`.
+   - [x] Code + tests op branch `ctrader-sync`
+   - [ ] cTrader-app geregistreerd + Vercel-env (owner)
+   - [x] 0065 op prod + read-only verificatie (2026-10-08)
+   - [ ] Fable-security-review → PR gemerged
 
 ## Voortgang bijhouden
 
