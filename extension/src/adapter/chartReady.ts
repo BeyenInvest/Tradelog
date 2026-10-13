@@ -22,7 +22,10 @@
 // sneller dan de oude vaste timer), nooit langer dan ~5 s per slot wachten.
 
 export const READY_POLL_MS = 150;
-export const READY_TIMEOUT_MS = 5000;
+/** 7 s (was 5 s, 2026-10-13): een load die de cap haalt, captured anders
+ * mid-load — daar helpt geen grace tegen. Kost alleen iets als TV écht traag
+ * is; een vlot slot gaat meteen door. */
+export const READY_TIMEOUT_MS = 7000;
 export const BLIND_FALLBACK_MS = 1500; // oude vaste wachttijd, alleen nog als de adapter blind is
 /** dataReady=false mag de bar-stable-route niet eeuwig veto'en: sommige
  * TV-builds houden 'm false zolang een trage study laadt, terwijl de candles
@@ -34,8 +37,9 @@ export const BAR_STABLE_OVERRIDE_MS = 2000;
  * Was 200 ms en alleen na echt wachten; owner zag nog sporadisch een lege
  * chart (2026-10-08) — TV tekent de candles soms pas net ná het data-event/
  * busy=false. Daarom nu 500 ms en altijd, ook na een timeout (dan laadt hij
- * juist nog). Kost ±2 s op een volle 4-slot-cyclus. */
-export const GRACE_MS = 500;
+ * juist nog). 2026-10-13: nog steeds sporadisch lege snapshots → 1000 ms per
+ * timeframe. Kost ±4 s op een volle 4-slot-cyclus. */
+export const GRACE_MS = 1000;
 
 /** TV rapporteert een timeframe na een programmatische switch als "1D"/"1W"
  * waar wij "D"/"W" zetten (runtime bewezen 2026-09-22) — voor élke vergelijking
