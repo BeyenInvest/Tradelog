@@ -660,7 +660,11 @@
     "weekTotalShifted": "Weektotaal — zondagtrades vanaf 22:00 horen bij de handelsweek erna en tellen daarom in het totaal van de volgende rij; de dagcel blijft op de zondag staan",
     "dayNet": "Netto",
     "dayTrades": "Trades",
-    "dayWinRate": "Win rate (excl. BE)"
+    "dayWinRate": "Win rate (excl. BE)",
+    "moreTrades": "+{{count}} meer",
+    "chipMode": "Weergave van de dagen",
+    "chipModePairs": "Paren",
+    "chipModeDots": "Bolletjes"
   },
   "tradeBadge": {
     "missedTitle": "Hypothetisch — deze trade is niet genomen",

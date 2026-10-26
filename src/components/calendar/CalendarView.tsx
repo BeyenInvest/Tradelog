@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -6,19 +6,50 @@ import type { Trade } from "@/lib/types";
 import { WEEKDAYS, type Outcome } from "@/lib/constants";
 import { dateLocale, formatAggregate, resultInUnit } from "@/lib/format";
 import { round2, type ClosedTrade } from "@/lib/stats";
-import { dayTotalsInUnit, monthTotalOf, monthWeeks, rawDayTotalsInUnit, rowWeekNumber, tradesByDayOfMonth, tradingWeekRowTotals } from "@/lib/calendarTotals";
+import {
+  dayTotalsInUnit,
+  groupDayChips,
+  monthTotalOf,
+  monthWeeks,
+  rawDayTotalsInUnit,
+  rowWeekNumber,
+  tradesByDayOfMonth,
+  tradingWeekRowTotals,
+  visibleDayChips,
+  type DayChip,
+} from "@/lib/calendarTotals";
 import { useResultDisplay } from "@/hooks/useResultDisplay";
-
-interface PairChip {
-  pair: string;
-  outcome: Outcome;
-}
 
 /** Same outcome→color mapping OutcomePill uses elsewhere, applied here to a small leading dot rather than the whole pill — a calmer look than a fully colored chip. */
 const OUTCOME_COLOR_VAR: Record<Outcome, string> = { Win: "win", Loss: "loss", BE: "be" };
 
+/** Dot color for a chip: outcome color, or neutral grey for hypothetical (missed) and still-running (outcome null) trades. */
+function chipColor(chip: DayChip, missed: boolean, alpha: number): string {
+  return missed || chip.outcome == null ? "rgb(var(--color-muted) / 0.75)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / ${alpha})`;
+}
+
+/** Tooltip label: "GBPCHF ×2" when several trades are folded into one chip. */
+function chipLabel(chip: DayChip): string {
+  return chip.count > 1 ? `${chip.pair} ×${chip.count}` : chip.pair;
+}
+
 /** A leading week column (number + total) + 7 day columns, shared by the weekday header and every week row so each week's label + running total sit at the front of its row. */
 const GRID_TEMPLATE = { gridTemplateColumns: "minmax(3rem, auto) repeat(7, minmax(0, 1fr))" };
+
+/** Narrowest (square) day cell that fits a counted pair-chip ("XAUUSD ×3" ≈ 61px + 12px padding) — below it (phones, narrow windows) the cell always shows dots. */
+const NAMES_MIN_CELL_PX = 74;
+
+/** Day-cell display: pair-chips with names, or one colored dot per trade (calmer). A per-device preference, so localStorage — no profile column (feature-freeze: no migration). */
+type ChipMode = "pairs" | "dots";
+const CHIP_MODE_KEY = "calendarChipMode";
+
+function getInitialChipMode(): ChipMode {
+  try {
+    return localStorage.getItem(CHIP_MODE_KEY) === "dots" ? "dots" : "pairs";
+  } catch {
+    return "pairs"; // storage blocked
+  }
+}
 
 /** Sign → text color token for a compact aggregate (day/week/month totals). */
 function totalColor(v: number): string {
@@ -43,6 +74,35 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
 
+  const [chipMode, setChipModeState] = useState<ChipMode>(getInitialChipMode);
+  function setChipMode(mode: ChipMode) {
+    setChipModeState(mode);
+    try {
+      localStorage.setItem(CHIP_MODE_KEY, mode);
+    } catch {
+      /* storage blocked/full — remembering the choice is best-effort */
+    }
+  }
+
+  // The grid is fluid, so how many chips fit (and whether names fit at all)
+  // follows the measured cell size — never a clipped half chip or a taller row.
+  // Measured on the first weekday header: same column width as a (square) day
+  // cell, and — unlike the cells — never remounts on a month switch. Observing
+  // the column itself also catches the week column changing width (font load).
+  const columnRef = useRef<HTMLDivElement>(null);
+  const [cellPx, setCellPx] = useState(80);
+  useEffect(() => {
+    const column = columnRef.current;
+    if (!column || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setCellPx(Math.floor(column.getBoundingClientRect().width)));
+    ro.observe(column);
+    return () => ro.disconnect();
+  }, []);
+  const namesFit = cellPx >= NAMES_MIN_CELL_PX;
+  const showNames = chipMode === "pairs" && namesFit;
+  // Dots sit inline with the day number; past this many a "+N" takes over.
+  const maxDots = namesFit ? 6 : 4;
+
   // Bucketing + dag-/maandtotalen: pure functies in src/lib/calendarTotals.ts
   // (audit T1 — de totaallogica is daar getest, hier alleen nog wiring).
   const byDay = useMemo(() => tradesByDayOfMonth(trades, year, month), [trades, year, month]);
@@ -52,41 +112,10 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
   const realResultByDay = useMemo(() => dayTotalsInUnit(byDay, resultUnit, saldo), [byDay, resultUnit, saldo]);
   const monthTotal = useMemo(() => monthTotalOf(rawResultByDay), [rawResultByDay]);
 
-  /** Unique (pair, outcome) combos per day, in first-taken order — a pair traded twice with the same outcome shows once, but a pair that won once and lost once still shows both, since the outcome drives the chip's color. */
-  const pairsByDay = useMemo(() => {
-    const m = new Map<number, PairChip[]>();
-    for (const [day, dayTrades] of byDay) {
-      const seen = new Set<string>();
-      const chips: PairChip[] = [];
-      for (const t of dayTrades) {
-        // Chip label is the instrument (falls back to pair for legacy/forex) — so a
-        // non-forex journal shows its tickers, not the hidden default pair (cyclus 7).
-        const sym = t.instrument ?? t.pair;
-        const key = `${sym}|${t.outcome}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        chips.push({ pair: sym, outcome: t.outcome });
-      }
-      m.set(day, chips);
-    }
-    return m;
-  }, [byDay]);
-
-  const missedPairsByDay = useMemo(() => {
-    const m = new Map<number, PairChip[]>();
-    for (const t of missedTrades) {
-      const d = new Date(t.datum_open + "T00:00:00");
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        const chips = m.get(day) ?? [];
-        const sym = t.instrument ?? t.pair;
-        const key = `${sym}|${t.outcome}`;
-        if (!chips.some((c) => `${c.pair}|${c.outcome}` === key)) chips.push({ pair: sym, outcome: t.outcome });
-        m.set(day, chips);
-      }
-    }
-    return m;
-  }, [missedTrades, year, month]);
+  // Missed/open trades bucketed the same string-based way as the closed ones;
+  // the per-day chips are folded at render time via groupDayChips (calendarTotals.ts).
+  const missedByDay = useMemo(() => tradesByDayOfMonth(missedTrades, year, month), [missedTrades, year, month]);
+  const openByDay = useMemo(() => tradesByDayOfMonth(openTrades, year, month), [openTrades, year, month]);
 
   const errorDayTypes = useMemo(() => {
     const m = new Map<number, Set<string>>();
@@ -105,34 +134,13 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
   const missedDayResult = useMemo(() => {
     const m = new Map<number, number>();
-    for (const t of missedTrades) {
-      const d = new Date(t.datum_open + "T00:00:00");
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        // Dag-totaal in de gekozen eenheid (Fase J) — resultInUnit is de gedeelde
-        // conversie (zelfde regels als tradesInResultUnit).
-        m.set(day, (m.get(day) ?? 0) + resultInUnit(t, resultUnit, saldo));
-      }
+    for (const [day, dayMissed] of missedByDay) {
+      // Dag-totaal in de gekozen eenheid (Fase J) — resultInUnit is de gedeelde
+      // conversie (zelfde regels als tradesInResultUnit).
+      m.set(day, dayMissed.reduce((s, t) => s + resultInUnit(t, resultUnit, saldo), 0));
     }
     return m;
-  }, [missedTrades, year, month, resultUnit, saldo]);
-
-  // Still-running trades per day — neutral chips (no outcome color, no value). The
-  // placeholder "BE" outcome is never read: open chips always render grey (displayOpen).
-  const openPairsByDay = useMemo(() => {
-    const m = new Map<number, PairChip[]>();
-    for (const t of openTrades) {
-      const d = new Date(t.datum_open + "T00:00:00");
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        const chips = m.get(day) ?? [];
-        const sym = t.instrument ?? t.pair;
-        if (!chips.some((c) => c.pair === sym)) chips.push({ pair: sym, outcome: "BE" });
-        m.set(day, chips);
-      }
-    }
-    return m;
-  }, [openTrades, year, month]);
+  }, [missedByDay, resultUnit, saldo]);
 
   // Full weeks (each 7 cells, null = padding) so every row can carry a leading
   // week-total cell — construction lives in calendarTotals.ts.
@@ -152,8 +160,8 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
     const dayResult = realResultByDay.get(d) ?? null;
     const missed = missedDayResult.get(d);
     const missedResult = missed != null ? round2(missed) : null;
-    const openPairs = openPairsByDay.get(d);
-    const hasOpen = openPairs != null;
+    const dayOpen = openByDay.get(d);
+    const hasOpen = dayOpen != null;
 
     let bg = "rgb(var(--color-bg))";
     let border = "rgb(var(--color-border-soft))";
@@ -201,75 +209,74 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
 
     const dateIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const errorTypes = errorDayTypes.get(d);
-    const dayPairs = dayTrades ? pairsByDay.get(d) : displayOpen ? openPairs : missedResult != null ? missedPairsByDay.get(d) : undefined;
-    const visiblePairs = dayPairs?.slice(0, 2) ?? [];
-    const extraPairCount = dayPairs ? dayPairs.length - visiblePairs.length : 0;
+    // A day with a real result also lists its still-running trades (grey chips) —
+    // only missed trades stay chip-less there (the dashed border flags them).
+    const dayPairs = dayTrades
+      ? groupDayChips([...dayTrades, ...(dayOpen ?? [])])
+      : displayOpen && dayOpen
+        ? groupDayChips(dayOpen)
+        : displayMissed
+          ? groupDayChips(missedByDay.get(d) ?? [])
+          : undefined;
+    const { visible: visiblePairs, hiddenTrades } = visibleDayChips(showNames ? (dayPairs ?? []) : [], cellPx);
+    // Dots mode: one dot per trade (a folded "×2" chip becomes two dots).
+    const dots = showNames ? [] : (dayPairs ?? []).flatMap((chip) => Array.from({ length: chip.count }, () => chip));
+    const pairList = dayPairs?.map(chipLabel).join(", ");
 
     return (
       <button
         key={key}
         type="button"
         onClick={() => onDayClick?.(dateIso)}
-        className="relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left"
+        className={`relative rounded-lg p-1.5 aspect-square flex flex-col justify-between text-left ${showNames ? "overflow-hidden" : ""}`}
         style={{ background: bg, border: `1px ${borderStyle} ${border}` }}
         title={
           displayMissed
             ? t("calendar.missedHypothetical")
             : displayOpen
-              ? `${t("tradeBadge.open")} — ${dayPairs?.map((c) => c.pair).join(", ")}`
+              ? `${t("tradeBadge.open")} — ${pairList}`
               : errorTypes
-                ? Array.from(errorTypes).join(", ")
-                : dayPairs?.map((c) => c.pair).join(", ")
+                ? `${Array.from(errorTypes).join(", ")} — ${pairList}`
+                : pairList
         }
       >
         {errorTypes && <TriangleAlert size={11} strokeWidth={2.5} className="absolute top-1 right-1 text-gold" />}
         <span className="flex items-center gap-1">
-          <span className="font-mono text-[11px] text-muted">{d}</span>
-          {/* Narrow cells (mobile, <640px viewport): no room for readable pair text — a dot per pair inline with the day number instead. Full names are always one tap away via the day modal. */}
-          {dayPairs && dayPairs.length > 0 && (
-            <span className="flex sm:hidden items-center gap-0.5">
-              {dayPairs.slice(0, 4).map((chip) => (
-                <span
-                  key={`${chip.pair}-${chip.outcome}`}
-                  className="w-[4px] h-[4px] rounded-full border"
-                  style={{
-                    borderColor: displayMissed || displayOpen
-                      ? "rgb(var(--color-muted) / 0.8)"
-                      : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}) / 0.9)`,
-                  }}
-                />
+          <span className="font-mono text-[11px] leading-none text-muted">{d}</span>
+          {/* Dots mode (chosen, or forced in cells too narrow for readable names): a dot per trade inline with the day number. Full names are one hover/tap away (title, day modal). */}
+          {dots.length > 0 && (
+            <span className="flex items-center gap-0.5">
+              {dots.slice(0, maxDots).map((chip, i) => (
+                <span key={i} className="w-[4px] h-[4px] rounded-full border" style={{ borderColor: chipColor(chip, displayMissed, 0.9) }} />
               ))}
+              {dots.length > maxDots && <span className="font-mono text-[8px] leading-none text-faint">+{dots.length - maxDots}</span>}
             </span>
           )}
         </span>
-        {visiblePairs.length > 0 && (
-          <div className="hidden sm:flex sm:flex-col items-start gap-0.5 overflow-hidden">
+        {/* As many chips as the measured cell fits (3 at full size); the rest folds into "+N meer", N = hidden trades — see visibleDayChips. */}
+        {(visiblePairs.length > 0 || hiddenTrades > 0) && (
+          <div className="flex flex-col items-start gap-[2px] min-h-0 overflow-hidden">
             {visiblePairs.map((chip) => (
               <span
                 key={`${chip.pair}-${chip.outcome}`}
-                className={`inline-flex items-center gap-1 font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-muted whitespace-nowrap ${
+                className={`inline-flex items-center gap-1 font-mono text-[8px] leading-none px-1 py-[2px] rounded-full border border-border-soft/70 bg-surface/60 text-muted whitespace-nowrap ${
                   displayMissed ? "italic" : ""
                 }`}
               >
-                <span
-                  className="w-[4px] h-[4px] rounded-full shrink-0"
-                  style={{
-                    background: displayMissed || displayOpen ? "rgb(var(--color-muted) / 0.7)" : `rgb(var(--color-${OUTCOME_COLOR_VAR[chip.outcome]}))`,
-                  }}
-                />
+                <span className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: chipColor(chip, displayMissed, 1) }} />
                 {chip.pair}
+                {/* Same pair + same outcome more than once: one chip, the count keeps every trade visible. */}
+                {chip.count > 1 && <span className="text-faint">×{chip.count}</span>}
               </span>
             ))}
-            {extraPairCount > 0 && (
-              <span className="font-mono text-[8px] leading-none px-1 py-[3px] rounded-full border border-border-soft/70 bg-surface/60 text-faint">
-                +{extraPairCount}
-              </span>
+            {hiddenTrades > 0 && (
+              <span className="font-mono text-[8px] leading-none px-1 text-faint">{t("calendar.moreTrades", { count: hiddenTrades })}</span>
             )}
           </div>
         )}
         {displayValue != null && (
           <span
-            className="font-mono text-[11px] font-medium self-end"
+            className="font-mono text-[11px] leading-none font-medium self-end"
             style={{ color: displayColor, fontStyle: displayMissed ? "italic" : "normal" }}
           >
             {/* Krappe cel: 1 decimaal voor %/R, hele euro's voor geld. */}
@@ -291,6 +298,24 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Paren | Bolletjes — only offered where names fit; phone-size cells always show dots. */}
+          {namesFit && (
+            <div role="group" aria-label={t("calendar.chipMode")} className="flex items-center rounded-md border border-border-soft p-0.5 mr-1">
+              {(["pairs", "dots"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={chipMode === mode}
+                  onClick={() => setChipMode(mode)}
+                  className={`px-2 py-0.5 rounded font-body text-[11px] transition-colors ${
+                    chipMode === mode ? "bg-ink/5 text-ink" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {t(mode === "pairs" ? "calendar.chipModePairs" : "calendar.chipModeDots")}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             onClick={() => setMonthDate(new Date(year, month - 1, 1))}
             className="p-1.5 rounded-md hover:bg-ink/5 text-muted"
@@ -309,8 +334,8 @@ export function CalendarView({ trades, missedTrades = [], openTrades = [], onDay
       <div className="max-w-2xl mx-auto w-full">
       <div className="grid gap-1.5 font-body text-[11px] uppercase tracking-wide mb-2 text-muted" style={GRID_TEMPLATE}>
         <div className="text-center text-faint">{t("calendar.weekColHeader")}</div>
-        {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center">
+        {WEEKDAYS.map((d, i) => (
+          <div key={d} ref={i === 0 ? columnRef : undefined} className="text-center">
             {t(`weekdays.${d}`)}
           </div>
         ))}

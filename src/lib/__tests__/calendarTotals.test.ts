@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   dayTotalsInUnit,
+  groupDayChips,
   mondayFirstOffset,
   monthTotalOf,
   monthWeeks,
@@ -8,6 +9,7 @@ import {
   rowWeekNumber,
   tradesByDayOfMonth,
   tradingWeekRowTotals,
+  visibleDayChips,
 } from "@/lib/calendarTotals";
 import { round2 } from "@/lib/stats";
 
@@ -169,5 +171,67 @@ describe("rowWeekNumber", () => {
     // January 2027 starts on a Friday; row 0's Monday is 2026-12-28 → week 53 of 2026 (53-week year).
     expect(rowWeekNumber(2027, 0, 0)).toBe(53);
     expect(rowWeekNumber(2027, 0, 1)).toBe(1); // Monday 2027-01-04
+  });
+});
+
+/** Chip-input shape: instrument/pair/outcome/is_open. */
+function c(pair: string, outcome: "Win" | "Loss" | "BE" | null, is_open = false, instrument: string | null = null) {
+  return { pair, instrument, outcome, is_open };
+}
+
+describe("groupDayChips", () => {
+  it("folds two same-pair same-outcome trades into one chip with count 2 (not dropped)", () => {
+    expect(groupDayChips([c("GBPCHF", "Win"), c("GBPCHF", "Win")])).toEqual([{ pair: "GBPCHF", outcome: "Win", count: 2 }]);
+  });
+
+  it("keeps a separate chip per outcome, in first-seen order", () => {
+    expect(groupDayChips([c("GBPCAD", "Loss"), c("EURUSD", "Win"), c("GBPCAD", "Win")])).toEqual([
+      { pair: "GBPCAD", outcome: "Loss", count: 1 },
+      { pair: "EURUSD", outcome: "Win", count: 1 },
+      { pair: "GBPCAD", outcome: "Win", count: 1 },
+    ]);
+  });
+
+  it("open trades become their own outcome-less chip, ignoring the placeholder outcome", () => {
+    expect(groupDayChips([c("EURUSD", "Win"), c("EURUSD", null, true), c("EURUSD", "BE", true)])).toEqual([
+      { pair: "EURUSD", outcome: "Win", count: 1 },
+      { pair: "EURUSD", outcome: null, count: 2 },
+    ]);
+  });
+
+  it("labels by instrument when set", () => {
+    expect(groupDayChips([c("EURUSD", "Win", false, "NAS100")])[0].pair).toBe("NAS100");
+  });
+});
+
+describe("visibleDayChips", () => {
+  const chip = (pair: string, count = 1) => ({ pair, outcome: "Win" as const, count });
+
+  it("full-size cell (83px): 3 chips fit as-is", () => {
+    const chips = [chip("A"), chip("B"), chip("C", 2)];
+    expect(visibleDayChips(chips, 83)).toEqual({ visible: chips, hiddenTrades: 0 });
+  });
+
+  it("full-size cell, 4+ chips: 2 chips + the hidden trade count (summing counts, not chips)", () => {
+    const res = visibleDayChips([chip("A"), chip("B"), chip("C", 2), chip("D")], 83);
+    expect(res.visible.map((x) => x.pair)).toEqual(["A", "B"]);
+    expect(res.hiddenTrades).toBe(3);
+  });
+
+  it("laptop cell (77px): a 3rd chip folds into 2 chips + '+1'", () => {
+    const res = visibleDayChips([chip("A"), chip("B"), chip("C")], 77);
+    expect(res.visible.map((x) => x.pair)).toEqual(["A", "B"]);
+    expect(res.hiddenTrades).toBe(1);
+  });
+
+  it("smallest names cell (74px): 2 chips fit, 3 become 2 chips + '+1'", () => {
+    expect(visibleDayChips([chip("A"), chip("B")], 74).hiddenTrades).toBe(0);
+    const res = visibleDayChips([chip("A"), chip("B"), chip("C")], 74);
+    expect(res.visible.map((x) => x.pair)).toEqual(["A", "B"]);
+    expect(res.hiddenTrades).toBe(1);
+  });
+
+  it("a cell too small for any chip shows only the '+N' line", () => {
+    expect(visibleDayChips([chip("A", 2)], 40)).toEqual({ visible: [], hiddenTrades: 2 });
   });
 });
