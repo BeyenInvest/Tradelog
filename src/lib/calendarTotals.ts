@@ -2,7 +2,7 @@ import { round2, type ClosedTrade } from "@/lib/stats";
 import { resultInUnit } from "@/lib/format";
 import { isoWeekOf, tradingDateOf } from "@/lib/isoWeek";
 import { toLocalIso } from "@/lib/localDate";
-import type { ResultUnit } from "@/lib/constants";
+import type { Outcome, ResultUnit } from "@/lib/constants";
 
 /**
  * De kalender-totaallogica van CalendarView als pure, geteste functies (audit
@@ -153,3 +153,62 @@ export function rowWeekNumber(year: number, month: number, weekIndex: number): n
   const monday = new Date(year, month, 1 - startOffset + weekIndex * 7);
   return isoWeekOf(toLocalIso(monday)).week_nummer;
 }
+
+/** One pair-chip in a calendar day cell: every trade on that instrument with the same outcome, folded together. */
+export interface DayChip {
+  pair: string;
+  /** Drives the chip's dot color; null = still-running trade (neutral grey, no outcome yet). */
+  outcome: Outcome | null;
+  /** How many trades sit behind the chip — shown as "×2" so a repeat trade on the same pair stays visible. */
+  count: number;
+}
+
+/**
+ * Folds a day's trades into chips, in first-seen order: one chip per
+ * (instrument, outcome), open trades per instrument as their own grey chip.
+ * Folding (not dropping) keeps every trade counted — the old dedup hid a
+ * second same-pair same-outcome trade entirely.
+ */
+export function groupDayChips(
+  trades: { instrument: string | null; pair: string; outcome: Outcome | null; is_open?: boolean }[]
+): DayChip[] {
+  const chips: DayChip[] = [];
+  const byKey = new Map<string, DayChip>();
+  for (const t of trades) {
+    // Label = instrument (falls back to pair for legacy/forex) — a non-forex
+    // journal shows its tickers, not the hidden default pair (cyclus 7).
+    const pair = t.instrument ?? t.pair;
+    const outcome = t.is_open ? null : t.outcome;
+    const key = `${pair}|${outcome ?? "open"}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.count++;
+      continue;
+    }
+    const chip = { pair, outcome, count: 1 };
+    byKey.set(key, chip);
+    chips.push(chip);
+  }
+  return chips;
+}
+
+/**
+ * What fits in a (square) day cell of `cellPx`: every chip when they all fit,
+ * otherwise as many as fit above a short "+N" line — N counts the hidden
+ * *trades* (not chips), so the cell never under-reports how much was traded.
+ * The px constants mirror CalendarView's chip CSS (keep them in sync).
+ */
+export function visibleDayChips(chips: DayChip[], cellPx: number): { visible: DayChip[]; hiddenTrades: number } {
+  const area = cellPx - CELL_CHROME_PX;
+  if (chips.length * (CHIP_PX + CHIP_GAP_PX) - CHIP_GAP_PX <= area) return { visible: chips, hiddenTrades: 0 };
+  const fit = Math.max(0, Math.floor((area - MORE_LINE_PX) / (CHIP_PX + CHIP_GAP_PX)));
+  const hiddenTrades = chips.slice(fit).reduce((s, c) => s + c.count, 0);
+  return { visible: chips.slice(0, fit), hiddenTrades };
+}
+
+/** Pair-chip height (8px text + 2×2px padding + border), the "+N" line, and the gap between them. */
+const CHIP_PX = 14;
+const MORE_LINE_PX = 8;
+const CHIP_GAP_PX = 2;
+/** Vertical px a day cell spends on padding (2×6) + day number (11) + value (11). */
+const CELL_CHROME_PX = 34;
