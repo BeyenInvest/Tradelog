@@ -74,6 +74,7 @@ export const tradeSchema = z
     h4_screenshot: z.string().nullable().optional().default(null),
     h2_screenshot: z.string().nullable().optional().default(null),
     notes: z.string().nullable().optional().default(null),
+    emotions: z.string().nullable().optional().default(null),
 
     // Scope C, cyclus 3. `custom` is the flexible per-trade bag keyed by
     // MethodologyField.field_key; its shape is per-user so it can't be a fixed

@@ -69,6 +69,8 @@ export interface Trade {
   h2_screenshot: string | null;
 
   notes: string | null;
+  /** Tweede vaste notitieblok "Emoties" (0069); `notes` heet in de UI "Technisch". */
+  emotions: string | null;
 
   weekly_review_id: string | null;
 

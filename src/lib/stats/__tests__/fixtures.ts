@@ -35,6 +35,7 @@ export function makeTrade(overrides: Partial<ClosedTrade> = {}): ClosedTrade {
     h4_screenshot: null,
     h2_screenshot: null,
     notes: null,
+    emotions: null,
     weekly_review_id: null,
     backtest_project_id: null,
     import_ref: null,

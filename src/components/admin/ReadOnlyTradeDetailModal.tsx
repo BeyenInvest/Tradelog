@@ -20,7 +20,7 @@ function Row({ label, value }: { label: string; value: string | number | null | 
   return (
     <div className="flex justify-between gap-4 py-1.5 border-b border-border-soft last:border-0">
       <span className="font-body text-xs text-muted">{label}</span>
-      <span className="font-mono text-xs text-ink text-right">{value}</span>
+      <span className="font-mono text-xs text-ink text-right whitespace-pre-wrap">{value}</span>
     </div>
   );
 }
@@ -243,6 +243,12 @@ export function ReadOnlyTradeDetailModal({
               <div>
                 <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">{t("tradeForm.notes")}</p>
                 <p className="font-body text-sm text-ink whitespace-pre-wrap">{trade.notes}</p>
+              </div>
+            )}
+            {trade.emotions && (
+              <div className={trade.notes ? "mt-4" : undefined}>
+                <p className="font-body text-xs uppercase tracking-wider text-muted mb-2">{t("tradeForm.emotions")}</p>
+                <p className="font-body text-sm text-ink whitespace-pre-wrap">{trade.emotions}</p>
               </div>
             )}
           </>
