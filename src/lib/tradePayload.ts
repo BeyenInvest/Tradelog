@@ -80,6 +80,7 @@ export interface BuildTradeInput {
   /** Client-uuid voor idempotentie; wordt `import_ref = "tv-ext:<uuid>"` (C6). */
   clientUuid: string;
   notes?: string | null;
+  emotions?: string | null;
 }
 
 /** Wat PostgREST ingestuurd krijgt: gevalideerde form-values + herkomst/idempotentie. */
@@ -145,6 +146,7 @@ export function buildTradePayload(input: BuildTradeInput): BuildTradeOk | BuildT
   values.direction = input.direction;
   values.risk_pct = input.riskPct;
   values.notes = input.notes ?? null;
+  values.emotions = input.emotions ?? null;
   values.custom = pruneCustom(input.custom);
 
   if (input.prices) {

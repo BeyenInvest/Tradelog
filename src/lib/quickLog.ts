@@ -49,6 +49,7 @@ export function quickLogDefaults(today: string): TradeFormValues {
     h4_screenshot: null,
     h2_screenshot: null,
     notes: null,
+    emotions: null,
     custom: {},
     methodology_id: null,
   };

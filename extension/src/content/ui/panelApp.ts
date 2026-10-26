@@ -114,6 +114,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   let resultTouched = false;
   let riskPct = "";
   let notes = "";
+  let emotions = "";
   let manualDate = "";
   let manualTime = "";
   /** true zodra de user de entry-datum/tijd zelf aanraakte — de tool-prefill
@@ -153,11 +154,18 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   ]);
   const body = el("div", { class: "by-body" });
   const foot = el("div", { class: "by-foot" });
-  const panel = el("div", { class: "by-panel by-card", attrs: { role: "dialog" } }, [head, body, foot]);
+  // Greepjes in de onderhoeken: slepen = paneel groter/kleiner (panel.ts doet
+  // de pointer-events, gedelegeerd op de slot), dubbelklik = standaardmaat.
+  const resizeGrips = [
+    el("div", { class: "by-resize is-left", attrs: { "aria-hidden": "true" } }),
+    el("div", { class: "by-resize is-right", attrs: { "aria-hidden": "true" } }),
+  ];
+  const panel = el("div", { class: "by-panel by-card", attrs: { role: "dialog" } }, [head, body, foot, ...resizeGrips]);
   host.appendChild(panel);
 
   /** Alles wat buiten body/foot leeft en toch taal draagt. */
   function paintChrome(): void {
+    for (const grip of resizeGrips) grip.setAttribute("title", t("panel.resize"));
     panel.setAttribute("aria-label", t("panel.launcher"));
     closeBtn.setAttribute("title", t("panel.close"));
     closeBtn.setAttribute("aria-label", t("panel.close"));
@@ -998,8 +1006,9 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   function renderExtra(): void {
     clear(extraSec.body);
 
-    // Risico staat nu bij R:R in de position-tool (owner 2026-09-19); hier blijft
-    // alleen Notities over — kop-loze sectie.
+    // Risico staat nu bij R:R in de position-tool (owner 2026-09-19); hier staan
+    // alleen de twee notitieblokken (0069): "Technisch" (kolom notes) en
+    // "Emoties" — kop-loze sectie.
     const notesInput = el("textarea", {
       class: "by-input",
       attrs: { rows: "3", placeholder: t("panel.notesPlaceholder") },
@@ -1009,10 +1018,19 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
       notes = notesInput.value;
     });
 
+    const emotionsInput = el("textarea", {
+      class: "by-input",
+      attrs: { rows: "3", placeholder: t("panel.emotionsPlaceholder") },
+    });
+    emotionsInput.value = emotions;
+    on(emotionsInput, "input", () => {
+      emotions = emotionsInput.value;
+    });
+
     extraSec.body.appendChild(
-      el("div", {}, [
-        el("span", { class: "by-label", text: t("panel.notesLabel") }),
-        notesInput,
+      el("div", { class: "by-stack" }, [
+        el("div", {}, [el("span", { class: "by-label", text: t("panel.notesLabel") }), notesInput]),
+        el("div", {}, [el("span", { class: "by-label", text: t("panel.emotionsLabel") }), emotionsInput]),
       ])
     );
   }
@@ -1103,6 +1121,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
         // Alle methodology-antwoorden (incl. fase/cc/…) gaan via de custom-bag.
         custom: journal ? customFromValues(formFieldList, journal.fields, values) : {},
         notes: notes.trim() ? notes.trim() : null,
+        emotions: emotions.trim() ? emotions.trim() : null,
         clientUuid,
         screenshots: snapshotsSec.screenshots(),
       },
@@ -1265,6 +1284,7 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
     resultTouched = false;
     riskPct = "";
     notes = "";
+    emotions = "";
     manualDate = "";
     manualTime = "";
     timeTouched = false;

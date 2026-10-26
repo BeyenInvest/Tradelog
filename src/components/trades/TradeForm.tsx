@@ -64,6 +64,7 @@ export function emptyDefaults(): TradeFormValues {
     h4_screenshot: null,
     h2_screenshot: null,
     notes: null,
+    emotions: null,
     custom: {},
     methodology_id: null,
   };
@@ -95,6 +96,7 @@ function tradeToDefaults(trade: Trade): TradeFormValues {
     h4_screenshot: trade.h4_screenshot,
     h2_screenshot: trade.h2_screenshot,
     notes: trade.notes,
+    emotions: trade.emotions,
     // Methodology fields (incl. the former WPM fase/cc/…) live in the custom bag since 0059.
     custom: trade.custom ?? {},
     methodology_id: trade.methodology_id,

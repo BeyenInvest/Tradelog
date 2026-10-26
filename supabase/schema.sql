@@ -2,12 +2,13 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0068 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0069 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
 -- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
 -- 0064 = admin-select op de screenshots-bucket; 0066 = vakje-weergave voor
 -- ja/nee-velden; 0067 = WPM: weekly kenmerk onder fase; 0068 = Scale-in
--- standaard in elk journal; 0065 = broker-koppeling cTrader).
+-- standaard in elk journal; 0065 = broker-koppeling cTrader; 0069 = vast
+-- notitieblok "Emoties" op trades).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -306,7 +307,9 @@ create table trades (
   h4_screenshot text,
   h2_screenshot text,
 
+  -- UI-label "Technisch" (0069); `emotions` = het tweede vaste notitieblok.
   notes text,
+  emotions text,
 
   weekly_review_id uuid references weekly_reviews(id) on delete set null,
   backtest_project_id uuid references backtest_projects(id) on delete cascade,

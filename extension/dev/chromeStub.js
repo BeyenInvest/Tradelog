@@ -185,6 +185,16 @@
           return Promise.resolve();
         },
         remove: (key) => {
+          const changes = {};
+          for (const k of Array.isArray(key) ? key : [key]) {
+            if (!(k in store)) continue;
+            changes[k] = { oldValue: store[k] };
+            delete store[k];
+          }
+          for (const l of changeListeners) l(changes, "local");
+          return Promise.resolve();
+        },
+        remove: (key) => {
           const keys = Array.isArray(key) ? key : [key];
           for (const k of keys) delete store[k];
           return Promise.resolve();

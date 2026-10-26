@@ -92,6 +92,7 @@ export function dealToImportRow(
     h4_screenshot: null,
     h2_screenshot: null,
     notes: `Geïmporteerd (${broker}): ${deal.symbol}`,
+    emotions: null,
     // No methodology/custom fields for imported trades — the DB defaults custom to
     // {} and methodology_id to null; set explicitly here to satisfy TradeInput (Scope C).
     methodology_id: null,

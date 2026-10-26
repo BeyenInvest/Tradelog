@@ -129,7 +129,7 @@ export function groupTradesByOutcome(trades: Trade[]): TradeGroup[] {
 export function matchesSearch(t: Trade, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  if ([t.pair, t.instrument, t.notes].some((v) => v != null && v.toLowerCase().includes(q))) {
+  if ([t.pair, t.instrument, t.notes, t.emotions].some((v) => v != null && v.toLowerCase().includes(q))) {
     return true;
   }
   // The custom bag holds every methodology answer (incl. the former WPM fase/concept/entry since 0059).

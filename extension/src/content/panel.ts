@@ -14,6 +14,7 @@ import {
   clampLauncherPos, isDrag, LAUNCHER_POS_KEY, parseStoredPos, type LauncherPos,
 } from "./ui/launcherDrag";
 import { mountPanelApp, type PanelApp } from "./ui/panelApp";
+import { clampPanelSize, PANEL_SIZE_KEY, parseStoredSize, type PanelSize } from "./ui/panelSize";
 
 const HOST_ID = "beyen-tv-panel-host";
 
@@ -67,7 +68,29 @@ function mount(): void {
     host.style.right = "auto";
   }
 
+  // ── Paneelmaat (resize-greepjes) ─────────────────────────────────────────
+  // Gezet als custom properties op de host; die erven door de shadow root heen
+  // naar .by-panel (panel.css). null = standaardmaat. Ook in storage.local.
+  let panelSize: PanelSize | null = null;
+
+  function applySize(size: PanelSize | null): void {
+    panelSize = size;
+    if (size) {
+      host.style.setProperty("--by-panel-w", `${size.w}px`);
+      host.style.setProperty("--by-panel-h", `${size.h}px`);
+    } else {
+      host.style.removeProperty("--by-panel-w");
+      host.style.removeProperty("--by-panel-h");
+    }
+  }
+
   function reclamp(): void {
+    // Een kleiner venster dan toen de maat gekozen werd → paneel krimpt mee
+    // (niet opgeslagen: wordt het venster weer groter, dan blijft de keuze).
+    if (panelSize) {
+      const fitted = clampPanelSize(panelSize, { w: window.innerWidth - 16, h: window.innerHeight - 16 });
+      if (fitted.w !== panelSize.w || fitted.h !== panelSize.h) applySize(fitted);
+    }
     if (!customPos) return;
     const rect = host.getBoundingClientRect();
     applyPos(
@@ -75,12 +98,12 @@ function mount(): void {
     );
   }
 
-  void chrome.storage.local.get(LAUNCHER_POS_KEY).then((stored) => {
+  void chrome.storage.local.get([LAUNCHER_POS_KEY, PANEL_SIZE_KEY]).then((stored) => {
+    const size = parseStoredSize(stored[PANEL_SIZE_KEY]);
+    if (size) applySize(size);
     const pos = parseStoredPos(stored[LAUNCHER_POS_KEY]);
-    if (pos) {
-      applyPos(pos);
-      reclamp(); // een kleiner venster dan bij het opslaan → terug in beeld
-    }
+    if (pos) applyPos(pos);
+    reclamp(); // een kleiner venster dan bij het opslaan → terug in beeld
   });
   window.addEventListener("resize", reclamp);
 
@@ -135,11 +158,70 @@ function mount(): void {
 
   launcher.addEventListener("pointerdown", (event) => startDrag(event, launcher));
 
+  /** Vergroot/verklein het open paneel aan een hoek-greepje. De rechter-greep
+   * houdt de linkerrand vast, de linker-greep de rechterrand (het paneel staat
+   * standaard rechts op de chart, dus daar groeit het naar links). */
+  function startResize(event: PointerEvent, grip: HTMLElement): void {
+    if (event.button !== 0) return;
+    const panel = grip.closest(".by-panel");
+    if (!panel) return;
+    event.preventDefault(); // geen tekstselectie tijdens het slepen
+    const rect = panel.getBoundingClientRect();
+    const fromLeft = grip.classList.contains("is-left");
+    const start = { x: event.clientX, y: event.clientY };
+    const margin = 8;
+    // Vanaf nu op left/top verankerd (standaard staat de host op right:16px).
+    applyPos({ x: rect.left, y: rect.top });
+    try {
+      grip.setPointerCapture(event.pointerId);
+    } catch {
+      // geen actieve pointer (synthetisch event) — dan geen resize
+    }
+    grip.classList.add("is-dragging");
+
+    const onMove = (ev: PointerEvent): void => {
+      const dx = ev.clientX - start.x;
+      const size = clampPanelSize(
+        { w: rect.width + (fromLeft ? -dx : dx), h: rect.height + (ev.clientY - start.y) },
+        {
+          w: fromLeft ? rect.right - margin : window.innerWidth - rect.left - margin,
+          h: window.innerHeight - rect.top - margin,
+        }
+      );
+      applySize(size);
+      if (fromLeft) applyPos({ x: rect.right - size.w, y: rect.top });
+    };
+    const onUp = (): void => {
+      grip.removeEventListener("pointermove", onMove);
+      grip.removeEventListener("pointerup", onUp);
+      grip.removeEventListener("pointercancel", onUp);
+      grip.classList.remove("is-dragging");
+      reclamp();
+      if (panelSize) void chrome.storage.local.set({ [PANEL_SIZE_KEY]: panelSize, [LAUNCHER_POS_KEY]: customPos });
+    };
+    grip.addEventListener("pointermove", onMove);
+    grip.addEventListener("pointerup", onUp);
+    grip.addEventListener("pointercancel", onUp);
+  }
+
+  // Dubbelklik op een greepje = terug naar de standaardmaat.
+  slot.addEventListener("dblclick", (event) => {
+    if (!(event.target as Element | null)?.closest?.(".by-resize")) return;
+    applySize(null);
+    void chrome.storage.local.remove(PANEL_SIZE_KEY);
+    requestAnimationFrame(reclamp);
+  });
+
   // Het open paneel sleept aan zijn titelbalk (.by-head), maar niet aan de
   // knoppen erin — die houden hun klik. Gedelegeerd op de slot zodat het blijft
   // werken als panelApp de kop opnieuw tekent.
   slot.addEventListener("pointerdown", (event) => {
     const target = event.target as Element | null;
+    const grip = target?.closest?.(".by-resize");
+    if (grip) {
+      startResize(event, grip as HTMLElement);
+      return;
+    }
     const head = target?.closest?.(".by-head");
     if (!head || target?.closest?.("button, a, input, select, textarea")) return;
     startDrag(event, head as HTMLElement);

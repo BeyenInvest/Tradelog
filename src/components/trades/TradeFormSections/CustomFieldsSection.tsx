@@ -887,7 +887,7 @@ function FieldInput({
       return <input type="number" step="any" className="input" {...register(name, { valueAsNumber: true })} />;
     case "date":
       return <input type="date" className="input" {...register(name)} />;
-    default: // text
-      return <input type="text" className="input" {...register(name)} />;
+    default: // text — meerregelig, zodat een veld als "Technisch" of "Mentaal" een echte reflectie kan dragen
+      return <textarea rows={2} className="input min-h-[3.5rem] max-h-60 [field-sizing:content]" {...register(name)} />;
   }
 }

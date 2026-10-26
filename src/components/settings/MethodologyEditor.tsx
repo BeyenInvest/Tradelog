@@ -56,7 +56,7 @@ function nativeFields(
   t: TFunction,
   isWpm: boolean,
   hasCc: boolean
-): { entry: string[]; result: string[]; screenshots: string[]; notes: string } {
+): { entry: string[]; result: string[]; screenshots: string[]; notes: string[] } {
   return {
     // The form shows the open time unless a `cc` field takes its slot (EntrySection).
     entry: hasCc
@@ -78,7 +78,8 @@ function nativeFields(
       t(isWpm ? "tradeForm.h4Screenshot" : "tradeForm.screenshot3"),
       t(isWpm ? "tradeForm.h2Screenshot" : "tradeForm.screenshot4"),
     ],
-    notes: t("tradeForm.notes"),
+    // Twee vaste notitieblokken (0069): "Technisch" (kolom notes) + "Emoties".
+    notes: [t("tradeForm.notes"), t("tradeForm.emotions")],
   };
 }
 
@@ -375,9 +376,11 @@ export function MethodologyEditor() {
                 ))}
               </div>
             )}
-            {/* Notes stays a fixed built-in field. */}
+            {/* The two notes blocks (Technisch/Emoties) stay fixed built-in fields. */}
             <div className="mt-3 flex flex-col divide-y divide-border-soft border-t border-border-soft">
-              <NativeRow label={natives.notes} badge={badge} />
+              {natives.notes.map((label) => (
+                <NativeRow key={label} label={label} badge={badge} />
+              ))}
             </div>
           </FormSection>
 

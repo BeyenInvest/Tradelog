@@ -154,7 +154,7 @@ describe("logTradeFromChart", () => {
 
   it("werkt de laatst gelogde trade bij via z'n import_ref (F5) — zelfde payload, geen insert", async () => {
     const db = makeDb();
-    const result = await updateLoggedTradeByRef(db, req({ notes: "toch B-setup" }));
+    const result = await updateLoggedTradeByRef(db, req({ notes: "toch B-setup", emotions: "twijfel bij de entry" }));
     expect(result).toEqual({ ok: true, tradeId: "t-1", duplicate: false });
     expect(db.insertTrade).not.toHaveBeenCalled();
     const [where, patch] = (db.updateTrade as ReturnType<typeof vi.fn>).mock.calls[0] as [
@@ -162,6 +162,8 @@ describe("logTradeFromChart", () => {
     ];
     expect(where).toEqual({ importRef: "tv-ext:c-uuid-1" });
     expect(patch.notes).toBe("toch B-setup");
+    // 0069: het tweede notitieblok reist mee in dezelfde payload.
+    expect(patch.emotions).toBe("twijfel bij de entry");
     expect(patch.pair).toBe("AUDJPY");
   });
 

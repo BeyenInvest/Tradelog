@@ -69,9 +69,26 @@ export function TechnicalSection() {
         <ScreenshotField name="h4_screenshot" label={slotLabel(2)} allowUpload={allowUpload} />
         <ScreenshotField name="h2_screenshot" label={slotLabel(3)} allowUpload={allowUpload} />
       </div>
-      <Field label={t("tradeForm.notes")}>
-        <textarea rows={3} className="input" {...register("notes")} />
-      </Field>
+      {/* Twee vaste notitieblokken (0069): de kolom `notes` heet "Technisch",
+          `emotions` is de mentale kant. Groeien mee met de tekst. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label={t("tradeForm.notes")}>
+          <textarea
+            rows={3}
+            className="input min-h-[5rem] max-h-80 [field-sizing:content]"
+            placeholder={t("tradeForm.notesPlaceholder")}
+            {...register("notes")}
+          />
+        </Field>
+        <Field label={t("tradeForm.emotions")}>
+          <textarea
+            rows={3}
+            className="input min-h-[5rem] max-h-80 [field-sizing:content]"
+            placeholder={t("tradeForm.emotionsPlaceholder")}
+            {...register("emotions")}
+          />
+        </Field>
+      </div>
     </div>
   );
 }

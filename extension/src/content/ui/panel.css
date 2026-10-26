@@ -33,10 +33,14 @@
 
 /* ── Paneel ──────────────────────────────────────────────────────────────── */
 .by-panel {
+  position: relative; /* anker voor de resize-greepjes */
   display: flex;
   flex-direction: column;
-  width: 340px;
-  max-height: min(78vh, 760px);
+  /* --by-panel-w/-h zet panel.ts op de host zodra de gebruiker het paneel
+     vergroot/verkleint (en onthoudt); zonder = de standaardmaat. */
+  width: var(--by-panel-w, 340px);
+  height: var(--by-panel-h, auto);
+  max-height: var(--by-panel-h, min(78vh, 760px));
   overflow: hidden;
   box-shadow: 0 18px 46px rgb(0 0 0 / 0.55);
   animation: by-panel-in 0.16s ease-out;
@@ -48,6 +52,30 @@
 @media (prefers-reduced-motion: reduce) {
   .by-panel { animation: none; }
   .by-launcher { transition: none; }
+}
+
+/* Resize-greepjes: onzichtbaar vlakje in elke onderhoek met een subtiel
+   diagonaal streepje; links-greep laat de rechterrand staan en omgekeerd. */
+.by-resize {
+  position: absolute;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  z-index: 2;
+  touch-action: none;
+  opacity: 0.45;
+  transition: opacity 0.12s;
+}
+.by-resize:hover, .by-resize.is-dragging { opacity: 1; }
+.by-resize.is-right {
+  right: 0;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 55%, rgb(var(--color-muted)) 55%, rgb(var(--color-muted)) 63%, transparent 63%, transparent 75%, rgb(var(--color-muted)) 75%, rgb(var(--color-muted)) 83%, transparent 83%);
+}
+.by-resize.is-left {
+  left: 0;
+  cursor: nesw-resize;
+  background: linear-gradient(225deg, transparent 55%, rgb(var(--color-muted)) 55%, rgb(var(--color-muted)) 63%, transparent 63%, transparent 75%, rgb(var(--color-muted)) 75%, rgb(var(--color-muted)) 83%, transparent 83%);
 }
 
 .by-head {
@@ -432,7 +460,8 @@
   background: rgb(var(--color-gold) / 0.12);
 }
 
-textarea.by-input { resize: vertical; min-height: 58px; font: 13px/1.45 var(--font-body); }
+/* field-sizing: het vak groeit mee met de tekst (tot max-height, daarna scrollt het). */
+textarea.by-input { resize: vertical; min-height: 58px; max-height: 240px; field-sizing: content; font: 13px/1.45 var(--font-body); }
 
 /* ── Snapshots (F3b) ─────────────────────────────────────────────────────── */
 .by-snap-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }

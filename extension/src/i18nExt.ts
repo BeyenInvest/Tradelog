@@ -71,6 +71,7 @@ const NL = {
   // Paneel — host, staten, kop
   "panel.launcher": "Beyen — trade loggen",
   "panel.close": "Paneel sluiten",
+  "panel.resize": "Sleep om het paneel groter of kleiner te maken — dubbelklik voor de standaardmaat",
   "panel.booting.title": "Verbinden…",
   "panel.booting.text": "Even je Beyen-account controleren.",
   "panel.notLinked.title": "Nog niet gekoppeld",
@@ -160,8 +161,10 @@ const NL = {
   // Paneel — extra
   "panel.riskLabel": "Risico %",
   "panel.riskPlaceholder": "standaard 1%",
-  "panel.notesLabel": "Notities",
-  "panel.notesPlaceholder": "Wat zag je hier?",
+  "panel.notesLabel": "Technisch",
+  "panel.notesPlaceholder": "Wat zag je op de chart?",
+  "panel.emotionsLabel": "Emoties",
+  "panel.emotionsPlaceholder": "Hoe voelde je je? Rust, twijfel, FOMO…",
 
   // Paneel — verzenden
   "panel.submit": "Log trade",
@@ -344,6 +347,7 @@ const EN: Record<MessageKey, string> = {
   // Panel — host, states, header
   "panel.launcher": "Beyen — log a trade",
   "panel.close": "Close panel",
+  "panel.resize": "Drag to resize the panel — double-click for the default size",
   "panel.booting.title": "Connecting…",
   "panel.booting.text": "Just checking your Beyen account.",
   "panel.notLinked.title": "Not connected yet",
@@ -435,8 +439,10 @@ const EN: Record<MessageKey, string> = {
   // Panel — extra
   "panel.riskLabel": "Risk %",
   "panel.riskPlaceholder": "default 1%",
-  "panel.notesLabel": "Notes",
-  "panel.notesPlaceholder": "What did you see here?",
+  "panel.notesLabel": "Technical",
+  "panel.notesPlaceholder": "What did you see on the chart?",
+  "panel.emotionsLabel": "Emotions",
+  "panel.emotionsPlaceholder": "How did you feel? Calm, doubt, FOMO…",
 
   // Panel — submitting
   "panel.submit": "Log trade",

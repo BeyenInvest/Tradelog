@@ -23,6 +23,8 @@ export interface LogTradeRequest {
   /** Alle methodology-antwoorden (incl. fase/cc/… op een WPM-journal) → trades.custom. */
   custom: Record<string, unknown>;
   notes?: string | null;
+  /** Tweede notitieblok "Emoties" (0069); `notes` heet in de UI "Technisch". */
+  emotions?: string | null;
   clientUuid: string;
   /** Storage-paden uit de snapshot-cyclus (F3a) voor de vier vaste slots. */
   screenshots?: Partial<Record<"w" | "d" | "h4" | "h2", string | null>> | null;
@@ -71,6 +73,7 @@ async function prepareTradePayload(db: ExtensionDb, req: LogTradeRequest): Promi
     custom: req.custom,
     clientUuid: req.clientUuid,
     notes: req.notes ?? null,
+    emotions: req.emotions ?? null,
   });
   if (!built.ok) return { ok: false, stage: "build", error: built.error, detail: built.detail };
 

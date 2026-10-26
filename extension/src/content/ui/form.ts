@@ -88,8 +88,21 @@ export function enumControl(
   return select;
 }
 
+/** Vrij tekstveld = meerregelig vak (zelfde stijl als Notities), zoals op het web. */
+function textareaControl(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
+  const area = el("textarea", { class: "by-input", attrs: { rows: "2" } });
+  const current = values[field.fieldKey];
+  if (current != null) area.value = String(current);
+  on(area, "input", () => {
+    values[field.fieldKey] = area.value || null;
+    changed();
+  });
+  return area;
+}
+
 function inputControl(field: JournalField, values: FormValues, changed: () => void): HTMLElement {
-  const type = field.fieldType === "number" ? "number" : field.fieldType === "date" ? "date" : "text";
+  if (field.fieldType === "text") return textareaControl(field, values, changed);
+  const type = field.fieldType === "number" ? "number" : "date";
   const attrs: Record<string, string> = { type };
   if (type === "number") {
     attrs.step = "any";
