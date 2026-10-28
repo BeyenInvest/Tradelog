@@ -1,7 +1,8 @@
 // MAIN-world content script (F2a) — de enige plek die window.TradingViewApi
 // aanraakt. Leest de chart-state (S0-bewezen API-vorm, docs/spike-tv-extensie.md)
-// en zet op verzoek de resolution (snapshot-cyclus, F3a). Schrijft verder NIETS
-// naar TV. Gebundeld als IIFE (content scripts zijn classic scripts, geen ESM).
+// en zet op verzoek de resolution + reset vóór elke snapshot het chartbeeld
+// (snapshot-cyclus, F3a). Schrijft verder NIETS naar TV. Gebundeld als IIFE
+// (content scripts zijn classic scripts, geen ESM).
 import {
   GRACE_MS, normalizeResolution, READY_TIMEOUT_MS, waitForChartReady,
   type BarProbe, type ReadyProbe, type WaitReadyOutcome,
@@ -197,6 +198,22 @@ function setResolution(resolution: string): unknown {
   });
 }
 
+/** "Reset chart view" (Alt+R) via TV's eigen chart-actie `chartReset`
+ * (GUIResetScales: standaard bar-spacing + right offset, prijs-as op auto).
+ * Runtime bewezen 2026-10-28: werkt synchroon, en een timeframe-switch neemt
+ * de zoom/scroll van het vorige TF gewoon over — zonder reset kreeg elk slot
+ * dus de zoom van de user of van het vorige slot. Faalt stil: een niet-
+ * gereset beeld is nog altijd een bruikbare snapshot. */
+function resetChartView(): boolean {
+  const w = window as unknown as { TradingViewApi?: { activeChart?: () => { executeActionById?: (id: string) => void } } };
+  return safe(() => {
+    const c = w.TradingViewApi?.activeChart?.();
+    if (!c?.executeActionById) throw new Error("executeActionById niet beschikbaar");
+    c.executeActionById("chartReset");
+    return true;
+  }).ok;
+}
+
 /** Lezers voor de snapshot-settle (chartReady.ts) — zelfde defensieve stijl als
  * readState: elke TV-drift degradeert naar null/unreadable, nooit een throw. */
 function makeReadyProbe(): ReadyProbe {
@@ -302,6 +319,10 @@ async function waitChartReady(resolution: string): Promise<unknown> {
   } else {
     outcome = await waitForChartReady(makeReadyProbe(), resolution);
   }
+  // Elk slot in TV's standaardbeeld: ná de data-load (zo runtime getest — de
+  // reset blijft dan staan), vóór de frames + grace, zodat de hertekening
+  // binnen de wachttijd valt die er toch al was. Kost dus geen extra tijd.
+  const viewReset = resetChartView();
   // Data geladen ≠ frame getekend: twee frames afwachten vóór de capture. De
   // setTimeout-race voorkomt hangen wanneer rAF niet vuurt (verborgen tab).
   const frame = () =>
@@ -314,7 +335,7 @@ async function waitChartReady(resolution: string): Promise<unknown> {
   // Altijd nog een vaste grace: "data binnen + 2 frames" bleek niet altijd
   // genoeg (sporadisch lege chart), en na een timeout is hij juist nog bezig.
   await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
-  return { ok: true, ...outcome };
+  return { ok: true, ...outcome, viewReset };
 }
 
 function run(command: PageCommand): unknown | Promise<unknown> {
