@@ -195,15 +195,17 @@ async function snapshotCycle(
     capture,
     upload: (image) => db.uploadScreenshot(image),
     // Echt wachten tot TV het nieuwe timeframe geladen+getekend heeft (page-
-    // world pollt dataReady/laatste bar, cap 5 s) i.p.v. een blinde timer —
-    // de Daily-capture pakte anders een nog-ladende chart. Degradeert altijd
-    // richting "toch capturen": nooit slechter dan het oude gedrag.
+    // world: onDataLoaded-event of poll, cap 7 s) i.p.v. een blinde timer —
+    // de Daily-capture pakte anders een nog-ladende chart. Page-side zet hij
+    // daarna ook "Reset chart view" (Alt+R). Degradeert altijd richting "toch
+    // capturen": nooit slechter dan het oude gedrag.
     async settle(target) {
       try {
         const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-wait-ready", resolution: target });
         const r = typeof res === "object" && res !== null
-          ? (res as { ok?: unknown; ready?: unknown; signal?: unknown; waitedMs?: unknown })
+          ? (res as { ok?: unknown; ready?: unknown; signal?: unknown; waitedMs?: unknown; viewReset?: unknown })
           : null;
+        if (r?.viewReset === false) await appendLog("snapshot-reset-degraded", `chartReset faalde op ${target}`);
         if (r?.ok === true && r.ready === true) return;
         // Timeout of onbruikbaar antwoord: page-side is al ruim gewacht.
         await appendLog("snapshot-settle-degraded", `signal=${String(r?.signal ?? "geen antwoord")}, waitedMs=${String(r?.waitedMs ?? "?")}`);
