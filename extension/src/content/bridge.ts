@@ -2,15 +2,17 @@
 // naar het MAIN-world script en de (onbetrouwbare) antwoorden terug. Valideert
 // alleen de ENVELOPE; de payload wordt pas typed in parse.ts aan de extensie-kant.
 // Gebundeld als IIFE.
+import { isChartView, isSnapshotAnchor } from "../adapter/chartFrame";
 import { isPageResponse, makeRequest, type PageCommand } from "../adapter/protocol";
 
 const PAGE_TIMEOUT_MS = 3000;
 /** Screenshot rendert een canvas van de hele chart — gun 'm meer tijd dan een leesactie. */
 const SCREENSHOT_TIMEOUT_MS = 10_000;
-/** De snapshot-settle pollt page-side tot max READY_TIMEOUT_MS (7 s) + twee
- * frames (≤ 0,5 s) + GRACE_MS (1 s); de bridge-timeout moet daar ruim boven
- * zitten om het antwoord niet te "verliezen" terwijl het nog onderweg is. */
-const WAIT_READY_TIMEOUT_MS = 10_000;
+/** De snapshot-settle pollt page-side tot max READY_TIMEOUT_MS (7 s) +
+ * HISTORY_LOAD_TIMEOUT_MS (2,5 s) + twee frames (≤ 0,5 s) + GRACE_MS (1 s); de
+ * bridge-timeout moet daar ruim boven zitten om het antwoord niet te "verliezen"
+ * terwijl het nog onderweg is. */
+const WAIT_READY_TIMEOUT_MS = 12_000;
 
 const pending = new Map<string, { resolve: (payload: unknown) => void; timer: number }>();
 
@@ -40,6 +42,8 @@ function askPage(command: PageCommand, timeoutMs = PAGE_TIMEOUT_MS): Promise<unk
 interface BridgeMessage {
   type?: unknown;
   resolution?: unknown;
+  anchor?: unknown;
+  view?: unknown;
 }
 
 /** Chart-container-rect voor de snapshot-crop (F3a). Zelfde selector-ladder als
@@ -68,7 +72,16 @@ chrome.runtime.onMessage.addListener((msg: BridgeMessage, _sender, sendResponse)
     return true;
   }
   if (msg?.type === "tv-page-wait-ready" && typeof msg.resolution === "string") {
-    void askPage({ cmd: "wait-chart-ready", resolution: msg.resolution }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
+    const anchor = isSnapshotAnchor(msg.anchor) ? msg.anchor : null;
+    void askPage({ cmd: "wait-chart-ready", resolution: msg.resolution, anchor }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
+    return true;
+  }
+  if (msg?.type === "tv-page-read-view") {
+    void askPage({ cmd: "read-view" }).then(sendResponse);
+    return true;
+  }
+  if (msg?.type === "tv-page-restore-view" && typeof msg.resolution === "string" && isChartView(msg.view)) {
+    void askPage({ cmd: "restore-view", resolution: msg.resolution, view: msg.view }, WAIT_READY_TIMEOUT_MS).then(sendResponse);
     return true;
   }
   if (msg?.type === "tv-chart-rect") {

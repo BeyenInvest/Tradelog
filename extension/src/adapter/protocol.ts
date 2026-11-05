@@ -3,12 +3,16 @@
 // wordt pas typed nadat parse.ts het gevalideerd heeft. De envelope zelf wordt
 // hier strikt gecheckt (source-tag + richting + id), de payload blijft unknown.
 
+import { isChartView, isSnapshotAnchor, type ChartView, type SnapshotAnchor } from "./chartFrame";
+
 export const ENVELOPE_SOURCE = "beyen-tv-ext";
 
 export type PageCommand =
   | { cmd: "read-state" }
   | { cmd: "set-resolution"; resolution: string }
-  | { cmd: "wait-chart-ready"; resolution: string }
+  | { cmd: "wait-chart-ready"; resolution: string; anchor: SnapshotAnchor | null }
+  | { cmd: "read-view" }
+  | { cmd: "restore-view"; resolution: string; view: ChartView }
   | { cmd: "take-screenshot" };
 
 export interface PageRequestEnvelope {
@@ -42,11 +46,11 @@ export function isPageRequest(v: unknown): v is PageRequestEnvelope {
   if (!isRecord(v) || v.source !== ENVELOPE_SOURCE || v.dir !== "req" || typeof v.id !== "string") return false;
   const c = v.command;
   if (!isRecord(c)) return false;
-  if (c.cmd === "read-state") return true;
-  if (c.cmd === "set-resolution" || c.cmd === "wait-chart-ready") {
-    return typeof c.resolution === "string" && c.resolution.length > 0 && c.resolution.length < 16;
-  }
-  if (c.cmd === "take-screenshot") return true;
+  const resolutionOk = typeof c.resolution === "string" && c.resolution.length > 0 && c.resolution.length < 16;
+  if (c.cmd === "read-state" || c.cmd === "read-view" || c.cmd === "take-screenshot") return true;
+  if (c.cmd === "set-resolution") return resolutionOk;
+  if (c.cmd === "wait-chart-ready") return resolutionOk && (c.anchor === null || isSnapshotAnchor(c.anchor));
+  if (c.cmd === "restore-view") return resolutionOk && isChartView(c.view);
   return false;
 }
 
