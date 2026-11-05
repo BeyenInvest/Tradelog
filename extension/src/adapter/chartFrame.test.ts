@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  anchorRightOffset, applySnapshotFrame, barIndexAtOrBefore, isChartView, isSnapshotAnchor, MIN_BAR_SPACING,
-  resolutionSeconds, snapshotBarSpacing, type FrameChart,
+  anchorRightOffset, applySnapshotFrame, barIndexAtOrBefore, isChartView, isSnapshotAnchor, resolutionSeconds,
+  SNAPSHOT_BAR_SPACING, type FrameChart,
 } from "./chartFrame";
 
 const noSleep = async () => {};
@@ -14,7 +14,7 @@ function makeChart(overrides: Partial<FrameChart> = {}, opts: { bars?: number; h
   const barTime = (i: number) => 1_000_000 + i * 100;
   const chart: FrameChart = {
     resetView: vi.fn(() => { calls.push("reset"); }),
-    width: () => 1300,
+    width: () => 130 * SNAPSHOT_BAR_SPACING,
     rightOffset: () => 10,
     setBarSpacing: vi.fn((px: number) => { calls.push(`spacing:${px}`); }),
     setRightOffset: vi.fn((n: number) => { calls.push(`offset:${n}`); }),
@@ -30,19 +30,6 @@ function makeChart(overrides: Partial<FrameChart> = {}, opts: { bars?: number; h
   };
   return { chart, calls, barTime };
 }
-
-describe("snapshotBarSpacing", () => {
-  it("geeft elk scherm evenveel bars", () => {
-    expect(snapshotBarSpacing(1300, 10)).toBe(10);
-    expect(snapshotBarSpacing(2600, 10)).toBe(20);
-  });
-
-  it("zoomt nooit verder uit dan TV's standaard, en weigert een onbruikbare breedte", () => {
-    expect(snapshotBarSpacing(400, 10)).toBe(MIN_BAR_SPACING);
-    expect(snapshotBarSpacing(0, 10)).toBeNull();
-    expect(snapshotBarSpacing(Number.NaN, 10)).toBeNull();
-  });
-});
 
 describe("resolutionSeconds", () => {
   it("kent TV's schrijfwijzen", () => {
@@ -100,32 +87,46 @@ describe("applySnapshotFrame", () => {
   it("zonder trade: reset, dan vast aantal bars bij de nieuwste bar", async () => {
     const { chart, calls } = makeChart();
     expect(await applySnapshotFrame(chart, null, noSleep)).toBe("latest");
-    expect(calls).toEqual(["reset", "spacing:10"]);
+    expect(calls).toEqual(["reset", "spacing:8"]);
+  });
+
+  it("houdt op elk scherm dezelfde candlebreedte", async () => {
+    for (const width of [800, 1654, 3440]) {
+      const { chart, calls } = makeChart({ width: () => width });
+      await applySnapshotFrame(chart, null, noSleep);
+      expect(calls).toEqual(["reset", "spacing:8"]);
+    }
+  });
+
+  it("op een breder scherm past een oudere trade vanzelf in het standaardbeeld", async () => {
+    const { chart, barTime } = makeChart({ width: () => 400 * SNAPSHOT_BAR_SPACING });
+    expect(await applySnapshotFrame(chart, { entrySec: barTime(49), endSec: null }, noSleep)).toBe("latest");
+    expect(chart.setRightOffset).not.toHaveBeenCalled();
   });
 
   it("een recente trade blijft in het standaardbeeld", async () => {
     const { chart, calls, barTime } = makeChart();
     expect(await applySnapshotFrame(chart, { entrySec: barTime(280), endSec: null }, noSleep)).toBe("latest");
-    expect(calls).toEqual(["reset", "spacing:10"]);
+    expect(calls).toEqual(["reset", "spacing:8"]);
   });
 
   it("een oudere, geladen trade schuift in beeld zonder extra data te laden", async () => {
     const { chart, calls, barTime } = makeChart();
     expect(await applySnapshotFrame(chart, { entrySec: barTime(49), endSec: null }, noSleep)).toBe("anchored");
-    expect(calls).toEqual(["reset", "spacing:10", `offset:${43 - 250}`]);
+    expect(calls).toEqual(["reset", "spacing:8", `offset:${43 - 250}`]);
     expect(chart.loadRange).not.toHaveBeenCalled();
   });
 
   it("laadt oudere data en kadert daarna opnieuw", async () => {
     const { chart, calls, barTime } = makeChart({}, { bars: 300, historyBars: 1000 });
     expect(await applySnapshotFrame(chart, { entrySec: barTime(-100), endSec: null }, noSleep)).toBe("anchored");
-    expect(calls).toEqual(["reset", "spacing:10", "load", "reset", "spacing:10", `offset:${43 - 399}`]);
+    expect(calls).toEqual(["reset", "spacing:8", "load", "reset", "spacing:8", `offset:${43 - 399}`]);
   });
 
   it("valt terug op de nieuwste bars als de oudere data niet komt", async () => {
     const { chart, calls, barTime } = makeChart();
     expect(await applySnapshotFrame(chart, { entrySec: barTime(-100), endSec: null }, noSleep)).toBe("degraded");
-    expect(calls.slice(-2)).toEqual(["reset", "spacing:10"]);
+    expect(calls.slice(-2)).toEqual(["reset", "spacing:8"]);
     expect(chart.setRightOffset).not.toHaveBeenCalled();
   });
 
@@ -134,13 +135,12 @@ describe("applySnapshotFrame", () => {
       lastIndex: () => { throw new Error("drift"); },
     });
     expect(await applySnapshotFrame(chart, { entrySec: barTime(49), endSec: null }, noSleep)).toBe("degraded");
-    expect(calls).toEqual(["reset", "spacing:10", "reset", "spacing:10"]);
+    expect(calls).toEqual(["reset", "spacing:8", "reset", "spacing:8"]);
   });
 
   it("richt niet bij een onbruikbare chart-breedte", async () => {
     const { chart, barTime } = makeChart({ width: () => 0 });
     expect(await applySnapshotFrame(chart, { entrySec: barTime(49), endSec: null }, noSleep)).toBe("degraded");
-    expect(chart.setBarSpacing).not.toHaveBeenCalled();
     expect(chart.setRightOffset).not.toHaveBeenCalled();
   });
 });

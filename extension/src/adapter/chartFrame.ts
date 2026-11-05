@@ -1,13 +1,15 @@
-// Snapshot-kader (v0.2.17). "Reset chart view" alleen is te ruim voor een
-// snapshot: op een breed scherm staan er bij TV's standaard-spacing 250+ bars in
-// beeld, de automatische prijs-as schaalt daarop en de recente candles worden
-// platgedrukt (runtime gemeten op GBPCAD W: as 1,46-1,92 tegen 1,75-1,91 met 120
-// bars). De reset springt bovendien altijd naar de nieuwste bar, dus een oudere
-// trade viel uit beeld.
+// Snapshot-kader. "Reset chart view" alleen is te ruim voor een snapshot: bij
+// TV's standaard-spacing staan er op een breed scherm 250+ bars in beeld, de
+// automatische prijs-as schaalt daarop en de recente candles worden platgedrukt
+// (GBPCAD W: as 1,46-1,92 tegen 1,60-1,91 met 8 px). De reset springt bovendien
+// altijd naar de nieuwste bar, dus een oudere trade viel uit beeld.
 //
-// Daarom per slot: reset (prijs-as op auto) → vast aantal bars, ongeacht de
-// schermbreedte → en ligt de trade buiten dat beeld, dan het beeld naar de trade
-// schuiven. Alles hier is puur en testbaar; de TV-koppeling zit in tvFrame.ts.
+// Daarom per slot: reset (prijs-as op auto) → vaste candlebreedte → en ligt de
+// trade buiten dat beeld, dan het beeld naar de trade schuiven. Bewust een vaste
+// breedte en geen vast aantal bars: dat laatste (v0.2.17) gaf op een breed scherm
+// dikke candles (12+ px), wat de owner lomp vond. Nu oogt een candle op elk scherm
+// hetzelfde en verschilt alleen hoeveel bars er passen.
+// Alles hier is puur en testbaar; de TV-koppeling zit in tvFrame.ts.
 //
 // Runtime bewezen op de website (2026-11-05):
 //  - `setVisibleRange` geeft "Not implemented"; `setTimeFrame` met een
@@ -19,10 +21,12 @@
 
 import { normalizeResolution } from "./chartReady";
 
-export const SNAPSHOT_BARS = 120;
-/** TV's eigen standaard (chartReset): nooit verder uitzoomen dan dat, ook niet
- * op een smal chart-venster. */
-export const MIN_BAR_SPACING = 6;
+/** Candlebreedte in px (TV's standaard is 6). Gekozen op beeld, owner-besluit
+ * 2026-11-05: 12 px oogt lomp, 6 px drukt de prijs-as plat. */
+export const SNAPSHOT_BAR_SPACING = 8;
+/** Hoeveel bars vóór de entry we bij het laden van historie opvragen. Gaat alleen
+ * om de data: het beeld wordt daarna opnieuw gekaderd. */
+const HISTORY_LOAD_BARS = 200;
 /** Maximale wachttijd op oudere data na `setTimeFrame`. */
 export const HISTORY_LOAD_TIMEOUT_MS = 2500;
 const HISTORY_POLL_MS = 50;
@@ -72,13 +76,6 @@ export function resolutionSeconds(resolution: string): number | null {
   if (r === "W") return 604_800;
   if (r === "M") return 2_592_000;
   return /^\d+$/.test(r) && Number(r) > 0 ? Number(r) * 60 : null;
-}
-
-/** Spacing voor SNAPSHOT_BARS bars naast de lege ruimte rechts. null = de
- * breedte is onbruikbaar (verborgen chart, TV-drift). */
-export function snapshotBarSpacing(width: number, rightOffset: number): number | null {
-  if (!Number.isFinite(width) || width <= 0) return null;
-  return Math.max(MIN_BAR_SPACING, width / (SNAPSHOT_BARS + Math.max(0, rightOffset)));
 }
 
 /** Laatste bar die op of vóór `timeSec` start. Een entry op 2H valt zo in de
@@ -151,7 +148,7 @@ async function ensureHistory(
   if (!notLoaded()) return false;
   const barSec = resolutionSeconds(chart.resolution());
   if (barSec === null) return false;
-  chart.loadRange(anchor.entrySec - barSec * SNAPSHOT_BARS, anchor.entrySec + barSec * (SNAPSHOT_BARS / 3));
+  chart.loadRange(anchor.entrySec - barSec * HISTORY_LOAD_BARS, anchor.entrySec + barSec * (HISTORY_LOAD_BARS / 3));
   for (let waited = 0; waited < HISTORY_LOAD_TIMEOUT_MS && notLoaded(); waited += HISTORY_POLL_MS) {
     await sleep(HISTORY_POLL_MS);
   }
@@ -167,23 +164,21 @@ export async function applySnapshotFrame(
 ): Promise<FrameResult> {
   const standard = () => {
     chart.resetView();
-    const defaultOffset = chart.rightOffset();
-    const spacing = snapshotBarSpacing(chart.width(), defaultOffset);
-    if (spacing !== null) chart.setBarSpacing(spacing);
-    return { defaultOffset, spacing };
+    chart.setBarSpacing(SNAPSHOT_BAR_SPACING);
+    return chart.rightOffset();
   };
 
-  let frame = standard();
+  let defaultOffset = standard();
   if (!anchor) return "latest";
 
   try {
-    if (await ensureHistory(chart, anchor, sleep)) frame = standard();
-    const { defaultOffset, spacing } = frame;
+    if (await ensureHistory(chart, anchor, sleep)) defaultOffset = standard();
+    const visibleBars = chart.width() / SNAPSHOT_BAR_SPACING;
     const lastIndex = chart.lastIndex();
     const firstIndex = chart.firstIndex();
     const indexOf = (sec: number) => barIndexAtOrBefore(sec, firstIndex, lastIndex, chart.timeAt);
     const entryIndex = indexOf(anchor.entrySec);
-    if (spacing === null || entryIndex === null) {
+    if (!(visibleBars > 0) || entryIndex === null) {
       standard();
       return "degraded";
     }
@@ -191,7 +186,7 @@ export async function applySnapshotFrame(
     const offset = anchorRightOffset({
       barsAfterEntry: lastIndex - entryIndex,
       barsAfterEnd: endIndex === null ? null : lastIndex - endIndex,
-      visibleBars: chart.width() / spacing,
+      visibleBars,
       defaultOffset,
     });
     if (offset === null) return "latest";
