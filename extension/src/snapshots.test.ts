@@ -40,6 +40,52 @@ describe("runSnapshotCycle", () => {
     expect(result.slots.h4).toBeUndefined(); // niet gevraagd
   });
 
+  it("zet de eigen zoom pas terug nadat het timeframe hersteld is", async () => {
+    const view = { barSpacing: 25, rightOffset: -150 };
+    const { deps, calls } = makeDeps({
+      readView: vi.fn(async () => {
+        calls.push("read-view");
+        return view;
+      }),
+      restoreView: vi.fn(async (resolution: string) => {
+        calls.push(`restore-view:${resolution}`);
+      }),
+    });
+    await runSnapshotCycle(deps, ["w"]);
+    expect(calls).toEqual(["read-view", "set:W", "settle:W", "capture:W", "set:240", "restore-view:240"]);
+    expect(deps.restoreView).toHaveBeenCalledWith("240", view);
+  });
+
+  it("zet de zoom ook terug als er niet gewisseld hoefde te worden", async () => {
+    const { deps } = makeDeps({
+      readView: vi.fn(async () => ({ barSpacing: 25, rightOffset: 10 })),
+      restoreView: vi.fn(async () => {}),
+    });
+    await runSnapshotCycle(deps, ["h4"]); // chart staat al op 240
+    expect(deps.restoreView).toHaveBeenCalledTimes(1);
+  });
+
+  it("laat de zoom met rust als het timeframe niet hersteld kon worden, of de zoom onleesbaar was", async () => {
+    let resolution = "240";
+    const stuck = makeDeps({
+      getResolution: vi.fn(async () => resolution),
+      setResolution: vi.fn(async (r: string) => {
+        if (r !== "W") return false; // terug naar 240 lukt niet
+        resolution = r;
+        return true;
+      }),
+      readView: vi.fn(async () => ({ barSpacing: 25, rightOffset: 10 })),
+      restoreView: vi.fn(async () => {}),
+    });
+    const result = await runSnapshotCycle(stuck.deps, ["w"]);
+    expect(result.restored).toBe(false);
+    expect(stuck.deps.restoreView).not.toHaveBeenCalled();
+
+    const unreadable = makeDeps({ readView: vi.fn(async () => null), restoreView: vi.fn(async () => {}) });
+    await runSnapshotCycle(unreadable.deps, ["w"]);
+    expect(unreadable.deps.restoreView).not.toHaveBeenCalled();
+  });
+
   it("slaat het switchen over als de chart al op het slot-timeframe staat, maar settlet wél", async () => {
     const { deps, calls } = makeDeps();
     await runSnapshotCycle(deps, ["h4"]); // chart staat al op 240

@@ -1,13 +1,15 @@
 // MAIN-world content script (F2a) — de enige plek die window.TradingViewApi
 // aanraakt. Leest de chart-state (S0-bewezen API-vorm, docs/spike-tv-extensie.md)
-// en zet op verzoek de resolution + reset vóór elke snapshot het chartbeeld
-// (snapshot-cyclus, F3a). Schrijft verder NIETS naar TV. Gebundeld als IIFE
+// en zet op verzoek de resolution + het snapshot-kader (snapshot-cyclus, F3a;
+// kader via tvFrame.ts). Schrijft verder NIETS naar TV. Gebundeld als IIFE
 // (content scripts zijn classic scripts, geen ESM).
+import type { ChartView, SnapshotAnchor } from "../adapter/chartFrame";
 import {
   GRACE_MS, normalizeResolution, READY_TIMEOUT_MS, waitForChartReady,
   type BarProbe, type ReadyProbe, type WaitReadyOutcome,
 } from "../adapter/chartReady";
 import { isPageRequest, makeResponse, type PageCommand } from "../adapter/protocol";
+import { applyChartView, frameSnapshot, readChartView } from "./tvFrame";
 
 interface SafeResult {
   ok: boolean;
@@ -198,22 +200,6 @@ function setResolution(resolution: string): unknown {
   });
 }
 
-/** "Reset chart view" (Alt+R) via TV's eigen chart-actie `chartReset`
- * (GUIResetScales: standaard bar-spacing + right offset, prijs-as op auto).
- * Runtime bewezen 2026-10-28: werkt synchroon, en een timeframe-switch neemt
- * de zoom/scroll van het vorige TF gewoon over — zonder reset kreeg elk slot
- * dus de zoom van de user of van het vorige slot. Faalt stil: een niet-
- * gereset beeld is nog altijd een bruikbare snapshot. */
-function resetChartView(): boolean {
-  const w = window as unknown as { TradingViewApi?: { activeChart?: () => { executeActionById?: (id: string) => void } } };
-  return safe(() => {
-    const c = w.TradingViewApi?.activeChart?.();
-    if (!c?.executeActionById) throw new Error("executeActionById niet beschikbaar");
-    c.executeActionById("chartReset");
-    return true;
-  }).ok;
-}
-
 /** Lezers voor de snapshot-settle (chartReady.ts) — zelfde defensieve stijl als
  * readState: elke TV-drift degradeert naar null/unreadable, nooit een throw. */
 function makeReadyProbe(): ReadyProbe {
@@ -287,13 +273,11 @@ function makeReadyProbe(): ReadyProbe {
   };
 }
 
-/** Snapshot-settle: wachten tot de chart het gevraagde timeframe echt geladen
- * én getekend heeft. Primair = het gearmde onDataLoaded-event van de eigen
- * setResolution (snel én waarheidsgetrouw); zonder gearmd event (settle zonder
- * switch, TV-drift) valt hij terug op de poll in chartReady.ts. Rejects nooit —
- * bij timeout meldt hij dat en captured de cyclus alsnog. */
-async function waitChartReady(resolution: string): Promise<unknown> {
-  let outcome: WaitReadyOutcome;
+/** Wachten tot de chart het gevraagde timeframe echt geladen heeft. Primair = het
+ * gearmde onDataLoaded-event van de eigen setResolution (snel én waarheidsgetrouw);
+ * zonder gearmd event (settle zonder switch, TV-drift) valt hij terug op de poll
+ * in chartReady.ts. Rejects nooit — bij timeout meldt hij dat. */
+async function waitLoaded(resolution: string): Promise<WaitReadyOutcome> {
   const pend = pendingLoad;
   if (pend && normalizeResolution(pend.target) === normalizeResolution(resolution)) {
     pendingLoad = null; // verbruikt — één settle per gearmde switch
@@ -313,16 +297,21 @@ async function waitChartReady(resolution: string): Promise<unknown> {
     }
     const waitedMs = Date.now() - start;
     const ready = pend.fired && probe.busy() !== true;
-    outcome = ready
+    return ready
       ? { ready: true, signal: "data-loaded", waitedMs, polls: 0 }
       : { ready: false, signal: "timeout", waitedMs, polls: 0 };
-  } else {
-    outcome = await waitForChartReady(makeReadyProbe(), resolution);
   }
-  // Elk slot in TV's standaardbeeld: ná de data-load (zo runtime getest — de
-  // reset blijft dan staan), vóór de frames + grace, zodat de hertekening
-  // binnen de wachttijd valt die er toch al was. Kost dus geen extra tijd.
-  const viewReset = resetChartView();
+  return waitForChartReady(makeReadyProbe(), resolution);
+}
+
+/** Snapshot-settle: geladen, in het kader gezet en getekend. Rejects nooit —
+ * bij een timeout captured de cyclus alsnog. */
+async function waitChartReady(resolution: string, anchor: SnapshotAnchor | null): Promise<unknown> {
+  const outcome = await waitLoaded(resolution);
+  // Het kader ná de data-load (zo runtime getest — hij blijft dan staan), vóór
+  // de frames + grace, zodat de hertekening binnen de wachttijd valt die er toch
+  // al was. Kost dus geen extra tijd, behalve als oudere data moet laden.
+  const { viewReset, framing } = await frameSnapshot(anchor);
   // Data geladen ≠ frame getekend: twee frames afwachten vóór de capture. De
   // setTimeout-race voorkomt hangen wanneer rAF niet vuurt (verborgen tab).
   const frame = () =>
@@ -335,7 +324,14 @@ async function waitChartReady(resolution: string): Promise<unknown> {
   // Altijd nog een vaste grace: "data binnen + 2 frames" bleek niet altijd
   // genoeg (sporadisch lege chart), en na een timeout is hij juist nog bezig.
   await new Promise((resolve) => setTimeout(resolve, GRACE_MS));
-  return { ok: true, ...outcome, viewReset };
+  return { ok: true, ...outcome, viewReset, framing };
+}
+
+/** Na de cyclus: de zoom van de trader terug op het oorspronkelijke timeframe.
+ * Eerst de load afwachten: vlak na een switch zou TV de zoom weer overschrijven. */
+async function restoreChartView(resolution: string, view: ChartView): Promise<unknown> {
+  await waitLoaded(resolution);
+  return { ok: applyChartView(view) };
 }
 
 function run(command: PageCommand): unknown | Promise<unknown> {
@@ -345,7 +341,11 @@ function run(command: PageCommand): unknown | Promise<unknown> {
     case "set-resolution":
       return setResolution(command.resolution);
     case "wait-chart-ready":
-      return waitChartReady(command.resolution);
+      return waitChartReady(command.resolution, command.anchor);
+    case "read-view":
+      return readChartView() ?? { ok: false };
+    case "restore-view":
+      return restoreChartView(command.resolution, command.view);
     case "take-screenshot":
       return takeScreenshot();
   }

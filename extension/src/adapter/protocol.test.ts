@@ -7,6 +7,10 @@ describe("isPageRequest", () => {
   it("accepteert alleen de eigen goedgevormde envelopes", () => {
     expect(isPageRequest(makeRequest("id-1", { cmd: "read-state" }))).toBe(true);
     expect(isPageRequest(makeRequest("id-2", { cmd: "set-resolution", resolution: "240" }))).toBe(true);
+    expect(isPageRequest(makeRequest("id-3", { cmd: "wait-chart-ready", resolution: "240", anchor: null }))).toBe(true);
+    expect(isPageRequest(makeRequest("id-4", { cmd: "wait-chart-ready", resolution: "240", anchor: { entrySec: 1_700_000_000, endSec: null } }))).toBe(true);
+    expect(isPageRequest(makeRequest("id-5", { cmd: "read-view" }))).toBe(true);
+    expect(isPageRequest(makeRequest("id-6", { cmd: "restore-view", resolution: "240", view: { barSpacing: 6, rightOffset: -150 } }))).toBe(true);
   });
 
   it("weigert rommel, andere sources en kapotte commands", () => {
@@ -26,6 +30,11 @@ describe("isPageRequest", () => {
       { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "set-resolution", resolution: "" } },
       { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "set-resolution", resolution: "X".repeat(64) } },
       { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "set-resolution", resolution: 240 } },
+      { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "wait-chart-ready", resolution: "240" } }, // anchor mist
+      { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "wait-chart-ready", resolution: "240", anchor: { entrySec: "1" } } },
+      { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "restore-view", resolution: "240" } }, // view mist
+      { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "restore-view", resolution: "240", view: { barSpacing: 0, rightOffset: 0 } } },
+      { source: "beyen-tv-ext", dir: "req", id: "x", command: { cmd: "restore-view", view: { barSpacing: 6, rightOffset: 0 } } }, // resolution mist
     ]) {
       expect(isPageRequest(bad)).toBe(false);
     }

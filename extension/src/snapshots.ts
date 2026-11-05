@@ -13,6 +13,7 @@
 // "needs-gesture" zodat de UI kan zeggen: "klik één keer op het Beyen-icoon".
 
 import { DEFAULT_SLOT_TIMEFRAMES, resolveSlotTimeframes } from "../../src/lib/screenshotSlots";
+import type { ChartView } from "./adapter/chartFrame";
 import { normalizeResolution } from "./adapter/chartReady";
 
 export const SNAPSHOT_SLOTS = ["w", "d", "h4", "h2"] as const;
@@ -76,6 +77,11 @@ export interface SnapshotDeps {
   /** Wachten tot TV het gevraagde timeframe geladen én getekend heeft. Mag
    * nooit rejecten — de impl (sw.ts → wait-chart-ready) degradeert zelf. */
   settle(target: string): Promise<void>;
+  /** De zoom van de trader, vóór het eerste kader. null = onleesbaar. Optioneel:
+   * zonder deze twee blijft de chart in het laatste kader staan. */
+  readView?(): Promise<ChartView | null>;
+  /** Mag nooit rejecten; wacht zelf tot `resolution` geladen is. */
+  restoreView?(resolution: string, view: ChartView): Promise<void>;
   /** Optioneel: kleine preview-data-URL van de snapshot voor de UI. Mag falen —
    * een preview is nice-to-have, nooit een reden om het slot te laten
    * mislukken. */
@@ -124,6 +130,7 @@ export async function runSnapshotCycle(
   // timeframe wisselt. Zelfde beelden, alleen niet meer serieel wachten.
   const pending: Array<{ slot: SnapshotSlot; result: Promise<SlotResult> }> = [];
   const original = await deps.getResolution();
+  const view = (await deps.readView?.()) ?? null;
   // Vergelijken altijd genormaliseerd: TV rapporteert na een switch "1D"/"1W"
   // waar wij "D"/"W" zetten — raw vergelijken gaf spook-switches (en het
   // herstel gebruikt bewust de ráuwe original, die TV gewoon accepteert).
@@ -168,6 +175,8 @@ export async function runSnapshotCycle(
     if (!same(now, original)) {
       restored = await deps.setResolution(original);
     }
+    // Pas ná het timeframe-herstel: een zoom op het verkeerde TF zegt niets.
+    if (restored && view) await deps.restoreView?.(original, view);
   }
   for (const p of pending) {
     results[p.slot] = await p.result;

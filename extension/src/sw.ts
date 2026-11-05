@@ -1,6 +1,7 @@
 // MV3 service worker — auth-eigenaar van de extensie (plan §2.6). Houdt de
 // Supabase-sessie in chrome.storage, ververst via chrome.alarms en beantwoordt
 // popup-berichten. Geen writes naar trades in F1b.
+import { isChartView, isSnapshotAnchor, type SnapshotAnchor } from "./adapter/chartFrame";
 import { parseChartState } from "./adapter/parse";
 import { REFRESH_ALARM_MINUTES, REFRESH_ALARM_NAME } from "./config";
 import type { ExtRequest, ExtResponses } from "./messages";
@@ -78,7 +79,7 @@ async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Pr
       return result;
     }
     case "snapshot-cycle":
-      return snapshotCycle(req.slots, req.resolutions, sender);
+      return snapshotCycle(req.slots, req.resolutions, isSnapshotAnchor(req.anchor) ? req.anchor : null, sender);
     case "delete-screenshots":
       await db.removeScreenshots(req.paths.filter((p) => typeof p === "string" && p.length < 200));
       return { ok: true };
@@ -137,6 +138,7 @@ function sanitizeResolutions(raw: Record<SnapshotSlot, string> | undefined): Rec
 async function snapshotCycle(
   slots: SnapshotSlot[],
   resolutions: Record<SnapshotSlot, string> | undefined,
+  anchor: SnapshotAnchor | null,
   sender: chrome.runtime.MessageSender
 ): Promise<ExtResponses["snapshot-cycle"]> {
   const tab = await resolveChartTab(sender);
@@ -197,15 +199,16 @@ async function snapshotCycle(
     // Echt wachten tot TV het nieuwe timeframe geladen+getekend heeft (page-
     // world: onDataLoaded-event of poll, cap 7 s) i.p.v. een blinde timer —
     // de Daily-capture pakte anders een nog-ladende chart. Page-side zet hij
-    // daarna ook "Reset chart view" (Alt+R). Degradeert altijd richting "toch
-    // capturen": nooit slechter dan het oude gedrag.
+    // daarna ook het snapshot-kader (chartFrame.ts). Degradeert altijd richting
+    // "toch capturen": nooit slechter dan het oude gedrag.
     async settle(target) {
       try {
-        const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-wait-ready", resolution: target });
+        const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-wait-ready", resolution: target, anchor });
         const r = typeof res === "object" && res !== null
-          ? (res as { ok?: unknown; ready?: unknown; signal?: unknown; waitedMs?: unknown; viewReset?: unknown })
+          ? (res as { ok?: unknown; ready?: unknown; signal?: unknown; waitedMs?: unknown; viewReset?: unknown; framing?: unknown })
           : null;
         if (r?.viewReset === false) await appendLog("snapshot-reset-degraded", `chartReset faalde op ${target}`);
+        if (r?.framing === "degraded") await appendLog("snapshot-frame-degraded", `trade niet in beeld op ${target}`);
         if (r?.ok === true && r.ready === true) return;
         // Timeout of onbruikbaar antwoord: page-side is al ruim gewacht.
         await appendLog("snapshot-settle-degraded", `signal=${String(r?.signal ?? "geen antwoord")}, waitedMs=${String(r?.waitedMs ?? "?")}`);
@@ -214,6 +217,23 @@ async function snapshotCycle(
         // vaste wachttijd als vloer.
         await appendLog("snapshot-settle-degraded", String((e instanceof Error && e.message) || e));
         await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    },
+    async readView() {
+      try {
+        const view: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-read-view" });
+        return isChartView(view) ? view : null;
+      } catch {
+        return null; // alleen de eigen zoom blijft dan achterwege
+      }
+    },
+    async restoreView(resolution, view) {
+      try {
+        const res: unknown = await chrome.tabs.sendMessage(tabId, { type: "tv-page-restore-view", resolution, view });
+        const ok = typeof res === "object" && res !== null && (res as { ok?: unknown }).ok === true;
+        if (!ok) await appendLog("snapshot-view-restore-degraded", `zoom niet hersteld op ${resolution}`);
+      } catch (e) {
+        await appendLog("snapshot-view-restore-degraded", String((e instanceof Error && e.message) || e));
       }
     },
     thumbnail: thumbnailDataUrl,

@@ -331,7 +331,12 @@ export function mountPanelApp(host: HTMLElement, options: { onClose: () => void 
   const targetSec = sectionEl("panel.sec.target");
   const journalSec = sectionEl("panel.sec.journal");
   const extraSec = sectionEl("panel.sec.extra", undefined, true);
-  const snapshotsSec = renderSnapshotsSection();
+  const snapshotsSec = renderSnapshotsSection(() => {
+    const position = selectedPosition();
+    return position?.entryTimeSec != null
+      ? { entrySec: position.entryTimeSec, endSec: position.endTimeSec ?? null }
+      : null;
+  });
   const closeSec = renderCloseSection();
 
   const submitBtn = el("button", { class: "by-btn by-btn-block", attrs: { type: "button" } });

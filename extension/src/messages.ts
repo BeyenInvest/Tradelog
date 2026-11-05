@@ -1,6 +1,7 @@
 // Berichtenschema popup ⇄ service worker. Eén union voor requests en een
 // type-map voor de bijbehorende responses; popup.ts krijgt daarmee end-to-end
 // types zonder casts in de call-sites.
+import type { SnapshotAnchor } from "./adapter/chartFrame";
 import type { ChartState } from "./adapter/parse";
 import type { CloseTradeRequest, CloseTradeResult, OpenTradesResult } from "./closeFlow";
 import type { BacktestProjectInfo, JournalInfo } from "./db";
@@ -25,6 +26,9 @@ export type ExtRequest =
        * de vaste W/D/4H/2H-defaults. De SW valideert elke waarde tegen de
        * gedeelde whitelist (trust boundary) vóór hij naar TV gaat. */
       resolutions?: Record<SnapshotSlot, string>;
+      /** De gekozen position-tool: een oudere trade blijft zo in de snapshot.
+       * null = geen tool, dan de nieuwste bars. */
+      anchor: SnapshotAnchor | null;
     }
   | { type: "delete-screenshots"; paths: string[] }
   | { type: "open-trades"; symbolRaw: string }

@@ -9,6 +9,7 @@
 // Opruimen is hier de belangrijkste onzichtbare taak: elk pad dat we uploadden
 // en dat niet in een gelogde trade terechtkomt, gaat via `delete-screenshots`
 // weer weg. Geplakte links raken we nooit aan — die zijn niet van ons.
+import type { SnapshotAnchor } from "../../adapter/chartFrame";
 import { onLangChange, t } from "../../i18nExt";
 import { sendToSw } from "../../messages";
 import { SNAPSHOT_SLOTS, slotResolutions, type SnapshotSlot } from "../../snapshots";
@@ -68,7 +69,7 @@ function deletePaths(paths: string[]): void {
   });
 }
 
-export function renderSnapshotsSection(): SnapshotsSection {
+export function renderSnapshotsSection(getAnchor: () => SnapshotAnchor | null): SnapshotsSection {
   let state: SnapshotState = initialState(readEnabled());
   let busy = false;
   let restored = true;
@@ -134,7 +135,12 @@ export function renderSnapshotsSection(): SnapshotsSection {
     paint();
     try {
       // De journal-TF's reizen mee (0061); de SW valideert ze tegen de whitelist.
-      const result = await sendToSw({ type: "snapshot-cycle", slots, resolutions: slotResolutions(customTimeframes) });
+      const result = await sendToSw({
+        type: "snapshot-cycle",
+        slots,
+        resolutions: slotResolutions(customTimeframes),
+        anchor: getAnchor(),
+      });
       if (result.ok) {
         const applied = applyCycle(state, slots, result);
         state = applied.state;
