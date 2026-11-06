@@ -51,8 +51,7 @@ function frameChart(chart: TvChart, onReset: () => void): FrameChart {
       onReset();
     },
     width: () => scale.width(),
-    rightOffset: () => scale.rightOffset(),
-    setBarSpacing: (px) => scale.setBarSpacing(px),
+    barSpacing: () => scale.barSpacing(),
     setRightOffset: (n) => scale.setRightOffset(n),
     firstIndex: () => bars().firstIndex(),
     lastIndex: () => bars().lastIndex(),
