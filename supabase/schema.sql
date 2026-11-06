@@ -2,13 +2,14 @@
 -- Beyen Invest — Supabase schema
 -- Paste into Supabase SQL editor and run once (fresh project).
 --
--- Dit bestand is de EINDSTAND van migraties 0001 t/m 0069 (gesynct in fixplan
+-- Dit bestand is de EINDSTAND van migraties 0001 t/m 0070 (gesynct in fixplan
 -- blok C, 2026-09-09; 0059 = WPM-sanering; 0060/0061 = screenshot-slots;
 -- 0062 = DB-hardening, deep review blok C; 0063 = handelsweek-zondag;
 -- 0064 = admin-select op de screenshots-bucket; 0066 = vakje-weergave voor
 -- ja/nee-velden; 0067 = WPM: weekly kenmerk onder fase; 0068 = Scale-in
 -- standaard in elk journal; 0065 = broker-koppeling cTrader; 0069 = vast
--- notitieblok "Emoties" op trades).
+-- notitieblok "Emoties" op trades; 0070 = optie hernoemen neemt backtest-trades
+-- zonder journal mee).
 -- ⚠️ CONVENTIE (hard sinds het fixplan): elke migratie die
 -- een tabel/kolom/functie/policy/index wijzigt, werkt dít bestand in dezelfde
 -- commit bij — het "t/m"-nummer hierboven telt mee en wordt door CI bewaakt
@@ -1245,7 +1246,8 @@ grant execute on function relink_weekly_review(uuid) to authenticated;
 -- UPDATE re-checks the caller's RLS. Mirrors the client-side guards it
 -- replaced: own non-system methodology only, enum field, old value must
 -- exist, case-insensitive collision refuses. (The `fase` lock from 0045 was
--- removed in 0059 — fase is an ordinary enum field now.)
+-- removed in 0059 — fase is an ordinary enum field now.) Since 0070 step 3 also
+-- takes the user's backtest trades without a journal along.
 create or replace function rename_field_option(p_field_id uuid, p_old_value text, p_new_value text)
 returns integer
 language plpgsql
@@ -1301,11 +1303,13 @@ begin
     and f.show_when_values ? p_old_value;
 
   -- 3. Migrate stored answers: every trade of this journal holding the old
-  -- value in its custom bag. One statement — no 1000-row pagination, no chunks.
+  -- value in its custom bag, plus the user's backtest trades without a journal
+  -- (0070) — the project analysis reads those with the active journal's fields.
   update trades t
   set custom = jsonb_set(t.custom, array[v_field.field_key], to_jsonb(v_new))
   where t.user_id = auth.uid()
-    and t.methodology_id = v_field.methodology_id
+    and (t.methodology_id = v_field.methodology_id
+         or (t.methodology_id is null and t.backtest_project_id is not null))
     and t.custom ->> v_field.field_key = p_old_value;
   get diagnostics v_migrated = row_count;
 
@@ -2015,7 +2019,7 @@ create table schema_migrations (
 );
 revoke all on table schema_migrations from anon, authenticated;
 
--- Een verse bootstrap IS de eindstand t/m 0068 — vul de registry meteen, zodat
+-- Een verse bootstrap IS de eindstand t/m 0070 — vul de registry meteen, zodat
 -- de runner een oude migratie tegen dit project weigert i.p.v. dubbel draait.
 insert into schema_migrations (filename) values
   ('0001_backtest_projects.sql'),
@@ -2085,4 +2089,6 @@ insert into schema_migrations (filename) values
   ('0065_broker_connections.sql'),
   ('0066_field_checkbox.sql'),
   ('0067_wpm_kenmerk_order.sql'),
-  ('0068_standard_scale_in.sql');
+  ('0068_standard_scale_in.sql'),
+  ('0069_trade_emotions.sql'),
+  ('0070_rename_option_orphan_backtests.sql');

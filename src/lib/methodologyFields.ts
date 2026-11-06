@@ -37,6 +37,43 @@ export function parseFieldOptions(raw: string): string[] {
   return out;
 }
 
+/**
+ * Why `newValue` can't replace `oldValue` in an enum's option list, or null when
+ * it can. Names compare case-insensitively, as in the rename_field_option RPC,
+ * so two options never differ by case alone; a case-only change of the same
+ * option is fine.
+ */
+export function optionRenameProblem(
+  options: readonly string[],
+  oldValue: string,
+  newValue: string
+): "empty" | "duplicate" | null {
+  const next = newValue.trim().toLowerCase();
+  if (!next) return "empty";
+  return options.some((o) => o !== oldValue && o.toLowerCase() === next) ? "duplicate" : null;
+}
+
+/**
+ * The local mirror of the rename_field_option RPC: the option in place (position
+ * kept) plus the show_when conditions that reference it. The RPC only returns the
+ * migrated-trade count, so open views apply this to stay in step with the server.
+ */
+export function applyOptionRename(
+  fields: MethodologyField[],
+  fieldId: string,
+  oldValue: string,
+  newValue: string
+): MethodologyField[] {
+  const rename = (v: string) => (v === oldValue ? newValue : v);
+  return fields.map((f) => {
+    if (f.id === fieldId) return { ...f, options: (f.options ?? []).map(rename) };
+    if (f.show_when_field_id === fieldId && f.show_when_values?.includes(oldValue)) {
+      return { ...f, show_when_values: f.show_when_values.map(rename) };
+    }
+    return f;
+  });
+}
+
 /** The fields the dynamic custom-field form/analysis own: everything except computed fields. */
 export function dynamicMethodologyFields(fields: MethodologyField[]): MethodologyField[] {
   return fields.filter((f) => !f.is_computed);

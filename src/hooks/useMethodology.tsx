@@ -4,6 +4,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
 import { instrumentsOfConfig, normalizeInstrument } from "@/lib/instruments";
+import { applyOptionRename, optionRenameProblem } from "@/lib/methodologyFields";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 /**
@@ -333,12 +334,8 @@ function useMethodologyState(): MethodologyData {
         throw new Error("option not found");
       }
       if (!next || next === oldValue) return { migrated: 0 };
-      // Renaming onto another existing option would merge two buckets — refuse
-      // (a case-only change of the same option is fine).
-      const collides = target.options.some(
-        (o) => o !== oldValue && o.toLowerCase() === next.toLowerCase()
-      );
-      if (collides) throw new Error("option already exists");
+      // Renaming onto another existing option would merge two buckets — refuse.
+      if (optionRenameProblem(target.options, oldValue, next)) throw new Error("option already exists");
 
       // One atomic RPC (M5 / migration 0045): option list + sibling show_when
       // conditions + every affected trade's custom bag move together server-side —
@@ -351,34 +348,16 @@ function useMethodologyState(): MethodologyData {
       if (rpcErr) throw rpcErr;
       const migrated = (data as number | null) ?? 0;
 
-      // Mirror the server's rewrite in shared local state (the RPC returns only
-      // the migrated-trade count).
-      const options = target.options.map((o) => (o === oldValue ? next : o));
-      const siblings = fields.filter(
-        (f) => f.show_when_field_id === fieldId && f.show_when_values?.includes(oldValue)
-      );
-
       // Any mounted trades view (Journal list/Analyse) holds pre-migration rows in
       // memory — tell useTrades to refetch so buckets rename immediately, not on
       // the next navigation. Window event: useMethodology has no TradesApi handle.
       if (migrated > 0) window.dispatchEvent(new CustomEvent(TRADES_MIGRATED_EVENT));
 
       // Shared local state, so every open view re-renders with the new name.
-      setFields((fs) =>
-        fs.map((f) => {
-          if (f.id === fieldId) return { ...f, options };
-          if (siblings.some((s) => s.id === f.id)) {
-            return {
-              ...f,
-              show_when_values: (f.show_when_values ?? []).map((v) => (v === oldValue ? next : v)),
-            };
-          }
-          return f;
-        })
-      );
+      setFields((fs) => applyOptionRename(fs, fieldId, oldValue, next));
       return { migrated };
     },
-    [requireEditableField, fields]
+    [requireEditableField]
   );
 
   return {

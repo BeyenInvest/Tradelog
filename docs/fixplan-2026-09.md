@@ -149,6 +149,10 @@ Volgorde is hier kritiek (CAPTCHA vóór signup; meten vóór bezoekers).
    - [ ] cTrader-app geregistreerd + Vercel-env (owner)
    - [x] 0065 op prod + read-only verificatie (2026-10-08)
    - [ ] Fable-security-review → PR gemerged
+5. **Freeze-uitzondering 2026-11-06 (owner, eigen gebruik): optie-namen aanpassen in de veld-editor** — inline hernoemen in Settings via de bestaande RPC `rename_field_option`, migratie 0070 neemt ook backtest-trades zonder journal mee. Geen nieuwe laag, alleen de editor aangesloten op wat het trade-formulier al kon.
+   - [x] Code + tests op branch `field-option-rename`
+   - [x] 0070 op prod (2026-11-06, door de owner gedraaid; de runner meldde "Migration applied + geregistreerd")
+   - [ ] PR gemerged
 
 ## Voortgang bijhouden
 

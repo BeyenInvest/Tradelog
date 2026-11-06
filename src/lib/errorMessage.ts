@@ -9,6 +9,7 @@ import i18n from "@/i18n";
  */
 const KNOWN_ERROR_PATTERNS: [pattern: string, key: string][] = [
   ["duplicate key", "errors.duplicate"],
+  ["option already exists", "methodology.optionRenameDuplicate"],
   ["Invalid login credentials", "errors.invalidLogin"],
   ["Email not confirmed", "errors.emailNotConfirmed"],
   ["User already registered", "errors.userExists"],

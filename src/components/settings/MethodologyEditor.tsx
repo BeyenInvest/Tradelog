@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { ChevronUp, ChevronDown, Pencil, Trash2, X, Check, Plus, GripVertical } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BooleanToggle } from "@/components/ui/BooleanToggle";
 import { useMethodologyEditor, type FieldInput } from "@/hooks/useMethodologyEditor";
-import { isCheckboxField, slugifyFieldKey } from "@/lib/methodologyFields";
+import { isCheckboxField, optionRenameProblem, slugifyFieldKey } from "@/lib/methodologyFields";
 import {
   customTimeframeLabel, DEFAULT_SLOT_TIMEFRAMES, isSnapshotTimeframe, SNAPSHOT_TIMEFRAMES, timeframeLabel,
 } from "@/lib/screenshotSlots";
@@ -198,6 +198,7 @@ export function MethodologyEditor() {
     fork,
     addField,
     updateField,
+    renameOption,
     deleteField,
     moveFieldFlat,
     reorderField,
@@ -282,6 +283,7 @@ export function MethodologyEditor() {
         onAddOption={(value) =>
           run(() => updateField(f.id, { options: [...(f.options ?? []), value] }), "methodology.saveFailed")
         }
+        onRenameOption={(oldValue, newValue) => renameOption(f.id, oldValue, newValue)}
       />
     );
   };
@@ -449,6 +451,7 @@ function FieldRow({
   onDelete,
   onSave,
   onAddOption,
+  onRenameOption,
 }: {
   field: MethodologyField;
   allFields: MethodologyField[];
@@ -463,6 +466,7 @@ function FieldRow({
   onDelete: () => void;
   onSave: (patch: Partial<FieldInput>) => Promise<void>;
   onAddOption: (value: string) => Promise<void>;
+  onRenameOption: (oldValue: string, newValue: string) => Promise<number>;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -477,6 +481,7 @@ function FieldRow({
         allFields={allFields}
         submitLabel={t("methodology.save")}
         onCancel={() => setEditing(false)}
+        onRenameOption={onRenameOption}
         onSubmit={async (input) => {
           // field_key is immutable on an existing field (it keys trades.custom) — omit it from the patch.
           // The label edits the *translated* text (0047), so only persist it when it
@@ -702,12 +707,79 @@ function AddFieldForm({
   );
 }
 
-/** Per-option editor for enum fields — one row per choice (reorder + remove), plus
- *  an add box where Enter appends. Replaces the old comma-separated text field so a
- *  single option can be added/removed/reordered and commas in a label are safe. */
-function OptionsEditor({ options, onChange }: { options: string[]; onChange: (next: string[]) => void }) {
+/**
+ * Per-option editor for enum fields — one row per choice (rename + reorder + remove),
+ * plus an add box where Enter appends. Replaces the old comma-separated text field so
+ * a single option can be added/removed/reordered and commas in a label are safe.
+ *
+ * Renaming a saved option is the one change here that doesn't wait for the form's
+ * save button: it runs straight away through `onRenameSaved`, which moves the option
+ * list, dependent show_when conditions and every logged trade together, so history
+ * never splits into two names. An option that only exists in this draft is renamed
+ * locally. The parent blocks its save while `renaming` is set: that save would write
+ * the draft's option list, old name included, over the rename.
+ */
+function OptionsEditor({
+  options,
+  onChange,
+  savedOptions,
+  renaming,
+  onRenamingChange,
+  onRenameSaved,
+}: {
+  options: string[];
+  onChange: Dispatch<SetStateAction<string[]>>;
+  /** The options as stored on the server — empty for a field that isn't saved yet. */
+  savedOptions: string[];
+  /** The option being renamed right now, if any. */
+  renaming: string | null;
+  onRenamingChange: (option: string | null) => void;
+  onRenameSaved?: (oldValue: string, newValue: string) => Promise<number>;
+}) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState("");
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function startRename(option: string) {
+    onRenamingChange(option);
+    setRenameDraft(option);
+    setRenameError(null);
+    setNotice(null);
+  }
+
+  async function commitRename() {
+    if (renaming === null || renameBusy) return;
+    const oldValue = renaming;
+    const next = renameDraft.trim();
+    if (next === oldValue) {
+      onRenamingChange(null);
+      return;
+    }
+    // Also against the saved list: an option removed in this draft still exists
+    // on the server until the form is saved, so the RPC would refuse it anyway.
+    const problem = optionRenameProblem([...options, ...savedOptions], oldValue, next);
+    if (problem) {
+      setRenameError(t(problem === "empty" ? "methodology.optionRenameEmpty" : "methodology.optionRenameDuplicate"));
+      return;
+    }
+    setRenameError(null);
+    setRenameBusy(true);
+    try {
+      if (onRenameSaved && savedOptions.includes(oldValue)) {
+        const migrated = await onRenameSaved(oldValue, next);
+        setNotice(t("methodology.optionRenameSaved", { count: migrated }));
+      }
+      onChange((prev) => prev.map((o) => (o === oldValue ? next : o)));
+      onRenamingChange(null);
+    } catch (err) {
+      setRenameError(toErrorMessage(err, t("methodology.saveFailed")));
+    } finally {
+      setRenameBusy(false);
+    }
+  }
 
   function add() {
     const v = draft.trim();
@@ -734,27 +806,71 @@ function OptionsEditor({ options, onChange }: { options: string[]; onChange: (ne
       <label className="font-mono text-[11px] text-muted">{t("methodology.fieldOptions")}</label>
       {options.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          {options.map((opt, i) => (
-            <div
-              key={`${opt}-${i}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-border"
-            >
-              <span className="flex-1 min-w-0 truncate font-body text-sm text-ink">{opt}</span>
-              <div className="flex items-center gap-0.5 shrink-0 text-muted">
-                <IconBtn label={t("methodology.moveUp")} disabled={i === 0} onClick={() => move(i, "up")}>
-                  <ChevronUp size={14} />
-                </IconBtn>
-                <IconBtn label={t("methodology.moveDown")} disabled={i === options.length - 1} onClick={() => move(i, "down")}>
-                  <ChevronDown size={14} />
-                </IconBtn>
-                <IconBtn label={t("methodology.optionRemove")} danger onClick={() => remove(i)}>
-                  <X size={14} />
-                </IconBtn>
+          {options.map((opt, i) =>
+            renaming === opt ? (
+              <div key={`${opt}-${i}`} className="flex flex-col gap-1 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-gold">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={renameDraft}
+                    disabled={renameBusy}
+                    aria-label={t("tradeForm.renameOption", { value: opt })}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void commitRename();
+                      } else if (e.key === "Escape") {
+                        onRenamingChange(null);
+                      }
+                    }}
+                    className="flex-1 min-w-0 bg-transparent font-body text-sm text-ink outline-none"
+                  />
+                  <div className="flex items-center gap-0.5 shrink-0 text-muted">
+                    <IconBtn label={t("methodology.save")} disabled={renameBusy} onClick={() => void commitRename()}>
+                      <Check size={14} />
+                    </IconBtn>
+                    <IconBtn label={t("methodology.cancel")} disabled={renameBusy} onClick={() => onRenamingChange(null)}>
+                      <X size={14} />
+                    </IconBtn>
+                  </div>
+                </div>
+                {renameError ? (
+                  <p className="font-mono text-[10px] text-loss">{renameError}</p>
+                ) : (
+                  <p className="font-mono text-[10px] text-muted">
+                    {t(savedOptions.includes(opt) ? "methodology.optionRenameHint" : "methodology.optionRenameHintDraft")}
+                  </p>
+                )}
               </div>
-            </div>
-          ))}
+            ) : (
+              <div
+                key={`${opt}-${i}`}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-border"
+              >
+                <span className="flex-1 min-w-0 truncate font-body text-sm text-ink">{opt}</span>
+                <div className="flex items-center gap-0.5 shrink-0 text-muted">
+                  <IconBtn label={t("methodology.moveUp")} disabled={i === 0} onClick={() => move(i, "up")}>
+                    <ChevronUp size={14} />
+                  </IconBtn>
+                  <IconBtn label={t("methodology.moveDown")} disabled={i === options.length - 1} onClick={() => move(i, "down")}>
+                    <ChevronDown size={14} />
+                  </IconBtn>
+                  <IconBtn label={t("tradeForm.renameOption", { value: opt })} disabled={renameBusy} onClick={() => startRename(opt)}>
+                    <Pencil size={13} />
+                  </IconBtn>
+                  <IconBtn label={t("methodology.optionRemove")} danger onClick={() => remove(i)}>
+                    <X size={14} />
+                  </IconBtn>
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
+      {notice && <p className="font-mono text-[10px] text-muted">{notice}</p>}
       <div className="flex gap-2 mt-1">
         <input
           type="text"
@@ -790,12 +906,15 @@ function FieldForm({
   submitLabel,
   onSubmit,
   onCancel,
+  onRenameOption,
 }: {
   initial?: MethodologyField;
   allFields: MethodologyField[];
   submitLabel: string;
   onSubmit: (input: FieldInput) => Promise<void>;
   onCancel: () => void;
+  /** Renames a saved option with its data; absent on a field that doesn't exist yet. */
+  onRenameOption?: (oldValue: string, newValue: string) => Promise<number>;
 }) {
   const { t } = useTranslation();
   const isNew = !initial;
@@ -805,6 +924,7 @@ function FieldForm({
   const [label, setLabel] = useState(initial ? fieldLabel(t, initial) : "");
   const [fieldType, setFieldType] = useState<MethodologyField["field_type"]>(initial?.field_type ?? "boolean");
   const [options, setOptions] = useState<string[]>(initial?.options ?? []);
+  const [renamingOption, setRenamingOption] = useState<string | null>(null);
   const [required, setRequired] = useState(initial?.required ?? false);
   // boolean only (0066): checkbox = a flag, empty = "nee"; toggle = Ja/Nee, empty = unanswered.
   const [checkbox, setCheckbox] = useState(initial?.checkbox ?? false);
@@ -819,6 +939,12 @@ function FieldForm({
   const [showWhenFieldId, setShowWhenFieldId] = useState<string | null>(initial?.show_when_field_id ?? null);
   const [showWhenValues, setShowWhenValues] = useState<string[]>(initial?.show_when_values ?? []);
   const [saving, setSaving] = useState(false);
+
+  // Renaming an option of the parent field (in its own open form) rewrites this
+  // condition on the server. Follow it, or saving here would write the old name back.
+  useEffect(() => {
+    setShowWhenValues(initial?.show_when_values ?? []);
+  }, [initial?.show_when_values]);
 
   // A condition can only key off another enum field's values — exclude self (a
   // field can't depend on itself). Matches the model in the design doc §2.4.
@@ -840,7 +966,7 @@ function FieldForm({
   const canSave =
     label.trim().length > 0 &&
     !duplicateKey &&
-    (fieldType !== "enum" || options.length > 0) &&
+    (fieldType !== "enum" || (options.length > 0 && renamingOption === null)) &&
     conditionValid &&
     (!newSection || newSectionName.trim().length > 0);
 
@@ -989,7 +1115,16 @@ function FieldForm({
         </div>
       )}
 
-      {fieldType === "enum" && <OptionsEditor options={options} onChange={setOptions} />}
+      {fieldType === "enum" && (
+        <OptionsEditor
+          options={options}
+          onChange={setOptions}
+          savedOptions={initial?.field_type === "enum" ? initial.options ?? [] : []}
+          renaming={renamingOption}
+          onRenamingChange={setRenamingOption}
+          onRenameSaved={onRenameOption}
+        />
+      )}
 
       <div className="flex flex-col gap-1.5 pt-1 border-t border-border-soft">
         <label className="font-mono text-[11px] text-muted">{t("methodology.visibility")}</label>

@@ -4,6 +4,7 @@ import { toErrorMessage } from "@/lib/errorMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { useMethodology } from "@/hooks/useMethodology";
 import { WPM_TEMPLATE_METHODOLOGY_ID } from "@/lib/constants";
+import { applyOptionRename } from "@/lib/methodologyFields";
 import type { Methodology, MethodologyField } from "@/lib/types";
 
 /** Editable attributes of a custom field, including its conditional visibility (show_when, cyclus 2b). */
@@ -36,7 +37,7 @@ export function useMethodologyEditor() {
   // The app-wide shared methodology state (MethodologyProvider) lives for the
   // whole session now — every editor mutation must push a refresh into it, or
   // the trade form/filters would keep rendering the pre-edit fields until reload.
-  const { refresh: refreshShared } = useMethodology();
+  const { refresh: refreshShared, renameFieldOption } = useMethodology();
   const methodologyId = profile?.methodology_id ?? null;
 
   const [methodology, setMethodology] = useState<Methodology | null>(null);
@@ -127,6 +128,18 @@ export function useMethodologyEditor() {
     await load(mid);
     void refreshShared();
   }, [fields, load, methodology, isOwn, refreshShared]);
+
+  /**
+   * Renames one option with its data (option list, show_when conditions and every
+   * logged trade, see useMethodology.renameFieldOption) and returns how many trades
+   * moved along. Patches `fields` in place instead of calling load(): that flips
+   * `loading`, which would unmount the field form the rename happens in.
+   */
+  const renameOption = useCallback(async (id: string, oldValue: string, newValue: string): Promise<number> => {
+    const { migrated } = await renameFieldOption(id, oldValue, newValue);
+    setFields((fs) => applyOptionRename(fs, id, oldValue, newValue.trim()));
+    return migrated;
+  }, [renameFieldOption]);
 
   const deleteField = useCallback(async (id: string) => {
     const mid = requireOwn();
@@ -265,5 +278,5 @@ export function useMethodologyEditor() {
     void refreshShared();
   }, [methodology, isOwn, refreshShared]);
 
-  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, deleteField, moveField, moveFieldFlat, reorderField, swapFieldOrder, setScreenshotLabels, setScreenshotTimeframes, refresh: () => load(methodologyId) };
+  return { methodology, fields, isOwn, loading, error, fork, addField, updateField, renameOption, deleteField, moveField, moveFieldFlat, reorderField, swapFieldOrder, setScreenshotLabels, setScreenshotTimeframes, refresh: () => load(methodologyId) };
 }

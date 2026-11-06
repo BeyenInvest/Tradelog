@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyOptionRename,
   booleanFieldValue,
   checkboxFieldKeys,
   dynamicMethodologyFields,
   isFieldVisible,
   missingRequiredCustomFields,
+  optionRenameProblem,
   parseFieldOptions,
   slugifyFieldKey,
 } from "../methodologyFields";
@@ -147,5 +149,64 @@ describe("checkbox fields (0066)", () => {
     expect(missingRequiredCustomFields([box], {})).toEqual([]);
     const enumWithFlag = field({ field_key: "setup", checkbox: true }); // stray flag on a non-boolean
     expect([...checkboxFieldKeys([box, toggle, enumWithFlag])]).toEqual(["scale_in"]);
+  });
+});
+
+describe("optionRenameProblem", () => {
+  const options = ["Decel", "Reversal", "2H Entry"];
+
+  it("accepts a new name", () => {
+    expect(optionRenameProblem(options, "Decel", "Deceleration")).toBeNull();
+  });
+
+  it("refuses an empty or blank name", () => {
+    expect(optionRenameProblem(options, "Decel", "")).toBe("empty");
+    expect(optionRenameProblem(options, "Decel", "   ")).toBe("empty");
+  });
+
+  it("refuses the name of another option, ignoring case and surrounding spaces", () => {
+    expect(optionRenameProblem(options, "Decel", "Reversal")).toBe("duplicate");
+    expect(optionRenameProblem(options, "Decel", " reversal ")).toBe("duplicate");
+  });
+
+  it("allows a case-only change of the same option", () => {
+    expect(optionRenameProblem(options, "Decel", "DECEL")).toBeNull();
+  });
+});
+
+describe("applyOptionRename", () => {
+  const entry = field({ id: "entry", field_key: "entry", options: ["Decel", "Reversal", "2H Entry"] });
+  const dependent = field({
+    id: "dep",
+    field_key: "dep",
+    show_when_field_id: "entry",
+    show_when_values: ["Decel", "2H Entry"],
+  });
+  const unrelated = field({
+    id: "other",
+    field_key: "other",
+    options: ["Decel"],
+    show_when_field_id: "elsewhere",
+    show_when_values: ["Decel"],
+  });
+
+  it("renames the option in place and keeps its position", () => {
+    const [renamed] = applyOptionRename([entry], "entry", "Reversal", "Reversal 2.0");
+    expect(renamed.options).toEqual(["Decel", "Reversal 2.0", "2H Entry"]);
+  });
+
+  it("moves show_when conditions on that field along", () => {
+    const [, dep] = applyOptionRename([entry, dependent], "entry", "Decel", "Deceleration");
+    expect(dep.show_when_values).toEqual(["Deceleration", "2H Entry"]);
+  });
+
+  it("leaves other fields alone, even when they hold the same word", () => {
+    const [, other] = applyOptionRename([entry, unrelated], "entry", "Decel", "Deceleration");
+    expect(other).toBe(unrelated);
+  });
+
+  it("keeps a renamed condition working in isFieldVisible", () => {
+    const next = applyOptionRename([entry, dependent], "entry", "Decel", "Deceleration");
+    expect(isFieldVisible(next[1], next, { entry: "Deceleration" })).toBe(true);
   });
 });
