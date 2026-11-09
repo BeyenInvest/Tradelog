@@ -1350,7 +1350,7 @@
       "title": "A journal shaped by your method.<line2>Not the other way around.</line2>",
       "sub": "Your spreadsheet remembers what you made. Beyen remembers how you traded: your setups and rules become the fields, and every field a filter in the analysis. Honest numbers, no coach, no signals.",
       "cta1": "Start free",
-      "note": "The free tier is a complete journal. No demo, no countdown."
+      "note": "Free during the beta. No credit card needed."
     },
     "stage": {
       "tab1": "Journal",
@@ -1486,29 +1486,29 @@
     },
     "p": {
       "kicker": "Pricing",
-      "h2": "Free is a <em>complete</em> journal.",
-      "lead": "Not a stripped-down demo. One journal with unlimited custom fields is free — you only pay for extra journals side by side.",
-      "free": "Free",
-      "freeAmt": " / forever",
-      "f1": "One full journal + backtest projects",
+      "h2": "Free during the <em>beta</em>.",
+      "lead": "While Beyen is in beta, you pay nothing: journal, analysis and the TradingView extension are all included. Pro arrives at public launch — join now and you get an early-user perk.",
+      "free": "Beta",
+      "freeAmt": " / during the beta",
+      "f1": "Journals + backtest projects",
       "f2": "Unlimited custom methodology fields",
       "f3": "Full analysis: R-multiples, drawdown, streaks",
-      "f4": "Weekly reviews + PDF export",
+      "f4": "The TradingView extension",
       "freeCta": "Start free",
       "pro": "Pro",
       "proSoon": "soon",
       "proAmt": " / price to follow",
-      "pf1": "Multiple journals side by side",
-      "pf2": "All methodology presets",
-      "pf3": "All instrument classes",
-      "proCta": "Start free, upgrade later",
-      "proNote": "Pro comes later. The free tier stays a complete journal."
+      "pf1": "Price and scope at public launch",
+      "pf2": "A perk for everyone who joins in beta",
+      "pf3": "Your data always stays exportable",
+      "proCta": "Join the beta now",
+      "proNote": "Beta users hear it first, well before anything changes."
     },
     "cta": {
       "h2": "Start with the <em>truth</em>.",
       "lead": "Create a free account and log your first trade in minutes.",
       "btn": "Start free",
-      "note": "No credit card, no countdown."
+      "note": "No credit card needed."
     },
     "foot": {
       "terms": "Terms",
@@ -1521,10 +1521,10 @@
     },
     "midcta": {
       "note": "No credit card. Your first trade is logged tonight.",
-      "note2": "Backtest projects are part of the free tier."
+      "note2": "Backtest projects are included."
     },
     "fs": {
-      "head": "Included as standard",
+      "head": "Also included",
       "f1": "Weekly reviews",
       "f2": "Accounts & balances",
       "f3": "PDF export",
@@ -1542,7 +1542,7 @@
       "q3": "Which markets does it work for?",
       "a3": "Anything you can express in R or percentages: forex, indices, crypto, stocks. Your fields drive the analysis, not the instrument.",
       "q4": "What will Pro cost?",
-      "a4": "We'll announce that at public launch. What we can say now: the free tier is not bait — it stays a complete journal.",
+      "a4": "We'll announce that at public launch. Until then Beyen is free, and joining now gets you an early-user perk. You'll hear well in advance, before anything changes.",
       "q5": "Why not just a spreadsheet?",
       "a5": "For the result, a sheet is fine. For your behaviour it isn't: keeping missed trades out of your numbers, streaks that treat BE correctly, chronological drawdown, a rule-followed breakdown — that's formula upkeep nobody sustains. Beyen computes it by default, and your fields stay filters instead of columns.",
       "q6": "Whose data is it?",

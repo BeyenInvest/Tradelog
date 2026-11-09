@@ -1350,7 +1350,7 @@
       "title": "Een journal dat zich vormt naar jouw methodiek.<line2>Niet andersom.</line2>",
       "sub": "Je spreadsheet onthoudt wat je verdiende. Beyen onthoudt hoe je handelde: jouw setups en regels worden de velden, en elk veld een filter in de analyse. Eerlijke cijfers, geen coach, geen signalen.",
       "cta1": "Gratis starten",
-      "note": "De gratis laag is een volwaardig journal. Geen demo, geen aftelklok."
+      "note": "Gratis tijdens de beta. Geen creditcard nodig."
     },
     "stage": {
       "tab1": "Journal",
@@ -1486,29 +1486,29 @@
     },
     "p": {
       "kicker": "Prijs",
-      "h2": "Gratis is een <em>compleet</em> journal.",
-      "lead": "Geen uitgeklede demo. Eén journal met onbeperkt eigen velden is gratis — je betaalt pas voor extra journals naast elkaar.",
-      "free": "Gratis",
-      "freeAmt": " / voor altijd",
-      "f1": "Eén volledig journal + backtest-projecten",
+      "h2": "Gratis tijdens de <em>beta</em>.",
+      "lead": "Zolang Beyen in beta is, betaal je niets: journal, analyse en de TradingView-extensie zitten erbij. Pro komt bij de publieke launch — wie nu instapt, krijgt een voordeel als vroege gebruiker.",
+      "free": "Beta",
+      "freeAmt": " / tijdens de beta",
+      "f1": "Journals + backtest-projecten",
       "f2": "Onbeperkt eigen methodiek-velden",
       "f3": "Volledige analyse: R-multiples, drawdown, streaks",
-      "f4": "Weekly reviews + PDF-export",
+      "f4": "De TradingView-extensie",
       "freeCta": "Gratis starten",
       "pro": "Pro",
       "proSoon": "binnenkort",
       "proAmt": " / prijs volgt",
-      "pf1": "Meerdere journals naast elkaar",
-      "pf2": "Alle methodiek-presets",
-      "pf3": "Alle instrument-classes",
-      "proCta": "Gratis starten, upgrade later",
-      "proNote": "Pro komt later. De gratis laag blijft een volwaardig journal."
+      "pf1": "Prijs en inhoud bij de publieke launch",
+      "pf2": "Voordeel voor wie in de beta instapt",
+      "pf3": "Je data blijft altijd exporteerbaar",
+      "proCta": "Nu instappen in de beta",
+      "proNote": "Beta-gebruikers horen het als eerste, ruim vóór er iets verandert."
     },
     "cta": {
       "h2": "Begin met de <em>waarheid</em>.",
       "lead": "Maak een gratis account en log je eerste trade binnen enkele minuten.",
       "btn": "Gratis starten",
-      "note": "Geen creditcard, geen aftelklok."
+      "note": "Geen creditcard nodig."
     },
     "foot": {
       "terms": "Voorwaarden",
@@ -1521,10 +1521,10 @@
     },
     "midcta": {
       "note": "Geen creditcard. Je eerste trade staat er vanavond in.",
-      "note2": "Backtest-projecten zitten in de gratis laag."
+      "note2": "Backtest-projecten zitten er gewoon bij."
     },
     "fs": {
-      "head": "Standaard inbegrepen",
+      "head": "Ook inbegrepen",
       "f1": "Weekly reviews",
       "f2": "Accounts & saldo's",
       "f3": "PDF-export",
@@ -1542,7 +1542,7 @@
       "q3": "Voor welke markten werkt het?",
       "a3": "Alles wat je in R of procenten kunt uitdrukken: forex, indices, crypto, aandelen. Jouw velden bepalen de analyse, niet het instrument.",
       "q4": "Wat gaat Pro kosten?",
-      "a4": "Dat maken we bij de publieke launch bekend. Wat we nu al zeggen: de gratis laag is geen lokkertje — die blijft een volwaardig journal.",
+      "a4": "Dat maken we bij de publieke launch bekend. Tot dan is Beyen gratis, en wie nu instapt krijgt een voordeel als vroege gebruiker. Je hoort het ruim op tijd, vóór er iets verandert.",
       "q5": "Waarom niet gewoon een spreadsheet?",
       "a5": "Voor het resultaat volstaat een sheet. Voor je gedrag niet: gemiste trades buiten je cijfers houden, streaks die BE juist behandelen, chronologische drawdown, een regel-gevolgd-breakdown — dat is formule-onderhoud dat niemand volhoudt. Beyen rekent het standaard, en jouw velden blijven filters in plaats van kolommen.",
       "q6": "Van wie is mijn data?",
